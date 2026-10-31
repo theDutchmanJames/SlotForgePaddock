@@ -6,11 +6,17 @@ Technical notes, validation results and release history for SlotForge Paddock (f
 
 Working desktop copy, version 0.16.3. The official name is **SlotForge Paddock**.
 
+## Theoretical build performance (after the first release)
+
+Build from Scratch now accepts no-load RPM, torque in gf·cm, separate test voltages, motor/torque types and rear tyre diameter. A shared pure calculation model produces axle RPM, rollout, ideal speed, axle torque and force. A guarded linear brushed DC model adds peak power and interactive torque/power curves only for confirmed stall ratings at matching voltages. A frozen comparison reference is saved with the build draft. Specifications persist into car history and optional As built setups, are editable in Technical & parts, and follow the existing backup/sharing paths. Older drafts remain valid without new fields; schema 8 is retained. See [Theoretical performance](THEORETICAL-PERFORMANCE.md) for assumptions and formulas.
+
+Validation includes 223 automated tests and desktop checks for curve endpoints, live updates, comparison references, voltage/type guards, draft reload, car creation, technical editing, immutable setups and light/dark layouts at 960/1440 pixels. This update is on the main branch and is not part of the original v0.16.3 Windows download.
+
 ## Build from Scratch gearing (after the first release)
 
 The build page now calculates crown / axle gear teeth divided by pinion teeth. Counts can come from unambiguous catalogue specifications on loose parts or assembly components, with optional manual overrides. Part names are not parsed for numbers. Counts survive draft saves and complete backups, and are copied into the created car, creation history and optional As built setup. Existing drafts without gearing remain valid. Invalid counts are rejected before saving; neither gear is required for a partial build.
 
-Validated with 216 automated tests and isolated Build from Scratch desktop checks, including live ratio changes, renderer restart, draft reload, car/setup persistence and 960/1440-pixel layouts. This source update is not included in the original v0.16.3 Windows download. Motor-RPM performance calculations remain a proposed extension.
+Validated at that stage with 216 automated tests and isolated Build from Scratch desktop checks, including live ratio changes, renderer restart, draft reload, car/setup persistence and 960/1440-pixel layouts. This source update is not included in the original v0.16.3 Windows download. Motor-RPM performance calculations were subsequently added as described above.
 
 ## Native installer builders (after the first release)
 

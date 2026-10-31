@@ -58,6 +58,7 @@ The same car profiles can hold detailed technical records and connect directly t
 
 - **Record detailed configurations.** Document motors, motor pods, gearing, axles, bearings, wheels, tyres, guides, braids, electronics, ballast and more. Keep current specifications alongside factory reference information.
 - **Calculate gearing automatically.** Enter pinion and driven-gear tooth counts to see the ratio.
+- **Explore theoretical performance.** In Build from Scratch, enter motor RPM, torque, test voltages and rear tyre diameter to calculate axle RPM, rollout, ideal speed, axle torque and driving force. Confirmed brushed DC stall specifications at matching voltages also enable estimated peak power and interactive torque/power curves. Keep a reference to compare changes to your build. Inputs carry into the finished car and its optional As built setup; estimates exclude losses and tyre slip. [How the calculations work](docs/THEORETICAL-PERFORMANCE.md).
 - **Save and compare setups.** Capture configurations with names, track information and notes. Review changes before applying a saved setup, including required stock, substitutions and transfers from other cars.
 - **Record testing results.** Manually log track tests and lap statistics against setup snapshots to relate performance to configuration changes.
 

@@ -21,6 +21,7 @@ const TEXT_FIELDS = ['name','number','maker','reference','marque','model','scale
 const TECH_FIELDS = ['body','bodyMaterial','bodySettings','chassis','wheelbase','motor','motorLayout','pod','podSettings','ratedRpm','ratedVoltage','measuredRpm','measuredVoltage','measuredDate','pinion','gear','gearType','frontAxle','rearAxle','frontBearings','rearBearings','frontWheels','rearWheels','frontTyres','rearTyres','frontDiameter','rearDiameter','frontAxlePlay','rearAxlePlay','guide','braids','wiring','lights','digitalSystem','chip','magnets','ballast','suspension','fasteners','weight','clearance','frontWidth','rearWidth','technicalNotes'];
 const PUBLIC_FIELDS = ['name','number','maker','reference','marque','model','scale','vehicleYear','releaseYear','livery','colours','raceNumber','team','drivers','event','edition','origin','category','raceClass','description'];
 TECH_FIELDS.push('pinionPart','gearPart');
+TECH_FIELDS.push('motorTorque','torqueVoltage','torqueType','motorType');
 const COMPONENT_FIELDS=['body','chassis','motor','pod','pinionPart','gearPart','frontAxle','rearAxle','frontBearings','rearBearings','frontWheels','rearWheels','frontTyres','rearTyres','guide','braids','wiring','lights','chip','magnets','ballast','suspension','fasteners'];
 const TECH = new Set(COMPONENT_FIELDS);
 const collectionContext={textFields:TEXT_FIELDS,techFields:TECH_FIELDS};
