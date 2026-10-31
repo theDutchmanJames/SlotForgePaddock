@@ -1,5 +1,10 @@
 # Development & release history
 
+## Release 0.17.1 — 31 October 2026
+
+The Overview now shows **Unique parts**, counting inventory entries consistently with the Parts folders rather than summing available quantities. Ten entries therefore display 10 even when they contain 2,023 pieces. This patch also includes the README calculations highlight. Stock quantities, database schema 9 and the Timing API are unchanged. See [release notes](releases/v0.17.1.md).
+
+
 ## Release 0.17.0 — 31 October 2026
 
 Includes the reviewed Timing host API and integration handoff, Build from Scratch gearing and theoretical motor performance calculations, comparison references, Linux/macOS builder scripts and all five fixes from the review below. See [release notes](releases/v0.17.0.md) for changes, upgrade guidance and validation limits. Database schema 9 requires a backup before upgrading from the original 0.16.3 release.
@@ -37,7 +42,7 @@ The Timing client is intentionally outside this repository. Local server/client 
 
 Technical notes, validation results and release history for SlotForge Paddock (formerly SlotForge Database). File paths and commands below are relative to the project root. Older release sections describe behaviour at that release; later sections may supersede them.
 
-Working desktop copy, version 0.17.0. The official name is **SlotForge Paddock**.
+Working desktop copy, version 0.17.1. The official name is **SlotForge Paddock**.
 
 ## Theoretical build performance (after the first release)
 
@@ -57,7 +62,7 @@ Linux and macOS now have normal and quick build launchers. Linux produces AppIma
 
 ## Run on Windows
 
-Close any earlier copy, then open `dist/v0.17.0/SlotForge Paddock 0.17.0.exe` after packaging. No Node.js installation is needed for that executable. A new collection starts empty; existing collections are retained.
+Close any earlier copy, then open `dist/v0.17.1/SlotForge Paddock 0.17.1.exe` after packaging. No Node.js installation is needed for that executable. A new collection starts empty; existing collections are retained.
 
 For development, double-click `Start SlotForge.cmd`, or run `npm ci` followed by `npm start` in this folder. If your npm installation skips dependency scripts, run `node node_modules/electron/install.js` once after installing dependencies.
 

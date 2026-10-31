@@ -1,6 +1,6 @@
 {
   "name": "slotforge-database",
-  "version": "0.17.0",
+  "version": "0.17.1",
   "description": "Slot-car collections, parts and setup history",
   "author": "theDutchmanJames",
   "private": true,
