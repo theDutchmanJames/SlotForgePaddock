@@ -33,6 +33,10 @@ module.exports=async({win,store,js,wait,click,fill,submit,qa})=>{
   await click('[data-action="build-review"]');assert.equal(store.data.cars.length,0);
   await click(`[data-action="build-pick"][data-id="${motor}"]`);assert.equal(store.data.installations.length,0);
   await fill({'build-name':'Club special','build-maker':'Scratch-built','build-scale':'1:32'});
+  for(const [pinion,gear,ratio] of [['8','27','3.375:1'],['13','31','2.385:1'],['9','27','3.00:1']]){
+    await js(`for(const [key,value] of Object.entries(${JSON.stringify({pinion,gear})})){const el=document.querySelector('[data-build-tooth="'+key+'"]');el.value=value;el.dispatchEvent(new Event('input',{bubbles:true}));}`);
+    assert.equal(await js(`document.querySelector('#build-gear-ratio').textContent`),ratio);
+  }
   await click('[data-action="build-slot"][data-id="rearTyres"]');await click(`[data-action="build-pick"][data-id="${tyres}"]`);
   assert.equal(await js('buildState.parts.find(r=>r.slot==="rearTyres").quantity'),2);
   await js(`document.querySelector('#build-quantity').value='1';document.querySelector('#build-quantity').dispatchEvent(new Event('change',{bubbles:true}))`);
@@ -51,6 +55,7 @@ module.exports=async({win,store,js,wait,click,fill,submit,qa})=>{
   await win.webContents.reload();await wait('typeof db!=="undefined"&&!!db');
   await js(`page='Parts';partsTab='Build from Scratch';render()`);await click('[data-action="build-drafts"]');await click(`[data-action="build-load-draft"][data-id="${draft.id}"]`);
   assert.equal(await js('buildState.name'),'Club special');assert.equal(await js('buildState.parts.length'),2);assert.equal(await js('buildState.assemblies.length'),1);
+  assert.equal(await js(`document.querySelector('#build-gear-ratio').textContent`),'3.00:1');
   checks.push('drafts survive renderer restart and reopen with selections intact; dark and light layouts fit 1440 and 960 px');
   await click('[data-action="build-review"]');await click('[data-action="close-modal"]');assert.equal(store.data.cars.length,0);
   await click('[data-action="build-review"]');act('settings.save',{name:'Updated club collection'});
@@ -60,6 +65,8 @@ module.exports=async({win,store,js,wait,click,fill,submit,qa})=>{
   assert.equal(store.data.cars.length,1);assert.equal(store.data.installations.filter(i=>!i.removed).length,3);assert.equal(store.data.parts.find(p=>p.id===motor).quantity,2);
   assert.equal(store.data.assemblies[0].carId,store.data.cars[0].id);assert.equal(store.data.buildDrafts.length,0);assert.equal(store.data.setups[0].name,'As built');
   assert.equal(await js('page'),'Cars');assert.equal(store.data.cars[0].technical.chassis,undefined);
+  assert.equal(store.data.cars[0].technical.pinion,'9');assert.equal(store.data.cars[0].technical.gear,'27');assert.equal(store.data.setups[0].technical.gear,'27');
+  checks.push('live gearing ratios update correctly and tooth counts survive draft reload, car creation and As built setup');
   checks.push('cancel and stale review preserve draft and inventory; confirmed save creates a partial car and its initial setup atomically');
   await js(`page='Parts';partsTab='Build from Scratch';render()`);
   await js(`const target=document.querySelector('.build-hotspot[data-id="frontTyres"]');target.focus();target.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}));`);

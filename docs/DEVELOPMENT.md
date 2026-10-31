@@ -6,6 +6,12 @@ Technical notes, validation results and release history for SlotForge Paddock (f
 
 Working desktop copy, version 0.16.3. The official name is **SlotForge Paddock**.
 
+## Build from Scratch gearing (after the first release)
+
+The build page now calculates crown / axle gear teeth divided by pinion teeth. Counts can come from unambiguous catalogue specifications on loose parts or assembly components, with optional manual overrides. Part names are not parsed for numbers. Counts survive draft saves and complete backups, and are copied into the created car, creation history and optional As built setup. Existing drafts without gearing remain valid. Invalid counts are rejected before saving; neither gear is required for a partial build.
+
+Validated with 216 automated tests and isolated Build from Scratch desktop checks, including live ratio changes, renderer restart, draft reload, car/setup persistence and 960/1440-pixel layouts. This source update is not included in the original v0.16.3 Windows download. Motor-RPM performance calculations remain a proposed extension.
+
 ## Native installer builders (after the first release)
 
 Linux and macOS now have normal and quick build launchers. Linux produces AppImage and Debian packages; macOS produces a universal DMG and ZIP by default, with optional Intel/Apple Silicon-only builds. See [Building installers](BUILDING.md) for prerequisites, commands, checksums and signing details. These additions are on the main branch; the original v0.16.3 release archive remains unchanged. Native installation testing is still outstanding.

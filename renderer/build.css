@@ -4,3 +4,4 @@
 
 
 .build-diagram-labels{fill:var(--ink)}.build-diagram-wire{stroke:var(--muted)}.build-diagram #assembly-guides{stroke:var(--muted)}
+.build-gearing h2{display:flex;align-items:center;gap:10px;margin:0 0 16px}.build-gearing h2 svg{width:18px;height:18px;flex:none}.build-gearing .form-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.build-gearing .gear-ratio{display:grid;gap:6px;margin-top:16px;padding:14px;background:var(--raised);border:1px solid var(--line);border-radius:8px}.build-gearing output{font-size:24px;font-weight:700;color:var(--ink)}.build-gearing small{font-size:11px;line-height:1.5}

@@ -9,6 +9,7 @@ function validateData(d){
   check(object(d),'Invalid build.');
   for(const [k,max] of [['name',200],['maker',200],['scale',200],['notes',20000]])check(text(d[k],max),'Invalid build '+k+'.');
   check(typeof d.saveSetup==='boolean','Invalid setup preference.');
+  if(d.gearing!==undefined){check(object(d.gearing),'Invalid build gearing.');for(const key of ['pinion','gear'])check(d.gearing[key]===''||(text(d.gearing[key],16)&&Model.toothCount(d.gearing[key])), 'Enter a positive whole tooth count for '+(key==='pinion'?'the pinion.':'the crown / axle gear.'));}
   check(Array.isArray(d.usage)&&d.usage.length<=100&&d.usage.every(v=>text(v,160)),'Invalid build usage labels.');
   check(Array.isArray(d.parts)&&d.parts.length<=100&&Array.isArray(d.assemblies)&&d.assemblies.length<=25,'Choose at most 100 part assignments and 25 assemblies.');
   const keys=new Set(),slots=new Set();
@@ -26,6 +27,7 @@ function validateData(d){
 function cleanData(input){
   validateData(input);
   return {name:input.name.trim(),maker:input.maker.trim(),scale:input.scale.trim(),notes:input.notes,usage:[...new Set(input.usage.map(v=>v.trim()).filter(Boolean))],saveSetup:input.saveSetup,
+    gearing:{pinion:input.gearing?.pinion.trim()||'',gear:input.gearing?.gear.trim()||''},
     parts:input.parts.map(r=>Object.fromEntries(['key','partId','quantity','slot','position','name'].map(k=>[k,r[k]]))),
     assemblies:input.assemblies.map(a=>({id:a.id,name:a.name,signature:a.signature}))};
 }
@@ -57,7 +59,8 @@ function plan(db,p){
     check(totals.get(part.id)<=w.available(db,part),part.name+' has insufficient available stock for this build.');
     rows.push({partId:part.id,name:part.name,quantity:selected.quantity,field,position:slot?.label||selected.position||'Additional part'});
   }
-  return {revision:db.revision,data,rows,pieces:rows.reduce((n,r)=>n+r.quantity,0)};
+  const gearing=Model.gearing(data,db);
+  return {revision:db.revision,data,rows,gearing:{pinion:gearing.pinion.value,gear:gearing.gear.value},pieces:rows.reduce((n,r)=>n+r.quantity,0)};
 }
 function mutate(db,action,p,remember){
   check(p.revision===db.revision,'The database changed. Refresh stock and review this build again; your selections are kept.');
@@ -73,6 +76,7 @@ function mutate(db,action,p,remember){
   db.cars.push(car);
   for(const a of d.assemblies)w.installAssembly(db,db.assemblies.find(item=>item.id===a.id),car.id);
   for(const r of preview.rows.filter(r=>!r.assemblyId))w.addInstallation(db,car.id,r.partId,r.quantity,r.field,r.position);
+  for(const key of ['pinion','gear'])if(preview.gearing[key])car.technical[key]=preview.gearing[key];
   const installations=w.active(db).filter(i=>i.carId===car.id).map(i=>({partId:i.partId,name:db.parts.find(p=>p.id===i.partId).name,quantity:i.quantity,field:i.field,position:i.position,...(i.assemblyId?{assemblyId:i.assemblyId,assemblyName:db.assemblies.find(a=>a.id===i.assemblyId).name}:{})}));
   const event=(type,title)=>db.events.unshift({id:randomUUID(),carId:car.id,type,title,date:stamp,notes:'',technical:structuredClone(car.technical),installations:structuredClone(installations)});
   event('created','Built from scratch');

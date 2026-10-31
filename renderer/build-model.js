@@ -26,7 +26,21 @@
     ['ballast','Ballast','ballast',1,['Ballast']],
     ['suspension','Suspension','suspension',1,['Suspension kit','Suspension spring']]
   ].map(([id,label,field,quantity,types])=>({id,label,field,quantity,types}));
-  const blank=()=>({name:'',maker:'',scale:'',notes:'',usage:[],saveSetup:true,parts:[],assemblies:[]});
+  const blank=()=>({name:'',maker:'',scale:'',notes:'',usage:[],saveSetup:true,parts:[],assemblies:[],gearing:{pinion:'',gear:''}});
   const signature=a=>JSON.stringify(a.components.map(c=>[c.partId,c.quantity,c.field,c.position]));
-  const api={slots,blank,signature};if(typeof module==='object'&&module.exports)module.exports=api;else root.BuildModel=api;
+  const toothCount=value=>typeof value==='string'&&/^\d+$/.test(value.trim())&&Number.isSafeInteger(Number(value))&&Number(value)>0?String(Number(value)):'';
+  function partTeeth(part){
+    const specs=(part?.catalogue?.specifications||[]).filter(s=>['teeth','tooth count','number of teeth'].includes(s.name.trim().toLowerCase()));
+    if(!specs.length||specs.some(s=>!toothCount(s.value)||!['','t','tooth','teeth'].includes(s.unit.trim().toLowerCase())))return '';
+    const counts=[...new Set(specs.map(s=>toothCount(s.value)))];return counts.length===1?counts[0]:'';
+  }
+  function gearing(data,db){
+    return Object.fromEntries([['pinion','pinionPart'],['gear','gearPart']].map(([key,field])=>{
+      const ids=data.parts.filter(r=>r.slot===field).map(r=>r.partId);
+      for(const chosen of data.assemblies){const a=db.assemblies.find(a=>a.id===chosen.id&&!a.dismantled);if(a)ids.push(...a.components.filter(c=>c.field===field).map(c=>c.partId));}
+      const part=ids.length===1?db.parts.find(p=>p.id===ids[0]):null,automatic=partTeeth(part),manual=data.gearing?.[key]||'';
+      return [key,{value:manual?toothCount(manual):automatic,automatic,manual:!!manual,partName:part?.name||''}];
+    }));
+  }
+  const api={slots,blank,signature,toothCount,gearing};if(typeof module==='object'&&module.exports)module.exports=api;else root.BuildModel=api;
 })(globalThis);
