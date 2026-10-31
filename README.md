@@ -162,6 +162,17 @@ npm run dist
 
 The current build is written to `dist/v0.16.3/`. Development notes, test commands, recovery information and release history are in [Development & release history](docs/DEVELOPMENT.md).
 
+### Build Linux and macOS installers
+
+Like SlotForge Timing, Paddock includes normal and quick build launchers:
+
+| Run on | Builder | Output |
+| --- | --- | --- |
+| Linux | `bash build-linux.sh` | AppImage and .deb installer |
+| macOS | `bash build-mac.command` | Universal DMG and ZIP for Intel and Apple Silicon |
+
+Use the [current source](https://github.com/theDutchmanJames/SlotForgePaddock/archive/refs/heads/main.zip) with Node.js **22.12 or newer**. These builders were added after the first release. See [Building installers](docs/BUILDING.md) for quick builds, architecture choices, installation and signing details. Native builds still need testing on their respective systems.
+
 ## Project status
 
 Current version: **0.16.3**. The project is under active development. **SlotForge Paddock** is the official name; earlier versions were called SlotForge Database.
@@ -175,6 +186,6 @@ Current version: **0.16.3**. The project is under active development. **SlotForg
 | Live SlotForge Timing / RaceCoordinatorAI synchronisation | Planned |
 | Automatic lap-data exchange | Planned; performance records currently use manual entry |
 | Windows portable build | Built and tested |
-| Native macOS and Linux builds | Build targets exist; native testing remains outstanding |
+| Native macOS and Linux builds | Normal/quick installer builders available; native testing remains outstanding |
 
 Catalogue imports validate structure and help identify duplicates. Manufacturer facts and physical part compatibility still need your review; the app does not scrape websites or download product images automatically.

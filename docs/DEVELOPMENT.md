@@ -6,6 +6,10 @@ Technical notes, validation results and release history for SlotForge Paddock (f
 
 Working desktop copy, version 0.16.3. The official name is **SlotForge Paddock**.
 
+## Native installer builders (after the first release)
+
+Linux and macOS now have normal and quick build launchers. Linux produces AppImage and Debian packages; macOS produces a universal DMG and ZIP by default, with optional Intel/Apple Silicon-only builds. See [Building installers](BUILDING.md) for prerequisites, commands, checksums and signing details. These additions are on the main branch; the original v0.16.3 release archive remains unchanged. Native installation testing is still outstanding.
+
 ## Run on Windows
 
 Close any earlier copy, then open `dist/v0.16.3/SlotForge Paddock 0.16.3.exe` after packaging. No Node.js installation is needed for that executable. A new collection starts empty; existing collections are retained.
