@@ -139,7 +139,7 @@ When you want to go further, add spare parts in **Parts**, save a setup from a c
 
 ### Run on Windows
 
-[Download the latest release](https://github.com/theDutchmanJames/SlotForgePaddock/releases/latest), then open **SlotForge Paddock 0.16.3.exe** from the release assets. It is portable and does not require Node.js. Close an earlier running copy before opening the updated version.
+[Download the latest release](https://github.com/theDutchmanJames/SlotForgePaddock/releases/latest), then open **SlotForge.Paddock.0.16.3.exe** from the release assets. It is portable and does not require Node.js. Close an earlier running copy before opening the updated version.
 
 The Windows executable is unsigned, so Windows may show an unknown-publisher warning. A `SHA256SUMS.txt` file is included with the download for integrity checking. Your collection is stored separately in your Windows user profile; moving the executable does not move your collection. Use the app's backup and export features to transfer your data.
 
