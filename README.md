@@ -123,6 +123,7 @@ The same app works for personal and club collections—there is no separate host
 - **Browse a shared collection.** Connect to another running instance over a local network using its connection code. Shared car information refreshes automatically while connected.
 - **Submit cars for approval.** Prepare an entry at home, then send it to the club when connected. The host reviews incoming submissions before accepting new cars or changes; members do not directly edit the host's records.
 - **Exchange files instead.** Export selected cars to JSON, send the file yourself, and let the recipient import and review it. You don't need to bring your computer to the club.
+- **Export cars for Timing.** Choose the SlotForge Timing format for supported car details, race classes and photographs. Timing imports them as new copies; no host connection is needed. [File-transfer instructions](docs/TIMING-CAR-EXPORT.md).
 - **Keep private records local.** Personal ownership information, private notes, workshop records and document attachments are excluded from car-sharing packages and shared views. Complete backups retain private data.
 
 Local sharing requires the host app to remain running and both computers to be able to communicate. It is intended for a trusted local network, not public internet hosting.
@@ -201,6 +202,7 @@ Current version: **0.17.1**. The project is under active development. **SlotForg
 | Build from Scratch and manufacturer catalogue imports | Available |
 | Local-network browsing and reviewed submissions | Implemented; physical two-computer Wi-Fi testing remains outstanding |
 | SlotForge Timing car imports | Available through supported Timing JSON exports |
+| Car exports for SlotForge Timing | Available in current source: select the Timing format when exporting; imports as new copies |
 | SlotForge Timing integration host API | Available from v0.17.0; Timing client and physical two-computer acceptance still pending |
 | Imported Timing performance sessions | Available from v0.17.0: captured configurations, corrections and withdrawals; manual records remain independent |
 | RaceCoordinatorAI integration | Planned |

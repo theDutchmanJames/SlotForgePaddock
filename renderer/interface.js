@@ -50,7 +50,7 @@ function renderExchangeDesign(){
   if(catalogueReview?.active)return renderCatalogueReview();
   const cards=[
     ['Import cars','download','blue','Open a SlotForge Paddock package or a SlotForge Timing JSON export. Review every car before importing.','Choose a JSON file','import','primary',''],
-    ['Export cars','upload','accent','Share selected cars with a club or another computer. Include additional photos and setup snapshots when needed.','Choose cars','nav','','Cars'],
+    ['Export cars','upload','accent','Choose a Paddock package or a Timing-compatible JSON file. Export one car or a selection, with optional additional photos.','Choose cars','nav','','Cars'],
     ['Back up this database','database','green','Keep a complete copy of cars, stock, jobs, photos, history and settings. Backups also contain your private information.','Create backup','backup','',''],
     ['Restore a backup','history','amber','Replace this database from a saved backup. Review and confirm before replacing it; the previous file is kept as a recovery copy.','Choose backup','restore-backup','danger','']
   ];

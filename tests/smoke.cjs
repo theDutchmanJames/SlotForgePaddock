@@ -70,6 +70,7 @@ module.exports=async(win,store,network)=>{
   reviewChecks.push(...await require('./general-jobs-smoke.cjs')({win,store,network,js,wait,click,fill,submit,qa,dialog}));
   reviewChecks.push(...await require('./showroom-smoke.cjs')({win,store,network,js,wait,click,fill,submit,qa,dialog}));
   reviewChecks.push(...await require('./timing-import-smoke.cjs')({win,store,network,js,wait,click,fill,submit,qa,dialog}));
+  reviewChecks.push(...await require('./timing-export-smoke.cjs')({win,store,network,js,wait,click,fill,submit,qa,dialog}));
   reviewChecks.push(...await require('./icons-smoke.cjs')({win,store,network,js,wait,click,fill,submit,qa,dialog}));
   reviewChecks.push(...await require('./review-hub-smoke.cjs')({win,store,network,js,wait,click,fill,submit,qa,dialog}));
   reviewChecks.push(...await require('./part-folders-smoke.cjs')({win,store,network,js,wait,click,fill,submit,qa,dialog}));

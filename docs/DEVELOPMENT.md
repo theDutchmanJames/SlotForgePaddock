@@ -1,5 +1,11 @@
 # Development & release history
 
+## Timing-compatible car exports — after 0.17.1
+
+Single-car and selected-car exports now offer Paddock package or SlotForge Timing format. Timing exports include its supported identity/technical fields, class definitions, main pictures and optional extra pictures. Only rear tyres populate Timing's tyre field. Saved setups, private fields, results and live-link metadata are excluded. Native Paddock exports remain the default, and club submission packages are unchanged. See [export instructions and field mapping](TIMING-CAR-EXPORT.md).
+
+All 260 automated tests passed, including selection bounds, privacy, stable export identities, class deduplication, optional photos and supported-field conversion. All 157 isolated desktop workflow checks passed with no renderer errors, including both export formats and cancelled saves. The export dialog was also visually inspected. A separate check against Timing 1.99.4's actual importer verified class remapping, multi-car import, repeat-as-copy semantics and persistence using an isolated test database.
+
 ## English catalogue guidance — after 0.17.1
 
 The AI import kit now explicitly requires English descriptions while preserving brands, model names, SKUs, source URLs and stated measurements. It includes exhaustive valid classification combinations, function-based decision guidance, multilingual vocabulary hints, ambiguous-item examples, a final self-check and instructions for repairing an existing catalogue without inventing facts or refreshing unverified source dates.

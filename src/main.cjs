@@ -6,6 +6,7 @@ const {Store,makePackage,migrate}=require('./store.cjs');
 const {Network}=require('./network.cjs');
 const {readJSON,exportJSON,exportBytes}=require('./files.cjs');
 const {timingPackage}=require('./timing-import.cjs');
+const {timingExport}=require('./timing-export.cjs');
 const catalogueImport=require('./catalogue-import.cjs');
 const {TYPES,readDocument,validateDocument}=require('./documents.cjs');
 const temporaryDocuments=[];
@@ -36,9 +37,9 @@ async function files(action,p={}){
     const file=r.filePaths[0];if(fs.statSync(file).size>25*1024*1024)throw new Error('Choose an image smaller than 25 MB.');
     const input=nativeImage.createFromPath(file);if(input.isEmpty())throw new Error('This image could not be opened.');const {width,height}=input.getSize();const scaled=width>1600||height>1600?input.resize(width>=height?{width:1600}:{height:1600}):input;return {name:path.basename(file),data:'data:image/jpeg;base64,'+scaled.toJPEG(88).toString('base64')};
   }
-  if(action==='export'||action==='backup'){
-    const db=store.snapshot();const content=action==='backup'?{format:'slotforge-backup',version:1,created:new Date().toISOString(),database:db}:makePackage(db,p.ids||[],p.options||{});
-    const r=await dialog.showSaveDialog(win,{title:action==='backup'?'Save complete backup':'Export selected cars',defaultPath:action==='backup'?'SlotForge-backup.json':'SlotForge-cars.json',filters:[{name:'SlotForge JSON',extensions:['json']}]});if(r.canceled)return null;
+  if(action==='export'||action==='export-timing'||action==='backup'){
+    const db=store.snapshot();const content=action==='backup'?{format:'slotforge-backup',version:1,created:new Date().toISOString(),database:db}:action==='export-timing'?timingExport(db,p.ids||[],p.options||{}):makePackage(db,p.ids||[],p.options||{});
+    const r=await dialog.showSaveDialog(win,{title:action==='backup'?'Save complete backup':action==='export-timing'?'Export cars for SlotForge Timing':'Export selected cars',defaultPath:action==='backup'?'SlotForge-backup.json':action==='export-timing'?'slotforge-timing-export.json':'SlotForge-cars.json',filters:[{name:'SlotForge JSON',extensions:['json']}]});if(r.canceled)return null;
     return exportJSON(r.filePath,content,[store.file,store.file+'.previous',store.file+'.tmp']);
   }
   if(action==='import'){
