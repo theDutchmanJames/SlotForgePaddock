@@ -1,0 +1,30 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const {initial}=require('../src/store.cjs'),catalogue=require('../renderer/catalogue.js');
+module.exports=async({win,store,js,wait,click,fill,submit,qa})=>{
+  const checks=[];store.data=initial();store.persist(store.data);
+  const groups=Object.keys(catalogue.parts),ids=[];
+  for(let i=0;i<100;i++){const category=groups[Math.floor(i/10)];ids.push(store.mutate('part.save',{data:{name:`Inventory part ${String(i+1).padStart(3,'0')}`,category,partType:catalogue.parts[category][i%catalogue.parts[category].length],quantity:2,tracking:'quantity',reference:`REF-${i+1}`}}).result);}
+  const car=store.mutate('car.save',{data:{name:'Stock count test'}}).result;store.mutate('part.install',{carId:car,partId:ids[0],quantity:1,field:'body'});
+  await js(`(async()=>{db=(await api('read')).data;source='local';page='Parts';partsTab='Stock';partCategory='';partTypeFilter='';partQuery='';partId=null;render()})()`);
+  assert.equal(await js('document.querySelectorAll(".part-group-card").length'),11);assert.equal(await js('document.querySelectorAll(".part-select-row").length'),0);
+  assert.match(await js(`document.querySelector('.part-group-card').innerText`),/10 part records/);assert.match(await js(`document.querySelector('.part-group-card').innerText`),/19 available · 1 fitted/);
+  // Use native, focusable buttons; OS keyboard injection cannot target the hidden QA window.
+  await js(`document.querySelector('.part-group-card').focus()`);assert.equal(await js('document.activeElement.tagName'),'BUTTON');assert.equal(await js('document.activeElement.tabIndex'),0);await click('.part-group-card');await wait(`partCategory==='Body & interior'`);
+  assert.equal(await js('document.querySelectorAll(".part-select-row").length'),10);await click('.part-select-row');assert.equal(await js('partId'),ids[0]);
+  await click('[data-action="part-groups"]');assert.equal(await js('partId'),null);assert.equal(await js('document.querySelectorAll(".part-select-row").length'),0);
+  checks.push('100 stock records open as 11 keyboard-accessible category folders with accurate record and stock counts');
+  await click('[data-action="part-group"][data-id="Other & custom parts"]');assert.match(await js('document.querySelector("#main").innerText'),/This group is empty/);await click('[data-action="add-part"]');assert.equal(await js('document.querySelector("[name=category]").value'),'Other & custom parts');await fill({name:'Custom test part',quantity:'3'});await submit();const added=store.data.parts.at(-1).id;assert.equal(await js('partId'),added);assert.equal(await js('document.querySelectorAll(".part-select-row").length'),1);
+  await click('[data-action="edit-part"]');await fill({category:'Gears & transmission'});await js(`document.querySelector('[name=category]').dispatchEvent(new Event('change',{bubbles:true}))`);await fill({partType:'Pinion'});await submit();assert.equal(await js('partCategory'),'Gears & transmission');assert.equal(await js('partId'),added);assert.equal(await js('document.querySelectorAll(".part-select-row").length'),11);
+  await click('[data-action="delete-part"]');await submit();assert.equal(await js('document.querySelectorAll(".part-select-row").length'),10);assert.equal(await js('partId'),null);
+  checks.push('empty groups can create stock; category edits move the selected record and deletion updates the group');
+  await js(`document.querySelector('#part-search').value='REF-91';document.querySelector('#part-search').dispatchEvent(new Event('input',{bubbles:true}))`);assert.equal(await js('partCategory'),'');assert.equal(await js('document.querySelectorAll(".part-select-row").length'),1);await click('.part-select-row');assert.equal(await js('partId'),ids[90]);
+  await js(`document.querySelector('#part-search').value='No such item';document.querySelector('#part-search').dispatchEvent(new Event('input',{bubbles:true}))`);assert.equal(await js('partId'),null);assert.equal(await js('!!document.querySelector("[data-action=delete-part]")'),false);
+  await js(`document.querySelector('#part-search').value='';document.querySelector('#part-search').dispatchEvent(new Event('input',{bubbles:true}))`);assert.equal(await js('document.querySelectorAll(".part-group-card").length'),11);
+  checks.push('global search finds stock in other groups, hides stale details and returns to folders when cleared');
+  await click('[data-action="part-group"][data-id="Motors & motor parts"]');await js(`document.querySelector('#part-type-filter').value='Motor';document.querySelector('#part-type-filter').dispatchEvent(new Event('change',{bubbles:true}))`);assert.equal(await js('document.querySelectorAll(".part-select-row").length'),1);await click('[data-action="part-groups"]');
+  for(const [width,theme]of [[1440,'dark'],[960,'light']]){win.setSize(width,980);await js(`db.settings.theme='${theme}';render();document.querySelector('#toast').hidden=true`);await js('new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))');await new Promise(r=>setTimeout(r,180));assert.equal(await js('document.documentElement.scrollWidth<=innerWidth'),true);fs.writeFileSync(path.join(qa,`part-folders-${width}.png`),(await win.webContents.capturePage({}, {stayHidden:true,stayAwake:true})).toPNG());}
+  checks.push('group-specific type filters and folder layouts work at 1440 px and 960 px');
+  await win.webContents.reload();await wait('typeof db!=="undefined"&&!!db');await click('[data-action="nav"][data-id="Parts"]');assert.equal(await js('document.querySelectorAll(".part-group-card").length'),11);assert.equal(store.data.parts.length,100);
+  checks.push('reopening Parts starts at folders and preserves existing inventory');
+  return checks;
+};

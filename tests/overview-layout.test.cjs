@@ -1,0 +1,15 @@
+const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path');
+const {Store,migrate,makePackage}=require('../src/store.cjs'),Layout=require('../renderer/overview-layout.js'),Theme=require('../renderer/theme.js');
+const act=(s,a,p={})=>s.mutate(a,{revision:s.data.revision,...p}).result;
+test('overview layout persists independently of car data and survives other preferences and backups',t=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'sf-overview-'));t.after(()=>fs.rmSync(dir,{recursive:true,force:true}));const s=new Store(path.join(dir,'db.json')),id=act(s,'car.save',{data:{name:'Club car',technical:{pinion:'9',gear:'27'}}});act(s,'custom.add',{label:'Pit box slot',type:'number'});const custom='custom_'+s.data.customFields[0].id,before=s.snapshot(),layout={details:['maker',custom,'usage'],configuration:['gearRatio','tech_motor','gearing']};
+ act(s,'settings.save',{overviewLayout:layout});assert.deepEqual(s.data.cars,before.cars);assert.deepEqual(s.data.events,before.events);assert.deepEqual(new Store(s.file).data.settings.overviewLayout,layout);
+ act(s,'settings.save',{theme:'custom',customColors:Theme.DEFAULT,banner:{line1:'Club',line2:'My collection',line3:'Welcome'}});assert.deepEqual(s.data.settings.overviewLayout,layout);const restored=new Store();restored.restore(s.snapshot(),0);assert.deepEqual(restored.data.settings.overviewLayout,layout);assert.equal(JSON.stringify(makePackage(s.data,[id])).includes('overviewLayout'),false);
+});
+test('invalid or stale overview changes and write failures roll back atomically',()=>{
+ const s=new Store();const valid={details:['owner'],configuration:['gearing']};for(const layout of [null,[],{}, {...valid,extra:[]},{...valid,details:['owner','owner']},{...valid,details:['__proto__']},{...valid,details:['custom_missing']},{...valid,configuration:['owner']},{...valid,details:['tech_motor']},{...valid,configuration:['unknown']},{...valid,details:'owner'}]){const before=s.snapshot();assert.throws(()=>act(s,'settings.save',{overviewLayout:layout}));assert.deepEqual(s.snapshot(),before);const bad=s.snapshot();bad.settings.overviewLayout=layout;assert.throws(()=>migrate(bad));}
+ assert.throws(()=>s.mutate('settings.save',{revision:-1,overviewLayout:valid}),/changed/);const before=s.snapshot();s.persist=()=>{throw Error('Disk full');};assert.throws(()=>act(s,'settings.save',{overviewLayout:valid}),/Disk full/);assert.deepEqual(s.snapshot(),before);
+});
+test('old collections use independent defaults; empty panels, arrays and zero-valued custom details are supported',()=>{
+ const s=new Store(),a=Layout.read(s.data.settings);a.details.pop();assert.equal(Layout.read(s.data.settings).details.length,4);act(s,'settings.save',{overviewLayout:{details:[],configuration:[]}});assert.deepEqual(Layout.read(s.data.settings),{details:[],configuration:[]});assert.equal(Layout.value({custom:{slot:0}},'custom_slot'),0);assert.deepEqual(Layout.value({usage:['Club racing']},'usage'),['Club racing']);assert.equal(Layout.value({},'tech_motor'),'');
+});

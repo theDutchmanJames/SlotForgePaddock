@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" color="#243442"><title>Decal sheet — flat monochrome slot car part</title><g fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M53 33H178L207 62V219H53Z M177 34V63H206"/>
+  <path d="M73 89H184M73 102H146" stroke-width="6"/>
+  <g fill="currentColor" stroke="none">
+   <path d="M74 122H89V137H74Z M104 122H119V137H104Z M89 137H104V152H89Z M119 137H134V152H119Z M74 152H89V167H74Z M104 152H119V167H104Z"/>
+   <path d="M153 124H183V154H153Z"/>
+  </g>
+  <circle cx="88" cy="190" r="12" stroke-width="5"/>
+  <path d="M116 185H183M116 196H164" stroke-width="5"/>
+ </g></svg>

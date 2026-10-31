@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" color="#243442"><title>Motor brushes — flat monochrome slot car part</title><g fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M73 111V87C73 64 43 81 43 58C43 39 83 39 83 57M179 111V87C179 64 209 81 209 58C209 39 169 39 169 57" stroke-width="6"/>
+  <path fill="currentColor" stroke="none" fill-rule="evenodd" d="M48 107H98V207Q73 196 48 207Z M58 121H64V181H58Z M154 107H204V207Q179 196 154 207Z M164 121H170V181H164Z"/>
+ </g></svg>

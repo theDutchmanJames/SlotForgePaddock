@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" color="#243442"><title>Motor endbell — flat monochrome slot car part</title><g fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M63 64H193V192H63Z" stroke-width="12"/>
+  <path d="M91 62V47H165V62M91 194V209H165V194"/>
+  <path fill="currentColor" stroke="none" fill-rule="evenodd" d="M97 128a31 31 0 1 0 62 0a31 31 0 1 0 -62 0M114 128a14 14 0 1 0 28 0a14 14 0 1 0 -28 0"/>
+  <path fill="currentColor" stroke="none" d="M41 106H84V150H41Z M172 106H215V150H172Z"/>
+  <path d="M84 128H97M159 128H172" stroke-width="8"/>
+  <g fill="currentColor" stroke="none"><circle cx="83" cy="83" r="6"/><circle cx="173" cy="83" r="6"/><circle cx="83" cy="173" r="6"/><circle cx="173" cy="173" r="6"/></g>
+ </g></svg>

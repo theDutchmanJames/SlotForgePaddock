@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" color="#243442"><title>Axle spacers — monochrome slot car part</title><g fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+    <path fill="currentColor" stroke="none" fill-rule="evenodd" d="M47 95a38 38 0 1 0 76 0a38 38 0 1 0 -76 0M65 95a20 20 0 1 0 40 0a20 20 0 1 0 -40 0"/><path fill="currentColor" stroke="none" fill-rule="evenodd" d="M139 95a38 38 0 1 0 76 0a38 38 0 1 0 -76 0M157 95a20 20 0 1 0 40 0a20 20 0 1 0 -40 0"/>
+    <path d="M65 157V206M86 157V206M107 157V206M147 157V206M168 157V206M189 157V206" stroke-width="10"/>
+    <path d="M62 164H110M62 199H110M144 164H192M144 199H192" stroke-width="7"/>
+  </g></svg>

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" color="#243442"><title>Ballast weights — monochrome slot car part</title><g fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+    <path fill="currentColor" stroke="none" fill-rule="evenodd" d="M46 63H210V111H46Z M78 72H86V102H78Z M170 72H178V102H170Z"/>
+    <path d="M47 122H209" stroke-width="8"/>
+    <path fill="currentColor" stroke="none" fill-rule="evenodd" d="M49 177a34 34 0 1 0 68 0a34 34 0 1 0 -68 0M76 177a7 7 0 1 0 14 0a7 7 0 1 0 -14 0"/><path fill="currentColor" stroke="none" fill-rule="evenodd" d="M137 177a34 34 0 1 0 68 0a34 34 0 1 0 -68 0M164 177a7 7 0 1 0 14 0a7 7 0 1 0 -14 0"/>
+  </g></svg>

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" color="#243442"><title>Racing number panels — flat monochrome slot car part</title><g fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+  <circle cx="88" cy="89" r="48" stroke-width="9"/>
+  <path d="M69 70H108L85 110" stroke-width="10"/>
+  <rect x="119" y="143" width="102" height="70" rx="8"/>
+  <path d="M137 165L148 157V197M168 167Q168 156 180 157Q195 158 190 169L170 195H194" stroke-width="7"/>
+ </g></svg>

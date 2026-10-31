@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.qa/
+*.log
+Start Test Collection.cmd
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+.DS_Store
+Thumbs.db

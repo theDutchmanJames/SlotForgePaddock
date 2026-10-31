@@ -1,0 +1,20 @@
+const {Store}=require('../../src/store.cjs');
+const {Network}=require('../../src/network.cjs');
+const store=new Store(),network=new Network(store);let dropAck=false;
+const request=network.request.bind(network);network.request=async(...args)=>{const result=await request(...args);if(dropAck&&args[2]==='/v1/submissions'){dropAck=false;throw Error('Simulated lost acknowledgement');}return result;};
+process.on('message',async message=>{try{let value;
+  switch(message.action){
+    case 'start':value=await network.start();break;
+    case 'discover':value=await network.discover();break;
+    case 'add':value=store.mutate('car.save',{data:{name:message.name,privateNotes:'Private test data'}}).result;break;
+    case 'connect':value=await network.connect(message.address,message.code);break;
+    case 'poll':network.nextPoll=0;await network.poll();value={status:network.status(),data:network.cached};break;
+    case 'submit':dropAck=!!message.dropAck;value=await network.submit([message.carId]);break;
+    case 'retry':value=await network.retrySubmission();break;
+    case 'controls':value=network.controls(message.options);break;
+    case 'inspect':value={database:store.snapshot(),status:network.status()};break;
+    case 'stop':await network.stop();network.disconnect();value=true;break;
+    default:throw Error('Unknown test operation');
+  }process.send({id:message.id,value});
+}catch(e){process.send({id:message.id,error:e.message});}});
+process.on('disconnect',()=>{network.close();process.exit(0);});

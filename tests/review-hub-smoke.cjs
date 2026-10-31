@@ -1,0 +1,34 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const {Store,initial,makePackage}=require('../src/store.cjs');
+module.exports=async({win,store,network,js,wait,click,fill,submit,qa})=>{
+  const checks=[];store.data=initial();store.persist(store.data);
+  const act=(a,p={})=>store.mutate(a,{revision:store.data.revision,...p}).result;
+  const carId=act('car.save',{data:{name:'Audi R8 GT2'}}),second=act('car.save',{data:{name:'Aston Martin Vantage'}});
+  const jobId=act('job.start',{kind:'general',carId,name:'Prepare for club race',notes:'Clean motor and check braids.'});act('job.note',{id:jobId,note:'Motor cleaned.'});
+  act('work.add',{carId,type:'maintenance',title:'Tyre inspection',task:'Tyres',nextDue:'2099-01-01'});
+  await js(`(async()=>{db=(await api('read')).data;switchCollection('local');page='Overview';render()})()`);
+  assert.equal(await js(`!!document.querySelector('.review-alert-dot')`),false);
+  await click('#review-button');assert.equal(await js('page'),'Review');assert.equal(await js('reviewTab'),'Workshop jobs');
+  await click(`[data-action="edit-job"][data-id="${jobId}"]`);await fill({name:'Discarded draft'});await click('[data-action="close-modal"]');assert.equal(store.data.jobs[0].name,'Prepare for club race');
+  await click(`[data-action="edit-job"][data-id="${jobId}"]`);await fill({name:'Race night preparation',notes:'Check rear tyres and guide.'});await submit();assert.equal(store.data.jobs[0].name,'Race night preparation');assert.equal(store.data.jobs[0].log[0].note,'Motor cleaned.');assert.equal(await js('page'),'Review');
+  await click(`[data-action="open-job"][data-id="${jobId}"]`);assert.equal(await js(`document.querySelector('.page-head h1').textContent`),'Race night preparation');assert.equal(await js(`document.querySelector('#main').innerText.includes('Check rear tyres and guide.')`),true);
+  await click('[data-action="edit-job"]');await fill({name:'Stale edit'});act('settings.save',{name:'Club workshop'});await js(`document.querySelector('#modal-form').requestSubmit()`);await wait(`!document.querySelector('#form-error').hidden`);assert.equal(store.data.jobs[0].name,'Race night preparation');await click('[data-action="close-modal"]');
+  checks.push('Review job cards edit and resume the original job; cancel and stale edits preserve progress');
+  const today=await js('slotforgeDomain.today()');act('work.add',{carId:second,type:'maintenance',title:'Braid service',task:'Braids',nextDue:today});
+  await js(`(async()=>{acceptSnapshot((await api('read')).data);openReview('Maintenance')})()`);assert.equal(await js(`!!document.querySelector('.review-alert-dot')`),true);assert.equal(await js(`document.querySelectorAll('.review-maintenance-card.today').length`),1);assert.equal(await js(`document.querySelectorAll('.review-maintenance-card.upcoming').length`),1);
+  await click('[data-action="maintenance-job"]');assert.equal(await js(`document.querySelector('[name=carId]').value`),second);assert.equal(await js(`document.querySelector('[name=name]').value`),'Braids');await submit();assert.equal(store.data.jobs[0].carId,second);
+  act('work.add',{carId:second,type:'maintenance',title:'Braids serviced',task:'Braids',performedDate:today,nextDue:''});await js(`(async()=>{acceptSnapshot((await api('read')).data);openReview('Maintenance')})()`);assert.equal(await js(`!!document.querySelector('.review-alert-dot')`),false);
+  checks.push('Review distinguishes due and upcoming maintenance, prefills jobs and clears resolved reminders');
+  const sender=new Store();sender.mutate('car.save',{data:{name:'Club member Porsche',technical:{motor:'21.5k'}}});act('submission.add',{package:makePackage(sender.data,[sender.data.cars[0].id])});network.onChange();await wait(`db.revision===${store.data.revision}`);await click('[data-action="review-tab"][data-id="Incoming cars"]');
+  await js(`document.querySelector('#review-note').value='Keep this note';document.querySelector('[data-review-field="technical"]').checked=false;document.querySelector('#review-note').focus()`);
+  const secondIncoming=sender.mutate('car.save',{data:{name:'Second member car'}}).result;act('submission.add',{package:makePackage(sender.data,[secondIncoming])});network.onChange();await wait(`db.revision===${store.data.revision}`);
+  assert.equal(await js(`document.querySelector('#review-note').value`),'Keep this note');assert.equal(await js(`document.querySelector('[data-review-field="technical"]').checked`),false);assert.equal(await js(`document.activeElement.id`),'review-note');assert.match(await js(`document.querySelector('#review-button').getAttribute('aria-label')`),/2 incoming cars/);
+  checks.push('Incoming network submissions light the Review indicator without disturbing an approval in progress');
+  await click('[data-action="refresh-inbox"]');await click('[data-action="nav"][data-id="Connections"]');assert.equal(await js(`!!document.querySelector('[data-action="connection-tab"]')`),false);
+  await js(`remote=structuredClone(db);source='remote';page='Cars';render()`);await click('#review-button');assert.equal(await js('source'),'local');assert.equal(await js('page'),'Review');
+  checks.push('Connections contains connection controls; header Review switches a shared view back to the host database');
+  for(const [width,tone]of [[1440,'dark'],[960,'light']]){win.setSize(width,980);await js(`db.settings.theme='${tone}';openReview('Maintenance')`);await js('new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))');await new Promise(r=>setTimeout(r,180));assert.equal(await js('document.documentElement.scrollWidth<=innerWidth'),true);fs.writeFileSync(path.join(qa,`review-maintenance-${width}.png`),(await win.webContents.capturePage({}, {stayHidden:true,stayAwake:true})).toPNG());await click('[data-action="review-tab"][data-id="Workshop jobs"]');await js('new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))');await new Promise(r=>setTimeout(r,180));fs.writeFileSync(path.join(qa,`review-jobs-${width}.png`),(await win.webContents.capturePage({}, {stayHidden:true,stayAwake:true})).toPNG());}
+  await win.webContents.reload();await wait('typeof db!=="undefined"&&!!db');assert.equal(store.data.jobs.find(j=>j.id===jobId).name,'Race night preparation');await click('#review-button');assert.equal(await js(`!!document.querySelector('.review-alert-dot')`),true);
+  checks.push('Review fits desktop and narrow windows; edited jobs and pending submissions survive reopening');
+  return checks;
+};

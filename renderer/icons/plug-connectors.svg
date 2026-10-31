@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" color="#243442"><title>Plug connectors — flat monochrome slot car part</title><g fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M22 105H53M22 149H53M207 105H236M207 149H236" stroke-width="7"/>
+  <path fill="currentColor" stroke="none" fill-rule="evenodd" d="M49 85H103V169H49Z M59 99H67V155H59Z M153 85H207V169H153Z M167 101H185V115H167Z M167 139H185V153H167Z"/>
+  <path d="M104 107H129M104 147H129" stroke-width="7"/>
+  <path d="M72 83V72H95V83M161 83V72H184V83" stroke-width="6"/>
+ </g></svg>

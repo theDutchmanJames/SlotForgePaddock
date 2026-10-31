@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" color="#243442"><title>Brushless motor — flat monochrome slot car part</title><g fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M179 99C218 99 209 55 232 55M186 128H230M179 157C218 157 209 201 232 201" stroke-width="6"/>
+  <path fill="currentColor" stroke="none" fill-rule="evenodd" d="M27 128a79 79 0 1 0 158 0a79 79 0 1 0 -158 0M40 128a66 66 0 1 0 132 0a66 66 0 1 0 -132 0"/><path fill="currentColor" stroke="none" fill-rule="evenodd" d="M80 128a26 26 0 1 0 52 0a26 26 0 1 0 -52 0M94 128a12 12 0 1 0 24 0a12 12 0 1 0 -24 0"/>
+  <path d="M98 71H114V94H98Z" fill="currentColor" stroke="none" transform="rotate(0 106 128)"/><path d="M98 71H114V94H98Z" fill="currentColor" stroke="none" transform="rotate(60 106 128)"/><path d="M98 71H114V94H98Z" fill="currentColor" stroke="none" transform="rotate(120 106 128)"/><path d="M98 71H114V94H98Z" fill="currentColor" stroke="none" transform="rotate(180 106 128)"/><path d="M98 71H114V94H98Z" fill="currentColor" stroke="none" transform="rotate(240 106 128)"/><path d="M98 71H114V94H98Z" fill="currentColor" stroke="none" transform="rotate(300 106 128)"/>
+  <path d="M40 83L28 69M40 173L28 187" stroke-width="12"/>
+ </g></svg>

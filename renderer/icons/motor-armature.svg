@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" color="#243442"><title>Motor armature — flat monochrome slot car part</title><g fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+  <g transform="rotate(-25 128 128)">
+   <path d="M28 128H225" stroke-width="10"/>
+   <path d="M65 68H148V188H65Z" stroke-width="8"/>
+   <rect x="57" y="86" width="99" height="84" rx="23" stroke-width="10"/>
+   <path d="M81 97V159M97 97V159M113 97V159M129 97V159" stroke-width="5"/>
+   <path fill="currentColor" stroke="none" fill-rule="evenodd" d="M176 99H206V157H176Z M180 116H202V122H180Z M180 135H202V141H180Z"/>
+  </g>
+ </g></svg>

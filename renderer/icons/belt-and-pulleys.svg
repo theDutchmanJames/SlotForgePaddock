@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" color="#243442"><title>Belt and pulleys — monochrome slot car part</title><g fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M76 73H180A55 55 0 0 1 180 183H76A55 55 0 0 1 76 73Z" stroke-width="10"/>
+    <path fill="currentColor" stroke="none" fill-rule="evenodd" d="M40 128a36 36 0 1 0 72 0a36 36 0 1 0 -72 0M52 128a24 24 0 1 0 48 0a24 24 0 1 0 -48 0"/><path fill="currentColor" stroke="none" fill-rule="evenodd" d="M144 128a36 36 0 1 0 72 0a36 36 0 1 0 -72 0M156 128a24 24 0 1 0 48 0a24 24 0 1 0 -48 0"/>
+    <path fill="currentColor" stroke="none" fill-rule="evenodd" d="M65 128a11 11 0 1 0 22 0a11 11 0 1 0 -22 0M71 128a5 5 0 1 0 10 0a5 5 0 1 0 -10 0"/><path fill="currentColor" stroke="none" fill-rule="evenodd" d="M169 128a11 11 0 1 0 22 0a11 11 0 1 0 -22 0M175 128a5 5 0 1 0 10 0a5 5 0 1 0 -10 0"/>
+    <path d="M52 128H65M87 128H100M156 128H169M191 128H204" stroke-width="8"/>
+  </g></svg>

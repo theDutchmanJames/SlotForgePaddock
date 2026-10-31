@@ -1,0 +1,119 @@
+let buildState=null,buildContext='',buildDraftId=null,buildDirty=false,buildSlot='motor',buildZoom=1,buildSearch='',buildAll=false;
+// Bounds limit each contour filter's drawing surface; they are never visible or clickable.
+const buildOutlineBounds={
+  guideScrew:[[749,6,102,88]],guide:[[747,94,106,133]],braids:[[503,102,244,88],[849,102,56,87]],
+  frontTyres:[[150,184,128,204],[1323,227,117,166]],frontWheels:[[309,196,117,190],[1185,242,91,140]],frontBearings:[[445,218,105,130],[1051,273,97,76]],frontAxle:[[550,244,498,99]],
+  chassis:[[626,389,348,697]],fasteners:[[274,431,168,152]],pod:[[228,583,251,379]],wiring:[[1137,414,205,222]],motor:[[1164,639,326,217]],pinionPart:[[1179,872,140,107]],
+  rearTyres:[[142,1058,147,240],[1299,1058,155,194]],rearWheels:[[302,1080,133,201],[1178,1080,106,150]],rearBearings:[[444,1109,109,138],[1052,1109,95,84]],
+  rearAxle:[[549,1126,254,119],[883,1125,166,50]],gearPart:[[802,1080,143,191]]
+};
+function ensureBuild(){if(!buildState||buildContext!==db.id){buildState=BuildModel.blank();buildContext=db.id;buildDraftId=null;buildDirty=false;buildSlot='motor';buildSearch='';buildAll=false;}}
+function buildSlotInfo(){return BuildModel.slots.find(s=>s.id===buildSlot);}
+function buildAssigned(slot){const meta=BuildModel.slots.find(s=>s.id===slot);return buildState.parts.find(r=>r.slot===slot)||buildState.assemblies.find(selected=>db.assemblies.find(a=>a.id===selected.id&&!a.dismantled)?.components.some(c=>meta?.field&&c.field===meta.field));}
+// Reuse every original component and its inherited SVG styles, leaving the source file intact.
+// Child indices split combined axle / motor drawings into their selectable inventory positions.
+const buildShapeSources=[
+  ['chassis','chassis',null,12],
+  ['frontTyres','front-wheel-assembly',[0,7,8,9],3],['frontWheels','front-wheel-assembly',[1,6],4],['frontBearings','front-wheel-assembly',[2,5],5],['frontAxle','front-wheel-assembly',[3,4],6],
+  ['rearTyres','rear-wheel-assembly',[0,8,9,10],13],['rearWheels','rear-wheel-assembly',[1,7],14],['rearBearings','rear-wheel-assembly',[2,6],15],['rearAxle','rear-wheel-assembly',[3,4],16],['gearPart','rear-wheel-assembly',[5],17],
+  ['guideScrew','guide-and-braids',[0,1],0],['guide','guide-and-braids',[2,3],1],['braids','guide-and-braids',[4],2],
+  ['fasteners','mounting-screws',null,7],['pod','motor-pod',null,8],['wiring','motor-and-leads',[0,1,2,3],9],['motor','motor-and-leads',[4,5,6,7,8,9,10],10],['pinionPart','motor-pinion',null,11]
+];
+function buildDiagram(){
+  const template=document.createElement('template');template.innerHTML=`<svg>${BuildDiagramArt}</svg>`;
+  const source=template.content.firstElementChild,labels=source.querySelector('.build-diagram-labels');
+  const shapes=buildShapeSources.map(([slot,sourceId,indices,labelIndex])=>{
+    const original=source.querySelector('#'+sourceId),art=original.cloneNode(false);
+    art.removeAttribute('id');art.classList.add('build-part-art');art.setAttribute('filter',`url(#build-outline-${slot})`);
+    for(const index of indices||[...original.children].map((_,i)=>i))art.append(original.children[index].cloneNode(true));
+    const label=labels.cloneNode(false);label.append(labels.children[labelIndex].cloneNode(true));
+    const meta=BuildModel.slots.find(s=>s.id===slot),assigned=buildAssigned(slot),areas=buildOutlineBounds[slot];
+    const x=Math.min(...areas.map(a=>a[0]))-24,y=Math.min(...areas.map(a=>a[1]))-24;
+    const width=Math.max(...areas.map(a=>a[0]+a[2]))-x+24,height=Math.max(...areas.map(a=>a[1]+a[3]))-y+24;
+    if(assigned){const tick=document.createElementNS('http://www.w3.org/2000/svg','tspan');tick.setAttribute('class','build-assigned-tick');tick.textContent=' ✓';label.firstElementChild.append(tick);}
+    return `<g class="build-hotspot ${assigned?'assigned':''} ${slot===buildSlot?'selected':''}" tabindex="0" role="button" data-action="build-slot" data-id="${slot}" aria-label="${meta.label}${assigned?', assigned':''}" aria-pressed="${slot===buildSlot}"><title>${meta.label}${assigned?' · assigned':''}</title><defs><filter id="build-outline-${slot}" filterUnits="userSpaceOnUse" x="${x}" y="${y}" width="${width}" height="${height}" color-interpolation-filters="sRGB"><feMorphology in="SourceAlpha" operator="dilate" radius="5" result="expanded"/><feComposite in="expanded" in2="SourceAlpha" operator="out" result="edge"/><feFlood class="build-outline-colour" result="colour"/><feComposite in="colour" in2="edge" operator="in" result="outline"/><feMerge><feMergeNode in="outline"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>${art.outerHTML}${label.outerHTML}</g>`;
+  }).join('');
+  return `<div class="build-diagram-scroll"><svg class="build-diagram zoom-${buildZoom}" viewBox="0 0 1600 1360" role="group" aria-label="Exploded chassis. Choose a part position.">${source.querySelector('#assembly-guides').outerHTML}${shapes}</svg></div>`;
+}
+function buildQuantity(partId,exceptKey){return buildState.parts.filter(r=>r.partId===partId&&r.key!==exceptKey).reduce((n,r)=>n+r.quantity,0);}
+function buildPickerRows(){
+  const slot=buildSlotInfo(),existing=buildState.parts.find(r=>r.slot&&r.slot===buildSlot);
+  const parts=db.parts.filter(p=>(buildAll||!slot||slot.types.includes(p.partType))&&[p.name,p.reference,p.maker,p.location,p.partType].join(' ').toLowerCase().includes(buildSearch.toLowerCase()));
+  return parts.length?parts.map(p=>{const remaining=available(p)-buildQuantity(p.id,existing?.key),reserved=liveAssemblies().some(a=>a.components.some(c=>c.partId===p.id));return `<button type="button" class="build-stock-item" data-action="build-pick" data-id="${p.id}" ${remaining<=0||reserved?'disabled':''}>${itemVisual(p)}<span><strong>${esc(p.name)}</strong><small>${esc([p.reference,p.location].filter(Boolean).join(' · '))}</small><small>${reserved?'In an assembly':remaining+' available for this build'}</small></span>${icon('plus')}</button>`;}).join(''):`<p class="muted">${buildAll?'No matching stock. Add parts in Stock, then return to this build.':'No suggested parts. Choose “Show all parts” to use another type.'}</p>`;
+}
+function buildPicker(){
+  const slot=buildSlotInfo(),assigned=slot&&buildAssigned(slot.id),row=buildState.parts.find(r=>r.slot&&r.slot===buildSlot),assembly=assigned?.signature&&db.assemblies.find(a=>a.id===assigned.id);
+  return `<section class="panel build-picker"><div class="panel-heading"><h2>${icon('box')}${esc(slot?.label||'Additional part')}</h2></div><div class="panel-content"><p class="muted tiny">${slot?.quantity===2?'This position covers both sides. Quantity starts at two when stock allows; one is also fine.':'Choose an inventory item to assign here.'}</p>${assembly?`<div class="note info">Provided by <strong>${esc(assembly.name)}</strong>. Remove the complete assembly from this build before changing its positions.</div>${btn('Remove assembly from build','build-remove-assembly','small',assembly.id)}`:`${row?`<div class="build-current"><strong>${esc(db.parts.find(p=>p.id===row.partId)?.name||row.name)}</strong><label class="field">Quantity<input id="build-quantity" type="number" min="1" step="1" value="${row.quantity}"></label>${btn('Remove assignment','build-remove','small',row.key)}</div>`:''}<label class="search">${icon('search')}<input id="build-stock-search" aria-label="Search available parts" placeholder="Search inventory…" value="${esc(buildSearch)}"></label><label class="check-row tiny"><input id="build-all" type="checkbox" ${buildAll||!slot?'checked':''} ${!slot?'disabled':''}>Show all parts</label><div class="build-stock-list" id="build-stock-list">${buildPickerRows()}</div>`}</div></section>`;
+}
+function buildSummary(){
+  const rows=buildState.parts,groups=buildState.assemblies,pieces=rows.reduce((n,r)=>n+r.quantity,0)+groups.reduce((n,g)=>n+(db.assemblies.find(a=>a.id===g.id)?.components.reduce((n,c)=>n+c.quantity,0)||0),0);
+  return `<div class="section-heading"><h2>Selected inventory</h2><span class="badge">${pieces} piece${pieces===1?'':'s'}</span></div>${!rows.length&&!groups.length?'<p class="muted">Start anywhere. One part is enough to save a car.</p>':''}<div class="build-selections">${groups.map(g=>{const a=db.assemblies.find(a=>a.id===g.id&&!a.dismantled);return `<div class="build-selection"><span>${icon('assembly')}<strong>${esc(a?.name||g.name)}</strong><small>${a&&!a.carId?'Complete assembly': 'Unavailable assembly — remove or replace'} · ${a?.components.length||0} components</small></span>${btn('Remove','build-remove-assembly','small ghost',g.id)}</div>`;}).join('')}${rows.map(r=>{const p=db.parts.find(p=>p.id===r.partId),slot=BuildModel.slots.find(s=>s.id===r.slot),short=!p||available(p)<buildQuantity(r.partId);return `<div class="build-selection ${short?'unavailable':''}"><span><strong>${r.quantity} × ${esc(p?.name||r.name)}</strong><small>${esc(slot?.label||r.position||'Additional part')}${short?' · stock needs attention':''}</small></span><div class="actions">${btn('Edit','build-edit-row','small ghost',r.key)}${btn('Remove','build-remove','small ghost',r.key)}</div></div>`;}).join('')}</div>`;
+}
+function renderBuild(tabs){
+  ensureBuild();const count=buildState.parts.length+buildState.assemblies.length;
+  return heading('Build from Scratch','Turn your inventory into a new car. Start with any part.',btn('Refresh stock','build-refresh-stock')+btn('Saved drafts ('+db.buildDrafts.length+')','build-drafts')+btn('New build','build-new'))+tabs+
+    `<div class="build-intro"><span>${icon('info')}Choose parts on the diagram. Empty positions are welcome.</span><span id="build-save-state" class="tiny muted">${buildDirty?'Unsaved changes':buildDraftId?'Draft saved · stock is not reserved':'New build · stock stays available until saved to Cars'}</span></div><div class="build-layout"><div class="build-main"><section class="panel build-canvas"><div class="build-canvas-toolbar"><span class="tiny">${badge('Selected','build-selected-key')} ${badge('Assigned','good')}</span><label class="tiny">Zoom <select id="build-zoom" aria-label="Diagram zoom"><option value="1" ${buildZoom===1?'selected':''}>Fit</option><option value="2" ${buildZoom===2?'selected':''}>150%</option><option value="3" ${buildZoom===3?'selected':''}>200%</option></select></label></div>${buildDiagram()}<p class="tiny muted build-caption">Universal schematic · click an icon or label. Paired icons share an assignment. Part fit and compatibility must be checked by you.</p></section><section class="panel build-extras"><h2>Beyond the drawing</h2><div class="actions">${BuildModel.slots.slice(18).map(s=>btn(esc(s.label)+(buildAssigned(s.id)?' ✓':''),'build-slot',s.id===buildSlot?'on':'',s.id)).join('')}${btn('+ Other part','build-slot','','')}${btn(icon('assembly')+' Use an assembly','build-assemblies')}</div></section><section class="panel" id="build-summary">${buildSummary()}</section></div><aside class="build-side">${buildPicker()}<section class="panel build-details"><h2>Your new car</h2><div class="form-grid">${[['name','Car name'],['maker','Manufacturer'],['scale','Scale']].map(([k,label])=>`<label class="field ${k==='name'?'wide':''}">${label}<input name="build-${k}" data-build-value="${k}" value="${esc(buildState[k])}" maxlength="200" ${k==='name'?'required':''}></label>`).join('')}<label class="field wide">Usage labels (comma separated)<input data-build-value="usage" value="${esc(buildState.usage.join(', '))}" placeholder="Club racing, Home racing…"></label><label class="field wide">Private build notes<textarea data-build-value="notes" maxlength="20000">${esc(buildState.notes)}</textarea></label></div><label class="check-row tiny"><input id="build-setup" type="checkbox" ${buildState.saveSetup?'checked':''}>Save an “As built” setup snapshot</label><div class="actions">${btn('Save draft','build-save-draft')}${btn('Review & save to Cars','build-review','primary'+(!count?' is-empty':''))}</div><p class="tiny muted">Only a name and one part are required. Saving fits the selected inventory to your new car.</p></section></aside></div>`;
+}
+function markBuildDirty(){buildDirty=true;const label=$('#build-save-state');if(label)label.textContent='Unsaved changes';}
+function buildRefresh(){const scroller=$('.build-diagram-scroll'),position=scroller&&[scroller.scrollLeft,scroller.scrollTop];render();const next=$('.build-diagram-scroll');if(position&&next){next.scrollLeft=position[0];next.scrollTop=position[1];}}
+async function reviewBuild(){
+  // Read current stock before reviewing; the commit uses this exact revision.
+  const latest=await api('read');acceptSnapshot(latest.data);if(buildContext!==db.id)throw Error('The database changed. Reopen Build from Scratch.');
+  const payload={data:structuredClone(buildState),draftId:buildDraftId||undefined};
+  let preview;try{preview=await api('plan','build.preview',payload);}catch(e){render();throw e;}
+  modal('Review build · '+preview.data.name,`<p>Create <strong>${esc(preview.data.name)}</strong> with ${preview.pieces} piece(s). Empty positions stay empty.</p><div class="table-wrap"><table><thead><tr><th>Part</th><th>Position</th><th>Pieces</th></tr></thead><tbody>${preview.rows.map(r=>`<tr><td>${esc(r.name)}${r.assemblyName?`<small class="muted"> · ${esc(r.assemblyName)}</small>`:''}</td><td>${esc(r.position)}</td><td>${r.quantity}</td></tr>`).join('')}</tbody></table></div><p class="note info mt">These parts will be recorded as fitted to this car. Owned quantities stay the same; available stock decreases. ${preview.data.saveSetup?'An As built setup snapshot will also be saved.':''}</p><label class="check-row"><input name="confirmed" type="checkbox" required>I have checked the selected parts and quantities and want to record them on this car.</label>`,async values=>{
+    const id=await change('build.create',{...payload,revision:preview.revision,confirmed:!!values.confirmed});
+    buildState=BuildModel.blank();buildDraftId=null;buildDirty=false;carId=id;page='Cars';section='Overview';toast('Car created with its fitted inventory.');
+  },'Save to Cars');
+}
+function chooseBuildAssembly(){
+  modal('Use a stored assembly',`<p class="muted">Its components stay together and populate their saved technical positions. No stock moves until you save the car.</p>${liveAssemblies().filter(a=>!a.carId).map(a=>`<div class="list-row"><div><strong>${esc(a.name)}</strong><p class="tiny muted">${a.components.map(c=>esc(db.parts.find(p=>p.id===c.partId)?.name)+' × '+c.quantity).join(' · ')}</p></div>${btn(buildState.assemblies.some(g=>g.id===a.id)?'Selected':'Use assembly','build-use-assembly','small',a.id)}</div>`).join('')||'<p class="muted">No assemblies in storage. Build one in Assemblies or select loose parts.</p>'}`,null);
+}
+function editBuildRow(key){const r=buildState.parts.find(r=>r.key===key);if(!r)return;modal('Edit assigned part',`<p>${esc(db.parts.find(p=>p.id===r.partId)?.name||r.name)}</p><label class="field">Quantity<input name="quantity" type="number" min="1" step="1" value="${r.quantity}" required></label>${!r.slot?`<label class="field mt">Position / description<input name="position" value="${esc(r.position)}" maxlength="160"></label>`:''}`,async values=>{const n=Number(values.quantity);if(!Number.isSafeInteger(n)||n<1)throw Error('Choose a positive whole quantity.');r.quantity=n;if(!r.slot)r.position=values.position;markBuildDirty();},'Update assignment');}
+async function buildAction(action,id){
+  if(!action.startsWith('build-'))return false;if(!local())return true;ensureBuild();
+  if(action==='build-slot'){buildSlot=id||'';buildAll=!id;buildSearch='';buildRefresh();document.querySelector('.build-hotspot.selected')?.focus({preventScroll:true});}
+  if(action==='build-refresh-stock'){const result=await api('read');acceptSnapshot(result.data);render();toast('Stock refreshed. Your selections are kept.');}
+  if(action==='build-pick'){
+    const p=db.parts.find(p=>p.id===id),slot=buildSlotInfo(),existing=buildState.parts.find(r=>r.slot&&r.slot===buildSlot);if(!p)return true;
+    const free=available(p)-buildQuantity(p.id,existing?.key);if(free<1)throw Error('No available stock remains for this build.');
+    const row={key:existing?.key||crypto.randomUUID(),partId:id,name:p.name,slot:slot?.id||'',position:slot?.label||'Additional part',quantity:Math.min(slot?.quantity||1,free)};
+    if(existing)buildState.parts.splice(buildState.parts.indexOf(existing),1,row);else buildState.parts.push(row);markBuildDirty();buildRefresh();
+  }
+  if(action==='build-remove'){buildState.parts=buildState.parts.filter(r=>r.key!==id);markBuildDirty();buildRefresh();}
+  if(action==='build-remove-assembly'){buildState.assemblies=buildState.assemblies.filter(a=>a.id!==id);markBuildDirty();buildRefresh();}
+  if(action==='build-edit-row')editBuildRow(id);
+  if(action==='build-assemblies')chooseBuildAssembly();
+  if(action==='build-use-assembly'){
+    const a=liveAssemblies().find(a=>a.id===id);if(!a||a.carId)throw Error('This assembly is no longer in storage.');
+    if(buildState.assemblies.some(g=>g.id===id)){toast('This assembly is already selected.');return true;}
+    const fields=new Set(a.components.map(c=>c.field).filter(Boolean));
+    if(buildState.parts.some(r=>fields.has(BuildModel.slots.find(s=>s.id===r.slot)?.field))||buildState.assemblies.some(g=>liveAssemblies().find(a=>a.id===g.id)?.components.some(c=>fields.has(c.field))))throw Error('Some positions already have parts assigned. Remove those assignments before adding this assembly.');
+    buildState.assemblies.push({id:a.id,name:a.name,signature:BuildModel.signature(a)});markBuildDirty();$('#dialog').close();buildRefresh();
+  }
+  if(action==='build-save-draft'){const revision=db.revision,data=structuredClone(buildState);buildDraftId=await change('build.draft.save',{id:buildDraftId||undefined,revision,data});buildDirty=JSON.stringify(buildState)!==JSON.stringify(data);buildRefresh();toast(buildDirty?'Draft saved. Your newer changes are still unsaved.':'Draft saved. Stock stays available.');}
+  if(action==='build-review')await reviewBuild();
+  if(action==='build-new'){
+    const reset=()=>{buildState=BuildModel.blank();buildDraftId=null;buildDirty=false;buildSlot='motor';buildSearch='';buildAll=false;};
+    if(buildDirty)modal('Start a new build?','<p>Unsaved changes to this build will be discarded. Cancel and choose Save draft to keep them.</p>',async()=>reset(),'Discard changes & start');else{reset();render();}
+  }
+  if(action==='build-drafts')modal('Saved builds',`<p class="muted">Drafts are private plans. They do not reserve stock and are included in complete backups.</p>${db.buildDrafts.map(d=>`<div class="list-row"><div><strong>${esc(d.data.name||'Untitled build')}</strong><div class="tiny muted">${date(d.updated)} · ${d.data.parts.length} part assignments · ${d.data.assemblies.length} assemblies</div></div><div class="actions">${btn('Open','build-load-draft','small',d.id)}${btn('Delete','build-delete-draft','small danger',d.id)}</div></div>`).join('')||'<p class="muted">No saved drafts yet.</p>'}`,null);
+  if(action==='build-load-draft'){
+    const d=db.buildDrafts.find(d=>d.id===id);if(!d)throw Error('Draft no longer exists.');const load=()=>{buildState=structuredClone(d.data);buildDraftId=d.id;buildDirty=false;buildSlot='motor';buildSearch='';buildAll=false;};
+    if(buildDirty)modal('Open another draft?','<p>Unsaved changes to your current build will be discarded. Cancel and save them first if needed.</p>',async()=>load(),'Discard changes & open');else{load();$('#dialog').close();render();}
+  }
+  if(action==='build-delete-draft'){const revision=db.revision;modal('Delete build draft?','<p>This removes only the saved plan. Cars and inventory stay unchanged.</p>',async()=>{await change('build.draft.delete',{id,revision});if(buildDraftId===id){buildDraftId=null;buildDirty=true;}},'Delete draft');}
+  return true;
+}
+document.addEventListener('input',e=>{
+  const el=e.target;if(el.dataset.buildValue){const k=el.dataset.buildValue;buildState[k]=k==='usage'?el.value.split(',').map(s=>s.trim()).filter(Boolean):el.value;markBuildDirty();}
+  if(el.id==='build-stock-search'){buildSearch=el.value;$('#build-stock-list').innerHTML=buildPickerRows();}
+});
+document.addEventListener('change',e=>{
+  const el=e.target;
+  if(el.id==='build-all'){buildAll=el.checked;$('#build-stock-list').innerHTML=buildPickerRows();}
+  if(el.id==='build-setup'){buildState.saveSetup=el.checked;markBuildDirty();}
+  if(el.id==='build-zoom'){buildZoom=Number(el.value);$('.build-diagram').setAttribute('class','build-diagram zoom-'+buildZoom);}
+  if(el.id==='build-quantity'){const r=buildState.parts.find(r=>r.slot===buildSlot),quantity=Number(el.value);if(!r)return;if(!el.value||!Number.isSafeInteger(quantity)||quantity<1){el.value=r.quantity;toast('Choose a positive whole quantity.',true);return;}r.quantity=quantity;markBuildDirty();$('#build-summary').innerHTML=buildSummary();$('#build-stock-list').innerHTML=buildPickerRows();}
+});
+document.addEventListener('keydown',e=>{if(e.target.matches('.build-hotspot')&&['Enter',' '].includes(e.key)){e.preventDefault();e.target.dispatchEvent(new MouseEvent('click',{bubbles:true}));}});

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" color="#243442"><title>Cockpit interior — monochrome slot car part</title><g fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M73 49H183L207 205H49Z"/>
+  <path d="M73 84H183M128 93V185" stroke-width="7"/>
+  <rect x="73" y="118" width="38" height="62" rx="9"/>
+  <path d="M148 156V115Q148 103 164 103Q180 103 180 115V156" stroke-width="10"/>
+  <path d="M143 173H184" stroke-width="12"/>
+  <path fill="currentColor" stroke="none" fill-rule="evenodd" d="M75 101a17 17 0 1 0 34 0a17 17 0 1 0 -34 0M83 101a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"/>
+  <circle cx="164" cy="88" r="12" fill="currentColor" stroke="none"/>
+ </g></svg>

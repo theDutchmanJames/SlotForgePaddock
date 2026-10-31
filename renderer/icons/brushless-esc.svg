@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" color="#243442"><title>Brushless control board — flat monochrome slot car part</title><g fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+  <rect x="67" y="48" width="128" height="160" rx="9"/>
+  <path d="M67 98H30M67 157H30M195 83H229M195 128H229M195 173H229" stroke-width="7"/>
+  <g fill="currentColor" stroke="none"><rect x="84" y="67" width="33" height="24" rx="3"/><rect x="140" y="67" width="33" height="24" rx="3"/><rect x="84" y="99" width="33" height="24" rx="3"/><rect x="140" y="99" width="33" height="24" rx="3"/><rect x="84" y="131" width="33" height="24" rx="3"/><rect x="140" y="131" width="33" height="24" rx="3"/><rect x="98" y="174" width="60" height="18" rx="3"/></g>
+ </g></svg>

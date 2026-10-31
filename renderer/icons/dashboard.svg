@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" color="#243442"><title>Dashboard — flat monochrome slot car part</title><g fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M35 91Q128 57 221 91L226 167H30Z" stroke-width="10"/>
+  <path fill="currentColor" stroke="none" fill-rule="evenodd" d="M55 117a23 23 0 1 0 46 0a23 23 0 1 0 -46 0M62 117a16 16 0 1 0 32 0a16 16 0 1 0 -32 0"/><path fill="currentColor" stroke="none" fill-rule="evenodd" d="M112 115a17 17 0 1 0 34 0a17 17 0 1 0 -34 0M118 115a11 11 0 1 0 22 0a11 11 0 1 0 -22 0"/>
+  <path d="M78 117L86 108M129 115L132 109" stroke-width="5"/>
+  <path d="M166 104H202M166 116H202M166 128H202" stroke-width="5"/>
+  <path d="M61 183H195" stroke-width="7"/>
+  <g fill="currentColor" stroke="none"><circle cx="163" cy="148" r="4"/><circle cx="178" cy="148" r="4"/><circle cx="193" cy="148" r="4"/></g>
+ </g></svg>

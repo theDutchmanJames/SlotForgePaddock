@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" color="#243442"><title>Body screws — monochrome slot car part</title><g fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+  <g transform="rotate(-14 128 128)">
+   <path d="M72 82V202L81 215 90 202V82M164 82V174L173 187 182 174V82"/>
+   <path d="M68 123H94M68 145H94M68 167H94M68 189H94M160 123H186M160 145H186M160 167H186" stroke-width="6"/>
+   <path fill="currentColor" stroke="none" fill-rule="evenodd" d="M53 62a28 28 0 1 0 56 0a28 28 0 1 0 -56 0M63 62a18 18 0 1 0 36 0a18 18 0 1 0 -36 0"/><path fill="currentColor" stroke="none" fill-rule="evenodd" d="M145 62a28 28 0 1 0 56 0a28 28 0 1 0 -56 0M155 62a18 18 0 1 0 36 0a18 18 0 1 0 -36 0"/>
+   <path d="M72 62H90M81 53V71M164 62H182M173 53V71" stroke-width="5"/>
+  </g>
+ </g></svg>

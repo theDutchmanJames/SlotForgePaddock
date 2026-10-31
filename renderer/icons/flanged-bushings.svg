@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" color="#243442"><title>Flanged bushings — monochrome slot car part</title><g fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+  <path fill="currentColor" stroke="none" fill-rule="evenodd" d="M37 111a45 45 0 1 0 90 0a45 45 0 1 0 -90 0M64 111a18 18 0 1 0 36 0a18 18 0 1 0 -36 0"/>
+  <path d="M47 146V166Q82 189 117 166V146" stroke-width="9"/>
+  <path fill="currentColor" stroke="none" fill-rule="evenodd" d="M139 151a39 39 0 1 0 78 0a39 39 0 1 0 -78 0M162 151a16 16 0 1 0 32 0a16 16 0 1 0 -32 0"/>
+  <path d="M147 118V94Q178 76 209 94V118" stroke-width="9"/>
+ </g></svg>

@@ -1,0 +1,5 @@
+let photoFit='contain';
+try{const saved=localStorage.getItem('slotforge-photo-fit');if(['contain','cover'].includes(saved))photoFit=saved;}catch{/* Display preferences still work for this session. */}
+document.documentElement.dataset.photoFit=photoFit;
+function photoFitControls(){return `<span class="photo-fit-control" role="group" aria-label="Photo scaling"><button type="button" class="btn" data-action="photo-fit" data-id="contain" aria-pressed="${photoFit==='contain'}" title="Show the entire photograph">Fit</button><button type="button" class="btn" data-action="photo-fit" data-id="cover" aria-pressed="${photoFit==='cover'}" title="Fill the frame; edges may be cropped">Fill</button></span>`;}
+function setPhotoFit(value){photoFit=value==='contain'?'contain':'cover';document.documentElement.dataset.photoFit=photoFit;try{localStorage.setItem('slotforge-photo-fit',photoFit);}catch{/* Keep the current choice even if local preferences cannot be saved. */}for(const button of document.querySelectorAll('[data-action="photo-fit"]'))button.setAttribute('aria-pressed',String(button.dataset.id===photoFit));}

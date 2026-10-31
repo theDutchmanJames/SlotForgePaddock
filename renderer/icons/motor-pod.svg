@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" color="#243442"><title>Motor pod — monochrome slot car part</title><g fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+    <path fill="currentColor" stroke="none" fill-rule="evenodd" d="M99 31H157V47H185Q197 47 197 59V154H215V194H181V211H75V194H41V154H59V59Q59 47 71 47H99Z
+    M91 68H165Q173 68 173 76V141Q173 149 165 149H91Q83 149 83 141V76Q83 68 91 68Z
+    M89 172H167V190H89Z M121 48a7 7 0 1 0 14 0a7 7 0 1 0 -14 0Z M52 174a7 7 0 1 0 14 0a7 7 0 1 0 -14 0Z M190 174a7 7 0 1 0 14 0a7 7 0 1 0 -14 0Z"/>
+    <path d="M87 117H102M154 117H169"/>
+  </g></svg>

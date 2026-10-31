@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" color="#243442"><title>Traction magnet — monochrome slot car part</title><g fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="43" y="95" width="170" height="66" rx="9" stroke-width="12"/>
+    <path d="M100 98V158" stroke-width="8"/>
+    <path d="M63 138V118L80 138V118M188 119H174V128H188V138H174" stroke-width="5"/>
+    <path d="M71 75C89 29 167 29 185 75M88 184C108 210 148 210 168 184" stroke-width="6"/>
+    <path d="M172 69L186 77 190 61M97 187L86 180 82 193" stroke-width="6"/>
+  </g></svg>

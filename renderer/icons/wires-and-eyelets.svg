@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" color="#243442"><title>Wires and eyelets — monochrome slot car part</title><g fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M68 72V147C68 198 173 217 173 158V114M104 71V136C104 162 206 182 206 132V112" stroke-width="10"/>
+    <path fill="currentColor" stroke="none" fill-rule="evenodd" d="M49 53a19 19 0 1 0 38 0a19 19 0 1 0 -38 0M59 53a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"/><path fill="currentColor" stroke="none" fill-rule="evenodd" d="M85 53a19 19 0 1 0 38 0a19 19 0 1 0 -38 0M95 53a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"/>
+    <path d="M173 114V85M206 112V83" stroke-width="6"/>
+    <path d="M165 87H181M198 85H214" stroke-width="6"/>
+  </g></svg>

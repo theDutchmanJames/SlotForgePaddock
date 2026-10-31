@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" color="#243442"><title>Pickup braids — monochrome slot car part</title><g fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+    <g transform="rotate(12 128 128)">
+      <rect x="65" y="48" width="43" height="151" rx="7"/>
+      <rect x="148" y="48" width="43" height="151" rx="7"/>
+      <path d="M69 83L104 70M152 83L187 70" stroke-width="5"/><path d="M69 104L104 91M152 104L187 91" stroke-width="5"/><path d="M69 125L104 112M152 125L187 112" stroke-width="5"/><path d="M69 146L104 133M152 146L187 133" stroke-width="5"/><path d="M69 167L104 154M152 167L187 154" stroke-width="5"/><path d="M69 188L104 175M152 188L187 175" stroke-width="5"/>
+      <path d="M78 55V191M94 55V191M161 55V191M177 55V191" stroke-width="4"/>
+      <path d="M70 200V211M86 200V217M102 200V211M153 200V211M169 200V217M185 200V211" stroke-width="5"/>
+    </g>
+  </g></svg>

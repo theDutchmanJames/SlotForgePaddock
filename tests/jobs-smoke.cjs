@@ -1,0 +1,32 @@
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+module.exports=async({win,store,js,wait,click,fill,submit,qa})=>{
+  // Fixtures are confined to the isolated smoke profile. Every new workflow below uses the UI.
+  store.mutate('settings.save',{theme:'dark'});
+  const c=store.mutate('car.save',{data:{name:'Workshop Corvette',technical:{weight:'80'}}}).result;
+  const part=(name,quantity=1,tracking='individual')=>store.mutate('part.save',{data:{name,quantity,tracking,category:'Motor'}}).result;
+  const old=part('Original club motor'),replacement=part('Race motor 25k');
+  store.mutate('part.install',{carId:c,partId:old,field:'motor',position:'Motor',quantity:1});store.mutate('setup.save',{carId:c,name:'Club night target',track:'Club track'});const setup=store.data.setups[0].id;
+  store.mutate('part.remove',{id:store.data.installations.find(i=>i.carId===c).id,destination:'spares'});store.mutate('car.save',{id:c,revision:store.data.cars.find(x=>x.id===c).revision,data:{technical:{weight:'90'}}});
+  await js(`(async()=>{const r=await api('read');acceptSnapshot(r.data);collectionMeta=r.collection;source='local';page='Cars';carId=${JSON.stringify(c)};section='Setups';render();})()`);
+  await click(`[data-action="start-job"][data-id="${setup}"]`);await submit();const job=store.data.jobs[0].id;assert.equal(store.data.jobs[0].status,'active');await wait(`document.querySelector('#main').innerText.includes('2 outstanding steps')`);
+  await click('[data-action="job-fit"]');await fill({selection:'p:'+replacement});await js(`document.querySelector('[name="confirmed"]').checked=true`);await submit();assert.equal(store.data.cars.find(x=>x.id===c).technical.motor,'Race motor 25k');await wait(`document.querySelector('#main').innerText.includes('1 outstanding step')`);
+  await js('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');fs.writeFileSync(path.join(qa,'workshop-job.png'),(await win.webContents.capturePage()).toPNG());
+  await click('[data-action="add-test"]');await fill({track:'Club track',laps:'10',best:'6.1',notes:'Motor fitted; ballast adjustment still outstanding.'});await submit();assert.equal(store.data.tests[0].jobId,job);assert.equal(store.data.tests[0].technical.weight,'90');assert.equal(store.data.tests[0].installations[0].partId,replacement);
+  await click('[data-action="nav"][data-id="Cars"]');await click(`[data-action="open-car"][data-id="${c}"]`);await click('[data-action="section"][data-id="Performance"]');await click(`[data-action="test-snapshot"][data-id="${store.data.tests[0].id}"]`);assert.equal(await js(`document.querySelector('#dialog').innerText.includes('Race motor 25k')&&document.querySelector('#dialog').innerText.includes('90')`),true);await click('[data-action="close-modal"]');
+  // Reload the entire renderer to exercise persisted resume, not just a cached checklist.
+  await win.webContents.reload();await wait(`!!document.querySelector('[data-action="nav"][data-id="Workshop"]')`);await click('[data-action="nav"][data-id="Workshop"]');await click(`[data-action="open-job"][data-id="${job}"]`);await wait(`document.querySelector('#main').innerText.includes('1 outstanding step')`);
+  await click('[data-action="job-setting"][data-id="weight"]');await js(`document.querySelector('[name="confirmed"]').checked=true`);await submit();assert.equal(store.data.cars.find(x=>x.id===c).technical.weight,'80');await click('[data-action="finish-job"]');await js(`document.querySelector('[name="confirmed"]').checked=true`);await submit();assert.equal(store.data.jobs[0].status,'completed');assert.equal(store.data.jobs[0].actual.technical.motor,'Race motor 25k');assert.equal(store.data.jobs[0].target.technical.motor,'Original club motor');
+  await click('[data-action="jobs-back"]');await click('[data-action="nav"][data-id="Cars"]');await click(`[data-action="open-car"][data-id="${c}"]`);await click('[data-action="section"][data-id="Setups"]');await click(`[data-action="start-job"][data-id="${setup}"]`);await submit();const cancelled=store.data.jobs[0].id;
+  await click('[data-action="cancel-job"]');await js(`document.querySelector('[name="confirmed"]').checked=true`);await submit();assert.equal(store.data.jobs.find(j=>j.id===cancelled).status,'cancelled');assert.equal(store.data.cars.find(x=>x.id===c).technical.motor,'Race motor 25k');
+  const tyre=part('Assembly tyres',4,'quantity'),soft=part('Soft replacement tyres',4,'quantity');
+  const assembly=store.mutate('assembly.create',{revision:store.data.revision,name:'Workshop rear axle',components:[{partId:tyre,quantity:2,field:'rearTyres',position:'Rear'}]}).result;
+  store.mutate('assembly.install',{id:assembly,carId:c,revision:store.data.revision});const oldMember=store.data.assemblies.find(a=>a.id===assembly).components[0].partId;
+  await js(`(async()=>{acceptSnapshot((await api('read')).data);page='Parts';partsTab='Assemblies';render();})()`);await click(`[data-action="replace-assembly"][data-id="${assembly}"]`);await fill({partId:soft});await js(`document.querySelector('[name="confirmed"]').checked=true`);await submit();
+  assert.equal(store.data.cars.find(x=>x.id===c).technical.rearTyres,'Soft replacement tyres');assert.equal(store.data.parts.find(p=>p.id===oldMember).condition,'Used');assert.equal(store.data.assemblies.find(a=>a.id===assembly).history.length,1);await wait(`document.querySelector('#main').innerText.includes('Soft replacement tyres')`);
+  await js('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');
+  fs.writeFileSync(path.join(qa,'assembly-replacement.png'),(await win.webContents.capturePage()).toPNG());
+  win.setSize(960,800);await js(`workshopJob=null;page='Workshop';render()`);await click(`[data-action="open-job"][data-id="${job}"]`);await js(`document.documentElement.dataset.theme='light'`);await js('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');fs.writeFileSync(path.join(qa,'workshop-finished-light.png'),(await win.webContents.capturePage()).toPNG());assert.equal(await js('document.documentElement.scrollWidth<=window.innerWidth'),true);win.setSize(1440,980);await js(`document.documentElement.dataset.theme='dark'`);
+  return ['start staged job','fit explicit substitute','test actual unfinished configuration','resume job after renderer restart','record setting and finish job','cancel without undoing work','replace installed assembly member','finished target/actual comparison at 960px'];
+};

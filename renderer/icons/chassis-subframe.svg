@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" color="#243442"><title>Chassis subframe — flat monochrome slot car part</title><g fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+  <path fill="currentColor" stroke="none" fill-rule="evenodd" d="M43 49H93V66H163V49H213V95H195V164H213V210H163V193H93V210H43V164H61V95H43Z
+  M86 91H170V166H86Z M59 72a8 8 0 1 0 16 0a8 8 0 1 0 -16 0Z M181 72a8 8 0 1 0 16 0a8 8 0 1 0 -16 0Z M59 187a8 8 0 1 0 16 0a8 8 0 1 0 -16 0Z M181 187a8 8 0 1 0 16 0a8 8 0 1 0 -16 0Z"/>
+  <path d="M114 93V106M142 93V106" stroke-width="6"/>
+ </g></svg>
