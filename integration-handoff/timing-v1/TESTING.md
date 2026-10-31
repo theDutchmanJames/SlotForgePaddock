@@ -48,7 +48,7 @@ Desktop checks are part of `tests/smoke.cjs`, `tests/timing-integration-smoke.cj
 - Native macOS/Linux runtime and installer testing remain outstanding.
 - Sudden power loss was not induced. Atomic save/reopen behavior and injected storage failure are tested; backup rollback semantics are documented separately.
 - Very large sustained race archives were not load-tested. The existing whole-document JSON store remains bounded by 200 MiB, with an 8 MiB session limit and no automatic tombstone purging. This implementation is for reviewed session batches, not live telemetry streaming.
-- The shipped v0.16.3 executable is unchanged. Run/build the updated source to use this API. Source saves migrate to database schema 9; older binaries cannot read schema-9 saves.
+- Release v0.17.0 includes this host API. Its saves use database schema 9; older binaries, including v0.16.3, cannot read schema-9 saves. Back up before upgrading.
 
 ## Suggested joint acceptance run
 

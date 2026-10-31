@@ -1,5 +1,10 @@
 # Development & release history
 
+## Release 0.17.0 — 31 October 2026
+
+Includes the reviewed Timing host API and integration handoff, Build from Scratch gearing and theoretical motor performance calculations, comparison references, Linux/macOS builder scripts and all five fixes from the review below. See [release notes](releases/v0.17.0.md) for changes, upgrade guidance and validation limits. Database schema 9 requires a backup before upgrading from the original 0.16.3 release.
+
+
 ## Review of changes since 0.16.2 — 31 October 2026
 
 Reviewed the changes since the previous documented review: branding and release documentation, native installer builders, Build from Scratch gearing, motor performance calculations and comparison, and the Timing host integration. The review covered renderer behaviour, validation, database persistence and compatibility, network authentication and permissions, retry/correction semantics, generated schemas and handoff fixtures. Existing sharing, submissions, manual performance records and inventory workflows remain covered by the full regression suite.
@@ -32,7 +37,7 @@ The Timing client is intentionally outside this repository. Local server/client 
 
 Technical notes, validation results and release history for SlotForge Paddock (formerly SlotForge Database). File paths and commands below are relative to the project root. Older release sections describe behaviour at that release; later sections may supersede them.
 
-Working desktop copy, version 0.16.3. The official name is **SlotForge Paddock**.
+Working desktop copy, version 0.17.0. The official name is **SlotForge Paddock**.
 
 ## Theoretical build performance (after the first release)
 
@@ -52,7 +57,7 @@ Linux and macOS now have normal and quick build launchers. Linux produces AppIma
 
 ## Run on Windows
 
-Close any earlier copy, then open `dist/v0.16.3/SlotForge Paddock 0.16.3.exe` after packaging. No Node.js installation is needed for that executable. A new collection starts empty; existing collections are retained.
+Close any earlier copy, then open `dist/v0.17.0/SlotForge Paddock 0.17.0.exe` after packaging. No Node.js installation is needed for that executable. A new collection starts empty; existing collections are retained.
 
 For development, double-click `Start SlotForge.cmd`, or run `npm ci` followed by `npm start` in this folder. If your npm installation skips dependency scripts, run `node node_modules/electron/install.js` once after installing dependencies.
 

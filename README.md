@@ -140,7 +140,7 @@ When you want to go further, add spare parts in **Parts**, save a setup from a c
 
 ### Run on Windows
 
-[Download the latest release](https://github.com/theDutchmanJames/SlotForgePaddock/releases/latest), then open **SlotForge.Paddock.0.16.3.exe** from the release assets. It is portable and does not require Node.js. Close an earlier running copy before opening the updated version.
+[Download the latest release](https://github.com/theDutchmanJames/SlotForgePaddock/releases/latest), then open **SlotForge.Paddock.0.17.0.exe** from the release assets. It is portable and does not require Node.js. Close an earlier running copy before opening the updated version.
 
 The Windows executable is unsigned, so Windows may show an unknown-publisher warning. A `SHA256SUMS.txt` file is included with the download for integrity checking. Your collection is stored separately in your Windows user profile; moving the executable does not move your collection. Use the app's backup and export features to transfer your data.
 
@@ -161,7 +161,7 @@ To create the Windows portable build:
 npm run dist
 ```
 
-The current build is written to `dist/v0.16.3/`. Development notes, test commands, recovery information and release history are in [Development & release history](docs/DEVELOPMENT.md).
+The current build is written to `dist/v0.17.0/`. Development notes, test commands, recovery information and release history are in [Development & release history](docs/DEVELOPMENT.md).
 
 ### Build Linux and macOS installers
 
@@ -172,11 +172,11 @@ Like SlotForge Timing, Paddock includes normal and quick build launchers:
 | Linux | `bash build-linux.sh` | AppImage and .deb installer |
 | macOS | `bash build-mac.command` | Universal DMG and ZIP for Intel and Apple Silicon |
 
-Use the [current source](https://github.com/theDutchmanJames/SlotForgePaddock/archive/refs/heads/main.zip) with Node.js **22.12 or newer**. These builders were added after the first release. See [Building installers](docs/BUILDING.md) for quick builds, architecture choices, installation and signing details. Native builds still need testing on their respective systems.
+Use the [current source](https://github.com/theDutchmanJames/SlotForgePaddock/archive/refs/heads/main.zip) with Node.js **22.12 or newer**. These builders are included in v0.17.0 and newer. See [Building installers](docs/BUILDING.md) for quick builds, architecture choices, installation and signing details. Native builds still need testing on their respective systems.
 
 ## Project status
 
-Current version: **0.16.3**. The project is under active development. **SlotForge Paddock** is the official name; earlier versions were called SlotForge Database.
+Current version: **0.17.0**. The project is under active development. **SlotForge Paddock** is the official name; earlier versions were called SlotForge Database.
 
 | Feature | Status |
 | --- | --- |
@@ -184,12 +184,12 @@ Current version: **0.16.3**. The project is under active development. **SlotForg
 | Build from Scratch and manufacturer catalogue imports | Available |
 | Local-network browsing and reviewed submissions | Implemented; physical two-computer Wi-Fi testing remains outstanding |
 | SlotForge Timing car imports | Available through supported Timing JSON exports |
-| SlotForge Timing integration host API | Implemented in current source; Timing client and physical two-computer acceptance still pending |
-| Imported Timing performance sessions | Current source supports captured configurations, corrections and withdrawals; manual records remain independent |
+| SlotForge Timing integration host API | Available from v0.17.0; Timing client and physical two-computer acceptance still pending |
+| Imported Timing performance sessions | Available from v0.17.0: captured configurations, corrections and withdrawals; manual records remain independent |
 | RaceCoordinatorAI integration | Planned |
 | Windows portable build | Built and tested |
 | Native macOS and Linux builds | Normal/quick installer builders available; native testing remains outstanding |
 
-The Paddock side of Timing integration is documented in the [Timing integration handoff](integration-handoff/timing-v1/README.md), including the exact contract, schemas, fixtures and local test host. It is newer than the v0.16.3 release download. Updated source migrates saved databases to schema 9; retain a backup for use with an older build.
+The Paddock side of Timing integration is documented in the [Timing integration handoff](integration-handoff/timing-v1/README.md), including the exact contract, schemas, fixtures and local test host. It is included in v0.17.0. This release migrates saved databases to schema 9; create a complete backup before upgrading because older builds cannot read schema-9 saves.
 
 Catalogue imports validate structure and help identify duplicates. Manufacturer facts and physical part compatibility still need your review; the app does not scrape websites or download product images automatically.

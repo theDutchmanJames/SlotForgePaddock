@@ -9,7 +9,7 @@ These launchers follow SlotForge Timing's normal/quick builder approach. Run the
 - Internet access for the first build and whenever dependencies or packaging tools need downloading.
 - On macOS, install Apple's Command Line Tools if requested (`xcode-select --install`).
 
-Download the [current source ZIP](https://github.com/theDutchmanJames/SlotForgePaddock/archive/refs/heads/main.zip), or clone the repository. The original v0.16.3 release tag predates these builders; use the current source until a later release includes them.
+Download the [current source ZIP](https://github.com/theDutchmanJames/SlotForgePaddock/archive/refs/heads/main.zip), or clone the repository. Release v0.17.0 and newer include these builders; the original v0.16.3 tag predates them.
 
 Run as your normal user, without `sudo`. A full build runs `npm ci`, syntax checks and automated tests before creating installers. Localhost networking must be allowed for the sharing tests.
 

@@ -50,4 +50,4 @@ From the Paddock repository, run `node scripts/timing-demo-host.cjs`. This start
 
 Do not send unchanged fixtures to a real collection: their database/car IDs and signed configurations intentionally belong only to the demo database. A real client must fetch real profiles and build its own payloads.
 
-The existing v0.16.3 downloadable executable predates this API. This handoff describes updated source; it is not a claim that the older binary supports it.
+Release v0.17.0 includes this host API. The older v0.16.3 executable predates it. The Timing client must still be implemented and tested in the Timing project.
