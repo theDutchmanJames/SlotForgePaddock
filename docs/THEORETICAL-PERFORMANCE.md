@@ -51,6 +51,6 @@ Choose **Keep current as reference**, then change a specification. The table sho
 
 Drafts and complete backups preserve both inputs and the reference. Creating a car saves its specifications in **Technical & parts**, its creation history and, when enabled, its **As built** setup. The reference remains a planning aid in drafts and is not added to the car or shared packages. Motor specifications themselves follow the normal car/setup sharing rules. Saved setups remain unchanged when current car specifications are edited.
 
-The original v0.16.3 release download predates this feature; use the updated source until a newer binary release is provided.
+These calculations are included in **v0.17.0 and newer**. The original v0.16.3 release download predates this feature.
 
 For background, see [Slot.it's explicit stall-torque specification](https://www.slot.it/immagini/schede_prod_EN/motors_GB/MN09ch_EN.pdf), [Pololu's explanation of motor torque, speed and power](https://www.pololu.com/docs/0j21/all), and [DIDEL's DC motor performance explanation](https://www.didel.com/microkit/moteurs/Motors.html).

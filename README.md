@@ -19,7 +19,7 @@ SlotForge Paddock is a desktop app for collecting, displaying, building and main
 
 Both approaches use the same collection. **You decide how much detail to record.**
 
-[Virtual showroom](#for-the-collector-your-virtual-showroom) · [Detailed workshop](#for-the-tinkerer-your-detailed-slotcar-workshop) · [Club sharing](#connect-with-your-club) · [Getting started](#getting-started) · [Project status](#project-status)
+[Virtual showroom](#for-the-collector-your-virtual-showroom) · [Build calculations](#plan-your-build-with-gearing-torque-and-power-calculations) · [Detailed workshop](#for-the-tinkerer-your-detailed-slotcar-workshop) · [Club sharing](#connect-with-your-club) · [Getting started](#getting-started) · [Project status](#project-status)
 
 ## For the collector: your virtual showroom
 
@@ -54,11 +54,28 @@ You can stop here and have a useful collection app. The workshop features are av
 
 The same car profiles can hold detailed technical records and connect directly to your parts inventory.
 
+### Plan your build with gearing, torque and power calculations
+
+**See what changing a pinion, motor or tyre diameter means before fitting the parts.** In **Parts → Build from Scratch**, enter your gear tooth counts and optional motor and tyre specifications. Paddock calculates what your inputs support as you work.
+
+| Calculation | What it tells you |
+| --- | --- |
+| **Gear ratio** | Driven-gear teeth divided by pinion teeth—for example, 9/27 gives **3.00:1**. |
+| **Axle RPM and rollout** | How fast the rear axle turns at no load, and how far the car travels per motor revolution. |
+| **Theoretical speed** | Ideal no-load speed from motor RPM, gearing and rear tyre diameter. |
+| **Axle torque and driving force** | How gearing and tyre size translate a confirmed stall or rated-running motor torque into torque and force at the driven axle. |
+| **Estimated peak power and interactive curves** | Explore torque and mechanical power across motor speeds for a brushed DC motor with confirmed stall torque and matching rating voltages. |
+
+**Compare before you commit.** Keep the current build as a reference, change the inputs, and see the differences. Drafts preserve your inputs and comparison reference; the finished car and optional **As built** setup retain the entered specifications.
+
+Torque is entered in **gf·cm** (gram-force centimetres), with separate test voltages for RPM and torque. These are ideal estimates: they exclude drivetrain losses and tyre slip and do not predict acceleration, lap times or actual top speed. Stall torque and no-load speed describe different operating points.
+
+[Explore the formulas, assumptions and a worked 21,500 RPM example →](docs/THEORETICAL-PERFORMANCE.md)
+
 ### Configurations and setups
 
 - **Record detailed configurations.** Document motors, motor pods, gearing, axles, bearings, wheels, tyres, guides, braids, electronics, ballast and more. Keep current specifications alongside factory reference information.
 - **Calculate gearing automatically.** Enter pinion and driven-gear tooth counts to see the ratio.
-- **Explore theoretical performance.** In Build from Scratch, enter motor RPM, torque, test voltages and rear tyre diameter to calculate axle RPM, rollout, ideal speed, axle torque and driving force. Confirmed brushed DC stall specifications at matching voltages also enable estimated peak power and interactive torque/power curves. Keep a reference to compare changes to your build. Inputs carry into the finished car and its optional As built setup; estimates exclude losses and tyre slip. [How the calculations work](docs/THEORETICAL-PERFORMANCE.md).
 - **Save and compare setups.** Capture configurations with names, track information and notes. Review changes before applying a saved setup, including required stock, substitutions and transfers from other cars.
 - **Record testing results.** Manually log track tests and lap statistics against setup snapshots to relate performance to configuration changes.
 
