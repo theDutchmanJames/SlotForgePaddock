@@ -1,0 +1,27 @@
+SlotForge Paddock — third-party notices
+
+First-party Paddock materials use the SlotForge Source-Available License 1.0
+in LICENSE. That license does not replace or restrict third-party licenses.
+
+Electron runtime
+https://github.com/electron/electron
+
+Desktop builds include Electron and its Chromium, Node.js and other runtime
+components. Electron is licensed under the MIT License; its bundled components
+have their own terms. Keep the full LICENSE (packaged as LICENSE.electron.txt
+on Windows) and LICENSES.chromium.html files provided with the Electron runtime
+when redistributing the desktop application. Their location follows the
+platform's Electron application layout. They are
+separate from resources/SlotForge-Paddock-LICENSE.txt, the first-party license.
+
+Build dependencies
+
+Electron Builder and other development dependencies retain their upstream
+licenses. package-lock.json records the pinned dependency tree. If distributing
+those dependencies separately, retain their supplied license and notice files.
+
+User content and manufacturer data
+
+Imported photographs, documents, manufacturer descriptions and other external
+material retain their respective owners' rights. Importing them into Paddock
+does not relicense them or grant additional redistribution rights.

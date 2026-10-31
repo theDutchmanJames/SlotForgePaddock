@@ -59,11 +59,22 @@
       "maintainer": "theDutchmanJames <thedutchmanjames@gmail.com>",
       "synopsis": "Slotcar collection and workshop",
       "artifactName": "SlotForgePaddock-${version}-linux-${arch}.${ext}"
-    }
+    },
+    "extraResources": [
+      {
+        "from": "LICENSE",
+        "to": "SlotForge-Paddock-LICENSE.txt"
+      },
+      {
+        "from": "THIRD-PARTY-NOTICES.txt",
+        "to": "THIRD-PARTY-NOTICES.txt"
+      }
+    ]
   },
   "homepage": "https://github.com/theDutchmanJames/SlotForgePaddock",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/theDutchmanJames/SlotForgePaddock.git"
-  }
+  },
+  "license": "SEE LICENSE IN LICENSE"
 }

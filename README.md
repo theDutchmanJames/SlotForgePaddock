@@ -210,3 +210,14 @@ Current version: **0.17.1**. The project is under active development. **SlotForg
 The Paddock side of Timing integration is documented in the [Timing integration handoff](integration-handoff/timing-v1/README.md), including the exact contract, schemas, fixtures and local test host. It is included in v0.17.0. This release migrates saved databases to schema 9; create a complete backup before upgrading because older builds cannot read schema-9 saves.
 
 Catalogue imports validate structure and help identify duplicates. Manufacturer facts and physical part compatibility still need your review; the app does not scrape websites or download product images automatically.
+
+## Licence and copyright
+
+SlotForge Paddock uses the [SlotForge Source-Available License 1.0](LICENSE), with the same terms as SlotForge Timing.
+
+- **Free to use**, including personal, educational, club and internal business use.
+- **Free to study, modify and share**, keeping the licence and notices and identifying your modifications.
+- **No selling the software or charging for access**, including modified, bundled or hosted versions, without separate written permission from the relevant copyright holders.
+- **Your own original content remains available for commercial use**—including your collection records, setups, photographs and reports. Rights in third-party material remain separate.
+
+These are custom **source-available** terms, not an OSI-approved open-source licence. The [full licence](LICENSE) controls over this summary. Electron and other third-party components retain their [own licences and notices](THIRD-PARTY-NOTICES.txt). For older releases, check the terms supplied with that download.

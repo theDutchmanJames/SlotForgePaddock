@@ -1,5 +1,9 @@
 # Development & release history
 
+## Source-available licence — after 0.17.1
+
+Adopted SlotForge Source-Available License 1.0 from Timing, changing only the application name in its scope. The README summarises the terms; package metadata points to LICENSE. Future desktop builds include the complete first-party licence and third-party notices as accessible resource files, without replacing Electron's own notices. The Timing handoff includes its own copy of LICENSE. Previously published downloads and tags are unchanged.
+
 ## Release 0.17.1 — 31 October 2026
 
 The Overview now shows **Unique parts**, counting inventory entries consistently with the Parts folders rather than summing available quantities. Ten entries therefore display 10 even when they contain 2,023 pieces. This patch also includes the README calculations highlight. Stock quantities, database schema 9 and the Timing API are unchanged. See [release notes](releases/v0.17.1.md).

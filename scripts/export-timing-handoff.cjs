@@ -4,6 +4,7 @@ const {fixtures}=require('../tests/support/timing-fixtures.cjs');
 const contract=require('../src/timing-schema.cjs'),timing=require('../src/timing-integration.cjs'),model=require('../renderer/timing-results-model.js');
 const root=path.join(__dirname,'..','integration-handoff','timing-v1');
 fs.mkdirSync(path.join(root,'fixtures'),{recursive:true});
+fs.copyFileSync(path.join(__dirname,'..','LICENSE'),path.join(root,'LICENSE'));
 const write=(name,value)=>fs.writeFileSync(path.join(root,name),JSON.stringify(value,null,2)+'\n');
 write('timing-v1.schema.json',contract.schema);
 const f=fixtures();write('fixtures/demo-database.json',f.store.snapshot());
