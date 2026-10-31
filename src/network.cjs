@@ -50,14 +50,15 @@ class Network {
       const now=Date.now(),peer=req.socket.remoteAddress;
       for(const [key,value]of this.authAttempts)if(value.until<=now)this.authAttempts.delete(key);
       const attempt=this.authAttempts.get(peer);
-      if(attempt?.count>=10)return send(429,{error:'Too many incorrect passwords. Wait one minute before trying again.',code:'AUTH_RATE_LIMITED'});
+      if(attempt?.count>=10){res.setHeader('Retry-After',Math.max(1,Math.ceil((attempt.until-now)/1000)));return send(429,{error:'Too many incorrect passwords. Wait one minute before trying again.',code:'AUTH_RATE_LIMITED'});}
       const authorization=String(req.headers.authorization||''),code=authorization.startsWith('Bearer ')?authorization.slice(7):'',access=this.access(code);
       if(!access){
         if(!attempt&&this.authAttempts.size>=256)this.authAttempts.delete(this.authAttempts.keys().next().value);
         this.authAttempts.set(peer,{count:(attempt?.count||0)+1,until:attempt?.until||now+60000});
         return send(401,{error:'Incorrect connection code or password.',code:'UNAUTHENTICATED'});
       }
-      this.authAttempts.delete(peer);
+      // Keep failed guesses for the whole window: a valid browse credential
+      // must not reset the limit while guessing a higher-permission password.
       try{
         const url=new URL(req.url,'http://localhost');
         if(req.method==='GET'&&url.pathname==='/v1/status')return send(200,{protocol:2,id:this.store.data.id,revision:this.store.data.revision,name:this.store.data.settings.name,permissions:access,capabilities:timing.capabilities()});

@@ -35,3 +35,12 @@ test('repeated failed authentication is limited per peer and expires',async t=>{
   await client.connect(address,'Club password');assert.equal(host.authAttempts.size,0);
   await assert.rejects(client.request(address,'wrong','/v1/status'));host.controls({access:'browse',password:'Updated password'});assert.equal(host.authAttempts.size,0);
 });
+
+test('browse access cannot reset failed guesses for higher-permission passwords',async t=>{
+  const {host,address,client}=await hostFor(t);host.controls({access:'browse',password:'Known browse password'});host.controls({access:'timing',password:'Private timing password'});
+  for(let i=0;i<10;i++){
+    await client.request(address,'Known browse password','/v1/status');
+    await assert.rejects(client.request(address,'Wrong timing guess','/v1/status'),e=>e.httpStatus===401);
+  }
+  await assert.rejects(client.request(address,'Wrong timing guess','/v1/status'),e=>e.httpStatus===429);
+});

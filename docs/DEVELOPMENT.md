@@ -1,5 +1,25 @@
 # Development & release history
 
+## Review since the Timing/build review — 31 October 2026
+
+Reviewed the changes from `17b3e28` through `3acf353`: release/package metadata, the unique-parts Overview count, README calculation descriptions, source-available licence delivery, English catalogue instructions and taxonomy, generated templates, Timing JSON exports and custom connection passwords. Inspection included their existing persistence, file-export, permission, discovery, import-review and renderer boundaries. No database migration or release version change is needed for these fixes.
+
+| Priority | Confirmed issue | Correction |
+| --- | --- | --- |
+| P2 | Successful authentication cleared failed login attempts. Someone holding a browse-only credential could interleave successful reads with guesses for a higher-permission password, bypassing the new limit. | Failed attempts remain for the entire one-minute window regardless of successful reads. A blocked response includes `Retry-After` in seconds. Host credential changes and revocation still clear the window. |
+| P2 | The host accepted passwords with repeated internal spaces but displayed collapsed spaces. Typing the displayed password could therefore fail authentication. | Connection credentials preserve whitespace while still wrapping long values. An Electron regression verifies the displayed password matches the stored one exactly. |
+
+Both regressions were reproduced as failures before correction. No obsolete production code was identified in these additions; existing package sharing, generated credentials and manual records remain required. Timing 1.99.4's client still restricts connection input to generated hexadecimal keys; custom Timing passwords require a client-side update in that separate project, as documented in the UI and handoff.
+
+Validation:
+
+- **265 automated tests**, syntax checks and **158 isolated Electron workflow checks passed**, with no captured renderer errors. Software rendering completed the full suite without the prior `UnknownVizError` screenshot failure; the earlier failed run remains recorded in its original feature entry below.
+- All **113** catalogue kind/category/type combinations imported at zero stock, survived backup validation and reimported as unchanged products. The generated standalone template matches the app's kit.
+- Timing **1.99.4's actual importer** accepted multiple exported cars, remapped their shared class, retained rear tyres/gearing, created copies on repeat import and reopened persisted data in a disposable database.
+- An unpacked Windows build completed in `.qa/review-package`; archived application files were compared with source. The first-party licence, third-party notices, Electron licence and Chromium notices were present. The first-party licence matches Timing's with the application scope name changed.
+
+Tests used disposable review profiles and databases, never normal user data or `.qa/test-collection`. Physical two-computer Wi-Fi and native macOS/Linux execution remain unverified here. This review updates source and the integration handoff; it does not publish a new installer or alter an existing release.
+
 ## Custom connection passwords — after 0.17.1
 
 Hosts can replace any of the three generated credentials with a case-sensitive, 8–128 character password. Each access type must use a different credential; changes invalidate its previous credential without granting additional permissions. Passwords use printable ASCII, including internal spaces, to preserve compatibility with existing HTTP clients. Secrets remain in memory and reset when sharing restarts or all credentials are revoked. The client connection form accepts either a code or password.
