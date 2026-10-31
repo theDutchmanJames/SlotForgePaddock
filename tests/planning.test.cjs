@@ -18,3 +18,56 @@ test('missing historical inventory stays unknown instead of creating false remov
 test('stale print previews cannot silently export a different revision',()=>{const {s,carId}=fixture();assert.throws(()=>reports.render(s.data,{kind:'cards',ids:[carId],revision:s.data.revision-1}),/changed/);});
 
 test('old setup reports never substitute currently fitted inventory for a missing snapshot',()=>{const {s,carId,partId}=fixture();act(s,'setup.save',{carId,name:'Legacy'});const setup=s.data.setups[0];act(s,'planning.receive',{partId,quantity:1,confirmed:true});act(s,'part.install',{carId,partId,quantity:1,field:'motor'});const data=s.snapshot();delete data.setups.find(x=>x.id===setup.id).installations;const report=reports.render(data,{kind:'setup',ids:[carId],setupId:setup.id});assert.ok(report.body.includes('no tracked-inventory snapshot'));assert.equal(report.body.includes('Motor × 1'),false);});
+
+test('current setup reports use corrected part names while saved reports retain captured names',()=>{
+  const {s,carId,partId}=fixture();act(s,'planning.receive',{partId,quantity:1,confirmed:true});act(s,'part.install',{carId,partId,quantity:1,position:'Motor mount'});act(s,'setup.save',{carId,name:'Before correction'});const setupId=s.data.setups[0].id;
+  act(s,'part.save',{id:partId,data:{...s.data.parts[0],name:'Corrected motor'}});
+  assert.match(reports.render(s.data,{kind:'setup',ids:[carId]}).body,/Corrected motor × 1/);
+  assert.match(reports.render(s.data,{kind:'setup',ids:[carId],setupId}).body,/Motor × 1/);
+});
+
+test('comparison retains both historical and current names without counting a rename as a physical replacement',()=>{
+  const a={technical:{},installations:[{partId:'p',name:'Original name',quantity:1,position:'Rear'}]},b={technical:{},installations:[{partId:'p',name:'Corrected name',quantity:1,position:'Rear'}]};
+  const r=comparison.compare(a,b);assert.equal(r.changes,0);assert.equal(r.parts[0].beforeName,'Original name');assert.equal(r.parts[0].afterName,'Corrected name');
+});
+
+test('imported public setups do not imply that no inventory was fitted',()=>{
+  const {s,carId,partId}=fixture();act(s,'setup.save',{carId,name:'Shared baseline'});
+  const recipient=new Store(),pack=makePackage(s.data,[carId],{setups:true}),subId=act(recipient,'submission.add',{package:pack});
+  act(recipient,'submission.review',{id:subId,carId,revision:0,decision:'accept',includeSetups:true});
+  const setup=recipient.data.setups[0];assert.ok(setup.sourceId);
+  const r=comparison.compare(setup,{technical:setup.technical,installations:[{partId,quantity:1,name:'Motor'}]});assert.equal(r.inventoryKnown,false);assert.equal(r.changes,0);
+  assert.match(reports.render(recipient.data,{kind:'setup',ids:[carId],setupId:setup.id}).body,/no tracked-inventory snapshot/);
+});
+
+test('shopping rejects purchases that cannot fit an individual identity or dedicated assembly lot',()=>{
+  const {s,partId}=fixture(),individual=act(s,'part.save',{data:{name:'Serialised motor',tracking:'individual',quantity:0}});
+  const unchanged=fn=>{const before=s.snapshot();assert.throws(fn);assert.deepEqual(s.snapshot(),before);};
+  unchanged(()=>act(s,'planning.shopping.add',{partId:individual,quantity:2}));
+  const line=act(s,'planning.shopping.add',{partId:individual,quantity:1});
+  unchanged(()=>act(s,'planning.shopping.add',{partId:individual,quantity:1}));
+  act(s,'planning.receive',{partId:individual,shoppingId:line,quantity:1,confirmed:true});
+  unchanged(()=>act(s,'planning.shopping.add',{partId:individual,quantity:1}));
+  act(s,'planning.receive',{partId,quantity:3,confirmed:true});act(s,'assembly.create',{name:'Ready motor',components:[{partId,quantity:1,position:'Motor'}]});
+  const dedicated=s.data.assemblies[0].components[0].partId;
+  assert.throws(()=>act(s,'planning.shopping.add',{partId:dedicated,quantity:1}),/assembly.*catalogue/i);
+  assert.throws(()=>act(s,'planning.receive',{partId:dedicated,quantity:1,confirmed:true}),/assembly.*catalogue/i);
+  act(s,'planning.receive',{partId,quantity:1,confirmed:true});assert.equal(s.data.parts.find(p=>p.id===dedicated).quantity,1);
+});
+
+test('planning numeric and checklist inputs reject implicit boolean or array conversion',()=>{
+  const {s,carId,partId,jobId}=fixture();
+  for(const quantity of [true,[1],null,''])for(const action of ['planning.shopping.add','planning.receive']){const before=s.snapshot();assert.throws(()=>act(s,action,{partId,quantity,confirmed:true}));assert.deepEqual(s.snapshot(),before);}
+  for(const x of [true,[50],null,''])assert.throws(()=>act(s,'planning.focus',{carId,photoKey:'main',x,y:50}));
+  assert.throws(()=>act(s,'planning.job.save',{jobId,priority:'Normal',targetDate:'',waiting:false,checklist:[{text:'Step',done:'false'}]}));
+});
+
+test('an additional photo named main has separate framing from the main photograph',()=>{
+  const {s,carId}=fixture(),extra='data:image/png;base64,'+fs.readFileSync(path.join(__dirname,'../assets/icon.png')).toString('base64');
+  act(s,'car.save',{id:carId,revision:s.data.cars[0].revision,data:{photos:[{id:'main',name:'Imported detail',data:extra}]}});
+  act(s,'planning.focus',{carId,photoKey:'main',x:20,y:30});
+  act(s,'planning.focus',{carId,photoKey:'photo:main',x:80,y:60});
+  assert.equal(s.data.planning.focus.length,2);
+  act(s,'car.save',{id:carId,revision:s.data.cars[0].revision,data:{photos:[]}});
+  assert.deepEqual(s.data.planning.focus.map(f=>[f.photoKey,f.x]),[['main',20]]);
+});

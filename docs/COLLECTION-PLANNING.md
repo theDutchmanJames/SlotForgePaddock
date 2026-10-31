@@ -31,6 +31,9 @@ record cannot be deleted while that record remains.
 Receiving stock does not fit it to a car or clear a job's waiting flag. Check the
 physical parts and continue the workshop job separately. An individually tracked
 record can contain at most one item; use separate records for separate identities.
+The shopping picker excludes already-owned individual identities and dedicated
+assembly stock. Purchase against the original catalogue record instead. An
+unowned individual identity can have only one outstanding piece on order.
 
 The Overview counts **owned part types** as inventory records with quantity above
 zero. The smaller line shows available individual pieces and total catalogue
@@ -42,7 +45,10 @@ Open **Car → Setups → Compare setups**. Choose any two saved configurations 
 that car, or compare either with **Current car**. Technical values and tracked
 inventory quantities are shown separately. **Show differences only** hides
 unchanged rows. A missing inventory snapshot in an older setup means unknown;
-the comparison does not treat it as an empty car.
+the comparison does not treat it as an empty car. Imported public setups also
+have unknown inventory because car packages do not transfer physical stock.
+Each column retains its recorded part names; a corrected name alone is not
+counted as a physical replacement.
 
 Links below the comparison open workshop jobs and manual tests directly linked
 to the selected saved setups. Comparisons are read-only. Applying a setup still
@@ -54,6 +60,7 @@ Open a job and select **Plan & checklist** to set its priority, target date,
 waiting status and up to 50 checklist steps. Check steps as you finish them.
 Complete every step and clear **Waiting for parts** before completing the job.
 Cancellation remains possible and preserves recorded physical changes.
+Quick successive checklist clicks are saved in order.
 
 The job's shopping section shows its linked purchases. A setup job also offers
 **Shopping need** beside outstanding individual component targets. Review the
@@ -82,6 +89,9 @@ filters), or **Car → More → Print / PDF** for one car. Choose:
 Review the preview, save the PDF, and print using your PDF viewer. Up to 500 cars
 can be selected per report. Historical setup notes and private ownership notes
 are not printed. Recorded specifications are not substitute measurements.
+Current setup sheets use current part names, while saved setup sheets retain
+their historical names. The PDF footer prints in the page margin without adding
+an extra sheet.
 
 QR links use `slotforge-paddock://car/<database-id>/<car-id>`. A compatible desktop
 installation must register that protocol and have the matching collection open.

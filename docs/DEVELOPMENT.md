@@ -1,5 +1,52 @@
 # Development & release history
 
+## Collection planning review — 1 November 2026
+
+Reviewed the changes from `5c5de96` through `bbcd4f7`: schema migration and
+persistence, stock/shopping, setup comparisons, workshop planning, reports and
+QR links, showroom shelves/framing, desktop IPC, packaging and documentation.
+The original 278-test suite passed before fixes. Added reproductions exposed:
+
+- **Checklist saves:** two rapid ticks used the same revision and one could fail.
+  Changes now persist sequentially against fresh revisions.
+- **Unreceivable purchases:** shopping accepted multiple pieces for one individual
+  identity, or orders against stock dedicated to an assembly. Backend checks and
+  the picker now prevent these combinations; the original catalogue lot remains
+  available for purchasing. Receipts still preserve assembly and inventory limits.
+- **Current report names:** current setup PDFs preferred the installation's old
+  captured name after a part was renamed. They now resolve current stock names;
+  historical reports retain the captured names.
+- **Comparison labels:** one shared label concealed historical part names. Each
+  comparison column now shows its own name and quantity without miscounting a
+  label correction as a physical replacement.
+- **Imported setup inventory:** public packages omit physical inventory, but the
+  comparison treated their empty local arrays as evidence of an empty car. Imported
+  setup comparisons and reports now explicitly show that inventory is unknown.
+- **Photo identities:** an imported additional photograph with ID `main` collided
+  with cover-photo framing. The two identities now remain separate, including when
+  photos are removed or replaced.
+- **PDF pagination:** the footer could spill onto an otherwise empty page, and a
+  final setup/scrutineering sheet forced another page. The PDF uses a margin footer
+  and ends its last sheet normally. Two-car fixtures produce one card/inventory
+  page and two setup/scrutineering pages, with a footer on every page.
+- **Input validation:** numeric planning fields no longer coerce booleans or arrays
+  into quantities/coordinates, and checklist state requires a boolean.
+
+Regression tests cover the failed cases, rollback and real desktop interactions.
+No database schema bump or Timing contract change was needed. Existing collection,
+sharing, manual performance and Timing tests remain part of the full suite.
+
+Validation: **284 unit/local-server tests**, **170 Electron workflow checks** with
+no renderer errors, syntax checks and Windows unpacked packaging. All four
+multi-car PDF types were generated, their page counts and text
+checked, and rendered output visually inspected. The workshop was also checked at
+the 960px content width. The final combined desktop suite passed, including the
+six new workflow checks. All tests use isolated collections.
+
+Physical printing, OS-level protocol registration/QR scanning, macOS/Linux builds
+and two-physical-computer networking remain untested here. No release/version bump
+is included; the wider UI design phase remains deferred.
+
 ## Collection planning and showroom polish — 1 November 2026
 
 Implemented the approved feature set: My stock / Catalogue / Shopping list,

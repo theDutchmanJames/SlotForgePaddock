@@ -1,6 +1,12 @@
 // Collection planning stays private to the local database.
 const jobPlan=id=>db.planning.jobs.find(p=>p.jobId===id)||{priority:'Normal',targetDate:'',waiting:false,checklist:[],photos:[]};
 const planningChange=(action,p)=>change('planning.'+action,{revision:db.revision,...p});
+function purchaseStockIssue(p,shopping=false){
+  if(liveAssemblies().some(a=>a.components.some(c=>c.partId===p.id)))return 'This stock belongs to an assembly. Choose its original catalogue record or add a separate stock record.';
+  const pending=shopping?db.planning.shopping.filter(s=>s.partId===p.id).reduce((n,s)=>n+s.quantity-s.received,0):0;
+  return p.tracking==='individual'&&p.quantity+pending>=1?'This individual identity is already owned or on the shopping list. Add a separate record for another identity.':'';
+}
+function purchaseStockActions(p){return (purchaseStockIssue(p)?'':btn('Add to my stock','receive-stock','',p.id))+(purchaseStockIssue(p,true)?'':btn('Add to shopping list','shop-add','',p.id));}
 function shoppingList(jobId){
   const lines=db.planning.shopping.filter(s=>!jobId||s.jobId===jobId),pending=lines.filter(s=>s.received<s.quantity),complete=lines.filter(s=>s.received===s.quantity);
   const rows=items=>items.map(s=>{const p=db.parts.find(p=>p.id===s.partId),j=db.jobs.find(j=>j.id===s.jobId);return `<article class="panel shopping-line"><div>${itemVisual(p)}<h3>${esc(p.name)}</h3><p>${s.quantity-s.received} still needed · ${s.received} received / ${s.quantity} planned</p><p class="tiny muted">${esc([s.supplier,s.date].filter(Boolean).join(' · '))}</p><p class="prewrap">${esc(s.notes)}</p></div><div class="actions">${j?btn(esc(j.name),'open-job','small',j.id):''}${s.received<s.quantity?btn('Receive parts…','shop-receive','primary',s.id):badge('Received','good')}${!s.received?btn('Remove','shop-remove','small',s.id):''}</div></article>`;}).join('');
@@ -8,12 +14,21 @@ function shoppingList(jobId){
 }
 function addShopping(partId='',jobId='',quantity=1){
   if(!db.parts.length){toast('Add a catalogue part first.');return;}
+  const parts=db.parts.filter(p=>!purchaseStockIssue(p,true)),requested=db.parts.find(p=>p.id===partId);
+  if(requested&&!parts.includes(requested)){
+    const original=parts.find(p=>p.id===requested.sourcePartId);
+    if(original)partId=original.id;else{toast(purchaseStockIssue(requested,true),true);return;}
+  }
+  if(!parts.length){toast('Add a catalogue stock record for the parts you want to purchase.',true);return;}
   const revision=db.revision;
-  modal('Add to shopping list',`<div class="form-grid"><label class="field wide">Catalogue part<select name="partId" required>${db.parts.map(p=>`<option value="${esc(p.id)}" ${p.id===partId?'selected':''}>${esc(p.name)} · ${esc(p.reference||p.category)}</option>`).join('')}</select></label>${field('quantity','Pieces needed',quantity,'number')}<label class="field">For workshop job<select name="jobId"><option value="">No linked job</option>${db.jobs.filter(j=>j.status==='active').map(j=>`<option value="${esc(j.id)}" ${j.id===jobId?'selected':''}>${esc(db.cars.find(c=>c.id===j.carId).name+' · '+j.name)}</option>`).join('')}</select></label>${field('supplier','Supplier')}${field('date','Expected date','','date')}${field('notes','Notes','','textarea')}</div>`,async v=>{await change('planning.shopping.add',{revision,...v});await refreshJob();},'Add shopping item');
+  modal('Add to shopping list',`<div class="form-grid"><label class="field wide">Catalogue part<select name="partId" data-shopping-part required>${parts.map(p=>`<option value="${esc(p.id)}" ${p.id===partId?'selected':''}>${esc(p.name)} · ${esc(p.reference||p.category)}</option>`).join('')}</select></label>${field('quantity','Pieces needed',quantity,'number')}<label class="field">For workshop job<select name="jobId"><option value="">No linked job</option>${db.jobs.filter(j=>j.status==='active').map(j=>`<option value="${esc(j.id)}" ${j.id===jobId?'selected':''}>${esc(db.cars.find(c=>c.id===j.carId).name+' · '+j.name)}</option>`).join('')}</select></label>${field('supplier','Supplier')}${field('date','Expected date','','date')}${field('notes','Notes','','textarea')}</div><p class="tiny muted">Assembly stock and already-owned individual identities are excluded. Use the original catalogue record or add a separate stock record.</p>`,async v=>{await change('planning.shopping.add',{revision,...v});await refreshJob();},'Add shopping item');
   $('#dialog [name=quantity]').step='1';$('#dialog [name=quantity]').min='1';$('#dialog [name=quantity]').required=true;
+  shoppingQuantityLimit();
 }
+function shoppingQuantityLimit(){const part=db.parts.find(p=>p.id===$('[data-shopping-part]').value),input=$('#dialog [name=quantity]');input.max=part.tracking==='individual'?'1':'1000000';if(part.tracking==='individual')input.value='1';}
 function receiveStock(partId,shoppingId=''){
   const p=db.parts.find(p=>p.id===partId),s=db.planning.shopping.find(s=>s.id===shoppingId),revision=db.revision;
+  const issue=purchaseStockIssue(p);if(issue){toast(issue,true);return;}
   modal('Receive · '+p.name,field('quantity','Individual pieces received',s?s.quantity-s.received:1,'number')+`<p>Current owned quantity: ${p.quantity}. Available: ${available(p)}.</p><label class="check-row"><input type="checkbox" name="confirmed" required>I have received these physical parts.</label>`,async v=>{await change('planning.receive',{revision,partId,shoppingId,quantity:v.quantity,confirmed:!!v.confirmed});await refreshJob();},'Add to my stock');$('#dialog [name=quantity]').step='1';$('#dialog [name=quantity]').min='1';$('#dialog [name=quantity]').required=true;
 }
 function jobPlanBadges(j){const p=jobPlan(j.id);return `<span class="row planning-badges">${badge(p.priority+' priority',p.priority==='High'?'low-stock':'')}${p.targetDate?badge((j.status==='active'&&p.targetDate<slotforgeDomain.today()?'Overdue · ':'Target ')+date(p.targetDate),j.status==='active'&&p.targetDate<slotforgeDomain.today()?'low-stock':''):''}${p.checklist.length?badge(p.checklist.filter(s=>s.done).length+'/'+p.checklist.length+' steps'):''}</span>`;}
@@ -23,9 +38,9 @@ function editJobPlan(id){const p=jobPlan(id),revision=db.revision;modal('Plan & 
 let comparisonCarId='';
 function openSetupComparison(id){const d=current(),s=d.setups.find(s=>s.id===id);if(!s)return;comparisonCarId=s.carId;const options=[['current','Current car'],...d.setups.filter(x=>x.carId===s.carId).map(x=>[x.id,x.name+' · '+date(x.date)])];modal('Compare configurations',`<div class="form-grid">${['left','right'].map((side,i)=>`<label class="field">${i?'Compare to':'Baseline'}<select id="compare-${side}">${options.map(([key,label])=>`<option value="${esc(key)}" ${key===(i?'current':id)?'selected':''}>${esc(label)}</option>`).join('')}</select></label>`).join('')}</div><label class="check-row mt"><input type="checkbox" id="compare-changes">Show differences only</label><div id="comparison-result"></div>`,null);renderSetupComparison();}
 function renderSetupComparison(){const d=current(),c=d.cars.find(c=>c.id===comparisonCarId),ids=[$('#compare-left').value,$('#compare-right').value],snap=id=>id==='current'?{technical:c.technical,installations:d.installations.filter(i=>i.carId===c.id&&!i.removed).map(i=>({...i,name:d.parts.find(p=>p.id===i.partId)?.name||i.name}))}:d.setups.find(s=>s.id===id),[a,b]=ids.map(snap),result=SetupComparison.compare(a,b),only=$('#compare-changes').checked;
-  const table=(rows,part=false)=>`<div class="table-wrap"><table><thead><tr><th>${part?'Tracked component':'Setting'}</th><th>Baseline</th><th>Compared configuration</th><th>Status</th></tr></thead><tbody>${rows.filter(r=>!only||r.changed).map(r=>`<tr class="${r.changed?'comparison-change':''}"><td>${esc(part?r.name+' · '+r.position:techLabels[r.key]||r.key)}</td><td>${esc(r.before|| (part?'0':'—'))}</td><td>${esc(r.after||(part?'0':'—'))}</td><td>${r.changed?'Changed':'Unchanged'}</td></tr>`).join('')}</tbody></table></div>`;
+  const table=(rows,part=false)=>`<div class="table-wrap"><table><thead><tr><th>${part?'Tracked component':'Setting'}</th><th>Baseline</th><th>Compared configuration</th><th>Status</th></tr></thead><tbody>${rows.filter(r=>!only||r.changed).map(r=>`<tr class="${r.changed?'comparison-change':''}"><td>${esc(part?r.name+' · '+r.position:techLabels[r.key]||r.key)}</td><td>${part&&r.beforeName?esc(r.beforeName)+' × ':''}${esc(r.before|| (part?'0':'—'))}</td><td>${part&&r.afterName?esc(r.afterName)+' × ':''}${esc(r.after||(part?'0':'—'))}</td><td>${r.changed?'Changed':'Unchanged'}</td></tr>`).join('')}</tbody></table></div>`;
   const jobs=local()?db.jobs.filter(j=>j.carId===c.id&&ids.includes(j.setupId)):[],tests=local()?db.tests.filter(t=>t.carId===c.id&&ids.includes(t.setupId)):[];
-  $('#comparison-result').innerHTML=`<p>${result.changes} differences. Comparison does not change the car.</p>${table(result.technical)}<h3 class="mt">Tracked inventory · quantities</h3>${!a.installations||!b.installations?'<p class="note info">An older snapshot has no tracked-inventory record. Missing quantities mean unknown, not proof that nothing was fitted.</p>':''}${table(result.parts,true)}<h3 class="mt">Related workshop jobs and tests</h3><div class="actions">${jobs.map(j=>btn(esc(j.name),'compare-job','',j.id)).join('')}${tests.map(t=>btn(esc((t.track||'Manual test')+' · '+date(t.date)),'compare-test','',t.id)).join('')}</div>${!jobs.length&&!tests.length?'<p class="muted">No records directly linked to the selected saved setups.</p>':''}`;
+  $('#comparison-result').innerHTML=`<p>${result.changes} differences. Comparison does not change the car.</p>${table(result.technical)}<h3 class="mt">Tracked inventory · quantities</h3>${!result.inventoryKnown?'<p class="note info">This historical or imported snapshot has no tracked-inventory record. Missing quantities mean unknown, not proof that nothing was fitted.</p>':''}${table(result.parts,true)}<h3 class="mt">Related workshop jobs and tests</h3><div class="actions">${jobs.map(j=>btn(esc(j.name),'compare-job','',j.id)).join('')}${tests.map(t=>btn(esc((t.track||'Manual test')+' · '+date(t.date)),'compare-test','',t.id)).join('')}</div>${!jobs.length&&!tests.length?'<p class="muted">No records directly linked to the selected saved setups.</p>':''}`;
 }
 let reportIds=[],reportRevision=0,reportPreviewRequest=0;
 function reportOptions(){return {revision:reportRevision,kind:$('#report-kind').value,ids:reportIds,purchase:$('#report-purchase').checked,setupId:$('#report-kind').value==='setup'?$('#report-setup')?.value||'':''};}
@@ -37,7 +52,7 @@ function shelfEditorRows(){return editingShelfIds.map((id,i)=>`<div class="list-
 function editShelf(id=''){const s=db.planning.shelves.find(s=>s.id===id),revision=db.revision;editingShelfId=id;editingShelfIds=[...(s?.carIds||[])];modal(s?'Edit shelf':'New showroom shelf',field('name','Shelf name',s?.name||'')+`<div class="row mt"><label class="field">Add car<select id="shelf-car">${db.cars.filter(c=>!c.archived).map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select></label>${btn('Add car','shelf-car-add')}</div><p class="muted">Order cars with the arrows. Archived cars stay saved on a shelf but are hidden in the showroom.</p><div id="shelf-editor">${shelfEditorRows()}</div>`,async v=>{showroom.shelf=await change('planning.shelf.save',{revision,id:editingShelfId,name:v.name,carIds:editingShelfIds});},'Save shelf');}
 function applyPhotoFocus(){for(const img of document.querySelectorAll('[data-focus-car]')){const f=local()?db.planning.focus.find(f=>f.carId===img.dataset.focusCar&&f.photoKey===img.dataset.focusPhoto):null;img.style.objectPosition=(f?.x??50)+'% '+(f?.y??50)+'%';}}
 let focusCarId='';
-function photoKey(c,p){return c.picture===p.data?'main':c.photos.find(f=>f.data===p.data)?.id;}
+function photoKey(c,p){if(c.picture===p.data)return 'main';const id=c.photos.find(f=>f.data===p.data)?.id;return id==='main'?'photo:main':id;}
 function focusPhotoOptions(){return ShowroomModel.photos(db.cars.find(c=>c.id===focusCarId));}
 function focusPreview(reset=false){const c=db.cars.find(c=>c.id===focusCarId),p=focusPhotoOptions()[Number($('#focus-photo').value)],key=photoKey(c,p),f=db.planning.focus.find(f=>f.carId===c.id&&f.photoKey===key);if(reset){$('#focus-x').value=f?.x??50;$('#focus-y').value=f?.y??50;}$('#focus-image').src=p.data;$('#focus-image').style.objectPosition=$('#focus-x').value+'% '+$('#focus-y').value+'%';}
 function editPhotoFocus(id,photoIndex=0){const c=db.cars.find(c=>c.id===id),photos=ShowroomModel.photos(c),revision=db.revision;if(!photos.length){toast('Add a car photograph first.');return;}focusCarId=id;modal('Photo framing · '+c.name,`<label class="field">Photograph<select id="focus-photo">${photos.map((p,i)=>`<option value="${i}">${esc(p.name)}</option>`).join('')}</select></label><p class="muted">Choose the focal point used in Fill mode. The original image and Fit mode keep the complete photograph.</p><div class="focus-preview"><img id="focus-image" alt="Framing preview"></div><label class="field">Horizontal focal point<input type="range" id="focus-x" min="0" max="100"></label><label class="field">Vertical focal point<input type="range" id="focus-y" min="0" max="100"></label>`,async()=>{const p=focusPhotoOptions()[Number($('#focus-photo').value)];await change('planning.focus',{revision,carId:id,photoKey:photoKey(c,p),x:Number($('#focus-x').value),y:Number($('#focus-y').value)});},'Save framing');$('#focus-photo').value=String(Math.min(photoIndex,photos.length-1));focusPreview(true);}
@@ -70,8 +85,23 @@ async function enhancementAction(action,id,target){
     case 'presentation-toggle':showroom.viewer.presentation=!showroom.viewer.presentation;renderShowroomViewer();return true;
   }return false;
 }
+// Persist rapid clicks in order, taking a fresh revision for each one.
+let checklistQueue=Promise.resolve(),pendingChecklistChanges=0;
+function saveChecklistStep(el){
+  const payload={jobId:el.dataset.jobId,id:el.dataset.jobStep,done:el.checked};el.disabled=true;pendingChecklistChanges++;
+  checklistQueue=checklistQueue.then(async()=>{
+    try{await planningChange('job.check',payload);}catch(error){toast(error.message,true);}
+    finally{
+      pendingChecklistChanges--;
+      if(!pendingChecklistChanges&&page==='Workshop'&&workshopJob?.job.id===payload.jobId){await refreshJob();render();}
+      if(el.isConnected){el.disabled=false;el.checked=jobPlan(payload.jobId).checklist.find(s=>s.id===payload.id)?.done??!payload.done;}
+    }
+  }).catch(error=>toast(error.message,true));
+  return checklistQueue;
+}
 document.addEventListener('change',async e=>{const el=e.target;try{
-  if(el.dataset.jobStep){el.disabled=true;await planningChange('job.check',{jobId:el.dataset.jobId,id:el.dataset.jobStep,done:el.checked});await refreshJob();render();}
+  if(el.matches('[data-shopping-part]'))shoppingQuantityLimit();
+  if(el.dataset.jobStep)await saveChecklistStep(el);
   if(['compare-left','compare-right','compare-changes'].includes(el.id))renderSetupComparison();
   if(['report-kind','report-setup','report-purchase'].includes(el.id))await reportPreview();
   if(el.id==='showroom-shelf'){showroom.shelf=el.value;render();}

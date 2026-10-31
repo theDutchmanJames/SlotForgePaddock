@@ -32,7 +32,7 @@ async function files(action,p={}){
     const report=reports.render(store.snapshot(),p),result=await dialog.showSaveDialog(win,{title:'Save printable PDF',defaultPath:'SlotForge-'+p.kind+'.pdf',filters:[{name:'PDF document',extensions:['pdf']}]});if(result.canceled)return null;
     const printWindow=new BrowserWindow({show:false,webPreferences:{sandbox:true,contextIsolation:true,nodeIntegration:false,javascript:false}});
     printWindow.webContents.setWindowOpenHandler(()=>({action:'deny'}));
-    try{await printWindow.loadURL('data:text/html;charset=utf-8,'+encodeURIComponent(report.html));const bytes=await printWindow.webContents.printToPDF({printBackground:true,pageSize:'A4',preferCSSPageSize:true});return exportBytes(result.filePath,bytes,[store.file,store.file+'.previous',store.file+'.tmp']);}finally{printWindow.destroy();}
+    try{await printWindow.loadURL('data:text/html;charset=utf-8,'+encodeURIComponent(report.html));const bytes=await printWindow.webContents.printToPDF({printBackground:true,pageSize:'A4',preferCSSPageSize:true,displayHeaderFooter:true,headerTemplate:'<span></span>',footerTemplate:report.footerTemplate});return exportBytes(result.filePath,bytes,[store.file,store.file+'.previous',store.file+'.tmp']);}finally{printWindow.destroy();}
   }
 
   if(action==='catalogue.kit'){const r=await dialog.showSaveDialog(win,{title:'Save manufacturer catalogue import kit',defaultPath:'SlotForge-catalogue-kit.json',filters:[{name:'Catalogue JSON kit',extensions:['json']}]});return r.canceled?null:exportJSON(r.filePath,catalogueImport.kit(),[store.file,store.file+'.previous',store.file+'.tmp']);}
