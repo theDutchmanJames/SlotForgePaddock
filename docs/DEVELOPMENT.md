@@ -1,5 +1,11 @@
 # Development & release history
 
+## English catalogue guidance — after 0.17.1
+
+The AI import kit now explicitly requires English descriptions while preserving brands, model names, SKUs, source URLs and stated measurements. It includes exhaustive valid classification combinations, function-based decision guidance, multilingual vocabulary hints, ambiguous-item examples, a final self-check and instructions for repairing an existing catalogue without inventing facts or refreshing unverified source dates.
+
+Added Body detail, Gear set, Wrench / spanner, Driver bit, Setup gauge, Work mat and Tyre treatment to the existing categories, using existing icons as defaults. Imports still require review and create zero-owned stock. The exchange format remains version 1; existing non-English catalogues remain readable. Older app versions cannot import the new types until updated. The [standalone kit and usage guide](CATALOGUE-IMPORT.md) match the app-generated download, checked by regression tests. All 255 automated tests passed, including new-type imports and backup validation. The user-supplied NSR file was inspected, not edited or imported.
+
 ## Source-available licence — after 0.17.1
 
 Adopted SlotForge Source-Available License 1.0 from Timing, changing only the application name in its scope. The README summarises the terms; package metadata points to LICENSE. Future desktop builds include the complete first-party licence and third-party notices as accessible resource files, without replacing Electron's own notices. The Timing handoff includes its own copy of LICENSE. Previously published downloads and tags are unchanged.

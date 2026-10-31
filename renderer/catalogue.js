@@ -1,9 +1,9 @@
 (function(root){
   const parts={
-    'Body & interior':['Body shell','Wing / spoiler','Mirror','Glazing','Bumper / splitter','Cockpit','Driver','Interior detail','Decals'],
+    'Body & interior':['Body shell','Wing / spoiler','Mirror','Glazing','Bumper / splitter','Cockpit','Driver','Interior detail','Decals','Body detail'],
     'Chassis & mounting':['Chassis','Chassis section','Subframe','Body mount','Motor pod','Motor bracket','Adapter','Retainer'],
     'Motors & motor parts':['Motor','Brushless motor','Armature','Endbell','Brushes','Brush springs','Brush holders','Motor magnets'],
-    'Gears & transmission':['Pinion','Crown gear','Spur gear','Anglewinder gear','Pulley','Drive belt'],
+    'Gears & transmission':['Pinion','Crown gear','Spur gear','Anglewinder gear','Pulley','Drive belt','Gear set'],
     'Axles & bearings':['Axle','Independent axle','Axle support','Bushing','Bearing','Spacer / shim','Axle collar'],
     'Wheels & tyres':['Wheel','Hub','Wheel insert','Tyre','Wheel & tyre set'],
     'Guides & pickups':['Guide','Guide pin','Guide holder','Braids','Pickup shoe','Pickup spring','Contact plate'],
@@ -13,11 +13,11 @@
     'Other & custom parts':['Custom part','Other']
   };
   const supplies={
-    'Hand tools':['Screwdriver','Hex driver','Pliers','Cutter','Tweezers','File'],
-    'Measuring & setup tools':['Calipers','Scales','Setup plate','Ride-height gauge','Gear-mesh tool'],
+    'Hand tools':['Screwdriver','Hex driver','Pliers','Cutter','Tweezers','File','Wrench / spanner','Driver bit'],
+    'Measuring & setup tools':['Calipers','Scales','Setup plate','Ride-height gauge','Gear-mesh tool','Setup gauge','Work mat'],
     'Tyre & wheel equipment':['Tyre truer','Sanding equipment','Wheel puller','Balancing equipment'],
     'Motor & electrical equipment':['Motor tester','RPM meter','Multimeter','Soldering equipment','Bench power supply'],
-    'Cleaning & lubrication':['Cleaner','Cleaning brush','Cloth','Bearing oil','Gear grease'],
+    'Cleaning & lubrication':['Cleaner','Cleaning brush','Cloth','Bearing oil','Gear grease','Tyre treatment'],
     'Adhesives & consumables':['Glue','Tape','Solder','Flux','Heat-shrink','Abrasive','Paint'],
     'Storage & transport':['Toolbox','Race case','Parts organiser','Storage tray']
   };

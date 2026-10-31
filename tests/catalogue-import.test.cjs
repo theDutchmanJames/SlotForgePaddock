@@ -9,6 +9,28 @@ const apply=(s,pack,selections)=>act(s,'catalogue.apply',{input:pack,selections,
 test('the kit includes all categories, instructions and isolated fictional examples',()=>{
   const kit=C.kit();assert.deepEqual(kit.reference.parts,taxonomy.parts);assert.deepEqual(kit.reference.supplies,taxonomy.supplies);assert.deepEqual(kit.products,[]);assert.match(kit.instructions,/do not invent/i);assert.throws(()=>C.parse(kit),/empty template/);
 });
+
+test('AI classification guidance uses only supported pairs and the downloadable template stays current',()=>{
+  const kit=C.kit(),options=kit.reference.classificationOptions;
+  const expected=Object.entries({part:taxonomy.parts,supply:taxonomy.supplies}).flatMap(([kind,groups])=>Object.entries(groups).flatMap(([category,types])=>types.map(partType=>({kind,category,partType}))));
+  assert.deepEqual(options,expected);
+  for(const example of kit.reference.classificationGuide.examples){
+    const r=C.parse(input([product({...example,name:example.description})]))[0];assert.deepEqual(r.errors,[],example.description);
+  }
+  assert.match(kit.instructions,/Generate the entire product list in English/);
+  assert.match(kit.instructions,/Do not refresh checkedDate unless you actually recheck/);
+  assert.match(kit.instructions,/Retain genuinely unresolved rows/);
+  assert.deepEqual(JSON.parse(require('node:fs').readFileSync(require('node:path').join(__dirname,'../docs/templates/slotforge-catalogue-kit.json'),'utf8')),kit);
+});
+
+test('additional catalogue types import as zero-stock items and survive backup validation',()=>{
+  const examples=C.kit().reference.classificationGuide.examples;
+  const pack=input(examples.map((e,i)=>product({...e,name:e.description,reference:'GUIDE-'+i})));
+  const store=new Store();const result=apply(store,pack,pack.products.map((_,index)=>({index,create:true})));
+  assert.deepEqual(result,{created:examples.length,updated:0});
+  assert.ok([...store.data.parts,...store.data.supplies].every(p=>p.quantity===0));
+  assert.deepEqual(migrate(store.snapshot()),store.snapshot());
+});
 test('selected products create zero-owned parts and supplies with packaging and units intact',()=>{
   const s=new Store(),pack=input([product({packSize:4,packUnit:'pieces'}),product({kind:'supply',name:'Oil',reference:'OIL',category:'Cleaning & lubrication',partType:'Bearing oil',supplyKind:'Consumable',specifications:[{name:'Capacity',value:'20',unit:'ml'}]}),product({name:'Not selected',reference:'SKIP'})]);
   const before=s.snapshot(),preview=s.plan('catalogue.preview',{input:pack});assert.deepEqual(s.snapshot(),before);assert.ok(preview.rows.every(r=>r.status==='new'));

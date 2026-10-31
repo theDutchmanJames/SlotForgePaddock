@@ -85,7 +85,7 @@ Torque is entered in **gf·cm** (gram-force centimetres), with separate test vol
 - **Choose icons and colours.** Use automatic part-type icons or pick your own, with five preset colours for your preferred organisation scheme.
 - **Build assemblies.** Combine components into a ready-to-use unit, such as a complete rear axle or motor-pod assembly. Install, remove, transfer or replace its components while retaining their history.
 - **Build from Scratch.** Click parts on the exploded SVG diagram to assign inventory to a new car. Highlights follow the component shapes. Calculate the gearing ratio from pinion and crown / axle gear teeth, using explicit catalogue specifications or your own entries. Save unfinished drafts, or create a car with as little as one component. An optional **As built** setup records its starting configuration, including entered gearing.
-- **Import manufacturer catalogues.** Download an AI-ready template containing the supported part and workshop-supply categories. Give it to your own AI with chosen manufacturer or retailer sources, then review the completed file and select which products to import. New entries start at **zero owned stock**; pack sizes do not become owned quantities.
+- **Import manufacturer catalogues.** Download an [AI-ready English template](docs/CATALOGUE-IMPORT.md) containing supported part and workshop-supply types, classification examples and a final self-check. Give it to your own AI with chosen manufacturer or retailer sources, then review the completed file and select which products to import. New entries start at **zero owned stock**; pack sizes do not become owned quantities.
 
 <table>
   <tr>

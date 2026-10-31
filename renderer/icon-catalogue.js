@@ -21,6 +21,7 @@
     'Storage & transport':['toolbox','race-case','parts-organiser','storage-tray']
   };
   const types={
+    'Body detail':'body-shell','Gear set':'crown-gear','Wrench / spanner':'hex-driver','Driver bit':'screwdriver','Setup gauge':'ride-height-gauge','Work mat':'setup-plate','Tyre treatment':'bearing-oil',
     'Body shell':'body-shell','Wing / spoiler':'rear-wing','Mirror':'door-mirrors','Glazing':'window-insert','Bumper / splitter':'front-bumper','Cockpit':'cockpit-interior','Driver':'driver-figure','Interior detail':'dashboard','Decals':'decal-sheet',
     'Chassis':'chassis','Chassis section':'chassis-section','Subframe':'chassis-subframe','Body mount':'body-mounting-posts','Motor pod':'motor-pod','Motor bracket':'motor-bracket','Adapter':'motor-adapter-plate','Retainer':'motor-retainer',
     'Motor':'short-can-motor','Brushless motor':'brushless-motor','Armature':'motor-armature','Endbell':'motor-endbell','Brushes':'motor-brushes','Brush springs':'motor-brush-springs','Brush holders':'brush-holders','Motor magnets':'motor-magnets',
