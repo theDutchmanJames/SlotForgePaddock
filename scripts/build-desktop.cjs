@@ -65,14 +65,16 @@ Files are written to dist/v<version>/. Nothing is installed automatically.`);
     run('npm', ['run', 'check']);
     run('npm', ['test']);
   }
-  const started = Date.now();
-  run('npm', ['run', `dist:${platform}`, '--', `--${arch}`, '--publish', 'never']);
   const output = path.join(root, 'dist', `v${pkg.version}`);
   const extensions = platform === 'mac' ? ['dmg', 'zip'] : ['AppImage', 'deb'];
   const files = extensions.map(ext => `SlotForgePaddock-${pkg.version}-${platform}-${arch}.${ext}`);
+  const signature = stat => [stat.dev,stat.ino,stat.size,stat.mtimeMs,stat.ctimeMs].join('/');
+  const previous = new Map(files.map(file=>{try{return [file,signature(fs.statSync(path.join(output,file)))];}catch(error){if(error.code!=='ENOENT')throw error;return [file,null];}}));
+  const started = Date.now();
+  run('npm', ['run', `dist:${platform}`, '--', `--${arch}`, '--publish', 'never']);
   for (const file of files) {
     const stat = fs.statSync(path.join(output, file));
-    if (!stat.isFile() || stat.size === 0 || stat.mtimeMs < started - 2000) throw Error(`Missing or stale installer: ${file}`);
+    if (!stat.isFile() || stat.size === 0 || stat.mtimeMs < started - 2000 || previous.get(file)===signature(stat)) throw Error(`Missing or stale installer: ${file}`);
   }
   const sums = files.map(file => `${crypto.createHash('sha256').update(fs.readFileSync(path.join(output, file))).digest('hex')}  ${file}`).join('\n') + '\n';
   fs.writeFileSync(path.join(output, `SHA256SUMS-${platform}-${arch}.txt`), sums);

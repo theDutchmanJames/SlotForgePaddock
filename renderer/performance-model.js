@@ -40,14 +40,16 @@
     if(!rpm||!torqueNm)reasons.push('Enter no-load RPM and motor torque.');
     if(!v.ratedVoltage||!v.torqueVoltage)reasons.push('Enter the test voltage for both RPM and torque.');
     else if(Math.abs(v.ratedVoltage-v.torqueVoltage)>1e-9)reasons.push('RPM and torque test voltages must match; no voltage scaling is assumed.');
+    const potentialPower=torqueNm!==null&&rpm!==null?finite(torqueNm*rpm*2*Math.PI/60/4):null;
+    if(!reasons.length&&!(potentialPower>0))reasons.push('These ratings are too small to calculate a usable power curve.');
     const curveReady=!reasons.length;
-    const peakPowerW=curveReady?finite(torqueNm*rpm*2*Math.PI/60/4):null;
+    const peakPowerW=curveReady?potentialPower:null;
     return {...v,ratio,axleRpm,rollout,speedKmh,torqueNm,axleTorque,forceN,curveReady,reasons,peakPowerW,peakMotorRpm:curveReady?rpm/2:null,torqueType:input.torqueType||'Unknown'};
   }
   function point(input,percent){
     const m=calculate(input);if(!m.curveReady||!Number.isFinite(percent)||percent<0||percent>100)return null;
     const rpm=m.ratedRpm*percent/100,torqueNm=m.torqueNm*(1-percent/100);
-    return {rpm,torqueGfCm:torqueNm/0.0000980665,powerW:torqueNm*rpm*2*Math.PI/60,axleRpm:m.ratio?rpm/m.ratio:null,forceN:m.ratio&&m.rearDiameter?torqueNm*m.ratio/(m.rearDiameter/2000):null,speedKmh:m.ratio&&m.rearDiameter?rpm/m.ratio*Math.PI*m.rearDiameter*60/1000000:null};
+    return {rpm,torqueGfCm:torqueNm/0.0000980665,powerW:torqueNm*rpm*2*Math.PI/60,axleRpm:m.ratio?rpm/m.ratio:null,forceN:m.ratio&&m.rearDiameter?finite(torqueNm*m.ratio/(m.rearDiameter/2000)):null,speedKmh:m.ratio&&m.rearDiameter?rpm/m.ratio*Math.PI*m.rearDiameter*60/1000000:null};
   }
   const api={numbers,choices,keys,blank,positive,clean,baseline,calculate,point};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.PerformanceModel=api;

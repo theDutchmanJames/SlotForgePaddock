@@ -78,13 +78,15 @@ Dates must be ISO 8601 **UTC with exactly millisecond precision**, e.g. `2026-10
 | `notes` | Reviewed session notes (maximum 4,000 characters). Not a technical modification or maintenance instruction. |
 | participant `summary` | Optional cross-check using `$defs.summary`. Paddock recomputes it; discrepancies >0.000001 for numbers or any other mismatch return `SUMMARY_MISMATCH`. See `normal-with-summary.json`. Omit if Timing cannot supply exactly these meanings. |
 
-Lap numbers must be unique and increasing within participant/heat when sorted by completion time. Measured lap intervals cannot overlap within participant/heat. A lap must finish within its referenced stint and its measured start must be inside that heat. A lap crossing a driver-change boundary is attributed to the stint/driver at completion; its measured interval is not split. Incomplete laps without a measured completion are omitted from `laps`; fractional classification belongs in standings. This version does not add fractional laps to physical mileage.
+Lap numbers must be unique and increasing within participant/heat when sorted by completion time. Measured lap intervals cannot overlap for the same participant, including across different heats. A lap must finish within its referenced stint and its measured start must be inside that heat. A lap crossing a driver-change boundary is attributed to the stint/driver at completion; its measured interval is not split. Incomplete laps without a measured completion are omitted from `laps`; fractional classification belongs in standings. This version does not add fractional laps to physical mileage.
 
 Invalid and pit laps require `recordEligible: false`. Valid non-pit laps may also be ineligible (for example, practice conditions unsuitable for official records). Paddock never promotes an ineligible lap. A Virtual Rival must use `kind: "virtual"`, `carId: null`, `configuration: null`. Virtual and unlinked entries are stored for context/classification but never contribute to physical-car statistics.
 
 ## Derived statistics: measured versus classified
 
 The receipt contains per-participant `summaries` and an `included` flag. Paddock recomputes these from the accepted latest active document; it never adds client-provided totals to existing counters. For virtual/unlinked/withdrawn entries the physical contribution is zero; withdrawn receipts have no summaries.
+
+An earlier host could accept overlapping measured laps across different heats for one participant. Such stored sessions remain readable, but the entire session contributes no statistics until corrected. Receipt lookup returns `SESSION_REQUIRES_CORRECTION` warnings for its linked cars, with `included: false` and zero physical contributions. The car UI labels the session **Needs correction** and retains its original results for inspection. Send a deliberate higher revision containing corrected results, or withdraw it. Retrying the original invalid payload returns `INVALID_PAYLOAD`; it does not restore its contributions. This compatibility safeguard does not permit new overlapping submissions.
 
 | Statistic | Exact meaning |
 | --- | --- |

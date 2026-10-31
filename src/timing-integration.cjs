@@ -29,7 +29,7 @@ function verifyConfiguration(db,carId,configuration){
   if(configurationId!==revision||revision!==digest({databaseId,carId,kind,technical,components}))throw fault('CONFIGURATION_INVALID','Configuration content and revision disagree.',409);
 }
 function unique(rows,key,label){const map=new Map();for(const row of rows){check(!map.has(row[key]),'Duplicate '+label+': '+row[key]);map.set(row[key],row);}return map;}
-function validatePayload(payload){
+function validatePayload(payload,{stored=false}={}){
   if(payload?.integrationVersion!==1)throw fault('UNSUPPORTED_VERSION','Supported Timing integration versions: 1.',422);
   contract.validate(payload,contract.schema.$defs[payload.state==='withdrawn'?'withdrawal':'active']);
   check(Buffer.byteLength(JSON.stringify(payload))<=MAX_BYTES,'Session exceeds the 8 MiB limit.');
@@ -44,7 +44,7 @@ function validatePayload(payload){
     check(p.kind!=='virtual'||p.carId===null,'Virtual participants must not reference physical cars.');
     if(p.carId){check(!cars.has(p.carId),'A physical car must use one participant across all heats and driver changes.');cars.add(p.carId);}
     const drivers=unique(p.drivers,'id','driver'),stints=unique(p.stints,'id','stint'),sequences=new Set(),lastLap=new Map();
-    let previousEnd=-1;
+    let previousEnd=-1,previousLapEnd=-1;
     for(const s of [...stints.values()].sort((a,b)=>a.startedAtMs-b.startedAtMs)){
       const h=heats.get(s.heatId);check(h&&drivers.has(s.driverId)&&lanes.has(s.lane),'Unknown heat, driver or lane in stint.');
       check(s.startedAtMs<=s.endedAtMs&&s.startedAtMs>=h.startedAtMs&&s.endedAtMs<=h.endedAtMs,'Stint times fall outside its heat.');
@@ -56,6 +56,7 @@ function validatePayload(payload){
       check(!lapIds.has(l.id),'Duplicate lap ID.');lapIds.add(l.id);
       const sequence=s.heatId+':'+l.number;check(!sequences.has(sequence),'Duplicate lap number for participant and heat.');sequences.add(sequence);
       check(l.endedAtMs>=s.startedAtMs&&l.endedAtMs<=s.endedAtMs&&l.durationMs<=l.endedAtMs-heats.get(s.heatId).startedAtMs,'Lap times fall outside the heat/stint.');
+      if(!stored)check(l.endedAtMs-l.durationMs>=previousLapEnd,'Overlapping measured laps for one participant, including across heats.');previousLapEnd=l.endedAtMs;
       const last=lastLap.get(s.heatId);check(!last||l.number>last.number&&l.endedAtMs-l.durationMs>=last.endedAtMs,'Overlapping or out-of-order measured laps.');lastLap.set(s.heatId,l);
       check(!l.recordEligible||l.valid&&!l.pit,'Invalid and pit laps cannot be record eligible.');
     }
@@ -63,9 +64,11 @@ function validatePayload(payload){
   unique(payload.standings,'participantId','standing');
   for(const s of payload.standings){check(participants.has(s.participantId),'Unknown participant in final standings.');check(s.status==='finished'||s.position!==1,'Only a finished participant can be the winner.');}
   for(const a of payload.adjustments)check(participants.has(a.participantId),'Unknown adjustment participant.');
-  for(const p of participants.values())if(p.summary){const expected=results.statistics(payload,p);for(const key of Object.keys(expected))if(typeof expected[key]==='number'&&typeof p.summary[key]==='number'?Math.abs(expected[key]-p.summary[key])>0.000001:expected[key]!==p.summary[key])throw fault('SUMMARY_MISMATCH','Participant '+p.id+' summary disagrees with measured laps: '+key);}
+  // Previously accepted cross-heat overlaps remain readable, but are quarantined
+  // by the derived-statistics model until Timing sends a valid higher revision.
+  if(!(stored&&results.requiresCorrection(payload)))for(const p of participants.values())if(p.summary){const expected=results.statistics(payload,p,true);for(const key of Object.keys(expected))if(typeof expected[key]==='number'&&typeof p.summary[key]==='number'?Math.abs(expected[key]-p.summary[key])>0.000001:expected[key]!==p.summary[key])throw fault('SUMMARY_MISMATCH','Participant '+p.id+' summary disagrees with measured laps: '+key);}
 }
-function receipt(db,record,duplicate=false){return {ok:true,integrationVersion:1,databaseId:db.id,sourceId:record.payload.source.id,sessionId:record.payload.sessionId,revision:record.payload.revision,state:record.payload.state,contentHash:record.contentHash,receivedAt:record.receivedAt,duplicate,warnings:record.warnings,summaries:results.summaries(record.payload)};}
+function receipt(db,record,duplicate=false){const warnings=[...record.warnings];if(results.requiresCorrection(record.payload))for(const p of record.payload.participants)if(p.carId)warnings.push({code:'SESSION_REQUIRES_CORRECTION',carId:p.carId});return {ok:true,integrationVersion:1,databaseId:db.id,sourceId:record.payload.source.id,sessionId:record.payload.sessionId,revision:record.payload.revision,state:record.payload.state,contentHash:record.contentHash,receivedAt:record.receivedAt,duplicate,warnings,summaries:results.summaries(record.payload)};}
 function receive(store,input){
   validatePayload(input);if(input.databaseId!==store.data.id)throw fault('DATABASE_MISMATCH','This session targets a different Paddock database.',409);
   const contentHash=digest(input),existing=store.data.timing.sessions.find(s=>s.payload.source.id===input.source.id&&s.payload.sessionId===input.sessionId);
@@ -88,11 +91,11 @@ function validateStored(db){
   const t=db.timing;check(t&&typeof t==='object'&&!Array.isArray(t),'Missing Timing storage.');check(t.key===null||typeof t.key==='string'&&/^[a-f0-9]{64}$/.test(t.key),'Invalid Timing capture key.');check(Array.isArray(t.sessions)&&t.sessions.length<=MAX_SESSIONS,'Invalid Timing sessions.');
   const ids=new Set();
   for(const r of t.sessions){
-    validatePayload(r.payload);check(r.payload.databaseId===db.id,'Stored session targets another database.');const id=r.payload.source.id+':'+r.payload.sessionId;check(!ids.has(id),'Duplicate stored session identity.');ids.add(id);
+    validatePayload(r.payload,{stored:true});check(r.payload.databaseId===db.id,'Stored session targets another database.');const id=r.payload.source.id+':'+r.payload.sessionId;check(!ids.has(id),'Duplicate stored session identity.');ids.add(id);
     check(r.contentHash===digest(r.payload),'Stored session hash mismatch.');
     contract.validate(receipt(db,r),contract.schema.$defs.receipt);
     check(Array.isArray(r.carIds)&&r.carIds.length<=10000&&new Set(r.carIds).size===r.carIds.length&&r.carIds.every(id=>typeof id==='string'&&/^[a-zA-Z0-9_-]{1,100}$/.test(id)),'Invalid session car references.');
-    check(typeof r.lastName==='string'&&r.lastName.length<=200,'Invalid session name.');
+    contract.validate(r.lastName,contract.schema.$defs.active.properties.name,'$.lastName');
     check(Array.isArray(r.history)&&r.history.length<1000,'Invalid revision history.');let previous=0;
     for(const h of r.history){check(Number.isInteger(h.revision)&&h.revision>previous&&h.revision<r.payload.revision,'Invalid historical revision.');previous=h.revision;check(['active','withdrawn'].includes(h.state)&&/^[a-f0-9]{64}$/.test(h.contentHash)&&typeof h.receivedAt==='string'&&Number.isFinite(Date.parse(h.receivedAt)),'Invalid session audit record.');}
     if(r.payload.state==='active')for(const p of r.payload.participants)if(p.carId){check(r.carIds.includes(p.carId),'Missing session car reference.');verifyConfiguration(db,p.carId,p.configuration);}

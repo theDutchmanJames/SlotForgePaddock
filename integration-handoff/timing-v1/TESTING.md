@@ -5,10 +5,10 @@ Validated on Windows against updated Paddock source on 31 October 2026.
 | Check | Result |
 | --- | --- |
 | `npm run check` | Passed syntax checks |
-| `npm test` | **246 passed, 0 failed** |
+| `npm test` | **253 passed, 0 failed** |
 | Timing integration suite (included above) | **23 passed, 0 failed** |
-| Full isolated Electron workflow suite | **151 checks passed; no renderer errors** |
-| Visual inspection | Imported-session view and session details checked; dark 1440px and light 960px layouts |
+| Full isolated Electron workflow suite | **154 checks passed; no renderer errors** |
+| Visual inspection | Imported-session view, correction notice and session details checked; dark 1440px and light 960px layouts |
 
 ## Covered cases
 
@@ -22,6 +22,7 @@ Validated on Windows against updated Paddock source on 31 October 2026.
 - Multiple cars/heats, endurance drivers/stints, invalid/pit laps, non-record laps, virtual/unlinked entries, unknown distance, independent adjusted standings, optional computed-summary cross-check.
 - Existing sharing, car-submission review, manual records, inventory, jobs and history remain independent. Public profile/export privacy checks pass.
 - Published schema equals the runtime definition; all example requests are accepted by the receiver with the demo database; responses match their documented schemas.
+- Unicode session-name persistence, cross-heat lap overlap rejection, safe reading of older overlapping sessions, exclusion from statistics until correction, quiet revision refresh after first configuration capture and lap-detail pagination.
 - Desktop permission controls, HTTP-delivered sessions beside manual records, correct Timing-specific notification, driver/configuration details, correction/withdrawal display and responsive themed layout.
 
 ## Reproduce
@@ -38,7 +39,7 @@ node scripts/timing-demo-host.cjs
 
 The last command starts the artificial in-memory host, prints its address/database ID/temporary Timing code, and stays running until Ctrl+C. It does not open the user's app data. Use the fixtures against that host with the headers described in CONTRACT.md. Run schema regeneration **before** tests if the definition is deliberately changed; the fixture/schema consistency test detects stale generated files.
 
-Desktop checks are part of `tests/smoke.cjs` and `tests/timing-integration-smoke.cjs`, launched by Electron with `--smoke`. The completed run used `.qa/timing-full-profile`, a dedicated disposable profile, and wrote `.qa/smoke-result.json`. Normal user data and `.qa/test-collection` were not used. The app's existing smoke harness resets its own test store; never direct it at a real collection.
+Desktop checks are part of `tests/smoke.cjs`, `tests/timing-integration-smoke.cjs` and `tests/recent-code-review-smoke.cjs`, launched by Electron with `--smoke`. The completed run used `.qa/review-full-profile`, a dedicated disposable profile, and wrote `.qa/smoke-result.json`. Normal user data and `.qa/test-collection` were not used. The app's existing smoke harness resets its own test store; never direct it at a real collection.
 
 ## Not yet validated
 

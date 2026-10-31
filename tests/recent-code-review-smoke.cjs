@@ -1,0 +1,23 @@
+const assert=require('node:assert/strict');
+const fs=require('node:fs'),path=require('node:path');
+const {fixtures}=require('./support/timing-fixtures.cjs');
+const {migrate}=require('../src/store.cjs');
+const timing=require('../src/timing-integration.cjs');
+module.exports=async({win,qa,store,network,js,wait,click})=>{
+  await network.stop();let f=fixtures();store.data=f.store.snapshot();store.data.timing.key=null;store.persist(store.data);
+  await network.start();network.controls({allowTimingResults:true});
+  const reload=()=>js(`(async()=>{const r=await api('read');db=r.data;net=r.network;collectionMeta=r.collection;switchCollection('local');page='Cars';carId='car-a';section='Performance';render();})()`);
+  await reload();await js(`document.querySelector('#toast').textContent='';document.querySelector('#toast').hidden=true`);
+  const r=await fetch('http://127.0.0.1:'+network.port+'/v1/timing/cars/car-a',{headers:{Authorization:'Bearer '+network.browseCode,'X-SlotForge-Database':store.data.id}});assert.equal(r.status,200);await r.json();
+  await wait('db.revision==='+store.data.revision);assert.equal(await js(`document.querySelector('#toast').textContent`),'');
+  f=fixtures();store.data=f.store.snapshot();timing.receive(store,f.normal);
+  const record=store.data.timing.sessions[0],s=record.payload,p=s.participants[0];
+  s.heats.push({...s.heats[0],id:'heat-2'});p.stints[0].endedAtMs=10000;p.stints.push({...p.stints[0],id:'stint-2',heatId:'heat-2',startedAtMs:10000,endedAtMs:60000});p.laps=[p.laps[0],{...p.laps[1],number:1,stintId:'stint-2',durationMs:15000,endedAtMs:20000}];record.contentHash=timing.digest(s);
+  store.data=migrate(store.data);store.persist(store.data);await reload();assert.match(await js('document.body.innerText'),/Needs correction/);assert.match(await js('document.body.innerText'),/0 contributing sessions/);
+  await js(`new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))`);fs.writeFileSync(path.join(qa,'timing-needs-correction.png'),(await win.webContents.capturePage()).toPNG());
+  await click('[data-action="timing-session"]');assert.match(await js(`document.querySelector('#dialog').innerText`),/original results are preserved/);await js(`document.querySelector('#dialog').close()`);
+  const corrected=structuredClone(f.normal);corrected.revision=2;timing.receive(store,corrected);await reload();assert.ok(!(await js('document.body.innerText')).includes('Needs correction'));assert.match(await js('document.body.innerText'),/1 contributing session/);
+  const paged=structuredClone(corrected);paged.revision=3;paged.participants[0].laps=Array.from({length:101},(_,i)=>({...f.normal.participants[0].laps[0],id:'page-lap-'+i,number:i+1,durationMs:100,endedAtMs:(i+1)*100}));timing.receive(store,paged);await reload();
+  await click('[data-action="timing-session"]');assert.match(await js(`document.querySelector('#dialog').innerText`),/page 1 of 2/);await click('[data-action="timing-laps-next"]');assert.match(await js(`document.querySelector('#dialog').innerText`),/page 2 of 2/);assert.equal(await js(`document.querySelector('.timing-session-details> .table-wrap tbody').children.length`),1);await js(`document.querySelector('#dialog').close()`);
+  await network.stop();return ['first Timing capture silently refreshes the host revision','legacy overlapping imports remain visible but do not contribute until corrected','Timing lap detail pagination shows the last page correctly'];
+};

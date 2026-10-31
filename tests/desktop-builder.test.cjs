@@ -79,6 +79,14 @@ test('missing or stale installers cannot be reported as a successful build', t =
     assert.ok(!result.messages.some(s => s.includes('Ready in')));
   }
 });
+
+test('a quick rebuild cannot reuse recent untouched installers as if it produced them', t => {
+  const {execute}=fixture(t);
+  assert.equal(execute().code,0);
+  const result=execute(['--quick'],{missing:true});
+  assert.equal(result.code,1);
+  assert.ok(!result.messages.some(s=>s.includes('Ready in')));
+});
 test('wrong operating systems and unsupported architectures stop before modifying dependencies', t => {
   const {execute} = fixture(t);
   for (const result of [execute([], {host: 'win32'}), execute(['--arch', 'universal']), execute(['--arch']), execute(['--unknown'])]) {

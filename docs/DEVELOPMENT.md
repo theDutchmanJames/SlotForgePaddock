@@ -1,5 +1,23 @@
 # Development & release history
 
+## Review of changes since 0.16.2 — 31 October 2026
+
+Reviewed the changes since the previous documented review: branding and release documentation, native installer builders, Build from Scratch gearing, motor performance calculations and comparison, and the Timing host integration. The review covered renderer behaviour, validation, database persistence and compatibility, network authentication and permissions, retry/correction semantics, generated schemas and handoff fixtures. Existing sharing, submissions, manual performance records and inventory workflows remain covered by the full regression suite.
+
+| Priority | Confirmed issue | Correction |
+| --- | --- | --- |
+| P2 | A schema-valid session name containing many supplementary Unicode characters passed the API but failed storage validation. | Stored display names now use the same Unicode-aware schema validation as submissions, including after withdrawal. |
+| P2 | One participant could have overlapping measured laps across different heats despite non-overlapping stints, inflating performance and mileage. | New submissions reject overlapping intervals across all heats. Previously accepted sessions remain readable and visibly require correction; the whole session contributes no statistics until corrected or withdrawn. |
+| P2 | The first Timing configuration capture persisted its signing key and incremented the database revision without refreshing the desktop snapshot. | The host publishes a quiet revision change; the desktop refreshes without presenting a false incoming-car notification. Later captures do not write or notify again. |
+| P3 | Extremely small positive motor/tyre values could produce infinite force or a zero-power curve with non-finite plotted coordinates. | Unrepresentable force is omitted and underflowing power curves are disabled with an explanation. Normal physical calculations are unchanged. |
+| P2 | A quick native rebuild could treat untouched installers from a very recent previous run as fresh output. | Builders compare file metadata before and after packaging as well as checking size and modification time before reporting success or writing checksums. |
+
+Regression evidence is in `tests/recent-code-review.test.cjs`, `tests/recent-code-review-smoke.cjs` and `tests/desktop-builder.test.cjs`. Existing boundary checks also confirm that trailing line terminators are rejected in Timing identifiers and signatures. No obsolete feature code was identified for removal in the reviewed additions.
+
+The Timing v1 request format and database schema 9 remain unchanged. The response warning enum now includes `SESSION_REQUIRES_CORRECTION`; the contract, generated schema and handoff ZIP describe that compatibility case. Corrections continue to use a higher revision, and original accepted payloads remain intact while awaiting correction.
+
+Validation: **253 automated tests and 154 isolated Electron workflow checks passed**, plus application syntax checks, with no captured renderer errors. The correction notice was visually inspected. Detailed results are recorded in [the integration testing report](../integration-handoff/timing-v1/TESTING.md). Testing uses a disposable `.qa/review-full-profile`, never normal user data or `.qa/test-collection`. Physical two-computer Wi-Fi, native macOS/Linux execution, power-loss behaviour and large sustained archives remain acceptance work. The existing v0.16.3 downloadable binary is not rebuilt by this review.
+
 ## Timing integration host — source update after 0.16.3
 
 Paddock now exposes Timing integration v1 with explicit capabilities, a separate permission/code, signed current-configuration captures and a dedicated session API. Sessions use persistent source/session IDs and monotonic revisions. Identical retries are acknowledged without another write; corrections replace prior contributions, and withdrawals retain tombstones. Imported results are shown separately from manual tests with captured configurations, measured laps, classification, endurance drivers and revision history. Virtual entries do not affect physical-car statistics. Existing car sharing and submission review remain independent.

@@ -40,7 +40,7 @@ class Network {
           if(!expected)throw timing.fault('DATABASE_REQUIRED','Send X-SlotForge-Database with the paired database ID.');
           if(expected!==this.store.data.id)throw timing.fault('DATABASE_MISMATCH','A different database is at this address.',409);
           const carMatch=url.pathname.match(/^\/v1\/timing\/cars\/([a-zA-Z0-9_-]{1,100})$/);
-          if(req.method==='GET'&&carMatch)return send(200,timing.profile(this.store,carMatch[1]));
+          if(req.method==='GET'&&carMatch){const before=this.store.data.revision,value=timing.profile(this.store,carMatch[1]);if(this.store.data.revision!==before)try{this.onChange({kind:'timing-capture'});}catch{}return send(200,value);}
           if(!access.timingResults)throw timing.fault('TIMING_PERMISSION_REQUIRED','Enable Allow Timing results and use the dedicated Timing code.',403);
           const receiptMatch=url.pathname.match(/^\/v1\/timing\/sessions\/([a-zA-Z0-9_-]{1,100})\/([a-zA-Z0-9_-]{1,100})$/);
           if(req.method==='GET'&&receiptMatch){const record=this.store.data.timing.sessions.find(r=>r.payload.source.id===receiptMatch[1]&&r.payload.sessionId===receiptMatch[2]);if(!record)throw timing.fault('SESSION_NOT_FOUND','No session with that source and session ID is stored.',404);return send(200,timing.receipt(this.store.data,record));}

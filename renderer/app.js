@@ -225,7 +225,7 @@ window.slotforge.onChange(async change=>{try{
     const focused=document.activeElement,search=['car-search','part-search','supply-search','showroom-search'].includes(focused?.id)?{id:focused.id,start:focused.selectionStart,end:focused.selectionEnd,direction:focused.selectionDirection}:null;
     render();if(search){const input=document.getElementById(search.id);if(input){input.focus({preventScroll:true});input.setSelectionRange(search.start,search.end,search.direction);}}
   }
-  toast(change?.kind==='timing'?'Timing results updated. Open the car’s Performance section to view them.':'A new club submission has arrived. Refresh the inbox when your current review is ready.');
+  if(change?.kind!=='timing-capture')toast(change?.kind==='timing'?'Timing results updated. Open the car’s Performance section to view them.':'A new club submission has arrived. Refresh the inbox when your current review is ready.');
 }catch(e){toast(e.message,true);}});
 async function init(){try{const result=await api('read');db=result.data;net=result.network;collectionMeta=result.collection;tableColumns=[...db.settings.columns];remote=result.remote||null;version=result.version;dataPath=result.dataPath;render();}catch(e){$('#main').innerHTML=empty('Unable to open the database',e.message);}}
 installNetworkUpdates();
