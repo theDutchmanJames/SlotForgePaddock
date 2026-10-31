@@ -35,7 +35,7 @@ function renderOverviewDesign(){
   const d=current(),cars=d.cars.filter(c=>!c.archived),jobs=local()?d.jobs.filter(j=>j.status==='active'):[],due=local()?slotforgeDomain.reminders(d.events).filter(e=>cars.some(c=>c.id===e.carId)):[];
   const stats=local()?[
     ['Cars in collection',cars.length,'car','Cars','Your collection'],
-    ['Unique parts',d.parts.length,'box','Parts','Individual inventory entries'],
+    ['Owned part types',d.parts.filter(p=>p.quantity>0).length,'box','Parts',d.parts.reduce((n,p)=>n+available(p),0)+' available pieces · '+d.parts.length+' catalogue entries'],
     ['Open jobs',jobs.length,'tool','Workshop','Work in progress'],
     ['Service reminders',due.length,'calendar','Workshop','Upcoming maintenance']
   ]:[['Cars in collection',cars.length,'car','Cars','Shared collection'],['Shared setups',d.setups.length,'setup','Cars','Saved configurations']];

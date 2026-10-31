@@ -87,7 +87,7 @@ test('assembly job removal stays intact and confirmation is invalidated by a lat
   step(s,'job.fit',j,{key:'0',selection:'a:'+a});const replacement=part(s,'New motor');act(s,'assembly.replace',{id:a,componentId:motor,partId:replacement,confirmed:true});assert.equal(view(s,j).rows[0].done,false);assert.throws(()=>step(s,'job.complete',j),/outstanding/);
 });
 test('schema 3 migrates to jobs without losing data; malformed job backup is rejected',()=>{
-  const {s,j}=fixture(),legacy=s.snapshot();legacy.schema=3;delete legacy.jobs;const upgraded=migrate(legacy);assert.equal(upgraded.schema,9);assert.deepEqual(upgraded.jobs,[]);assert.deepEqual(upgraded.cars,legacy.cars);assert.equal(legacy.schema,3);
+  const {s,j}=fixture(),legacy=s.snapshot();legacy.schema=3;delete legacy.jobs;const upgraded=migrate(legacy);assert.equal(upgraded.schema,10);assert.deepEqual(upgraded.jobs,[]);assert.deepEqual(upgraded.cars,legacy.cars);assert.equal(legacy.schema,3);
   const corrupt=s.snapshot();corrupt.jobs[0].target.technical.motor='Changed';assert.throws(()=>migrate(corrupt),/target snapshot/);
   const duplicate=s.snapshot();duplicate.jobs.push({...duplicate.jobs[0],id:'another'});assert.throws(()=>migrate(duplicate),/one active/);
   step(s,'job.complete',j);const restored=new Store();restored.restore(s.snapshot(),0);assert.deepEqual(restored.data.jobs,s.data.jobs);

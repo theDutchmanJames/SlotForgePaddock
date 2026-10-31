@@ -25,3 +25,13 @@ User content and manufacturer data
 Imported photographs, documents, manufacturer descriptions and other external
 material retain their respective owners' rights. Importing them into Paddock
 does not relicense them or grant additional redistribution rights.
+
+QR Code encoder
+
+The JavaScript QR encoder under src/vendor/QRCode is Copyright (c) 2009
+Kazuhiko Arase, with MIT-licensed source headers, distributed through the
+qrcode-terminal vendor package with Node compatibility modifications.
+The supplied Apache-2.0 package license and embedded attribution are retained
+in LICENSE-qrcode-terminal.txt; the complete MIT terms are in LICENSE-MIT.txt.
+The encoder is reused from SlotForge Timing. Paddock adds its own SVG renderer
+in src/reports.cjs. These third-party files retain their original licenses.

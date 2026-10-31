@@ -76,6 +76,6 @@ test('failed persistence rolls back car creation, assembly placement and draft r
 });
 test('schema 7 upgrades on the next write and invalid restored build drafts are rejected',()=>{
   const legacy=initial();legacy.schema=7;delete legacy.buildDrafts;const before=structuredClone(legacy),next=migrate(legacy);
-  assert.equal(next.schema,9);assert.deepEqual(next.buildDrafts,[]);assert.deepEqual(legacy,before);
+  assert.equal(next.schema,10);assert.deepEqual(next.buildDrafts,[]);assert.deepEqual(legacy,before);
   const s=new Store();act(s,'build.draft.save',{data:Model.blank()});const bad=s.snapshot();bad.buildDrafts[0].data.parts=[row('__proto__')];assert.throws(()=>migrate(bad));
 });

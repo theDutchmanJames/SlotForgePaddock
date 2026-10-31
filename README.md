@@ -27,7 +27,7 @@ Both approaches use the same collection. **You decide how much detail to record.
 
 You don't need to enter technical specifications or manage spare parts to get started.
 
-- **Display your collection.** Showroom presents your cars in a photo gallery, with a featured spotlight car, favourites, full-screen viewing and a slideshow.
+- **Display your collection.** Showroom presents your cars in a photo gallery, with a featured spotlight car, favourites, full-screen viewing and a slideshow. Create ordered **shelves** for selected cars, adjust each photograph’s focal point, and use a clean presentation view.
 - **Build a profile for each car.** Start with its name and photograph, then optionally add manufacturer, scale, model, livery, racing number and other identifying details.
 - **Keep your collection organised.** Search, filter and label cars—for example, Collection / Display, Home racing, Club racing or Competition.
 - **Record ownership details.** Keep track of storage locations, condition, packaging, purchases, valuations and loans.
@@ -76,11 +76,12 @@ Torque is entered in **gf·cm** (gram-force centimetres), with separate test vol
 
 - **Record detailed configurations.** Document motors, motor pods, gearing, axles, bearings, wheels, tyres, guides, braids, electronics, ballast and more. Keep current specifications alongside factory reference information.
 - **Calculate gearing automatically.** Enter pinion and driven-gear tooth counts to see the ratio.
-- **Save and compare setups.** Capture configurations with names, track information and notes. Review changes before applying a saved setup, including required stock, substitutions and transfers from other cars.
+- **Save and compare setups.** Compare saved setups with the current car or another saved setup, including technical fields and tracked inventory. Filter to differences and open linked workshop jobs or manual tests. Capture configurations with names, track information and notes. Review changes before applying a saved setup, including required stock, substitutions and transfers from other cars.
 - **Record testing results.** Manually log track tests and lap statistics against setup snapshots to relate performance to configuration changes.
 
 ### Parts, assemblies and new builds
 
+- **Separate stock from your catalogue.** **My stock** shows owned part types; **Catalogue** includes zero-stock references. Keep a **Shopping list**, link purchases to workshop jobs, and receive quantities in stages without installing them automatically.
 - **Manage spare parts.** Browse stock by category, track quantities or individual items, and see what is available, fitted or reserved. Store specifications, locations, photographs and compatibility notes.
 - **Choose icons and colours.** Use automatic part-type icons or pick your own, with five preset colours for your preferred organisation scheme.
 - **Build assemblies.** Combine components into a ready-to-use unit, such as a complete rear axle or motor-pod assembly. Install, remove, transfer or replace its components while retaining their history.
@@ -100,7 +101,7 @@ Torque is entered in **gf·cm** (gram-force centimetres), with separate test vol
 
 ### Jobs, maintenance and your digital toolbox
 
-- **Plan workshop jobs.** Create maintenance or modification jobs, or work towards a saved setup in stages. Edit job details, record progress, leave and resume work, then complete or cancel it.
+- **Plan workshop jobs.** Create maintenance or modification jobs, or work towards a saved setup in stages. Set priority and a target date, add a checklist, mark **Waiting for parts**, and attach before/after photographs. Edit job details, record progress, leave and resume work, then complete or cancel it.
 - **Keep a work history.** Record completed maintenance and modifications, set future maintenance dates and see what changed over time.
 - **Maintain a digital toolbox.** Track tools, oils, cleaners, adhesives and other workshop supplies, including storage locations, remaining amounts and low-stock thresholds.
 - **See what needs attention.** The **REVIEW** button brings incoming cars, workshop jobs and maintenance reminders together in one place.
@@ -115,6 +116,12 @@ Torque is entered in **gf·cm** (gram-force centimetres), with separate test vol
     <td><a href="docs/screenshots/review-hub.png"><img src="docs/screenshots/review-hub.png" alt="Review hub with tabs for incoming cars, workshop jobs and maintenance" width="100%"></a></td>
   </tr>
 </table>
+
+## Printable car cards and reports
+
+Open **Cars → Print / PDF**, or **More → Print / PDF** on one car. Preview and save car cards with photos and desktop QR links, setup sheets, club scrutineering sheets, or a collection inventory. Purchase details are excluded unless explicitly selected. QR links open a matching collection in an installed desktop app; they are not public web pages.
+
+[Using stock planning, comparisons, reports and showroom shelves →](docs/COLLECTION-PLANNING.md)
 
 ## Connect with your club
 
@@ -211,7 +218,7 @@ Current version: **0.17.1**. The project is under active development. **SlotForg
 | Windows portable build | Built and tested |
 | Native macOS and Linux builds | Normal/quick installer builders available; native testing remains outstanding |
 
-The Paddock side of Timing integration is documented in the [Timing integration handoff](integration-handoff/timing-v1/README.md), including the exact contract, schemas, fixtures and local test host. It is included in v0.17.0. This release migrates saved databases to schema 9; create a complete backup before upgrading because older builds cannot read schema-9 saves.
+The Paddock side of Timing integration is documented in the [Timing integration handoff](integration-handoff/timing-v1/README.md), including the exact contract, schemas, fixtures and local test host. It is included in v0.17.0. The current source now migrates saved databases to **schema 10** for collection planning. Create a complete backup before running it; published v0.17.x builds cannot read schema-10 saves. The Timing v1 API contract is unchanged.
 
 Catalogue imports validate structure and help identify duplicates. Manufacturer facts and physical part compatibility still need your review; the app does not scrape websites or download product images automatically.
 

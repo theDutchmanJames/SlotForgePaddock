@@ -1,5 +1,50 @@
 # Development & release history
 
+## Collection planning and showroom polish — 1 November 2026
+
+Implemented the approved feature set: My stock / Catalogue / Shopping list,
+configuration comparisons, workshop planning and photographs, printable reports,
+and curated showroom shelves with per-photo focal points and a presentation view.
+See [the usage guide](COLLECTION-PLANNING.md) for controls and limitations.
+
+- Stock receipts are atomic, revision-checked and support partial deliveries.
+  Purchase history protects its linked part records from deletion.
+- Job planning supports priority, target date, waiting status, checklist steps and
+  private before/after photos; completion checks the plan without changing setup
+  snapshots or physical stock automatically.
+- Comparisons cover technical fields and tracked inventory between saved/current
+  configurations, with direct links to related jobs and manual test records.
+- PDF reports support car cards, current/saved setup sheets, scrutineering sheets
+  and collection inventories. Purchase details require explicit opt-in. QR links
+  identify the local database and car through the desktop protocol.
+- Shelves preserve a custom car order. Focal points do not modify original images
+  and are reset when the corresponding photo changes.
+
+Database schema **10** migrates existing schema-9 collections. Create a complete
+backup before opening existing data with this source: published v0.17.x builds
+cannot read schema-10 saves. The Timing v1 API is unchanged; its demo database and
+handoff ZIP have been refreshed. Planning, purchase, job-photo and showroom data
+remain private and are included only in complete backups.
+
+Validation: **278 unit/local-server tests**, **164 Electron workflow checks** with
+no renderer errors, syntax checks and a Windows unpacked packaging build. The
+new UI tests cover partial receipts, job completion, before/after photos, saved
+setup comparison, shelf ordering, framing, presentation, PDF preview/export,
+privacy opt-in, reload persistence and a matching desktop-link message. Initial
+combined UI attempts hit background rendering stalls; the final combined pass
+completed with software rendering, explicit test-window focus and background
+rendering enabled. Test profiles were isolated from the user's collection.
+
+Actual printer output, OS-level QR launching, macOS/Linux packaging and physical
+multi-computer networking were not exercised in this feature pass. The existing
+local network test suite passed. QR links require an installed protocol handler
+and matching local collection; they are not public/mobile car pages.
+
+No release or version bump is included. The larger UI redesign is deferred until
+design previews are approved; performance analytics and remembered connections
+also remain deferred.
+
+
 ## Review since the Timing/build review — 31 October 2026
 
 Reviewed the changes from `17b3e28` through `3acf353`: release/package metadata, the unique-parts Overview count, README calculation descriptions, source-available licence delivery, English catalogue instructions and taxonomy, generated templates, Timing JSON exports and custom connection passwords. Inspection included their existing persistence, file-export, permission, discovery, import-review and renderer boundaries. No database migration or release version change is needed for these fixes.

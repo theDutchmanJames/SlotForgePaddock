@@ -6,7 +6,7 @@ function references(value,id){
 }
 function deletion(db,id){
   const part=db.parts.find(p=>p.id===id);if(!part)throw Error('Part not found.');
-  const reasons=[];
+  const reasons=[];if(references(db.planning?.shopping,id))reasons.push('shopping list or purchase history');
   for(const [key,label] of [['installations','car installation history'],['assemblies','assemblies or assembly history'],['setups','saved setups'],['tests','performance records'],['jobs','workshop jobs'],['events','car history']])if(references(db[key],id))reasons.push(label);
   if(references(db.parts.filter(p=>p.id!==id),id))reasons.push('stock returned from this part');
   return {id,name:part.name,quantity:part.quantity,revision:db.revision,reasons};

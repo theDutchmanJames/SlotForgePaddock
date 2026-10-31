@@ -69,7 +69,7 @@ function mutate(db,action,p,techFields){
   if(action==='job.cancel'){
     check(p.confirmed===true,'Confirm cancellation. Completed physical work will remain.');job.status='cancelled';job.finished=now();job.actual=snapshot(db,car.id);note='Cancelled; recorded physical changes retained.';
   }else if(action==='job.complete'){
-    check(p.confirmed===true,'Confirm the completed physical configuration.');check(model(db,job.id,techFields).remaining===0,'There are still outstanding parts, settings or removals.');job.status='completed';job.finished=now();job.actual=snapshot(db,car.id);note='Completed with actual fitted configuration saved.';
+    check(p.confirmed===true,'Confirm the completed physical configuration.');const plan=db.planning?.jobs.find(x=>x.jobId===job.id);check(!plan?.waiting,'Clear Waiting for parts before completing this job.');check(!plan?.checklist.some(s=>!s.done),'Finish the checklist before completing this job.');check(model(db,job.id,techFields).remaining===0,'There are still outstanding parts, settings or removals.');job.status='completed';job.finished=now();job.actual=snapshot(db,car.id);note='Completed with actual fitted configuration saved.';
   }else{
     check(job.kind!=='general','Use the car page to record parts and specification changes for this job.');
     check(p.confirmed===true,'Confirm that you have made this physical change.');

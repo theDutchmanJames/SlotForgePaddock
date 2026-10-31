@@ -9,7 +9,11 @@ const {timingPackage}=require('./timing-import.cjs');
 const {timingExport}=require('./timing-export.cjs');
 const catalogueImport=require('./catalogue-import.cjs');
 const {TYPES,readDocument,validateDocument}=require('./documents.cjs');
+const reports=require('./reports.cjs');
 const temporaryDocuments=[];
+let pendingCarLink=process.argv.map(reports.parseLink).find(Boolean)||null;
+function acceptCarLink(value){const target=reports.parseLink(value);if(!target)return;pendingCarLink=target;if(win&&!win.isDestroyed()&&store&&rendererReady&&!win.webContents.isLoadingMainFrame()){win.webContents.send('sf:open-car',target);pendingCarLink=null;}}
+app.on('open-url',(event,url)=>{event.preventDefault();acceptCarLink(url);});
 // Keep the established profile path (including a launcher override) when changing the visible app name.
 const existingUserData=app.getPath('userData');
 app.setName('SlotForge Paddock');
@@ -19,10 +23,18 @@ if(smoke)app.setPath('userData',path.join(__dirname,'..','.qa','profile'));
 else if(!app.isPackaged&&process.argv.includes('--test-collection')){const profile=path.join(__dirname,'..','.qa','test-collection');fs.mkdirSync(profile,{recursive:true});app.setPath('userData',profile);}
 const ownsInstance=app.requestSingleInstanceLock();
 if(!ownsInstance)app.quit();
-let win,store,network,networkTimer;
+let win,store,network,networkTimer,rendererReady=false;
 const entry=path.join(__dirname,'..','renderer','index.html');
 function reply(fn){return async(event,...args)=>{if(event.sender!==win?.webContents||event.senderFrame?.url!==pathToFileURL(entry).href)return {error:'Unauthorised application frame.'};try{return {ok:true,value:await fn(...args)};}catch(e){return {error:e.message};}};}
 async function files(action,p={}){
+  if(action==='report.preview'){const r=reports.render(store.snapshot(),p);return {title:r.title,body:r.body};}
+  if(action==='report.pdf'){
+    const report=reports.render(store.snapshot(),p),result=await dialog.showSaveDialog(win,{title:'Save printable PDF',defaultPath:'SlotForge-'+p.kind+'.pdf',filters:[{name:'PDF document',extensions:['pdf']}]});if(result.canceled)return null;
+    const printWindow=new BrowserWindow({show:false,webPreferences:{sandbox:true,contextIsolation:true,nodeIntegration:false,javascript:false}});
+    printWindow.webContents.setWindowOpenHandler(()=>({action:'deny'}));
+    try{await printWindow.loadURL('data:text/html;charset=utf-8,'+encodeURIComponent(report.html));const bytes=await printWindow.webContents.printToPDF({printBackground:true,pageSize:'A4',preferCSSPageSize:true});return exportBytes(result.filePath,bytes,[store.file,store.file+'.previous',store.file+'.tmp']);}finally{printWindow.destroy();}
+  }
+
   if(action==='catalogue.kit'){const r=await dialog.showSaveDialog(win,{title:'Save manufacturer catalogue import kit',defaultPath:'SlotForge-catalogue-kit.json',filters:[{name:'Catalogue JSON kit',extensions:['json']}]});return r.canceled?null:exportJSON(r.filePath,catalogueImport.kit(),[store.file,store.file+'.previous',store.file+'.tmp']);}
   if(action==='catalogue.instructions')return catalogueImport.instructions;
   if(action==='catalogue.pick'){const r=await dialog.showOpenDialog(win,{title:'Review a manufacturer catalogue',properties:['openFile'],filters:[{name:'SlotForge catalogue JSON',extensions:['json']}]});if(r.canceled)return null;const file=r.filePaths[0];if(fs.statSync(file).size>16*1024*1024)throw Error('Catalogue file exceeds 16 MB.');const input=readJSON(file);const preview=catalogueImport.preview(store.data,input);return {name:path.basename(file),input,preview};}
@@ -54,12 +66,14 @@ async function files(action,p={}){
 app.whenReady().then(async()=>{
   if(!ownsInstance)return;
   try{store=new Store(path.join(app.getPath('userData'),'database.json'));}catch(e){dialog.showErrorBox('SlotForge database could not be opened',e.message+'\nYour existing files have not been replaced.');app.quit();return;}
+  if(app.isPackaged)app.setAsDefaultProtocolClient('slotforge-paddock',process.env.PORTABLE_EXECUTABLE_FILE||process.env.APPIMAGE||process.execPath);
   network=new Network(store,change=>win?.webContents.send('sf:changed',change),result=>{if(win&&!win.isDestroyed())win.webContents.send('sf:network-state',result);});
   if(!smoke){networkTimer=setInterval(()=>network.poll().catch(()=>{}),5000);networkTimer.unref();}
   win=new BrowserWindow({width:1440,height:980,minWidth:960,minHeight:700,show:false,backgroundColor:'#171b21',icon:path.join(__dirname,'..','assets','icon.png'),title:'SlotForge Paddock',autoHideMenuBar:true,webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
+  win.webContents.on('did-start-loading',()=>{rendererReady=false;});
   win.webContents.setWindowOpenHandler(()=>({action:'deny'}));win.webContents.on('will-navigate',event=>event.preventDefault());
   win.webContents.session.setPermissionRequestHandler((wc,permission,callback)=>callback(permission==='fullscreen'&&wc===win.webContents&&wc.getURL()===pathToFileURL(entry).href));
-  ipcMain.handle('sf:read',reply(()=>({data:store.snapshot(),network:network.status(),remote:network.cached,collection:store.metadata(),version:app.getVersion(),dataPath:store.file})));
+  ipcMain.handle('sf:read',reply(()=>{rendererReady=true;const openCar=pendingCarLink;pendingCarLink=null;return {openCar,data:store.snapshot(),network:network.status(),remote:network.cached,collection:store.metadata(),version:app.getVersion(),dataPath:store.file};}));
   ipcMain.handle('sf:mutate',reply((action,payload)=>store.mutate(action,payload)));
   ipcMain.handle('sf:plan',reply((action,payload)=>store.plan(action,payload)));
   ipcMain.handle('sf:file',reply(files));
@@ -69,6 +83,6 @@ app.whenReady().then(async()=>{
   else win.show();
 });
 app.on('window-all-closed',()=>app.quit());
-app.on('second-instance',()=>{if(win){if(win.isMinimized())win.restore();win.show();win.focus();}});
+app.on('second-instance',(_event,argv)=>{for(const arg of argv)acceptCarLink(arg);if(win){if(win.isMinimized())win.restore();win.show();win.focus();}});
 app.on('before-quit',()=>{clearInterval(networkTimer);network?.close();});
 app.on('will-quit',()=>{for(const {file,directory}of temporaryDocuments){try{fs.unlinkSync(file);fs.rmdirSync(directory);}catch{/* An external viewer may still hold its temporary copy open. */}}});
