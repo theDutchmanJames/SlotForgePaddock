@@ -1,0 +1,5 @@
+.timing-results>.section-panel+.section-panel{margin-top:18px}
+.timing-results .details dd,.timing-session-details .details dd{overflow-wrap:anywhere;min-width:0}
+.timing-results .section-panel{border-top:3px solid var(--blue)}
+.timing-session-details details>summary{cursor:pointer;font-weight:600;padding:8px 0}
+.timing-session-details .table-wrap{margin-top:12px}

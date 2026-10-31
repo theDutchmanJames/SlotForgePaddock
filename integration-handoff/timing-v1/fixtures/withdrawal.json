@@ -1,0 +1,13 @@
+{
+  "integrationVersion": 1,
+  "databaseId": "paddock-demo",
+  "source": {
+    "id": "timing-demo",
+    "name": "Club Timing PC",
+    "application": "SlotForge Timing"
+  },
+  "sessionId": "session-normal",
+  "revision": 3,
+  "state": "withdrawn",
+  "reason": "Session withdrawn by the Race Director."
+}

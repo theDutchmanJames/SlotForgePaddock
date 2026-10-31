@@ -57,7 +57,7 @@ function profileContent(c){const d=current(),events=d.events.filter(e=>e.carId==
   if(section==='Setups')return `<div class="page-head"><div><h2>Saved configurations</h2><p class="muted">Snapshots preserve the specifications and tracked components used at that time.</p></div>${local()?btn('Add setup','save-setup','primary',c.id):''}</div>${setups.length?`<div class="setup-grid">${setups.map(s=>panel(s.name,`<div class="tiny muted">${date(s.date)}${s.track?' · '+esc(s.track):''}</div><p class="prewrap mt">${esc(s.notes)}</p>${dl([['Motor',s.technical.motor],...ratioRows(s.technical),['Rear tyres',s.technical.rearTyres],['Weight',s.technical.weight]])}<div class="actions mt">${btn('Compare with current','compare-setup','',s.id)}${local()?btn('Apply setup…','apply-setup','primary',s.id)+btn('Work in stages…','start-job','',s.id):''}</div>`)).join('')}</div>`:empty('Save your first setup','Capture the current configuration before making changes.',local()?btn('Add setup','save-setup','primary',c.id):'')}`;
   if(section==='Maintenance')return panel('Service & modification journal',`<div class="actions">${local()?btn('Record work','add-work','primary',c.id):''}</div>${timeline(events.filter(e=>['maintenance','modification','installation','removal'].includes(e.type)))}`);
   if(section==='History')return panel('Car history',timeline(events));
-  if(section==='Performance'){const tests=d.tests.filter(t=>t.carId===c.id);return `<div class="page-head"><div><h2>Manual test records</h2><p class="muted">Timing application integration is planned for a later release.</p></div>${local()?btn('Record test','add-test','primary',c.id):''}</div>${tests.length?tests.map(t=>panel(t.track||'Manual test',`<div class="tiny muted">${date(t.date)} · ${esc(t.setupId?'Saved historical snapshot: '+(setups.find(s=>s.id===t.setupId)?.name||'Setup'):'Actual current configuration')}${t.jobId?' · During workshop job':''}</div>${dl([['Recorded motor',t.technical.motor],...ratioRows(t.technical),['Recorded rear tyres',t.technical.rearTyres],['Recorded weight',t.technical.weight]])}<p class="tiny muted">${t.installations?t.installations.length+' tracked component record(s) captured':'Earlier record: no inventory snapshot'}</p>${dl([['Driver',t.driver],['Lane',t.lane],['Voltage',t.voltage],['Laps',t.laps],['Best (seconds)',t.best],['Average (seconds)',t.average]])}<p class="prewrap mt">${esc(t.notes)}</p>${local()?btn('View recorded configuration','test-snapshot','small',t.id):''}`)).join(''):empty('Keep track of your testing','Record the setup, conditions, figures and how the car felt.')}`;}
+  if(section==='Performance'){const tests=d.tests.filter(t=>t.carId===c.id);return `${local()?renderTimingResults(c):''}<hr class="mt"><div class="page-head"><div><h2>Manual test records</h2><p class="muted">Record your own tests independently of imported Timing sessions.</p></div>${local()?btn('Record test','add-test','primary',c.id):''}</div>${tests.length?tests.map(t=>panel(t.track||'Manual test',`<div class="tiny muted">${date(t.date)} · ${esc(t.setupId?'Saved historical snapshot: '+(setups.find(s=>s.id===t.setupId)?.name||'Setup'):'Actual current configuration')}${t.jobId?' · During workshop job':''}</div>${dl([['Recorded motor',t.technical.motor],...ratioRows(t.technical),['Recorded rear tyres',t.technical.rearTyres],['Recorded weight',t.technical.weight]])}<p class="tiny muted">${t.installations?t.installations.length+' tracked component record(s) captured':'Earlier record: no inventory snapshot'}</p>${dl([['Driver',t.driver],['Lane',t.lane],['Voltage',t.voltage],['Laps',t.laps],['Best (seconds)',t.best],['Average (seconds)',t.average]])}<p class="prewrap mt">${esc(t.notes)}</p>${local()?btn('View recorded configuration','test-snapshot','small',t.id):''}`)).join(''):empty('Keep track of your testing','Record the setup, conditions, figures and how the car felt.')}`;}
   if(section==='Photos & documents')return `<div class="page-head"><div><h2>Car photographs</h2><p class="muted">Photos are stored with your database and included in complete backups.</p></div>${local()?btn('Add photo','add-photo','primary',c.id):''}</div><div class="photo-grid">${c.picture?`<div class="panel">${photo(c)}<p>Main photograph</p>${local()?btn('Replace','main-photo','small',c.id):''}</div>`:''}${(c.photos||[]).map(p=>`<div class="panel"><img src="${esc(p.data)}" alt="${esc(p.name)}"><p>${esc(p.name)}</p>${local()?btn('Remove','delete-photo','small',p.id):''}</div>`).join('')}</div>${!c.picture&&!c.photos?.length?`<div class="compact-photo-empty">${empty('Add a photograph','Use a PNG, JPEG or WebP image of the car or its components.',local()?btn('Choose main photo','main-photo','primary',c.id):'')}</div>`:''}${renderDocuments(c)}`;
   return '';
 }
@@ -165,6 +165,11 @@ document.addEventListener('click',async event=>{
       case 'compare-setup':{const s=db.setups.find(s=>s.id===id),c=db.cars.find(c=>c.id===s.carId);const fields=[...new Set([...Object.keys(s.technical),...Object.keys(c.technical)])].filter(k=>s.technical[k]||c.technical[k]);modal('Compare · '+s.name,`<div class="table-wrap"><table><thead><tr><th>Setting</th><th>Saved snapshot</th><th>Current car</th></tr></thead><tbody>${fields.map(k=>`<tr class="${s.technical[k]!==c.technical[k]?'selected':''}"><td>${esc(techLabels[k]||k)}</td><td>${esc(s.technical[k]||'—')}</td><td>${esc(c.technical[k]||'—')}</td></tr>`).join('')}</tbody></table></div>`,null);return;}
 
       case 'add-work':addWork(id);return;
+      case 'timing-session':openTimingSession(id);return;
+      case 'timing-list-prev':timingListPage=Math.max(0,timingListPage-1);break;
+      case 'timing-list-next':timingListPage++;break;
+      case 'timing-laps-prev':timingLapPage=Math.max(0,timingLapPage-1);showTimingSession();return;
+      case 'timing-laps-next':timingLapPage++;showTimingSession();return;
       case 'test-snapshot':{const t=db.tests.find(t=>t.id===id);modal('Recorded test configuration',snapshotDetails(t),null);return;}
       case 'add-test':addTest(id);return;
       case 'export-selected':share([...selected]);return;
@@ -183,8 +188,9 @@ document.addEventListener('click',async event=>{
       case 'connect':connectDialog();return;
       case 'discover-hosts':await findHosts();return;
       case 'connect-discovered':connectDialog(discoveredHosts[Number(id)].address);return;
+      case 'toggle-timing-results':net=await api('network','controls',{allowTimingResults:!net.allowTimingResults});break;
       case 'toggle-submissions':net=await api('network','controls',{allowSubmissions:!net.allowSubmissions});break;
-      case 'rotate-codes':modal('Revoke connection codes', '<p>Replace both codes now. Existing members will need a new code for future reads or submissions. Public data they have already read cannot be withdrawn.</p>',async()=>{net=await api('network','controls',{rotate:true});},'Revoke and replace codes');return;
+      case 'rotate-codes':modal('Revoke connection codes', '<p>Replace all three codes now. Existing members will need a new code for future reads or submissions. Public data they have already read cannot be withdrawn.</p>',async()=>{net=await api('network','controls',{rotate:true});},'Revoke and replace codes');return;
       case 'toggle-auto':net=await api('network','auto',{enabled:!net.remote.autoRefresh});break;
       case 'retry-submission':{const result=await api('network','retry');net=(await api('read')).network;toast(result.duplicate?'The host had already received this submission.':'Submitted for club review.');break;}
       case 'discard-submission':modal('Discard submission retry copy','<p>This only clears the local retry copy. It does not withdraw a package the host may already have received. Check with the host before submitting a new copy.</p>',async()=>{net=await api('network','discard');},'Discard retry copy');return;
@@ -213,13 +219,13 @@ document.addEventListener('change',event=>{const el=event.target;try{
     default:return;
   }render();
 }catch(e){toast(e.message,true);}});
-window.slotforge.onChange(async()=>{try{
+window.slotforge.onChange(async change=>{try{
   const context=db.id;const r=await api('read');if(db.id!==context)return;acceptSnapshot(r.data);updateReviewIndicator();
   if(!$('#dialog').open&&!(page==='Review'&&reviewTab==='Incoming cars')&&!(page==='Parts'&&partsTab==='Build from Scratch')&&!(page==='Import & Export'&&catalogueReview?.active)){
     const focused=document.activeElement,search=['car-search','part-search','supply-search','showroom-search'].includes(focused?.id)?{id:focused.id,start:focused.selectionStart,end:focused.selectionEnd,direction:focused.selectionDirection}:null;
     render();if(search){const input=document.getElementById(search.id);if(input){input.focus({preventScroll:true});input.setSelectionRange(search.start,search.end,search.direction);}}
   }
-  toast('A new club submission has arrived. Refresh the inbox when your current review is ready.');
+  toast(change?.kind==='timing'?'Timing results updated. Open the car’s Performance section to view them.':'A new club submission has arrived. Refresh the inbox when your current review is ready.');
 }catch(e){toast(e.message,true);}});
 async function init(){try{const result=await api('read');db=result.data;net=result.network;collectionMeta=result.collection;tableColumns=[...db.settings.columns];remote=result.remote||null;version=result.version;dataPath=result.dataPath;render();}catch(e){$('#main').innerHTML=empty('Unable to open the database',e.message);}}
 installNetworkUpdates();

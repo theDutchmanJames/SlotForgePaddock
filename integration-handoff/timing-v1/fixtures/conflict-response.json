@@ -1,0 +1,4 @@
+{
+  "error": "This revision already exists with different content.",
+  "code": "REVISION_CONFLICT"
+}

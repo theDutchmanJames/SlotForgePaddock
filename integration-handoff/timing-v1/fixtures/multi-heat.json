@@ -1,0 +1,266 @@
+{
+  "integrationVersion": 1,
+  "databaseId": "paddock-demo",
+  "source": {
+    "id": "timing-demo",
+    "name": "Club Timing PC",
+    "application": "SlotForge Timing"
+  },
+  "sessionId": "session-multi",
+  "revision": 1,
+  "state": "active",
+  "name": "Two cars, two heats",
+  "type": "race",
+  "startedAt": "2026-10-31T10:01:00.000Z",
+  "endedAt": "2026-10-31T10:03:00.000Z",
+  "track": {
+    "id": "track-1",
+    "name": "Club circuit",
+    "lanes": [
+      {
+        "lane": 1,
+        "lengthM": 20
+      },
+      {
+        "lane": 2,
+        "lengthM": 20
+      }
+    ]
+  },
+  "heats": [
+    {
+      "id": "heat-1",
+      "name": "Heat 1",
+      "startedAtMs": 0,
+      "endedAtMs": 60000
+    },
+    {
+      "id": "heat-2",
+      "name": "Heat 2",
+      "startedAtMs": 60000,
+      "endedAtMs": 120000
+    }
+  ],
+  "participants": [
+    {
+      "id": "entry-1",
+      "kind": "physical",
+      "carId": "car-a",
+      "configuration": {
+        "databaseId": "paddock-demo",
+        "carId": "car-a",
+        "kind": "current",
+        "configurationId": "b45e252a52522a0b267ac5b440533e42efb74f64796f06ca2e4b1578ca0ef13a",
+        "revision": "b45e252a52522a0b267ac5b440533e42efb74f64796f06ca2e4b1578ca0ef13a",
+        "carRevision": 1,
+        "capturedAt": "2026-10-31T10:00:00.000Z",
+        "technical": {
+          "motor": "21.5k",
+          "pinion": "9",
+          "gear": "27"
+        },
+        "components": [],
+        "signature": "a366a131cf225af3270996c907d8901c09b070435d11ee413e4f4325ed4a7e3a"
+      },
+      "displayName": "Example GT3",
+      "drivers": [
+        {
+          "id": "driver-1",
+          "name": "Alex Example"
+        }
+      ],
+      "stints": [
+        {
+          "id": "stint-1",
+          "heatId": "heat-1",
+          "driverId": "driver-1",
+          "lane": 1,
+          "startedAtMs": 0,
+          "endedAtMs": 60000
+        },
+        {
+          "id": "stint-2",
+          "heatId": "heat-2",
+          "driverId": "driver-1",
+          "lane": 2,
+          "startedAtMs": 60000,
+          "endedAtMs": 120000
+        }
+      ],
+      "laps": [
+        {
+          "id": "entry-0-lap-1",
+          "stintId": "stint-1",
+          "number": 1,
+          "durationMs": 10000,
+          "endedAtMs": 10000,
+          "valid": true,
+          "pit": false,
+          "recordEligible": true,
+          "countsForDistance": true,
+          "distanceM": 20,
+          "reason": ""
+        },
+        {
+          "id": "entry-0-lap-2",
+          "stintId": "stint-1",
+          "number": 2,
+          "durationMs": 11000,
+          "endedAtMs": 21000,
+          "valid": true,
+          "pit": false,
+          "recordEligible": true,
+          "countsForDistance": true,
+          "distanceM": 20,
+          "reason": ""
+        },
+        {
+          "id": "entry-0-lap-3",
+          "stintId": "stint-1",
+          "number": 3,
+          "durationMs": 10000,
+          "endedAtMs": 31000,
+          "valid": true,
+          "pit": true,
+          "recordEligible": false,
+          "countsForDistance": true,
+          "distanceM": 20,
+          "reason": "Pit lane"
+        },
+        {
+          "id": "heat2-0",
+          "stintId": "stint-2",
+          "number": 1,
+          "durationMs": 10000,
+          "endedAtMs": 70000,
+          "valid": true,
+          "pit": false,
+          "recordEligible": true,
+          "countsForDistance": true,
+          "distanceM": 20,
+          "reason": ""
+        }
+      ]
+    },
+    {
+      "id": "entry-2",
+      "kind": "physical",
+      "carId": "car-b",
+      "configuration": {
+        "databaseId": "paddock-demo",
+        "carId": "car-b",
+        "kind": "current",
+        "configurationId": "b21d3f3a9095261ab4a17bbb574cf96b41d52f85c0c2d9589b269fa56d0f6c77",
+        "revision": "b21d3f3a9095261ab4a17bbb574cf96b41d52f85c0c2d9589b269fa56d0f6c77",
+        "carRevision": 1,
+        "capturedAt": "2026-10-31T10:00:00.000Z",
+        "technical": {
+          "motor": "21.5k",
+          "pinion": "9",
+          "gear": "27"
+        },
+        "components": [],
+        "signature": "e5b2f20a1a81b44c1c15960e404c364cdea529bbd1b711673b99b8261c367235"
+      },
+      "displayName": "Example prototype",
+      "drivers": [
+        {
+          "id": "driver-1",
+          "name": "Alex Example"
+        }
+      ],
+      "stints": [
+        {
+          "id": "stint-1",
+          "heatId": "heat-1",
+          "driverId": "driver-1",
+          "lane": 2,
+          "startedAtMs": 0,
+          "endedAtMs": 60000
+        },
+        {
+          "id": "stint-2",
+          "heatId": "heat-2",
+          "driverId": "driver-1",
+          "lane": 1,
+          "startedAtMs": 60000,
+          "endedAtMs": 120000
+        }
+      ],
+      "laps": [
+        {
+          "id": "entry-1-lap-1",
+          "stintId": "stint-1",
+          "number": 1,
+          "durationMs": 10000,
+          "endedAtMs": 10000,
+          "valid": true,
+          "pit": false,
+          "recordEligible": true,
+          "countsForDistance": true,
+          "distanceM": 20,
+          "reason": ""
+        },
+        {
+          "id": "entry-1-lap-2",
+          "stintId": "stint-1",
+          "number": 2,
+          "durationMs": 11000,
+          "endedAtMs": 21000,
+          "valid": true,
+          "pit": false,
+          "recordEligible": true,
+          "countsForDistance": true,
+          "distanceM": 20,
+          "reason": ""
+        },
+        {
+          "id": "entry-1-lap-3",
+          "stintId": "stint-1",
+          "number": 3,
+          "durationMs": 10000,
+          "endedAtMs": 31000,
+          "valid": true,
+          "pit": true,
+          "recordEligible": false,
+          "countsForDistance": true,
+          "distanceM": 20,
+          "reason": "Pit lane"
+        },
+        {
+          "id": "heat2-1",
+          "stintId": "stint-2",
+          "number": 1,
+          "durationMs": 10000,
+          "endedAtMs": 70000,
+          "valid": true,
+          "pit": false,
+          "recordEligible": true,
+          "countsForDistance": true,
+          "distanceM": 20,
+          "reason": ""
+        }
+      ]
+    }
+  ],
+  "standings": [
+    {
+      "participantId": "entry-1",
+      "position": 1,
+      "status": "finished",
+      "classifiedLaps": 4,
+      "classifiedElapsedMs": 41000,
+      "points": 10
+    },
+    {
+      "participantId": "entry-2",
+      "position": 2,
+      "status": "finished",
+      "classifiedLaps": 4,
+      "classifiedElapsedMs": 41000,
+      "points": 8
+    }
+  ],
+  "adjustments": [],
+  "notes": "Reviewed by the Race Director."
+}

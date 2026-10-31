@@ -1,0 +1,31 @@
+{
+  "protocol": 2,
+  "id": "paddock-demo",
+  "revision": 5,
+  "name": "Timing integration demo",
+  "permissions": {
+    "browse": true,
+    "submit": false,
+    "timingResults": true
+  },
+  "capabilities": {
+    "timing": {
+      "versions": [
+        1
+      ],
+      "profile": "/v1/timing/cars/{carId}",
+      "sessions": "/v1/timing/sessions",
+      "receipt": "/v1/timing/sessions/{sourceId}/{sessionId}",
+      "permission": "timingResults",
+      "configurationKinds": [
+        "current"
+      ],
+      "maxRequestBytes": 8388608,
+      "maxLaps": 50000,
+      "maxParticipants": 256,
+      "laneBase": 1,
+      "durationUnit": "ms",
+      "distanceUnit": "m"
+    }
+  }
+}

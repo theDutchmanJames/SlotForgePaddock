@@ -53,7 +53,7 @@ async function files(action,p={}){
 app.whenReady().then(async()=>{
   if(!ownsInstance)return;
   try{store=new Store(path.join(app.getPath('userData'),'database.json'));}catch(e){dialog.showErrorBox('SlotForge database could not be opened',e.message+'\nYour existing files have not been replaced.');app.quit();return;}
-  network=new Network(store,()=>win?.webContents.send('sf:changed'),result=>{if(win&&!win.isDestroyed())win.webContents.send('sf:network-state',result);});
+  network=new Network(store,change=>win?.webContents.send('sf:changed',change),result=>{if(win&&!win.isDestroyed())win.webContents.send('sf:network-state',result);});
   if(!smoke){networkTimer=setInterval(()=>network.poll().catch(()=>{}),5000);networkTimer.unref();}
   win=new BrowserWindow({width:1440,height:980,minWidth:960,minHeight:700,show:false,backgroundColor:'#171b21',icon:path.join(__dirname,'..','assets','icon.png'),title:'SlotForge Paddock',autoHideMenuBar:true,webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
   win.webContents.setWindowOpenHandler(()=>({action:'deny'}));win.webContents.on('will-navigate',event=>event.preventDefault());

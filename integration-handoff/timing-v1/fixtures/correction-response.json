@@ -1,0 +1,30 @@
+{
+  "ok": true,
+  "integrationVersion": 1,
+  "databaseId": "paddock-demo",
+  "sourceId": "timing-demo",
+  "sessionId": "session-normal",
+  "revision": 2,
+  "state": "active",
+  "contentHash": "12d2a64020341e4252a39be4c1d92be65d0c947eb3f285864aaaadca6a21315a",
+  "receivedAt": "2026-10-31T10:05:00.000Z",
+  "duplicate": false,
+  "warnings": [],
+  "summaries": [
+    {
+      "participantId": "entry-1",
+      "carId": "car-a",
+      "included": true,
+      "statistics": {
+        "validLaps": 1,
+        "recordEligibleLaps": 1,
+        "bestLapMs": 11000,
+        "averageLapMs": 11000,
+        "measuredTimeMs": 11000,
+        "distanceM": 60,
+        "distanceComplete": true,
+        "wins": 1
+      }
+    }
+  ]
+}

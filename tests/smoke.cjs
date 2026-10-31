@@ -79,5 +79,6 @@ module.exports=async(win,store,network)=>{
   reviewChecks.push(...await require('./performance-smoke.cjs')({win,store,network,js,wait,click,fill,submit,qa,dialog}));
   reviewChecks.push(...await require('./catalogue-import-smoke.cjs')({win,store,network,js,wait,click,fill,submit,qa,dialog}));
   reviewChecks.push(...await require('./new-additions-review-smoke.cjs')({win,store,network,js,wait,click,fill,submit,qa,dialog}));
+  reviewChecks.push(...await require('./timing-integration-smoke.cjs')({win,store,network,js,wait,click,fill,submit,qa,dialog}));
   assert.deepEqual(errors,[]);fs.writeFileSync(path.join(qa,'smoke-result.json'),JSON.stringify({passed:true,date:new Date().toISOString(),checks:['empty start','create car','reusable fields','setup snapshot','stock','installation','table view','maintenance','all navigation','dark/light themes','import inbox','selective review','backup file','photo import','manual test','settings-only setup application','assembly creation','assembly installation','assembly removal','reviewed assembly transfer through setup','assembly dismantling','screenshots',...reviewChecks],rendererErrors:errors},null,2));console.log('PASS Electron UI workflow checks.');
 };

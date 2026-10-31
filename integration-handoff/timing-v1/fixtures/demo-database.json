@@ -1,0 +1,111 @@
+{
+  "schema": 9,
+  "timing": {
+    "key": "1111111111111111111111111111111111111111111111111111111111111111",
+    "sessions": []
+  },
+  "buildDrafts": [],
+  "supplies": [],
+  "jobs": [],
+  "id": "paddock-demo",
+  "revision": 2,
+  "settings": {
+    "name": "Timing integration demo",
+    "theme": "dark",
+    "columns": [
+      "name",
+      "maker",
+      "scale",
+      "usage",
+      "location",
+      "availability"
+    ]
+  },
+  "cars": [
+    {
+      "id": "car-a",
+      "revision": 1,
+      "created": "2026-10-31T01:49:07.552Z",
+      "updated": "2026-10-31T01:49:07.553Z",
+      "usage": [],
+      "tags": [],
+      "technical": {
+        "motor": "21.5k",
+        "pinion": "9",
+        "gear": "27",
+        "technicalNotes": "private technical note"
+      },
+      "factory": {},
+      "photos": [],
+      "custom": {},
+      "ownership": "Owned",
+      "availability": "Available",
+      "name": "Example GT3",
+      "maker": "Example maker",
+      "owner": "Private owner",
+      "raceClass": "GT3",
+      "privateNotes": "private ownership note"
+    },
+    {
+      "id": "car-b",
+      "revision": 1,
+      "created": "2026-10-31T01:49:07.559Z",
+      "updated": "2026-10-31T01:49:07.559Z",
+      "usage": [],
+      "tags": [],
+      "technical": {
+        "motor": "21.5k",
+        "pinion": "9",
+        "gear": "27",
+        "technicalNotes": "private technical note"
+      },
+      "factory": {},
+      "photos": [],
+      "custom": {},
+      "ownership": "Owned",
+      "availability": "Available",
+      "name": "Example prototype",
+      "maker": "Example maker",
+      "owner": "Private owner",
+      "raceClass": "GT3",
+      "privateNotes": "private ownership note"
+    }
+  ],
+  "parts": [],
+  "assemblies": [],
+  "installations": [],
+  "setups": [],
+  "events": [],
+  "tests": [],
+  "submissions": [],
+  "choices": {
+    "maker": [
+      "Example maker"
+    ],
+    "owner": [
+      "Private owner"
+    ],
+    "ownership": [
+      "Owned"
+    ],
+    "availability": [
+      "Available"
+    ],
+    "raceClass": [
+      "GT3"
+    ],
+    "tech_motor": [
+      "21.5k"
+    ],
+    "tech_pinion": [
+      "9"
+    ],
+    "tech_gear": [
+      "27"
+    ]
+  },
+  "choiceAliases": [],
+  "documents": [],
+  "views": [],
+  "customFields": []
+}

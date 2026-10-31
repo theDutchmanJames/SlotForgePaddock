@@ -1,0 +1,33 @@
+{
+  "integrationVersion": 1,
+  "databaseId": "paddock-demo",
+  "databaseRevision": 2,
+  "car": {
+    "id": "car-a",
+    "name": "Example GT3",
+    "maker": "Example maker",
+    "marque": "",
+    "model": "",
+    "scale": "",
+    "raceClass": "GT3",
+    "picture": "",
+    "availability": "Available",
+    "archived": false
+  },
+  "configuration": {
+    "databaseId": "paddock-demo",
+    "carId": "car-a",
+    "kind": "current",
+    "configurationId": "b45e252a52522a0b267ac5b440533e42efb74f64796f06ca2e4b1578ca0ef13a",
+    "revision": "b45e252a52522a0b267ac5b440533e42efb74f64796f06ca2e4b1578ca0ef13a",
+    "carRevision": 1,
+    "capturedAt": "2026-10-31T10:00:00.000Z",
+    "technical": {
+      "motor": "21.5k",
+      "pinion": "9",
+      "gear": "27"
+    },
+    "components": [],
+    "signature": "a366a131cf225af3270996c907d8901c09b070435d11ee413e4f4325ed4a7e3a"
+  }
+}

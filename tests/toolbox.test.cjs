@@ -8,7 +8,7 @@ const part=(s,quantity=4)=>act(s,'part.save',{data:{name:'Rear tyre',category:'T
 const supply=(s,data={})=>act(s,'supply.save',{data:{name:'Bearing oil',category:'Cleaning & lubrication',kind:'Consumable',quantity:2,remaining:'30.5',minimum:10,unit:'ml',picture:photo,...data}});
 test('schema 4 migration preserves identities and custom categories, and leaves input untouched',()=>{
   const s=new Store();const id=part(s),old=s.snapshot();old.schema=4;delete old.supplies;old.parts[0].category='Handmade pickup';delete old.parts[0].partType;
-  const next=migrate(old);assert.equal(next.schema,8);assert.deepEqual(next.supplies,[]);assert.equal(next.parts[0].id,id);assert.equal(next.parts[0].category,'Other & custom parts');assert.equal(next.parts[0].partType,'Handmade pickup');assert.equal(next.parts[0].picture,photo);assert.equal(old.schema,4);assert.equal(old.parts[0].category,'Handmade pickup');
+  const next=migrate(old);assert.equal(next.schema,9);assert.deepEqual(next.supplies,[]);assert.equal(next.parts[0].id,id);assert.equal(next.parts[0].category,'Other & custom parts');assert.equal(next.parts[0].partType,'Handmade pickup');assert.equal(next.parts[0].picture,photo);assert.equal(old.schema,4);assert.equal(old.parts[0].category,'Handmade pickup');
 });
 test('part metadata and photos survive edits, stock returns and complete restore',()=>{
   const s=new Store(),p=part(s),c=act(s,'car.save',{data:{name:'Car'}});assert.equal(s.data.parts[0].category,'Wheels & tyres');assert.equal(s.data.parts[0].partType,'Tyre');act(s,'part.install',{carId:c,partId:p,quantity:2,field:'rearTyres'});act(s,'part.remove',{id:s.data.installations[0].id,destination:'spares'});

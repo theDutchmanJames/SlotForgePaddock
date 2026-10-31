@@ -184,9 +184,12 @@ Current version: **0.16.3**. The project is under active development. **SlotForg
 | Build from Scratch and manufacturer catalogue imports | Available |
 | Local-network browsing and reviewed submissions | Implemented; physical two-computer Wi-Fi testing remains outstanding |
 | SlotForge Timing car imports | Available through supported Timing JSON exports |
-| Live SlotForge Timing / RaceCoordinatorAI synchronisation | Planned |
-| Automatic lap-data exchange | Planned; performance records currently use manual entry |
+| SlotForge Timing integration host API | Implemented in current source; Timing client and physical two-computer acceptance still pending |
+| Imported Timing performance sessions | Current source supports captured configurations, corrections and withdrawals; manual records remain independent |
+| RaceCoordinatorAI integration | Planned |
 | Windows portable build | Built and tested |
 | Native macOS and Linux builds | Normal/quick installer builders available; native testing remains outstanding |
+
+The Paddock side of Timing integration is documented in the [Timing integration handoff](integration-handoff/timing-v1/README.md), including the exact contract, schemas, fixtures and local test host. It is newer than the v0.16.3 release download. Updated source migrates saved databases to schema 9; retain a backup for use with an older build.
 
 Catalogue imports validate structure and help identify duplicates. Manufacturer facts and physical part compatibility still need your review; the app does not scrape websites or download product images automatically.

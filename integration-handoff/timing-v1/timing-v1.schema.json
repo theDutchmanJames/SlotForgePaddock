@@ -1,0 +1,1358 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://slotforge.invalid/contracts/timing-v1.schema.json",
+  "title": "SlotForge Paddock Timing integration v1",
+  "anyOf": [
+    {
+      "$ref": "#/$defs/active"
+    },
+    {
+      "$ref": "#/$defs/withdrawal"
+    }
+  ],
+  "$defs": {
+    "active": {
+      "type": "object",
+      "properties": {
+        "integrationVersion": {
+          "const": 1
+        },
+        "databaseId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "source": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100,
+              "pattern": "^[a-zA-Z0-9_-]+$"
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "application": {
+              "const": "SlotForge Timing"
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "application"
+          ],
+          "additionalProperties": false
+        },
+        "sessionId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "state": {
+          "const": "active"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "type": {
+          "enum": [
+            "practice",
+            "qualifying",
+            "race",
+            "endurance"
+          ]
+        },
+        "startedAt": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 24,
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+        },
+        "endedAt": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 24,
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+        },
+        "track": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100,
+              "pattern": "^[a-zA-Z0-9_-]+$"
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "lanes": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "lane": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 64
+                  },
+                  "lengthM": {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "lane",
+                  "lengthM"
+                ],
+                "additionalProperties": false
+              },
+              "maxItems": 64,
+              "minItems": 1
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "lanes"
+          ],
+          "additionalProperties": false
+        },
+        "heats": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100,
+                "pattern": "^[a-zA-Z0-9_-]+$"
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "startedAtMs": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 604800000
+              },
+              "endedAtMs": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 604800000
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "startedAtMs",
+              "endedAtMs"
+            ],
+            "additionalProperties": false
+          },
+          "maxItems": 1000,
+          "minItems": 1
+        },
+        "participants": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100,
+                "pattern": "^[a-zA-Z0-9_-]+$"
+              },
+              "kind": {
+                "enum": [
+                  "physical",
+                  "virtual"
+                ]
+              },
+              "carId": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100,
+                    "pattern": "^[a-zA-Z0-9_-]+$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "configuration": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/configuration"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "displayName": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "drivers": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 100,
+                      "pattern": "^[a-zA-Z0-9_-]+$"
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 200
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name"
+                  ],
+                  "additionalProperties": false
+                },
+                "maxItems": 100,
+                "minItems": 1
+              },
+              "stints": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 100,
+                      "pattern": "^[a-zA-Z0-9_-]+$"
+                    },
+                    "heatId": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 100,
+                      "pattern": "^[a-zA-Z0-9_-]+$"
+                    },
+                    "driverId": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 100,
+                      "pattern": "^[a-zA-Z0-9_-]+$"
+                    },
+                    "lane": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 64
+                    },
+                    "startedAtMs": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 604800000
+                    },
+                    "endedAtMs": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 604800000
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "heatId",
+                    "driverId",
+                    "lane",
+                    "startedAtMs",
+                    "endedAtMs"
+                  ],
+                  "additionalProperties": false
+                },
+                "maxItems": 2000,
+                "minItems": 1
+              },
+              "laps": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 100,
+                      "pattern": "^[a-zA-Z0-9_-]+$"
+                    },
+                    "stintId": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 100,
+                      "pattern": "^[a-zA-Z0-9_-]+$"
+                    },
+                    "number": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 1000000
+                    },
+                    "durationMs": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 86400000
+                    },
+                    "endedAtMs": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 604800000
+                    },
+                    "valid": {
+                      "type": "boolean"
+                    },
+                    "pit": {
+                      "type": "boolean"
+                    },
+                    "recordEligible": {
+                      "type": "boolean"
+                    },
+                    "countsForDistance": {
+                      "type": "boolean"
+                    },
+                    "distanceM": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 100000
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "reason": {
+                      "type": "string",
+                      "maxLength": 500
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "stintId",
+                    "number",
+                    "durationMs",
+                    "endedAtMs",
+                    "valid",
+                    "pit",
+                    "recordEligible",
+                    "countsForDistance",
+                    "distanceM",
+                    "reason"
+                  ],
+                  "additionalProperties": false
+                },
+                "maxItems": 50000,
+                "minItems": 0
+              },
+              "summary": {
+                "$ref": "#/$defs/summary"
+              }
+            },
+            "required": [
+              "id",
+              "kind",
+              "carId",
+              "configuration",
+              "displayName",
+              "drivers",
+              "stints",
+              "laps"
+            ],
+            "additionalProperties": false
+          },
+          "maxItems": 256,
+          "minItems": 1
+        },
+        "standings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "participantId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100,
+                "pattern": "^[a-zA-Z0-9_-]+$"
+              },
+              "position": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 1000
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "status": {
+                "enum": [
+                  "finished",
+                  "dnf",
+                  "dns",
+                  "disqualified"
+                ]
+              },
+              "classifiedLaps": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1000000
+              },
+              "classifiedElapsedMs": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 604800000
+              },
+              "points": {
+                "type": "number",
+                "minimum": -1000000,
+                "maximum": 1000000
+              }
+            },
+            "required": [
+              "participantId",
+              "position",
+              "status",
+              "classifiedLaps",
+              "classifiedElapsedMs",
+              "points"
+            ],
+            "additionalProperties": false
+          },
+          "maxItems": 256,
+          "minItems": 0
+        },
+        "adjustments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "participantId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100,
+                "pattern": "^[a-zA-Z0-9_-]+$"
+              },
+              "kind": {
+                "enum": [
+                  "time",
+                  "laps",
+                  "points",
+                  "other"
+                ]
+              },
+              "amount": {
+                "type": "number",
+                "minimum": -1000000000,
+                "maximum": 1000000000
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000
+              }
+            },
+            "required": [
+              "participantId",
+              "kind",
+              "amount",
+              "reason"
+            ],
+            "additionalProperties": false
+          },
+          "maxItems": 2000,
+          "minItems": 0
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 4000
+        }
+      },
+      "required": [
+        "integrationVersion",
+        "databaseId",
+        "source",
+        "sessionId",
+        "revision",
+        "state",
+        "name",
+        "type",
+        "startedAt",
+        "endedAt",
+        "track",
+        "heats",
+        "participants",
+        "standings",
+        "adjustments",
+        "notes"
+      ],
+      "additionalProperties": false
+    },
+    "withdrawal": {
+      "type": "object",
+      "properties": {
+        "integrationVersion": {
+          "const": 1
+        },
+        "databaseId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "source": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100,
+              "pattern": "^[a-zA-Z0-9_-]+$"
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "application": {
+              "const": "SlotForge Timing"
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "application"
+          ],
+          "additionalProperties": false
+        },
+        "sessionId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "state": {
+          "const": "withdrawn"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        }
+      },
+      "required": [
+        "integrationVersion",
+        "databaseId",
+        "source",
+        "sessionId",
+        "revision",
+        "state",
+        "reason"
+      ],
+      "additionalProperties": false
+    },
+    "configuration": {
+      "type": "object",
+      "properties": {
+        "databaseId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "carId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "kind": {
+          "const": "current"
+        },
+        "configurationId": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "carRevision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "capturedAt": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 24,
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+        },
+        "technical": {
+          "type": "object",
+          "properties": {
+            "body": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "bodyMaterial": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "bodySettings": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "chassis": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "wheelbase": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "motor": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "motorLayout": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "pod": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "podSettings": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "ratedRpm": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "ratedVoltage": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "measuredRpm": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "measuredVoltage": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "measuredDate": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "pinion": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "gear": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "gearType": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "pinionPart": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "gearPart": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "frontAxle": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "rearAxle": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "frontBearings": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "rearBearings": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "frontWheels": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "rearWheels": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "frontTyres": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "rearTyres": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "frontDiameter": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "rearDiameter": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "frontAxlePlay": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "rearAxlePlay": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "guide": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "braids": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "wiring": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "lights": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "digitalSystem": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "chip": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "magnets": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "ballast": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "suspension": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "fasteners": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "weight": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "clearance": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "frontWidth": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "rearWidth": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "motorTorque": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "torqueVoltage": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "torqueType": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "motorType": {
+              "type": "string",
+              "maxLength": 20000
+            }
+          },
+          "additionalProperties": false
+        },
+        "components": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "partId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100,
+                "pattern": "^[a-zA-Z0-9_-]+$"
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "quantity": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000000
+              },
+              "field": {
+                "type": "string",
+                "maxLength": 100
+              },
+              "position": {
+                "type": "string",
+                "maxLength": 160
+              },
+              "assemblyId": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100,
+                    "pattern": "^[a-zA-Z0-9_-]+$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "partId",
+              "name",
+              "quantity",
+              "field",
+              "position",
+              "assemblyId"
+            ],
+            "additionalProperties": false
+          },
+          "maxItems": 1000,
+          "minItems": 0
+        },
+        "signature": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "required": [
+        "databaseId",
+        "carId",
+        "kind",
+        "configurationId",
+        "revision",
+        "carRevision",
+        "capturedAt",
+        "technical",
+        "components",
+        "signature"
+      ],
+      "additionalProperties": false
+    },
+    "summary": {
+      "type": "object",
+      "properties": {
+        "validLaps": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "recordEligibleLaps": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "bestLapMs": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "averageLapMs": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1000000000
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "measuredTimeMs": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "distanceM": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1000000000000000
+        },
+        "distanceComplete": {
+          "type": "boolean"
+        },
+        "wins": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "validLaps",
+        "recordEligibleLaps",
+        "bestLapMs",
+        "averageLapMs",
+        "measuredTimeMs",
+        "distanceM",
+        "distanceComplete",
+        "wins"
+      ],
+      "additionalProperties": false
+    },
+    "receipt": {
+      "type": "object",
+      "properties": {
+        "ok": {
+          "const": true
+        },
+        "integrationVersion": {
+          "const": 1
+        },
+        "databaseId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "sourceId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "sessionId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "state": {
+          "enum": [
+            "active",
+            "withdrawn"
+          ]
+        },
+        "contentHash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "receivedAt": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 24,
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+        },
+        "duplicate": {
+          "type": "boolean"
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "enum": [
+                  "CAR_ARCHIVED"
+                ]
+              },
+              "carId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100,
+                "pattern": "^[a-zA-Z0-9_-]+$"
+              }
+            },
+            "required": [
+              "code",
+              "carId"
+            ],
+            "additionalProperties": false
+          },
+          "maxItems": 256,
+          "minItems": 0
+        },
+        "summaries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "participantId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100,
+                "pattern": "^[a-zA-Z0-9_-]+$"
+              },
+              "carId": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100,
+                    "pattern": "^[a-zA-Z0-9_-]+$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "included": {
+                "type": "boolean"
+              },
+              "statistics": {
+                "$ref": "#/$defs/summary"
+              }
+            },
+            "required": [
+              "participantId",
+              "carId",
+              "included",
+              "statistics"
+            ],
+            "additionalProperties": false
+          },
+          "maxItems": 256,
+          "minItems": 0
+        }
+      },
+      "required": [
+        "ok",
+        "integrationVersion",
+        "databaseId",
+        "sourceId",
+        "sessionId",
+        "revision",
+        "state",
+        "contentHash",
+        "receivedAt",
+        "duplicate",
+        "warnings",
+        "summaries"
+      ],
+      "additionalProperties": false
+    },
+    "profile": {
+      "type": "object",
+      "properties": {
+        "integrationVersion": {
+          "const": 1
+        },
+        "databaseId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "databaseRevision": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "car": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100,
+              "pattern": "^[a-zA-Z0-9_-]+$"
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "maker": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "marque": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "model": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "scale": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "raceClass": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "picture": {
+              "type": "string",
+              "maxLength": 12582912
+            },
+            "availability": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "archived": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "maker",
+            "marque",
+            "model",
+            "scale",
+            "raceClass",
+            "picture",
+            "availability",
+            "archived"
+          ],
+          "additionalProperties": false
+        },
+        "configuration": {
+          "$ref": "#/$defs/configuration"
+        }
+      },
+      "required": [
+        "integrationVersion",
+        "databaseId",
+        "databaseRevision",
+        "car",
+        "configuration"
+      ],
+      "additionalProperties": false
+    },
+    "error": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "code": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        }
+      },
+      "required": [
+        "error",
+        "code"
+      ],
+      "additionalProperties": false
+    },
+    "status": {
+      "type": "object",
+      "properties": {
+        "protocol": {
+          "const": 2
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "permissions": {
+          "type": "object",
+          "properties": {
+            "browse": {
+              "const": true
+            },
+            "submit": {
+              "type": "boolean"
+            },
+            "timingResults": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "browse",
+            "submit",
+            "timingResults"
+          ],
+          "additionalProperties": false
+        },
+        "capabilities": {
+          "type": "object",
+          "properties": {
+            "timing": {
+              "type": "object",
+              "properties": {
+                "versions": {
+                  "type": "array",
+                  "items": {
+                    "const": 1
+                  },
+                  "maxItems": 1,
+                  "minItems": 1
+                },
+                "profile": {
+                  "const": "/v1/timing/cars/{carId}"
+                },
+                "sessions": {
+                  "const": "/v1/timing/sessions"
+                },
+                "receipt": {
+                  "const": "/v1/timing/sessions/{sourceId}/{sessionId}"
+                },
+                "permission": {
+                  "const": "timingResults"
+                },
+                "configurationKinds": {
+                  "type": "array",
+                  "items": {
+                    "const": "current"
+                  },
+                  "maxItems": 1,
+                  "minItems": 1
+                },
+                "maxRequestBytes": {
+                  "const": 8388608
+                },
+                "maxLaps": {
+                  "const": 50000
+                },
+                "maxParticipants": {
+                  "const": 256
+                },
+                "laneBase": {
+                  "const": 1
+                },
+                "durationUnit": {
+                  "const": "ms"
+                },
+                "distanceUnit": {
+                  "const": "m"
+                }
+              },
+              "required": [
+                "versions",
+                "profile",
+                "sessions",
+                "receipt",
+                "permission",
+                "configurationKinds",
+                "maxRequestBytes",
+                "maxLaps",
+                "maxParticipants",
+                "laneBase",
+                "durationUnit",
+                "distanceUnit"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "timing"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "protocol",
+        "id",
+        "revision",
+        "name",
+        "permissions",
+        "capabilities"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

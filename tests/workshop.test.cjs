@@ -77,7 +77,7 @@ test('applying a settings-only setup removes complete assemblies without dismant
 test('legacy v0.1 backups migrate without losing cars, setups, photos or stock',()=>{
   const old=new Store(),c=car(old),p=part(old);old.mutate('part.install',{carId:c,partId:p,quantity:2,field:'rearTyres'});saved(old,c);
   const legacy=old.snapshot();legacy.schema=1;delete legacy.assemblies;const s=new Store();s.restore(legacy,0);
-  assert.equal(s.data.schema,8);assert.deepEqual(s.data.assemblies,[]);assert.deepEqual(s.data.cars,legacy.cars);assert.deepEqual(s.data.setups,legacy.setups);assert.deepEqual(s.data.parts,legacy.parts);
+  assert.equal(s.data.schema,9);assert.deepEqual(s.data.assemblies,[]);assert.deepEqual(s.data.cars,legacy.cars);assert.deepEqual(s.data.setups,legacy.setups);assert.deepEqual(s.data.parts,legacy.parts);
   assert.equal(legacy.schema,1);assert.equal(legacy.assemblies,undefined);
 });
 test('assembly creation and setup application roll back if persistence fails',()=>{

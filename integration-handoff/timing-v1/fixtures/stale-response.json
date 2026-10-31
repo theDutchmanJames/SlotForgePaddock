@@ -1,0 +1,4 @@
+{
+  "error": "A newer session revision is already stored.",
+  "code": "STALE_REVISION"
+}

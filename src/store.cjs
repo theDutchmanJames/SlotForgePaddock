@@ -11,6 +11,7 @@ const toolbox=require('./toolbox.cjs');
 const preferences=require('./preferences.cjs');
 const inventory=require('./inventory.cjs');
 const build=require('./build.cjs');
+const timing=require('./timing-integration.cjs');
 const catalogueImport=require('./catalogue-import.cjs');
 const iconAppearance=require('../renderer/icon-catalogue.js');
 const {validateDocument}=require('./documents.cjs');
@@ -48,8 +49,8 @@ function carData(input) {
   for (const k of ['archived','favourite']) if (Object.hasOwn(input,k)) { assert(typeof input[k]==='boolean','Invalid flag.'); out[k]=input[k]; }
   return out;
 }
-function initial() { return {schema:8,buildDrafts:[],supplies:[],jobs:[],id:randomUUID(),revision:0,settings:{name:'My collection',theme:'dark',columns:[...collection.DEFAULT_COLUMNS]},cars:[],parts:[],assemblies:[],installations:[],setups:[],events:[],tests:[],submissions:[],choices:{},choiceAliases:[],documents:[],views:[],customFields:[]}; }
-function migrate(input){const db=clone(object(input));if(db.schema===1){db.schema=2;db.assemblies=[];}if(db.schema===2){db.schema=3;db.choiceAliases=[];db.documents=[];object(db.settings).columns=[...collection.DEFAULT_COLUMNS];if(Array.isArray(db.views))for(const view of db.views)view.columns=[...collection.DEFAULT_COLUMNS];}if(db.schema===3){db.schema=4;db.jobs=[];}if(db.schema===4){db.schema=5;db.supplies=[];if(Array.isArray(db.parts))for(const p of db.parts){Object.assign(p,catalogue.classify(p.category,p.partType));for(const key of ['maker','scale','dimensions','material','compatibility','picture'])p[key]??='';}}if(db.schema===5)db.schema=6;if(db.schema===6)db.schema=7;if(db.schema===7){db.schema=8;db.buildDrafts=[];}if(Array.isArray(db.submissions))for(const sub of db.submissions){object(sub);sub.package=validatePackage(sub.package);}return validateDatabase(db);}
+function initial() { return {schema:9,timing:{key:null,sessions:[]},buildDrafts:[],supplies:[],jobs:[],id:randomUUID(),revision:0,settings:{name:'My collection',theme:'dark',columns:[...collection.DEFAULT_COLUMNS]},cars:[],parts:[],assemblies:[],installations:[],setups:[],events:[],tests:[],submissions:[],choices:{},choiceAliases:[],documents:[],views:[],customFields:[]}; }
+function migrate(input){const db=clone(object(input));if(db.schema===1){db.schema=2;db.assemblies=[];}if(db.schema===2){db.schema=3;db.choiceAliases=[];db.documents=[];object(db.settings).columns=[...collection.DEFAULT_COLUMNS];if(Array.isArray(db.views))for(const view of db.views)view.columns=[...collection.DEFAULT_COLUMNS];}if(db.schema===3){db.schema=4;db.jobs=[];}if(db.schema===4){db.schema=5;db.supplies=[];if(Array.isArray(db.parts))for(const p of db.parts){Object.assign(p,catalogue.classify(p.category,p.partType));for(const key of ['maker','scale','dimensions','material','compatibility','picture'])p[key]??='';}}if(db.schema===5)db.schema=6;if(db.schema===6)db.schema=7;if(db.schema===7){db.schema=8;db.buildDrafts=[];}if(db.schema===8){db.schema=9;db.timing??={key:null,sessions:[]};}if(Array.isArray(db.submissions))for(const sub of db.submissions){object(sub);sub.package=validatePackage(sub.package);}return validateDatabase(db);}
 function publicCar(car) {
   const result = {id:car.id,...cleanMap(car,PUBLIC_FIELDS),technical:cleanMap(car.technical || {},TECH_FIELDS),picture:car.picture || '',usage:clone(car.usage || [])};
   return result;
@@ -79,7 +80,7 @@ function validatePackage(input) {
   return {format:input.format,version:1,packageId:ident(input.packageId),source:ident(input.source),sender:text(input.sender,200),created:text(input.created,100),cars};
 }
 function validateDatabase(db) {
-  object(db); assert(db.schema===8,'Unsupported database version.');ident(db.id);build.validateDrafts(db);
+  object(db); assert(db.schema===9,'Unsupported database version.');ident(db.id);build.validateDrafts(db);timing.validateStored(db);
   assert(Number.isSafeInteger(db.revision) && db.revision>=0,'Invalid database revision.');
   for(const k of ['cars','parts','installations','setups','events','tests','submissions','views','customFields']){assert(Array.isArray(db[k]),'Invalid database: '+k);unique(db[k],k);}
   assert(db.cars.length<=10000 && db.parts.length<=50000,'Database limit exceeded.');

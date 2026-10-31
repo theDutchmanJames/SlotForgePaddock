@@ -30,5 +30,5 @@ test('Invalid icons, CSS-like colours, stale edits and failed writes leave data 
  assert.throws(()=>s.mutate('part.appearance',{id,revision:0,data:{iconColour:'red'}}),/changed/);s.persist=()=>{throw Error('Disk full');};assert.throws(()=>act(s,'part.appearance',{id,data:{iconColour:'red'}}),/Disk full/);assert.deepEqual(s.snapshot(),before);
 });
 test('Existing records without appearance fields remain valid; invalid backup choices are refused',()=>{
- const s=new Store();part(s);const old=s.snapshot();delete old.parts[0].iconId;delete old.parts[0].iconColour;assert.equal(migrate(old).schema,8);const bad=s.snapshot();bad.parts[0].iconId='javascript:bad';assert.throws(()=>migrate(bad),/icon/);
+ const s=new Store();part(s);const old=s.snapshot();delete old.parts[0].iconId;delete old.parts[0].iconColour;assert.equal(migrate(old).schema,9);const bad=s.snapshot();bad.parts[0].iconId='javascript:bad';assert.throws(()=>migrate(bad),/icon/);
 });

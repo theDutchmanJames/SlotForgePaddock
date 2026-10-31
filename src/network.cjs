@@ -2,6 +2,7 @@ const http = require('node:http');
 const os = require('node:os');
 const crypto = require('node:crypto');
 const discovery=require('./discovery.cjs');
+const timing=require('./timing-integration.cjs');
 const { publicCar, makePackage, validatePackage } = require('./store.cjs');
 const MAX = 32 * 1024 * 1024;
 const PAGE_BYTES=16*1024*1024;
@@ -19,21 +20,42 @@ function localAddress(address) {
 }
 class Network {
   constructor(store,onChange=()=>{},onNetwork=()=>{}){this.store=store;this.onChange=onChange;this.onNetwork=onNetwork;this.server=null;this.code='';this.browseCode='';this.allowSubmissions=true;this.remote=null;this.cached=null;this.pending=null;this.generation=0;this.readAbort=new AbortController();this.starting=null;this.advertiser=null;this.discoveryError='';this.refreshing=null;this.nextPoll=0;this.failures=0;this.scanning=null;this.sending=false;}
-  status(){return {sharing:!!this.server&&!!this.port,code:this.code,browseCode:this.browseCode,allowSubmissions:this.allowSubmissions,discoverable:!!this.advertiser,discoveryError:this.discoveryError,port:this.port||0,addresses:this.server?Object.values(os.networkInterfaces()).flat().filter(i=>i.family==='IPv4'&&!i.internal).map(i=>i.address+':'+this.port):[],remote:this.remote?{address:this.remote.address,name:this.remote.name,id:this.remote.id,state:this.remote.state,lastSync:this.remote.lastSync,lastError:this.remote.lastError,permissions:this.remote.permissions,autoRefresh:this.remote.autoRefresh}:null,pending:this.pending?{hostId:this.pending.hostId,name:this.pending.name,count:this.pending.bundle.cars.length}:null};}
+  status(){return {timingCode:this.timingCode||'',allowTimingResults:!!this.allowTimingResults,sharing:!!this.server&&!!this.port,code:this.code,browseCode:this.browseCode,allowSubmissions:this.allowSubmissions,discoverable:!!this.advertiser,discoveryError:this.discoveryError,port:this.port||0,addresses:this.server?Object.values(os.networkInterfaces()).flat().filter(i=>i.family==='IPv4'&&!i.internal).map(i=>i.address+':'+this.port):[],remote:this.remote?{address:this.remote.address,name:this.remote.name,id:this.remote.id,state:this.remote.state,lastSync:this.remote.lastSync,lastError:this.remote.lastError,permissions:this.remote.permissions,autoRefresh:this.remote.autoRefresh}:null,pending:this.pending?{hostId:this.pending.hostId,name:this.pending.name,count:this.pending.bundle.cars.length}:null};}
   notify(data){try{this.onNetwork({status:this.status(),...(data?{data}: {})});}catch{}}
-  access(code){const token=Buffer.from(String(code||''));for(const [value,submit]of [[this.code,true],[this.browseCode,false]]){const expected=Buffer.from(value);if(expected.length&&token.length===expected.length&&crypto.timingSafeEqual(token,expected))return {browse:true,submit:submit&&this.allowSubmissions};}return null;}
-  controls(p={}){if(!this.server)throw Error('Start sharing first.');if(p.allowSubmissions!==undefined){if(typeof p.allowSubmissions!=='boolean')throw Error('Invalid submission permission.');this.allowSubmissions=p.allowSubmissions;}if(p.rotate===true){this.code=crypto.randomBytes(12).toString('hex');this.browseCode=crypto.randomBytes(12).toString('hex');}return this.status();}
+  access(code){const token=Buffer.from(String(code||''));for(const [value,submit,timingResults]of [[this.code,true,false],[this.browseCode,false,false],[this.timingCode||'',false,true]]){const expected=Buffer.from(value);if(expected.length&&token.length===expected.length&&crypto.timingSafeEqual(token,expected))return {browse:true,submit:submit&&this.allowSubmissions,timingResults:timingResults&&!!this.allowTimingResults};}return null;}
+  controls(p={}){if(!this.server)throw Error('Start sharing first.');for(const key of ['allowSubmissions','allowTimingResults'])if(p[key]!==undefined){if(typeof p[key]!=='boolean')throw Error('Invalid permission.');this[key]=p[key];}if(p.rotate===true){this.code=crypto.randomBytes(12).toString('hex');this.browseCode=crypto.randomBytes(12).toString('hex');this.timingCode=crypto.randomBytes(12).toString('hex');}return this.status();}
   async discover(){if(!this.scanning)this.scanning=discovery.scan().finally(()=>{this.scanning=null;});return (await this.scanning).filter(h=>h.id!==this.store.data.id);}
   async start(){if(this.starting){await this.starting;return this.status();}if(this.server)return this.status();this.starting=this.startHost();try{await this.starting;}finally{this.starting=null;}return this.status();}
-  async startHost(){this.code=crypto.randomBytes(12).toString('hex');this.browseCode=crypto.randomBytes(12).toString('hex');this.allowSubmissions=true;
+  async startHost(){this.code=crypto.randomBytes(12).toString('hex');this.browseCode=crypto.randomBytes(12).toString('hex');this.timingCode=crypto.randomBytes(12).toString('hex');this.allowSubmissions=true;this.allowTimingResults=false;
     this.server=http.createServer(async(req,res)=>{
-      const send=(status,value)=>{if(res.destroyed||res.writableEnded)return;if(res.headersSent){res.destroy();return;}res.writeHead(status,{'Content-Type':'application/json','Cache-Control':'no-store','X-Content-Type-Options':'nosniff',...(status>=400?{'Connection':'close'}:{})});res.end(JSON.stringify(value));if(status>=400)res.once('finish',()=>req.destroy());};
-      if(req.headers.origin)return send(403,{error:'Browser access is not supported.'});
+      const send=(status,value)=>{if(res.destroyed||res.writableEnded)return;if(res.headersSent){res.destroy();return;}res.writeHead(status,{'Content-Type':'application/json','Cache-Control':'no-store','X-Content-Type-Options':'nosniff',...(status>=400&&!req.url.startsWith('/v1/timing/')?{'Connection':'close'}:{})});if(status>=400){let discarded=0;const timer=setTimeout(()=>{if(!req.complete)req.destroy();},2000);timer.unref();req.once('end',()=>clearTimeout(timer));req.on('data',chunk=>{discarded+=chunk.length;if(discarded>16*1024*1024)req.destroy();});req.resume();}res.end(JSON.stringify(value));};
+      if(Object.hasOwn(req.headers,'origin'))return send(403,{error:'Browser access is not supported.',code:'BROWSER_ORIGIN_FORBIDDEN'});
       const authorization=String(req.headers.authorization||''),code=authorization.startsWith('Bearer ')?authorization.slice(7):'',access=this.access(code);
-      if(!access)return send(401,{error:'Incorrect connection code.'});
+      if(!access)return send(401,{error:'Incorrect connection code.',code:'UNAUTHENTICATED'});
       try{
         const url=new URL(req.url,'http://localhost');
-        if(req.method==='GET'&&url.pathname==='/v1/status')return send(200,{protocol:2,id:this.store.data.id,revision:this.store.data.revision,name:this.store.data.settings.name,permissions:access});
+        if(req.method==='GET'&&url.pathname==='/v1/status')return send(200,{protocol:2,id:this.store.data.id,revision:this.store.data.revision,name:this.store.data.settings.name,permissions:access,capabilities:timing.capabilities()});
+        if(url.pathname.startsWith('/v1/timing/')){
+          const expected=req.headers['x-slotforge-database'];
+          if(!expected)throw timing.fault('DATABASE_REQUIRED','Send X-SlotForge-Database with the paired database ID.');
+          if(expected!==this.store.data.id)throw timing.fault('DATABASE_MISMATCH','A different database is at this address.',409);
+          const carMatch=url.pathname.match(/^\/v1\/timing\/cars\/([a-zA-Z0-9_-]{1,100})$/);
+          if(req.method==='GET'&&carMatch)return send(200,timing.profile(this.store,carMatch[1]));
+          if(!access.timingResults)throw timing.fault('TIMING_PERMISSION_REQUIRED','Enable Allow Timing results and use the dedicated Timing code.',403);
+          const receiptMatch=url.pathname.match(/^\/v1\/timing\/sessions\/([a-zA-Z0-9_-]{1,100})\/([a-zA-Z0-9_-]{1,100})$/);
+          if(req.method==='GET'&&receiptMatch){const record=this.store.data.timing.sessions.find(r=>r.payload.source.id===receiptMatch[1]&&r.payload.sessionId===receiptMatch[2]);if(!record)throw timing.fault('SESSION_NOT_FOUND','No session with that source and session ID is stored.',404);return send(200,timing.receipt(this.store.data,record));}
+          if(req.method==='POST'&&url.pathname==='/v1/timing/sessions'){
+            if(!/^application\/json(?:\s*;\s*charset=utf-8)?$/i.test(req.headers['content-type']||''))throw timing.fault('CONTENT_TYPE_REQUIRED','Send application/json with UTF-8 encoding.',415);
+            if(req.headers['content-encoding']&&req.headers['content-encoding']!=='identity')throw timing.fault('CONTENT_ENCODING_UNSUPPORTED','Compressed request bodies are not supported.',415);
+            if(Number(req.headers['content-length'])>timing.MAX_BYTES)throw timing.fault('PAYLOAD_TOO_LARGE','Timing sessions are limited to 8 MiB.',413);
+            const chunks=[];let size=0;for await(const chunk of req.iterator({destroyOnReturn:false})){size+=chunk.length;if(size>timing.MAX_BYTES){send(413,{error:'Timing sessions are limited to 8 MiB.',code:'PAYLOAD_TOO_LARGE'});return;}chunks.push(chunk);}
+            if(expected!==this.store.data.id)throw timing.fault('DATABASE_MISMATCH','The host database changed during upload.',409);
+            if(!this.access(code)?.timingResults)throw timing.fault('TIMING_PERMISSION_REQUIRED','Timing access changed during upload.',403);
+            let payload;try{payload=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(Buffer.concat(chunks)));}catch{throw timing.fault('INVALID_JSON','Request must contain valid UTF-8 JSON.');}
+            const result=timing.receive(this.store,payload);if(!result.duplicate)try{this.onChange({kind:'timing'});}catch{}return send(200,result);
+          }
+          throw timing.fault('NOT_FOUND','Unknown Timing operation.',404);
+        }
         if(req.method==='GET'&&url.pathname==='/v1/collection'){
           const db=this.store.data,offset=Number(url.searchParams.get('offset')||0),all=db.cars.filter(c=>!c.archived);
           if(req.headers['x-slotforge-pages']!=='1'){const view=publicView(db.id,db.revision,db.settings.name,all.map(publicCar));if(Buffer.byteLength(JSON.stringify(view))>MAX)return send(413,{error:'This photo collection needs a newer SlotForge client with paged transfers.'});return send(200,{...view,permissions:access});}
@@ -53,13 +75,13 @@ class Network {
           const result=this.store.mutate('submission.add',{package:JSON.parse(Buffer.concat(chunks).toString())});if(result.result!=='duplicate'){try{this.onChange();}catch{/* Notification failure must not change a successful save response. */}}return send(200,{ok:true,duplicate:result.result==='duplicate'});
         }
         send(404,{error:'Unknown operation.'});
-      }catch(e){send(e.code?500:400,{error:e.code?'The host could not save the submission. Check storage on the sharing computer.':e.message});}
+      }catch(e){send(e.httpStatus||(e.code?500:400),{error:e.code?'The host could not save the submission. Check storage on the sharing computer.':e.message,code:e.apiCode||(e.code?'STORAGE_FAILED':'INVALID_PAYLOAD')});}
     });
     this.server.requestTimeout=15000;this.server.headersTimeout=10000;this.server.maxConnections=30;
     const listening=new Promise((resolve,reject)=>{this.server.once('error',reject);this.server.listen(0,'0.0.0.0',resolve);});
     try{await listening;this.port=this.server.address().port;try{this.advertiser=await discovery.advertise(()=>this.server?{id:this.store.data.id,name:this.store.data.settings.name,port:this.port}:null);this.discoveryError='';}catch{this.discoveryError='Discovery is unavailable on this computer. Members can still enter the displayed address and code.';}}catch(e){this.server=null;this.code='';throw e;}return this.status();
   }
-  async stop(){if(this.starting)await this.starting.catch(()=>{});const s=this.server;this.server=null;this.code='';this.browseCode='';this.port=0;if(this.advertiser){this.advertiser.close();this.advertiser=null;}this.discoveryError='';if(s){s.closeAllConnections();await new Promise(resolve=>s.close(resolve));}return this.status();}
+  async stop(){if(this.starting)await this.starting.catch(()=>{});const s=this.server;this.server=null;this.code='';this.browseCode='';this.timingCode='';this.allowTimingResults=false;this.port=0;if(this.advertiser){this.advertiser.close();this.advertiser=null;}this.discoveryError='';if(s){s.closeAllConnections();await new Promise(resolve=>s.close(resolve));}return this.status();}
   async request(address,code,route,body,expectedDatabase,signal){
     const payload=body?JSON.stringify(body):undefined;if(payload&&Buffer.byteLength(payload)>MAX)throw new Error('Package exceeds the 32 MB network limit. Use a file export.');
     const response=await fetch(localAddress(address)+route,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+code,'Content-Type':'application/json','X-SlotForge-Pages':'1',...(expectedDatabase?{'X-SlotForge-Database':expectedDatabase}:{})},body:payload,redirect:'error',signal:signal?AbortSignal.any([signal,AbortSignal.timeout(10000)]):AbortSignal.timeout(10000)});

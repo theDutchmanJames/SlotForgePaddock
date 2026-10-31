@@ -1,5 +1,15 @@
 # Development & release history
 
+## Timing integration host — source update after 0.16.3
+
+Paddock now exposes Timing integration v1 with explicit capabilities, a separate permission/code, signed current-configuration captures and a dedicated session API. Sessions use persistent source/session IDs and monotonic revisions. Identical retries are acknowledged without another write; corrections replace prior contributions, and withdrawals retain tombstones. Imported results are shown separately from manual tests with captured configurations, measured laps, classification, endurance drivers and revision history. Virtual entries do not affect physical-car statistics. Existing car sharing and submission review remain independent.
+
+See the [integration handoff](../integration-handoff/timing-v1/README.md), [exact contract](../integration-handoff/timing-v1/CONTRACT.md), machine-readable schema and executable fixtures. This source update uses **database schema 9**, migrating schemas 1–8 in memory and saving with the existing recovery-copy mechanism. Older binaries cannot open schema-9 saves; keep a complete backup if retaining an older executable. Session records, withdrawal tombstones and the capture signing key are included in complete backups, never in public car exports.
+
+Validation: 246 automated tests and 151 isolated desktop workflow checks passed, with no renderer errors. The integration-specific suite includes 23 local server/client and contract tests.
+
+The Timing client is intentionally outside this repository. Local server/client and isolated desktop checks are documented in the handoff; physical two-computer acceptance, native macOS/Linux execution and power-loss testing remain outstanding. The existing synchronous whole-document persistence and 200 MiB cap remain; this bounded session API is not a high-volume streaming telemetry service.
+
 [Back to the app overview](../README.md)
 
 Technical notes, validation results and release history for SlotForge Paddock (formerly SlotForge Database). File paths and commands below are relative to the project root. Older release sections describe behaviour at that release; later sections may supersede them.
@@ -453,8 +463,8 @@ The Windows 0.5.1 build completed successfully and is placed separately in `dist
 
 ## Planned next
 
-SlotForge Timing and RaceCoordinatorAI integration is the next major feature phase. Physical two-computer network acceptance and native macOS/Linux packaging still need validation. Later improvements include maintenance based on imported usage; richer ownership history; custom-field exchange; individual member accounts and an optional persistent offline cache; and signed updates.
+Paddock’s Timing integration host is implemented in current source; the Timing client, RaceCoordinatorAI integration, physical two-computer acceptance and native macOS/Linux packaging still need validation. Later improvements include maintenance based on imported usage; richer ownership history; custom-field exchange; individual member accounts and an optional persistent offline cache; and signed updates.
 
-SlotForge Timing and RaceCoordinatorAI integration remain the final development phase. No timing integration, race control or timing hardware support is implemented here.
+Paddock receives reviewed Timing results through the documented v1 host API. Race control, measurement and hardware support remain the responsibility of Timing; RaceCoordinatorAI integration is still planned.
 
 The original product scope and screen studies remain in `concept/`. They describe the broader target; the feature sections above describe the current implementation and its release history.

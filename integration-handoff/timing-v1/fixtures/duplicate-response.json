@@ -1,0 +1,14 @@
+{
+  "ok": true,
+  "integrationVersion": 1,
+  "databaseId": "paddock-demo",
+  "sourceId": "timing-demo",
+  "sessionId": "session-normal",
+  "revision": 3,
+  "state": "withdrawn",
+  "contentHash": "9f0649008c66f31ecc76634dee3e024d35fa73110c60fdb1f3e195b86109d992",
+  "receivedAt": "2026-10-31T10:05:00.000Z",
+  "duplicate": true,
+  "warnings": [],
+  "summaries": []
+}
