@@ -51,3 +51,7 @@ From the Paddock repository, run `node scripts/timing-demo-host.cjs`. This start
 Do not send unchanged fixtures to a real collection: their database/car IDs and signed configurations intentionally belong only to the demo database. A real client must fetch real profiles and build its own payloads.
 
 Release v0.17.0 includes this host API. The older v0.16.3 executable predates it. The Timing client must still be implemented and tested in the Timing project.
+
+## Custom password compatibility
+
+Updated Paddock source lets hosts choose session-only passwords in place of generated credentials. The request header is unchanged. Timing 1.99.4 currently restricts its connection input to 24 hexadecimal characters; its client must accept opaque printable-ASCII credentials before using custom passwords. Keep the generated Timing code until that validation is updated. See CONTRACT.md for limits and HTTP 429 authentication backoff.

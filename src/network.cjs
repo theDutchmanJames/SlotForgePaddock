@@ -23,15 +23,41 @@ class Network {
   status(){return {timingCode:this.timingCode||'',allowTimingResults:!!this.allowTimingResults,sharing:!!this.server&&!!this.port,code:this.code,browseCode:this.browseCode,allowSubmissions:this.allowSubmissions,discoverable:!!this.advertiser,discoveryError:this.discoveryError,port:this.port||0,addresses:this.server?Object.values(os.networkInterfaces()).flat().filter(i=>i.family==='IPv4'&&!i.internal).map(i=>i.address+':'+this.port):[],remote:this.remote?{address:this.remote.address,name:this.remote.name,id:this.remote.id,state:this.remote.state,lastSync:this.remote.lastSync,lastError:this.remote.lastError,permissions:this.remote.permissions,autoRefresh:this.remote.autoRefresh}:null,pending:this.pending?{hostId:this.pending.hostId,name:this.pending.name,count:this.pending.bundle.cars.length}:null};}
   notify(data){try{this.onNetwork({status:this.status(),...(data?{data}: {})});}catch{}}
   access(code){const token=Buffer.from(String(code||''));for(const [value,submit,timingResults]of [[this.code,true,false],[this.browseCode,false,false],[this.timingCode||'',false,true]]){const expected=Buffer.from(value);if(expected.length&&token.length===expected.length&&crypto.timingSafeEqual(token,expected))return {browse:true,submit:submit&&this.allowSubmissions,timingResults:timingResults&&!!this.allowTimingResults};}return null;}
-  controls(p={}){if(!this.server)throw Error('Start sharing first.');for(const key of ['allowSubmissions','allowTimingResults'])if(p[key]!==undefined){if(typeof p[key]!=='boolean')throw Error('Invalid permission.');this[key]=p[key];}if(p.rotate===true){this.code=crypto.randomBytes(12).toString('hex');this.browseCode=crypto.randomBytes(12).toString('hex');this.timingCode=crypto.randomBytes(12).toString('hex');}return this.status();}
+  controls(p={}){
+    if(!this.server)throw Error('Start sharing first.');
+    // Validate every change before applying any of it, including permission flags.
+    for(const key of ['allowSubmissions','allowTimingResults'])if(p[key]!==undefined&&typeof p[key]!=='boolean')throw Error('Invalid permission.');
+    let credentialKey;
+    if(p.password!==undefined){
+      credentialKey=({browse:'browseCode',submit:'code',timing:'timingCode'})[p.access];
+      if(!['browse','submit','timing'].includes(p.access)||!credentialKey)throw Error('Choose a valid access type.');
+      if(p.rotate===true)throw Error('Set a password or revoke all passwords separately.');
+      if(typeof p.password!=='string'||p.password.length<8||p.password.length>128||!/^[\x20-\x7e]+$/.test(p.password)||p.password!==p.password.trim())throw Error('Use 8–128 characters: English letters, numbers, spaces or symbols, with no spaces at either end.');
+      if(['code','browseCode','timingCode'].some(key=>key!==credentialKey&&this[key]===p.password))throw Error('Use a different password for each access type.');
+    }
+    for(const key of ['allowSubmissions','allowTimingResults'])if(p[key]!==undefined)this[key]=p[key];
+    if(credentialKey)this[credentialKey]=p.password;
+    if(p.rotate===true){this.code=crypto.randomBytes(12).toString('hex');this.browseCode=crypto.randomBytes(12).toString('hex');this.timingCode=crypto.randomBytes(12).toString('hex');}
+    if(credentialKey||p.rotate===true)this.authAttempts?.clear();
+    return this.status();
+  }
   async discover(){if(!this.scanning)this.scanning=discovery.scan().finally(()=>{this.scanning=null;});return (await this.scanning).filter(h=>h.id!==this.store.data.id);}
   async start(){if(this.starting){await this.starting;return this.status();}if(this.server)return this.status();this.starting=this.startHost();try{await this.starting;}finally{this.starting=null;}return this.status();}
-  async startHost(){this.code=crypto.randomBytes(12).toString('hex');this.browseCode=crypto.randomBytes(12).toString('hex');this.timingCode=crypto.randomBytes(12).toString('hex');this.allowSubmissions=true;this.allowTimingResults=false;
+  async startHost(){this.code=crypto.randomBytes(12).toString('hex');this.browseCode=crypto.randomBytes(12).toString('hex');this.timingCode=crypto.randomBytes(12).toString('hex');this.allowSubmissions=true;this.allowTimingResults=false;this.authAttempts=new Map();
     this.server=http.createServer(async(req,res)=>{
       const send=(status,value)=>{if(res.destroyed||res.writableEnded)return;if(res.headersSent){res.destroy();return;}res.writeHead(status,{'Content-Type':'application/json','Cache-Control':'no-store','X-Content-Type-Options':'nosniff',...(status>=400&&!req.url.startsWith('/v1/timing/')?{'Connection':'close'}:{})});if(status>=400){let discarded=0;const timer=setTimeout(()=>{if(!req.complete)req.destroy();},2000);timer.unref();req.once('end',()=>clearTimeout(timer));req.on('data',chunk=>{discarded+=chunk.length;if(discarded>16*1024*1024)req.destroy();});req.resume();}res.end(JSON.stringify(value));};
       if(Object.hasOwn(req.headers,'origin'))return send(403,{error:'Browser access is not supported.',code:'BROWSER_ORIGIN_FORBIDDEN'});
+      const now=Date.now(),peer=req.socket.remoteAddress;
+      for(const [key,value]of this.authAttempts)if(value.until<=now)this.authAttempts.delete(key);
+      const attempt=this.authAttempts.get(peer);
+      if(attempt?.count>=10)return send(429,{error:'Too many incorrect passwords. Wait one minute before trying again.',code:'AUTH_RATE_LIMITED'});
       const authorization=String(req.headers.authorization||''),code=authorization.startsWith('Bearer ')?authorization.slice(7):'',access=this.access(code);
-      if(!access)return send(401,{error:'Incorrect connection code.',code:'UNAUTHENTICATED'});
+      if(!access){
+        if(!attempt&&this.authAttempts.size>=256)this.authAttempts.delete(this.authAttempts.keys().next().value);
+        this.authAttempts.set(peer,{count:(attempt?.count||0)+1,until:attempt?.until||now+60000});
+        return send(401,{error:'Incorrect connection code or password.',code:'UNAUTHENTICATED'});
+      }
+      this.authAttempts.delete(peer);
       try{
         const url=new URL(req.url,'http://localhost');
         if(req.method==='GET'&&url.pathname==='/v1/status')return send(200,{protocol:2,id:this.store.data.id,revision:this.store.data.revision,name:this.store.data.settings.name,permissions:access,capabilities:timing.capabilities()});
@@ -109,7 +135,7 @@ class Network {
   }
   checkedPermissions(p){if(!p||p.browse!==true||typeof p.submit!=='boolean')throw Error('Invalid host permissions.');return {browse:true,submit:p.submit};}
   async connect(address,code){
-    address=localAddress(address);if(typeof code!=='string'||!code.trim()||code.length>200)throw Error('Enter the host connection code.');code=code.trim();
+    address=localAddress(address);if(typeof code!=='string'||!code.trim()||code.length>200)throw Error('Enter the host connection code or password.');code=code.trim();
     this.readAbort.abort();this.readAbort=new AbortController();const generation=++this.generation,{data,permissions}=await this.readCollection(address,code,generation,this.readAbort.signal);
     if(generation!==this.generation)throw Error('Connection canceled.');
     this.remote={address,code,id:data.id,name:data.settings.name,state:'connected',lastSync:new Date().toISOString(),lastError:'',permissions,autoRefresh:true};this.cached=data;this.nextPoll=Date.now()+5000;this.failures=0;

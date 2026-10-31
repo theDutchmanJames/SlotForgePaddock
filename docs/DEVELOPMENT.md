@@ -1,5 +1,11 @@
 # Development & release history
 
+## Custom connection passwords — after 0.17.1
+
+Hosts can replace any of the three generated credentials with a case-sensitive, 8–128 character password. Each access type must use a different credential; changes invalidate its previous credential without granting additional permissions. Passwords use printable ASCII, including internal spaces, to preserve compatibility with existing HTTP clients. Secrets remain in memory and reset when sharing restarts or all credentials are revoked. The client connection form accepts either a code or password.
+
+Invalid changes are rejected atomically. Ten failed authentication attempts from one address temporarily block that address for the remainder of a one-minute window; expired entries are pruned and tracking is bounded. No database migration or Timing protocol version change is required. Timing 1.99.4 still validates credentials as 24 hexadecimal characters; its generated code remains compatible, and the UI warns against choosing a Timing password until that client is updated. All 264 automated tests and syntax checks passed. All 11 focused connection UI workflows passed, including mismatched password confirmation, setting a password, password-based pairing, revocation, discovery, retries and a 960px layout. A broader desktop run stopped with Electron UnknownVizError during screenshot capture; it is not counted as passing. Validation used isolated local profiles and localhost clients, not two physical computers.
+
 ## Timing-compatible car exports — after 0.17.1
 
 Single-car and selected-car exports now offer Paddock package or SlotForge Timing format. Timing exports include its supported identity/technical fields, class definitions, main pictures and optional extra pictures. Only rear tyres populate Timing's tyre field. Saved setups, private fields, results and live-link metadata are excluded. Native Paddock exports remain the default, and club submission packages are unchanged. See [export instructions and field mapping](TIMING-CAR-EXPORT.md).

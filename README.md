@@ -120,11 +120,13 @@ Torque is entered in **gf·cm** (gram-force centimetres), with separate test vol
 
 The same app works for personal and club collections—there is no separate host or client edition.
 
-- **Browse a shared collection.** Connect to another running instance over a local network using its connection code. Shared car information refreshes automatically while connected.
+- **Browse a shared collection.** Connect to another running instance over a local network using its connection code or a host-defined password. Shared car information refreshes automatically while connected.
 - **Submit cars for approval.** Prepare an entry at home, then send it to the club when connected. The host reviews incoming submissions before accepting new cars or changes; members do not directly edit the host's records.
 - **Exchange files instead.** Export selected cars to JSON, send the file yourself, and let the recipient import and review it. You don't need to bring your computer to the club.
 - **Export cars for Timing.** Choose the SlotForge Timing format for supported car details, race classes and photographs. Timing imports them as new copies; no host connection is needed. [File-transfer instructions](docs/TIMING-CAR-EXPORT.md).
 - **Keep private records local.** Personal ownership information, private notes, workshop records and document attachments are excluded from car-sharing packages and shared views. Complete backups retain private data.
+
+**Custom connection passwords (current source).** Start sharing in **Connections**, then choose **Set password…** for browse-only, submissions or Timing access. Use a different password for each access type. Passwords last for the sharing session and reset on restart or revocation.
 
 Local sharing requires the host app to remain running and both computers to be able to communicate. It is intended for a trusted local network, not public internet hosting.
 

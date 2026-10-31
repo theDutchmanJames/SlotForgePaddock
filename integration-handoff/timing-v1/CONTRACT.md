@@ -5,10 +5,11 @@ This document and `timing-v1.schema.json` define the implemented contract. HTTP 
 ## Transport, authentication and discovery
 
 - Local HTTP with UTF-8 JSON, no redirects or compression. This is a trusted-LAN service, not an Internet API. No browser CORS access is granted; **any Origin header is rejected**, including `null`. Use Electron main.
-- Every request requires `Authorization: Bearer <connection-code>`; a code is 24 hex characters. Codes are shared secrets, never advertised by discovery or returned by `/v1/status`.
+- Every request requires `Authorization: Bearer <connection-code>`; generated codes are 24 hex characters. In updated Paddock source, hosts can instead set an 8–128 printable-ASCII password (internal spaces allowed; leading/trailing spaces rejected). Treat the credential as opaque, case-sensitive text, not necessarily hexadecimal. Codes and passwords are shared secrets, never advertised by discovery or returned by `/v1/status`.
 - Three independent codes: browse (`browse: true`, `submit: false`, `timingResults: false`); car submissions (`browse: true`, `submit` follows host toggle, `timingResults: false`); Timing (`browse: true`, `submit: false`, `timingResults` follows its own host toggle).
 - Timing permission authorizes receipt lookup, session writes, corrections and withdrawals. It is not implicit in browsing or car-edit submissions. Permission and database identity are checked again after an upload completes. The code grants access to all Timing sources on this host; `source.id` is a namespace, **not a separate authentication identity**. Give the Timing code only to trusted race directors.
-- Sharing restart generates new codes and disables Timing results. Existing session records and capture signatures survive. Revoking codes rotates all three. Capture signatures are not authentication tokens; they remain valid across network code changes.
+- Ten failed authentication attempts from one source address block authentication from that address for the remainder of a one-minute window, returning HTTP 429 `AUTH_RATE_LIMITED`. Back off before retrying; keep local results queued. Successful authentication resets the failure counter before the limit is reached.
+- Sharing restart discards custom passwords, generates new codes and disables Timing results. Existing session records and capture signatures survive. Revoking codes rotates all three. Capture signatures are not authentication tokens; they remain valid across network code changes.
 - Discovery: UDP IPv4 multicast **239.255.47.77:47778**, TTL 1. Send `{"type":"slotforge-discover","version":1,"nonce":"<32 lowercase hex characters>"}`. Hosts reply to the sender's UDP port with `type: "slotforge-host"`, `version: 1`, the same nonce, database `id`, `name` and **actual HTTP port**. Combine that port with the UDP reply's source IPv4 address. Never interpret 47778 as the HTTP port. See discovery fixtures.
 - Validate matching nonce/version, private source IPv4, port 1–65535, ID (1–100 ASCII letters/digits/underscore/hyphen), name (1–200 characters), and response size ≤2,048 bytes. Scan across suitable local interfaces; suggested discovery window 1.8 seconds. Firewall/VPN/client isolation may block discovery; manual connection remains supported.
 - All `/v1/timing/*` calls also require `X-SlotForge-Database: <paired-database-id>`. Writes additionally require matching body `databaseId`. Never silently re-pair if an address now serves another database. Port/address/name changes do not change identity.
@@ -128,7 +129,8 @@ Every Timing error body is `{ "error": "Human-readable explanation", "code": "MA
 | --- | --- | --- |
 | 400 | `INVALID_JSON`, `INVALID_PAYLOAD`, `SUMMARY_MISMATCH` | Keep local result; fix serialization/data before retrying. |
 | 400 | `DATABASE_REQUIRED` | Send paired database header. |
-| 401 | `UNAUTHENTICATED` | Ask for current code; do not discard local results. |
+| 401 | `UNAUTHENTICATED` | Ask for current code or password; do not discard local results. |
+| 429 | `AUTH_RATE_LIMITED` | Wait one minute before retrying authentication; retain queued results. |
 | 403 | `BROWSER_ORIGIN_FORBIDDEN` | Use Electron main; do not weaken Paddock protection. |
 | 403 | `TIMING_PERMISSION_REQUIRED` | Dedicated Timing code and host permission required. |
 | 404 | `CAR_NOT_FOUND` | Resolve missing identity; never attach by name. |

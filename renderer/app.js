@@ -201,7 +201,8 @@ document.addEventListener('click',async event=>{
       case 'connect-discovered':connectDialog(discoveredHosts[Number(id)].address);return;
       case 'toggle-timing-results':net=await api('network','controls',{allowTimingResults:!net.allowTimingResults});break;
       case 'toggle-submissions':net=await api('network','controls',{allowSubmissions:!net.allowSubmissions});break;
-      case 'rotate-codes':modal('Revoke connection codes', '<p>Replace all three codes now. Existing members will need a new code for future reads or submissions. Public data they have already read cannot be withdrawn.</p>',async()=>{net=await api('network','controls',{rotate:true});},'Revoke and replace codes');return;
+      case 'set-host-password':hostPasswordDialog(id);return;
+      case 'rotate-codes':modal('Revoke connection codes and passwords', '<p>Replace all three codes or passwords with random codes now. Existing members will need a new code for future reads or submissions. Public data they have already read cannot be withdrawn.</p>',async()=>{net=await api('network','controls',{rotate:true});},'Revoke and replace codes');return;
       case 'toggle-auto':net=await api('network','auto',{enabled:!net.remote.autoRefresh});break;
       case 'retry-submission':{const result=await api('network','retry');net=(await api('read')).network;toast(result.duplicate?'The host had already received this submission.':'Submitted for club review.');break;}
       case 'discard-submission':modal('Discard submission retry copy','<p>This only clears the local retry copy. It does not withdraw a package the host may already have received. Check with the host before submitting a new copy.</p>',async()=>{net=await api('network','discard');},'Discard retry copy');return;
