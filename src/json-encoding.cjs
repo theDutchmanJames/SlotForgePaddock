@@ -43,7 +43,13 @@ function* chunks(value,ancestors=new Set(),prepared=false){
   yield {json:array?']':'}',bytes:1};
  }finally{ancestors.delete(value);}
 }
-function stringify(value){const parts=[...chunks(value)];return parts.length?parts.map(c=>c.json).join(''):undefined;}
+function stringify(value){
+ // Join small tokens in bounded batches instead of retaining millions of
+ // chunk objects and array entries for a large parts/results catalogue.
+ const batches=[];let parts=[],size=0;
+ for(const chunk of chunks(value)){parts.push(chunk.json);size+=chunk.bytes;if(size>=65536){batches.push(parts.join(''));parts=[];size=0;}}
+ if(parts.length)batches.push(parts.join(''));return batches.length?batches.join(''):undefined;
+}
 function byteLength(value){let size=0;for(const chunk of chunks(value))size+=chunk.bytes;if(!size)throw new TypeError('Value has no JSON representation');return size;}
 function hash(value){const digest=crypto.createHash('sha256');let any=false;for(const chunk of chunks(value)){any=true;digest.update(chunk.json);}if(!any)throw new TypeError('Value has no JSON representation');return digest.digest('hex');}
 function isPhoto(value){const entry=encodedString(value);return entry.photo??(entry.photo=!value||/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(value));}

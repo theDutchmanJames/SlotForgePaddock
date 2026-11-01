@@ -4,7 +4,13 @@ module.exports=async({win,store,network,js,wait,click,fill,submit,qa})=>{
  const checks=[],club=network.club;
  await click('[data-action="nav"][data-id="Connections"]');
  await click('[data-action="club-enable"]');await fill({name:'Main club computer',password:'race',confirm:'race'});
- await js(`document.querySelector('[name="confirmed"]').checked=true`);await submit();
+ await js(`document.querySelector('[name="confirmed"]').checked=true`);
+ const start=network.start.bind(network);network.start=async()=>{throw Error('Test listener unavailable');};
+ try{await submit();}finally{network.start=start;}
+ assert.equal(club.coordinator,true);assert.equal(club.device.hostPassword,'race');
+ assert.match(await js(`document.querySelector('#toast').innerText`),/settings saved.*could not start/);
+ await click('[data-action="club-start"]');
+ checks.push('failed first hosting start retains the saved setup and offers a working retry');
  assert.equal(club.coordinator,true);await wait(`document.body.innerText.includes('Dealership Mode')`);assert.equal(network.clubCode,'race');assert.equal(network.hostingMode,'dealership');assert.equal(await js("!!document.querySelector('[data-action=\"set-host-password\"]')"),false);await click('[data-action="club-stop"]');await click('[data-action="club-start"]');assert.equal(network.clubCode,'race');fs.writeFileSync(path.join(qa,'dealership-password-host.png'),(await win.webContents.capturePage()).toPNG());checks.push('Dealership Mode starts with one remembered password and separate hosting controls');
  await click('[data-action="nav"][data-id="Cars"]');await click('[data-action="add-car"]');
  await fill({name:'Club review UI car',maker:'NSR','technical.motor':'21.5k RPM'});await submit();

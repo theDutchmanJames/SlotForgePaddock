@@ -91,6 +91,34 @@ test('a failed explicit outbox discard keeps the retry list in memory and on dis
  assert.equal(JSON.parse(fs.readFileSync(a.club.backupPath)).proposals.length,1);
 });
 
+test('failed first-copy persistence does not remember a new pairing over an old leftover copy',async t=>{
+ const {h,make}=await host(t),a=make('Personal');await join(h,a);
+ const persist=a.club.cache.persist.bind(a.club.cache);a.club.cache.persist=()=>{throw Error('copy locked');};
+ a.club.leave();assert.equal(a.club.device.pair,null);const before=fs.readFileSync(a.club.file,'utf8');
+ const other=make('Other');other.club.enable('Other dealership','Other password');await other.net.start();other.address='127.0.0.1:'+other.net.port;
+ await assert.rejects(join(other,a),/copy locked/);
+ assert.equal(a.club.device.pair,null);assert.equal(a.club.active,false);assert.equal(fs.readFileSync(a.club.file,'utf8'),before);
+ a.club.cache.persist=persist;await join(other,a);assert.equal(a.club.cache.data.id,other.store.data.id);assert.equal(a.club.state,'connected');
+});
+
+test('failed password persistence on reconnect preserves the existing connection and credential',async t=>{
+ const {h,make}=await host(t),a=make('Personal');await join(h,a);await until(()=>h.club.clients.size===1);
+ const save=a.club.saveDevice.bind(a.club),oldAbort=a.club.abort,before=fs.readFileSync(a.club.file,'utf8');
+ a.club.saveDevice=()=>{throw Error('settings locked');};await assert.rejects(join(h,a),/settings locked/);
+ assert.equal(a.club.state,'connected');assert.equal(a.club.abort,oldAbort);assert.equal(oldAbort.signal.aborted,false);assert.equal(fs.readFileSync(a.club.file,'utf8'),before);
+ a.club.saveDevice=save;
+});
+
+test('corrected Timing payloads with reordered JSON fields replicate without digest failures',async t=>{
+ const {h,make}=await host(t),f=require('./support/timing-fixtures.cjs').fixtures(),timing=require('../src/timing-integration.cjs');
+ h.store.replace({...f.store.snapshot(),club:h.store.data.club});timing.receive(h.store,f.normal);
+ const a=make('Personal');await join(h,a);
+ f.correction.track=Object.fromEntries(Object.entries(f.correction.track).reverse());
+ f.correction.participants[0]=Object.fromEntries(Object.entries(f.correction.participants[0]).reverse());
+ timing.receive(h.store,f.correction);await until(()=>a.club.cache.data.revision===h.store.data.revision);
+ assert.equal(a.club.state,'connected');assert.equal(a.club.lastError,'');assert.equal(M.hash(a.club.cache.data),M.hash(M.shared(h.store.data)));
+});
+
 test('leaving stays paired on a settings save failure and handles a failed copy cleanup safely',async t=>{
  const {h,make}=await host(t),a=make('Personal');await join(h,a);
  const save=a.club.saveDevice.bind(a.club),pair=structuredClone(a.club.device.pair);
@@ -168,7 +196,7 @@ test('Timing sessions remain readable in protected copies without leaking the ca
  assert.ok(!JSON.stringify(a.club.cache.data).includes(h.store.data.timing.key));
  assert.equal(new Store(a.club.cache.file).data.timing.sessions.length,1);
  const exported=require('../src/store.cjs').makePackage(h.store.data,['car-a']);assert.equal(exported.club,undefined);
- const response=await fetch('http://'+h.address+'/v1/collection',{headers:{Authorization:'Bearer '+h.net.browseCode}});const publicData=await response.json();assert.equal(publicData.club,undefined);
+ const response=await fetch('http://'+h.address+'/v1/collection',{headers:{Authorization:'Bearer '+h.net.clubCode}});assert.equal(response.status,200);const publicData=await response.json();assert.equal(publicData.club,undefined);assert.equal(publicData.cars[0].owner,undefined);assert.equal(publicData.timing,undefined);
 });
 
 test('changing the Dealership password revokes old access and malformed proposals never alter records',async t=>{
@@ -177,4 +205,15 @@ test('changing the Dealership password revokes old access and malformed proposal
  for(const body of ['{',JSON.stringify({action:'car.save',payload:{}})]){const r=await fetch(base+'/v1/club/proposals',{method:'POST',headers,body});assert.equal(r.status,400);}
  assert.deepEqual(h.store.data,before);const oldCode=h.net.clubCode;h.club.setPassword('new club password');
  assert.equal((await fetch(base+'/v1/club/snapshot',{headers})).status,401);assert.deepEqual(h.net.access(h.net.clubCode),{browse:true,submit:true,timingResults:true,club:true});assert.equal(h.net.access(oldCode),null);
+});
+
+test('password rotation closes existing push streams and reconnect remembers the replacement',async t=>{
+ const {h,make}=await host(t),a=make('Personal');await join(h,a);await until(()=>h.club.clients.size===1);
+ const revision=a.club.cache.data.revision;h.club.setPassword('new dealership password');await until(()=>a.club.state==='offline');
+ h.store.mutate('car.save',{data:{name:'After password rotation'}});
+ assert.equal(a.club.cache.data.revision,revision);assert.equal(h.club.clients.size,0);
+ await join(h,a);assert.equal(a.club.state,'outdated');assert.equal(a.club.device.pair.password,'new dealership password');
+ await a.club.update(h.store.data.revision);assert.equal(a.club.state,'connected');
+ assert.equal(JSON.parse(fs.readFileSync(a.club.file)).pair.password,'new dealership password');
+ a.club.discardOutbox();assert.equal(JSON.parse(fs.readFileSync(a.club.backupPath)).pair.password,undefined);
 });

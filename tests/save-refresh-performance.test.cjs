@@ -1,6 +1,18 @@
 const test=require('node:test'),assert=require('node:assert/strict'),crypto=require('node:crypto');
 const encoding=require('../src/json-encoding.cjs'),{Store}=require('../src/store.cjs');
 const {SnapshotTransfer}=require('../src/snapshot-transfer.cjs'),{apply}=require('../renderer/snapshot-patch.js');
+test('replicated patches preserve JSON key order and exact digests, including record roots',()=>{
+ const M=require('../src/club-model.cjs');
+ for(const [before,after] of [
+  [{technical:{motor:'21.5k',pinion:'9',gear:'27'}},{technical:{gear:'27',pinion:'9',motor:'25k'}}],
+  [{records:[{id:'car',name:'Car',technical:{motor:'21.5k',gear:'27'}}]},{records:[{technical:{gear:'27',motor:'21.5k'},name:'Car',id:'car'}]}],
+  [{first:1,second:2},{second:2,first:1}],
+  [{values:{'3':'three',other:1}},{values:{'2':'two','3':'three',other:1}}]
+ ]){
+  const rebuilt=apply(before,M.delta(before,after));
+  assert.equal(JSON.stringify(rebuilt),JSON.stringify(after));assert.equal(M.hash(rebuilt),M.hash(after));
+ }
+});
 test('cached JSON encoding retains native bytes, hashes and escaping for database JSON',()=>{
  const long='photo-like 😀\n\t"\\\ud800'.repeat(1000),samples=[null,true,5,-0,NaN,Infinity,'',long,[],[undefined,,NaN],{optional:undefined,ignored:()=>{},nested:{long},again:long},JSON.parse('{"__proto__":{"value":1},"1":"one","0":"zero"}'),{date:new Date('2026-01-01'),omit:{toJSON(){return undefined;}},key:{toJSON(key){return key;}}},[new Number(4),new String('text'),new Boolean(false),{toJSON(){return undefined;}}]];
  for(const value of samples)for(let n=0;n<2;n++){
@@ -13,6 +25,11 @@ test('image validation caching never accepts changed, malformed or oversized ima
  s.mutate('car.save',{data:{name:'Valid',picture}});s.mutate('car.save',{data:{name:'Same image',picture}});
  for(const value of [picture+'!',picture.replace('jpeg','svg+xml'),'data:image/png;base64,'+'A'.repeat(12*1024*1024)])assert.throws(()=>s.mutate('car.save',{data:{name:'Invalid',picture:value}}));
  assert.equal(s.data.cars.length,2);
+});
+test('batched JSON output matches native JSON across many tokens and large Unicode strings',()=>{
+ const value={records:Array.from({length:3000},(_,i)=>({id:String(i),name:'Motor "'+i+'"',labels:['é','😀','\\','\n']})),photo:'A'.repeat(70000),notes:'😀'.repeat(40000)};
+ assert.equal(encoding.stringify(value),JSON.stringify(value));assert.deepEqual(JSON.parse(encoding.stringify(value)),value);
+ assert.equal(encoding.stringify(undefined),undefined);
 });
 test('small edits transfer only changes and reconstruct exact snapshots without copying photos',()=>{
  const s=new Store(),t=new SnapshotTransfer(),path='personal',photo='data:image/jpeg;base64,'+'A'.repeat(1024*1024);

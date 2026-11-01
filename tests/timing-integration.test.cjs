@@ -26,6 +26,14 @@ test('Timing API advertises version, limits, actual port and distinct permission
   await h.network.stop();await h.network.start();assert.equal(Object.hasOwn(h.network.status(),'allowTimingResults'),false);assert.equal(h.network.access(h.network.timingCode).timingResults,true);
   const restarted=await fetch('http://127.0.0.1:'+h.network.port+'/v1/timing/sessions',{method:'POST',headers:{Authorization:'Bearer '+h.network.timingCode,'X-SlotForge-Database':h.store.data.id,'Content-Type':'application/json'},body:JSON.stringify(h.normal)});assert.equal(restarted.status,200);assert.equal((await restarted.json()).duplicate,true);
 });
+test('changing the shared Dealership password rejects an already started Timing upload',async t=>{
+ const h=await host(t),dir=fs.mkdtempSync(path.join(os.tmpdir(),'paddock-timing-rotate-')),{Club}=require('../src/club.cjs');
+ const club=new Club(h.store,h.network,dir);t.after(()=>{club.close();fs.rmSync(dir,{recursive:true,force:true});});club.enable('Dealership','race');await h.network.start();
+ const arrived=new Promise(resolve=>h.network.server.once('request',resolve)),body=JSON.stringify(h.normal);let req;
+ const result=new Promise((resolve,reject)=>{req=http.request('http://127.0.0.1:'+h.network.port+'/v1/timing/sessions',{method:'POST',headers:{Authorization:'Bearer race','X-SlotForge-Database':h.store.data.id,'Content-Type':'application/json'}},res=>{let text='';res.on('data',c=>text+=c);res.on('end',()=>resolve({status:res.statusCode,body:JSON.parse(text)}));});req.on('error',reject);req.write(body.slice(0,100));});
+ await arrived;club.setPassword('new race password');req.end(body.slice(100));
+ assert.equal((await result).status,403);assert.equal(h.store.data.timing.sessions.length,0);
+});
 test('profile excludes private fields, preserves identity across renames, and captures historical configuration',async t=>{
   const h=await host(t),r=await h.request('/v1/timing/cars/car-a');assert.equal(r.status,200);contract.validate(r.body,contract.schema.$defs.profile);const serialized=JSON.stringify(r.body);assert.ok(!serialized.includes('private'));assert.equal(r.body.configuration.technical.technicalNotes,undefined);assert.equal(r.body.car.owner,undefined);
   const before=r.body.configuration;let car=h.store.data.cars[0];h.store.mutate('car.save',{id:car.id,revision:car.revision,data:{name:'Renamed'}});let next=(await h.request('/v1/timing/cars/car-a')).body;assert.equal(next.configuration.configurationId,before.configurationId);assert.equal(next.car.name,'Renamed');

@@ -23,14 +23,28 @@ function command(p){
  for(const r of p.original)check(r&&['field','before','after'].every(k=>typeof r[k]==='string'&&r[k].length<=600),'Invalid proposal comparison.');
  check(Buffer.byteLength(JSON.stringify(p))<=16*1024*1024,'A club proposal is limited to 16 MiB.');clean(p);
 }
+// Replication digests cover JSON bytes, including object key order. Deep value
+// equality alone misses reordered keys in corrected/imported Timing payloads.
+function sameOrderedData(a,b){
+ if(Object.is(a,b))return true;
+ if(!a||!b||typeof a!=='object'||typeof b!=='object'||Array.isArray(a)!==Array.isArray(b))return false;
+ const left=Object.keys(a),right=Object.keys(b);
+ return left.length===right.length&&left.every((key,i)=>key===right[i]&&sameOrderedData(a[key],b[key]));
+}
 function delta(a,b,path=[],out=[]){
- if(isDeepStrictEqual(a,b))return out;
+ if(sameOrderedData(a,b))return out;
  if(Array.isArray(a)&&Array.isArray(b)&&[...a,...b].every(x=>x&&typeof x.id==='string')&&new Set(a.map(x=>x.id)).size===a.length&&new Set(b.map(x=>x.id)).size===b.length){
-  const old=new Map(a.map(x=>[x.id,x]));out.push({path,order:b.map(x=>x.id),records:b.filter(x=>!isDeepStrictEqual(x,old.get(x.id))).map(x=>old.has(x.id)?{id:x.id,changes:delta(old.get(x.id),x)}:{id:x.id,value:cloneJSON(x)})});return out;
+  const old=new Map(a.map(x=>[x.id,x]));out.push({path,order:b.map(x=>x.id),records:b.filter(x=>!sameOrderedData(x,old.get(x.id))).map(x=>old.has(x.id)?{id:x.id,changes:delta(old.get(x.id),x)}:{id:x.id,value:cloneJSON(x)})});return out;
  }
  if(a&&b&&typeof a==='object'&&typeof b==='object'&&Array.isArray(a)===Array.isArray(b)){
   if(Array.isArray(a)){for(let i=0;i<b.length;i++)delta(a[i],b[i],[...path,i],out);if(a.length>b.length)out.push({path,trim:b.length});}
-  else{for(const k of Object.keys(a))if(!Object.hasOwn(b,k))out.push({path:[...path,k],remove:true});for(const k of Object.keys(b))delta(a[k],b[k],[...path,k],out);}
+  else{
+   const left=Object.keys(a),right=Object.keys(b),rebuilt=[...left.filter(k=>Object.hasOwn(b,k)),...right.filter(k=>!Object.hasOwn(a,k))];
+   // Recreate reordered objects using existing patch operations. This also
+   // works at a record root, where an empty replacement path is not allowed.
+   if(!isDeepStrictEqual(rebuilt,right)){for(const k of left)out.push({path:[...path,k],remove:true});for(const k of right)out.push({path:[...path,k],value:cloneJSON(b[k])});}
+   else{for(const k of left)if(!Object.hasOwn(b,k))out.push({path:[...path,k],remove:true});for(const k of right)delta(a[k],b[k],[...path,k],out);}
+  }
  }else out.push({path,value:cloneJSON(b)});
  return out;
 }

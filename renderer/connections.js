@@ -34,7 +34,7 @@ function installNetworkUpdates(){let pendingRender=false;
 });}
 
 function hostPasswordDialog(access){
-  const labels={browse:'Browse only',submit:'Browse + submit',timing:'SlotForge Timing',club:'Dealership Mode'};
+  const labels={browse:'Browse only',submit:'Browse + submit',timing:'SlotForge Timing'};
   if(!Object.hasOwn(labels,access))return;
   simpleForm('Set password · '+labels[access],'<p>Replace the current code or password for this access type. Anyone using the old one will need to reconnect.</p><label class="field">New password<input name="password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required></label><label class="field">Confirm password<input name="confirm" type="password" autocomplete="new-password" minlength="8" maxlength="128" required></label><p class="tiny muted">8–128 characters. Use English letters, numbers, spaces or symbols, with no spaces at either end. Passwords are case-sensitive and must differ between access types. This password lasts until sharing stops or you revoke it; it is not saved to disk.</p>',async values=>{
     if(values.password!==values.confirm)throw Error('The passwords do not match.');

@@ -56,11 +56,13 @@ class Club {
    const pair={address,databaseId:response.id,clubId:response.clubId,password:code};let snapshot;
    // Verify the initial download before committing a pairing. A network failure
    // must not leave the user tied to a collection they never received.
-   if(!this.device.pair||!this.cache.data.club)snapshot=this.verify(await this.request('/v1/club/snapshot',undefined,{pair,code}),pair);
+   if(!this.hasCopy())snapshot=this.verify(await this.request('/v1/club/snapshot',undefined,{pair,code}),pair);
    const candidate=snapshot||this.cache.data;M.check(candidate.id===pair.databaseId&&candidate.club?.id===pair.clubId,'The dealership computer’s collection identity changed.');
    if(snapshot)this.backup(this.cache,'before-joining');
-   this.disconnect();this.saveDevice({...this.device,pair,name:p.name.trim()});this.code=code;this.latest=snapshot?.revision??response.revision;
+   // Save the verified copy before committing its pairing/password. A failed
+   // disk write must not remember a new dealership with an unrelated old copy.
    if(snapshot)this.cache.replace(snapshot);
+   this.saveDevice({...this.device,pair,name:p.name.trim()});this.disconnect();this.code=code;this.latest=snapshot?.revision??response.revision;
    this.active=true;this.lastError='';this.state=this.cache.data.revision===this.latest?'connected':'outdated';if(this.state==='connected')this.listen();this.notify({kind:'club'});return this.status();
   }finally{this.busy=false;this.notify({kind:'club'});}
  }

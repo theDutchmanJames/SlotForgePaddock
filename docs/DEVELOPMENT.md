@@ -1,6 +1,18 @@
 # Development & release history
 
-The changes below are published in [v0.20.0](releases/v0.20.0.md), including the save improvements and unified Dealership password.
+The latest release is [v1.0.0](releases/v1.0.0.md), including the unified Dealership password, save improvements and the review fixes below.
+
+## Full review of v0.20.0 changes — 1 November 2026
+
+Fixed exact-JSON replication after reordered Timing corrections, first-connection
+disk-failure recovery, reconnect settings failures and recovery from a failed
+initial hosting start. Batched JSON output reduces temporary memory for large
+catalogues. Removed an obsolete legacy password-dialog entry and repaired a
+privacy test that was checking an unauthorised error response.
+
+Validation: **342 automated tests and 189 isolated desktop checks passed**, with
+no captured renderer errors; 2,000 deterministic JSON/patch/hash round trips and
+syntax checks also passed. Schema and Timing v1 are unchanged. These fixes are included in v1.0.0. See [findings and validation limits](reviews/2026-11-01-v0200.md).
 
 ## v0.20.0 — one remembered Dealership password — 1 November 2026
 
