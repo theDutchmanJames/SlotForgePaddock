@@ -1,5 +1,29 @@
 # Build Linux and macOS installers
 
+## Download a finished app
+
+The [native release workflow](../.github/workflows/native-release.yml) builds
+Linux x64/ARM64 AppImage and Debian packages, plus a universal macOS DMG and ZIP
+for Intel and Apple Silicon. Successful builds attach downloads and separate
+SHA-256 manifests to the [GitHub release](https://github.com/theDutchmanJames/SlotForgePaddock/releases).
+Users do not need Node.js or a development terminal to install those packages.
+AppImages may need executable permission; the macOS approval notes below still apply.
+
+Publishing a new release starts the workflow. Maintainers can also open
+**Actions → Native Linux and macOS releases → Run workflow**, enter an existing
+version tag, and select **Attach verified installers** to backfill its release.
+Leave that option off for a build-only run; downloads remain in Actions artifacts
+for 14 days. Releases created with another workflow's `GITHUB_TOKEN` do not trigger
+release workflows: dispatch this workflow explicitly in that case.
+
+Each native runner installs locked dependencies, runs syntax checks and unit/local-server
+tests, builds installers, and verifies their checksums. Upload runs only after all
+three builds succeed, using the exact tagged source. Existing assets are never
+overwritten; identical assets are accepted on upload retries, while conflicts stop
+publication for maintainer review. Windows downloads and their manifest are untouched.
+
+## Build locally
+
 These launchers follow SlotForge Timing's normal/quick builder approach. Run them on the operating system you are building for. They do not install the app automatically or change collection data.
 
 ## Requirements
@@ -68,10 +92,13 @@ Files are written to `dist/v<version>/`:
 | Linux | `SlotForgePaddock-<version>-linux-<arch>.AppImage` and `.deb` |
 | macOS | `SlotForgePaddock-<version>-mac-<arch>.dmg` and `.zip` |
 
-Each builder also writes a platform/architecture-specific SHA-256 checksum file. Nothing is uploaded to GitHub automatically. The existing Windows builder remains `npm run dist`.
+Each builder also writes a platform/architecture-specific SHA-256 checksum file. Local builds do not upload anything; only the separate GitHub workflow publishes downloads. The existing Windows builder remains `npm run dist`.
 
 For direct packaging after dependencies are installed, use `npm run dist:linux -- --x64 --publish never` or `npm run dist:mac -- --universal --publish never`. Direct npm packaging skips the launchers' checks and checksum generation.
 
 ## Validation status
 
-The launcher control flow and packaging configuration have been checked on Windows. Actual Linux/macOS packaging, installation and app startup still need validation on those systems; these scripts are builders, not a claim of tested native binaries.
+Native workflow results are recorded in GitHub Actions. Successful packaging and
+automated tests do not replace interactive installation and app-startup testing on
+users' Linux distributions and Macs. macOS builds use ad-hoc signing, not Apple
+Developer ID signing or notarisation.

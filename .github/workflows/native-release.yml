@@ -1,0 +1,150 @@
+name: Native Linux and macOS releases
+run-name: Native installers for ${{ inputs.tag || github.event.release.tag_name }}
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing version tag (for example v0.18.0)
+        required: true
+        type: string
+      publish_assets:
+        description: Attach verified installers to the existing GitHub release
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-release-${{ inputs.tag || github.event.release.tag_name }}
+  cancel-in-progress: false
+
+jobs:
+  source:
+    runs-on: ubuntu-24.04
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+      version: ${{ steps.version.outputs.version }}
+      sha: ${{ steps.version.outputs.sha }}
+    steps:
+      - name: Validate requested tag
+        env:
+          RELEASE_TAG: ${{ inputs.tag || github.event.release.tag_name }}
+        run: |
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo 'Expected vMAJOR.MINOR.PATCH'; exit 1; }
+      - uses: actions/checkout@v6
+        with:
+          ref: refs/tags/${{ inputs.tag || github.event.release.tag_name }}
+          persist-credentials: false
+      - name: Verify version and capture immutable source
+        id: version
+        env:
+          RELEASE_TAG: ${{ inputs.tag || github.event.release.tag_name }}
+        run: |
+          node -e 'const fs=require("fs"); const v=require("./package.json").version; if("v"+v!==process.env.RELEASE_TAG)throw Error("Tag/package version mismatch"); fs.appendFileSync(process.env.GITHUB_OUTPUT,`tag=v${v}\nversion=${v}\n`);'
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: source
+    name: Build ${{ matrix.platform }} ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            platform: linux
+            arch: x64
+          - runner: ubuntu-24.04-arm
+            platform: linux
+            arch: arm64
+          - runner: macos-15
+            platform: mac
+            arch: universal
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.source.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install, check, test and package on the native OS
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+          PLATFORM: ${{ matrix.platform }}
+          ARCH: ${{ matrix.arch }}
+        run: node scripts/build-desktop.cjs "$PLATFORM" --arch "$ARCH" --no-pause
+      - name: Verify installer checksums
+        working-directory: dist/v${{ needs.source.outputs.version }}
+        env:
+          PLATFORM: ${{ matrix.platform }}
+          ARCH: ${{ matrix.arch }}
+        run: shasum -a 256 -c "SHA256SUMS-$PLATFORM-$ARCH.txt"
+      - uses: actions/upload-artifact@v6
+        with:
+          name: native-${{ matrix.platform }}-${{ matrix.arch }}
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+          path: |
+            dist/v${{ needs.source.outputs.version }}/SlotForgePaddock-${{ needs.source.outputs.version }}-${{ matrix.platform }}-${{ matrix.arch }}.*
+            dist/v${{ needs.source.outputs.version }}/SHA256SUMS-${{ matrix.platform }}-${{ matrix.arch }}.txt
+
+  publish:
+    needs: [source, build]
+    if: github.event_name == 'release' || inputs.publish_assets
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v6
+        with:
+          pattern: native-*
+          path: installers
+          merge-multiple: true
+      - name: Verify and attach downloads without overwriting existing assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ needs.source.outputs.tag }}
+          RELEASE_VERSION: ${{ needs.source.outputs.version }}
+          SOURCE_SHA: ${{ needs.source.outputs.sha }}
+        working-directory: installers
+        run: |
+          node <<'NODE'
+          const fs=require('fs'),crypto=require('crypto'),assert=require('assert/strict');
+          const {execFileSync}=require('child_process');
+          const gh=args=>execFileSync('gh',args,{encoding:'utf8'});
+          const {GH_REPO:repo,RELEASE_TAG:tag,RELEASE_VERSION:version,SOURCE_SHA:sha}=process.env;
+          assert.equal(JSON.parse(gh(['api',`repos/${repo}/commits/${tag}`])).sha,sha,'Tag moved during build');
+          const release=JSON.parse(gh(['api',`repos/${repo}/releases/tags/${tag}`]));
+          assert.equal(release.draft,false,'Publish the release first');
+          const files=[];
+          const hash=file=>crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+          for(const [platform,arch,extensions] of [['linux','x64',['AppImage','deb']],['linux','arm64',['AppImage','deb']],['mac','universal',['dmg','zip']]]){
+            const names=extensions.map(ext=>`SlotForgePaddock-${version}-${platform}-${arch}.${ext}`);
+            const sums=`SHA256SUMS-${platform}-${arch}.txt`;
+            const expected=names.map(name=>`${hash(name)}  ${name}`).join('\n')+'\n';
+            assert.equal(fs.readFileSync(sums,'utf8'),expected,`Invalid manifest: ${sums}`);
+            files.push(...names,sums);
+          }
+          // Validate every conflict before uploading any files. A partial-upload retry
+          // may reuse identical assets; changed downloads require maintainer review.
+          for(const name of files){
+            const old=release.assets.find(a=>a.name===name);
+            if(old)assert.ok(old.state==='uploaded'&&old.size===fs.statSync(name).size&&old.digest===`sha256:${hash(name)}`,`Existing asset differs: ${name}`);
+          }
+          for(const name of files){
+            if(!release.assets.some(a=>a.name===name))gh(['release','upload',tag,name,'--repo',repo]);
+          }
+          const uploaded=JSON.parse(gh(['api',`repos/${repo}/releases/tags/${tag}`])).assets;
+          for(const name of files)assert.equal(uploaded.find(a=>a.name===name)?.digest,`sha256:${hash(name)}`,`Uploaded hash differs: ${name}`);
+          console.log(`Verified ${files.length} native release assets for ${tag}.`);
+          NODE

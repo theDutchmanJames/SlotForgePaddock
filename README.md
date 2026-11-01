@@ -190,7 +190,15 @@ npm run dist
 
 The current build is written to `dist/v0.18.0/`. Development notes, test commands, recovery information and release history are in [Development & release history](docs/DEVELOPMENT.md).
 
-### Build Linux and macOS installers
+### Linux and macOS downloads
+
+The [native release builds](https://github.com/theDutchmanJames/SlotForgePaddock/actions/workflows/native-release.yml)
+produce Linux **AppImage / .deb** packages for x64 and ARM64, and a **universal macOS DMG / ZIP** for Intel and Apple Silicon.
+When the jobs finish successfully, these files appear under the release's assets,
+with platform-specific checksums. macOS builds are ad-hoc signed, not notarised;
+you may need to approve opening the app in Privacy & Security.
+
+### Build Linux and macOS installers yourself
 
 Like SlotForge Timing, Paddock includes normal and quick build launchers:
 
@@ -216,7 +224,7 @@ Current version: **0.18.0**. The project is under active development. **SlotForg
 | Imported Timing performance sessions | Available from v0.17.0: captured configurations, corrections and withdrawals; manual records remain independent |
 | RaceCoordinatorAI integration | Planned |
 | Windows portable build | Built and tested |
-| Native macOS and Linux builds | Normal/quick installer builders available; native testing remains outstanding |
+| Native macOS and Linux builds | GitHub release build jobs and local builders available; interactive native acceptance testing remains outstanding |
 
 The Paddock side of Timing integration is documented in the [Timing integration handoff](integration-handoff/timing-v1/README.md), including the exact contract, schemas, fixtures and local test host. It is included in v0.17.0. Version 0.18.0 migrates saved databases to **schema 10** for collection planning. Create a complete backup before running it; published v0.17.x builds cannot read schema-10 saves. The Timing v1 API contract is unchanged.
 
