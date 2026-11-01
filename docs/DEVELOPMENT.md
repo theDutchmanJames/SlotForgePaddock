@@ -1,5 +1,60 @@
 # Development & release history
 
+## v0.19.1 — responsiveness and Dealership reliability — 1 November 2026
+
+Publishes the database responsiveness improvements, Dealership-first Connections
+layout and the review fixes below. Database schema 11 and Timing integration v1
+remain unchanged. Validation: 326 automated tests and 187 isolated desktop
+checks passed. See [release notes](releases/v0.19.1.md) for downloads and scope.
+
+## Full review since collection planning — 1 November 2026
+
+Reviewed changes after `0a5ebb1`, including workshop/shopping polish, native
+release automation, Dealership Mode, catalogue revision metadata, Connections
+layout and the unpublished responsiveness fixes. Corrected review propagation
+for repeated imports, durable outbox and receipt handling, interrupted pairing,
+disconnect recovery, quiet reconnect status, custom-field metadata refresh,
+collection-switch races and startup notifications. Removed a duplicate CSS rule.
+
+Validation: **326 automated tests and 187 isolated Electron workflow checks
+passed**, with no captured renderer errors; affected Dealership workflows were
+rerun after the final adjustments. Syntax and diff checks passed. Timing's current
+separate checkout passed 75 of 77 tests; two client-local archive/error handling
+failures are documented for its own task. No Timing source was changed.
+
+See [the detailed findings and validation limits](reviews/2026-11-01-dealership.md).
+These fixes are included in v0.19.1; schema 11 and the public Timing contract
+are unchanged. No user collection was used for testing.
+
+## Working source — database responsiveness — 1 November 2026
+
+- Replaced repeated structured cloning of base64 photo strings in database and
+  dealership operations with copies of mutable JSON containers. Snapshot
+  isolation, protected-copy key redaction and conflict digests retain their
+  existing semantics.
+- Reused the exact JSON produced by full database validation for durable saves,
+  keeping fsync, atomic replacement and the previous-file backup. Review approval
+  now uses one fresh simulation instead of recomputing the same proposal twice;
+  the final Store replacement still validates before persisting.
+- Timing profile string validation uses UTF-16 bounds to skip unnecessary scans
+  of large images while preserving JSON Schema Unicode code-point limits.
+- Coalesced database-change notifications and serialised renderer refreshes.
+  Conditional internal reads return no database payload when identity, revision
+  and storage context already match. Public HTTP API shapes are unchanged.
+- Median of three alternating released/current-source runs on this Windows PC,
+  using 40 synthetic cars with 512 KiB photo payloads (27 MiB database): workshop
+  save 315 → 169 ms; proposal 1,081 → 570 ms; approval 1,124 → 487 ms; first Timing
+  capture 326 → 166 ms. Hardware/load affect timings. Reproduce the current
+  workload with `npm run benchmark:database`; it uses only temporary data.
+- An isolated Electron check verified that 20 notifications produce one snapshot
+  read; another 20 without a database change produce none. An unchanged internal
+  read took 6 ms in that run. Initial reads/transfers still carry the photographs,
+  and synchronous durable saves can still cause brief pauses for large databases.
+- Validation: 319 automated tests, 181 desktop workflow checks, 75 current Timing
+  client integration tests, syntax checks and snapshot/Unicode/failure regression
+  checks passed. Actual multi-computer performance needs user confirmation. These
+  optimisations are included in v0.19.1.
+
 ## v0.19.0 — quiet Timing catalogue refresh — 1 November 2026
 
 - Added persistent `catalogueRevision` to host status and collection responses.

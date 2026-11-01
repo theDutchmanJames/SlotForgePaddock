@@ -28,7 +28,7 @@ TECH_FIELDS.push('motorTorque','torqueVoltage','torqueType','motorType');
 const COMPONENT_FIELDS=['body','chassis','motor','pod','pinionPart','gearPart','frontAxle','rearAxle','frontBearings','rearBearings','frontWheels','rearWheels','frontTyres','rearTyres','guide','braids','wiring','lights','chip','magnets','ballast','suspension','fasteners'];
 const TECH = new Set(COMPONENT_FIELDS);
 const collectionContext={textFields:TEXT_FIELDS,techFields:TECH_FIELDS};
-const clone = value => structuredClone(value);
+const {cloneJSON:clone}=require('./json-data.cjs');
 const now = () => new Date().toISOString();
 function assert(condition, message) { if (!condition) throw new Error(message); }
 function text(value, max = 20000) { assert(typeof value === 'string' && value.length <= max, 'Invalid text or text too long.'); return value; }
@@ -91,7 +91,7 @@ function validatePackage(input) {
   });
   return {format:input.format,version:1,packageId:ident(input.packageId),source:ident(input.source),sender:text(input.sender,200),created:text(input.created,100),cars};
 }
-function validateDatabase(db) {
+function validateDatabase(db,encoded) {
   object(db); assert(db.schema===11,'Unsupported database version.');clubModel.validate(db);planning.validate(db);ident(db.id);build.validateDrafts(db);timing.validateStored(db);
   assert(Number.isSafeInteger(db.revision) && db.revision>=0,'Invalid database revision.');
   assert(Number.isSafeInteger(db.catalogueRevision)&&db.catalogueRevision>=0,'Invalid public catalogue revision.');
@@ -116,7 +116,7 @@ function validateDatabase(db) {
   toolbox.validate(db,photo);catalogueImport.validateStored(db);
   assert(Array.isArray(db.documents),'Invalid document collection.');unique(db.documents,'document');const docCounts=new Map();for(const d of db.documents){assert(ids.has(d.carId),'Orphan document.');validateDocument(d);text(d.title,200);assert(d.title.trim(),'Missing document title.');text(d.category,160);text(d.added,100);docCounts.set(d.carId,(docCounts.get(d.carId)||0)+1);assert(docCounts.get(d.carId)<=100,'Maximum 100 documents per car.');}
   const packages=new Set();for(const s of db.submissions){const pack=validatePackage(s.package);assert(!packages.has(pack.packageId),'Duplicate submission package.');packages.add(pack.packageId);assert(['pending','reviewed'].includes(s.status),'Invalid submission status.');object(s.outcomes);text(s.received,100);for(const [id,outcome]of Object.entries(s.outcomes)){assert(pack.cars.some(c=>c.id===id),'Unknown review outcome.');object(outcome);assert(['accept','reject'].includes(outcome.decision),'Invalid review decision.');text(outcome.date,100);text(outcome.note||'');}assert((s.status==='reviewed')===pack.cars.every(c=>Object.hasOwn(s.outcomes,c.id)),'Review status and decisions disagree.');}
-  assert(Buffer.byteLength(JSON.stringify(db))<=200*1024*1024,'Database exceeds 200 MB. Export or reduce image sizes.');
+  const json=JSON.stringify(db);assert(Buffer.byteLength(json)<=200*1024*1024,'Database exceeds 200 MB. Export or reduce image sizes.');if(encoded)encoded.json=json;
   return db;
 }
 class Store {
@@ -124,11 +124,11 @@ class Store {
   snapshot(){return clone(this.data);}
   subscribe(fn){this.listeners.add(fn);return ()=>this.listeners.delete(fn);}
   emit(){for(const fn of this.listeners)try{fn();}catch{}}
-  replace(data){validateDatabase(data);this.persist(data);this.data=data;this.emit();return this.snapshot();}
+  replace(data){const encoded={};validateDatabase(data,encoded);this.persist(data,encoded.json);this.data=data;this.emit();return this.snapshot();}
   metadata(){return collection.metadata(this.data,collectionContext);}
   plan(action,p={}){if(action==='catalogue.preview')return catalogueImport.preview(this.data,p.input);if(action==='catalogue.selection')return catalogueImport.selected(this.data,p);if(action==='build.preview')return build.plan(this.data,p);if(action==='part.delete')return inventory.deletion(this.data,p.id);if(action==='job.view')return jobs.model(this.data,p.id,TECH_FIELDS);if(action==='choices.catalogue')return collection.catalogue(this.data,collectionContext);if(action==='setup.options')return workshop.setupOptions(this.data,p.id);if(['setup.preview','choice.preview','bulk.preview'].includes(action)){const draft=this.snapshot(),result=action==='setup.preview'?workshop.applySetup(draft,p,true):action==='choice.preview'?collection.renameChoice(draft,p,collectionContext,true):collection.applyBulk(draft,p,true);validateDatabase(draft);return result;}throw new Error('Unknown preview.');}
-  persist(db){if(!this.file)return;fs.mkdirSync(path.dirname(this.file),{recursive:true});const temp=this.file+'.tmp'; const fd=fs.openSync(temp,'w');try{fs.writeFileSync(fd,JSON.stringify(db));fs.fsyncSync(fd);}finally{fs.closeSync(fd);}if(fs.existsSync(this.file))fs.copyFileSync(this.file,this.file+'.previous');fs.renameSync(temp,this.file);}
-  transact(fn){const draft=clone(this.data);const result=fn(draft);planning.pruneFocus(draft,this.data);draft.revision++;advanceCatalogue(this.data,draft);validateDatabase(draft);this.persist(draft);this.data=draft;this.emit();return result;}
+  persist(db,json){if(!this.file)return;fs.mkdirSync(path.dirname(this.file),{recursive:true});const temp=this.file+'.tmp'; const fd=fs.openSync(temp,'w');try{fs.writeFileSync(fd,json??JSON.stringify(db));fs.fsyncSync(fd);}finally{fs.closeSync(fd);}if(fs.existsSync(this.file))fs.copyFileSync(this.file,this.file+'.previous');fs.renameSync(temp,this.file);}
+  transact(fn){const draft=clone(this.data);const result=fn(draft);planning.pruneFocus(draft,this.data);draft.revision++;advanceCatalogue(this.data,draft);const encoded={};validateDatabase(draft,encoded);this.persist(draft,encoded.json);this.data=draft;this.emit();return result;}
   mutate(action,p={}) {object(p);let result;if(action.startsWith('planning.')){this.transact(db=>{result=planning.mutate(db,action,p);});return {result,data:this.snapshot(),collection:this.metadata()};}
     if(action==='submission.add'){const pack=validatePackage(p.package);const existing=this.data.submissions.find(s=>s.package.packageId===pack.packageId);if(existing){assert(isDeepStrictEqual(existing.package,pack),'This package identity was already used for different content. Export a new package for changed cars.');return {result:'duplicate',data:this.snapshot()};}}
     this.transact(db=>{
@@ -169,6 +169,6 @@ class Store {
       const prior=new Map(this.data.cars.map(c=>[c.id,c.revision]));for(const c of db.cars)if(prior.get(c.id)!==c.revision)remember(c);
     });return {result,data:this.snapshot(),collection:this.metadata()};
   }
-  restore(input,revision){const data=migrate(input);assert(this.data.revision===revision,'Database changed. Export again before restoring.');data.revision=this.data.revision+1;if(data.id===this.data.id){const previous={...this.data,catalogueRevision:Math.max(this.data.catalogueRevision,data.catalogueRevision)};advanceCatalogue(previous,data);}validateDatabase(data);this.persist(data);this.data=data;this.emit();return this.snapshot();}
+  restore(input,revision){const data=migrate(input);assert(this.data.revision===revision,'Database changed. Export again before restoring.');data.revision=this.data.revision+1;if(data.id===this.data.id){const previous={...this.data,catalogueRevision:Math.max(this.data.catalogueRevision,data.catalogueRevision)};advanceCatalogue(previous,data);}const encoded={};validateDatabase(data,encoded);this.persist(data,encoded.json);this.data=data;this.emit();return this.snapshot();}
 }
 module.exports={Store,initial,migrate,validateDatabase,validatePackage,makePackage,publicCar,publicCatalogue,PUBLIC_FIELDS,TECH_FIELDS,COMPONENT_FIELDS,TEXT_FIELDS};

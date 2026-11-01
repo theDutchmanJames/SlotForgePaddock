@@ -28,7 +28,7 @@ function render(){
   prepareShowroom();
   applyTheme();
   $('#header').innerHTML=`<div class="header-top"><div class="brand"><span class="brand-mark">${icon('car')}</span><div>SlotForge Paddock<small>Collection & workshop</small></div></div>${reviewButton()}</div><nav class="main-nav" aria-label="Main navigation">${navs.map(n=>`<button class="nav-btn ${page===n?'active':''}" data-action="nav" data-id="${esc(n)}" aria-current="${page===n?'page':'false'}">${icon(uiPageIcons[n])}${esc(n)}</button>`).join('')}</nav>`;
-  $('#database-bar').innerHTML=`<span class="muted">Database</span><select id="database-select" aria-label="Current database"><option value="local">${esc(db.settings.name)}</option>${remote?`<option value="remote" ${source==='remote'?'selected':''}>${esc(remote.settings.name)} · Shared</option>`:''}</select><span class="db-state">${icon('database')} ${local()?(clubState?.active?'Shared club copy':clubState?.role==='coordinator'?'Dealership Mode':'Local database'):net.remote?.permissions?.submit?'Shared collection · Submit for review':'Shared collection · Browse only'}</span><span class="spacer"></span><span class="db-state"><span class="dot ${local()?clubState?.active&&clubState.state!=='connected'?'offline':'':net.remote?.state!=='connected'?'offline':''}"></span>${local()?(clubState?.active?(clubState.state==='connected'?'Club connected':clubState.state==='outdated'?'Club copy out of date':'Club offline · saved copy'):'Saved on this computer'):net.remote?.state==='connected'?'Connected':'Saved view · offline'}</span>${net.sharing?badge('Sharing enabled','good'):''}`;
+  $('#database-bar').innerHTML=`<span class="muted">Database</span><select id="database-select" aria-label="Current database"><option value="local">${esc(db.settings.name)}</option>${remote?`<option value="remote" ${source==='remote'?'selected':''}>${esc(remote.settings.name)} · Shared</option>`:''}</select><span class="db-state">${icon('database')} ${local()?(clubState?.active?'Dealership collection copy':clubState?.role==='coordinator'?'Dealership Mode':'Local database'):net.remote?.permissions?.submit?'Shared collection · Submit for review':'Shared collection · Browse only'}</span><span class="spacer"></span><span class="db-state"><span class="dot ${local()?clubState?.active&&clubState.state!=='connected'?'offline':'':net.remote?.state!=='connected'?'offline':''}"></span>${local()?(clubState?.active?(clubState.state==='connected'?'Dealership connected':clubState.state==='outdated'?'Collection copy out of date':'Dealership offline · saved copy'):'Saved on this computer'):net.remote?.state==='connected'?'Connected':'Saved view · offline'}</span>${net.sharing?badge('Sharing enabled','good'):''}`;
   const views={'Overview':renderOverview,'Showroom':renderShowroom,'Cars':()=>carId&&car()?renderProfile():renderCars(),'Parts':renderParts,'Workshop':renderWorkshop,'Library':renderLibrary,'Connections':renderConnections,'Import & Export':renderExchange,'Settings':renderSettings,'Review':renderReviewHub};
   $('#main').dataset.page=page;
   $('#main').innerHTML=clubBanner()+'<div id="remote-notice">'+remoteNotice()+'</div>'+views[page]();paintCustomTile();applyPhotoFocus();
@@ -232,15 +232,29 @@ document.addEventListener('change',event=>{const el=event.target;try{
     default:return;
   }render();
 }catch(e){toast(e.message,true);}});
-window.slotforge.onChange(async change=>{try{
-  const context=db.id;const r=await api('read');if(db.id!==context)return;acceptSnapshot(r.data);clubState=r.club;net=r.network;updateReviewIndicator();
+// A saved Timing session also raises a dealership notification. Coalesce bursts
+// and allow only one read at a time instead of copying all photos for each event.
+let pendingDatabaseChange=null,databaseChangeTimer=null,databaseChangeReading=false;
+function scheduleDatabaseChange(){if(!db||databaseChangeReading||databaseChangeTimer)return;databaseChangeTimer=setTimeout(flushDatabaseChange,60);}
+async function flushDatabaseChange(){
+ databaseChangeTimer=null;if(!pendingDatabaseChange||!db)return;
+ const change=pendingDatabaseChange;pendingDatabaseChange=null;databaseChangeReading=true;
+ try{
+  const context={databaseId:db.id,revision:db.revision,dataPath};const r=await api('read',context);
+  // Joining/leaving a dealership has its own explicit reload. Never merge a
+  // background reply into a different collection or storage context.
+  if(db.id!==context.databaseId||dataPath!==context.dataPath||r.dataPath!==context.dataPath||r.data&&(r.data.id!==context.databaseId||r.data.revision<db.revision))return;
+  const changed=!!r.data||JSON.stringify(clubState)!==JSON.stringify(r.club)||JSON.stringify(net)!==JSON.stringify(r.network);
+  if(r.data)acceptSnapshot(r.data);if(r.collection)collectionMeta=r.collection;clubState=r.club;net=r.network;if(!changed)return;updateReviewIndicator();
   if(!$('#dialog').open&&!(page==='Review'&&reviewTab==='Incoming cars')&&!(page==='Parts'&&partsTab==='Build from Scratch')&&!(page==='Import & Export'&&catalogueReview?.active)){
     const focused=document.activeElement,search=['car-search','part-search','supply-search','showroom-search'].includes(focused?.id)?{id:focused.id,start:focused.selectionStart,end:focused.selectionEnd,direction:focused.selectionDirection}:null;
     render();if(search){const input=document.getElementById(search.id);if(input){input.focus({preventScroll:true});input.setSelectionRange(search.start,search.end,search.direction);}}
   }
   if(change?.kind!=='timing-capture'&&change?.kind!=='club')toast(change?.kind==='timing'?'Timing results updated. Open the car’s Performance section to view them.':'A new club submission has arrived. Refresh the inbox when your current review is ready.');
-}catch(e){toast(e.message,true);}});
-async function init(){try{const result=await api('read');db=result.data;clubState=result.club;net=result.network;collectionMeta=result.collection;tableColumns=[...db.settings.columns];remote=result.remote||null;version=result.version;dataPath=result.dataPath;if(queuedCarLink||result.openCar){followCarLink(queuedCarLink||result.openCar);queuedCarLink=null;}else render();}catch(e){$('#main').innerHTML=empty('Unable to open the database',e.message);}}
+ }catch(e){toast(e.message,true);}finally{databaseChangeReading=false;if(pendingDatabaseChange)scheduleDatabaseChange();}
+}
+window.slotforge.onChange(change=>{if(!pendingDatabaseChange||!['club','timing-capture'].includes(change?.kind))pendingDatabaseChange=change||{};scheduleDatabaseChange();});
+async function init(){try{const result=await api('read');db=result.data;clubState=result.club;net=result.network;collectionMeta=result.collection;tableColumns=[...db.settings.columns];remote=result.remote||null;version=result.version;dataPath=result.dataPath;if(queuedCarLink||result.openCar){followCarLink(queuedCarLink||result.openCar);queuedCarLink=null;}else render();if(pendingDatabaseChange)scheduleDatabaseChange();}catch(e){$('#main').innerHTML=empty('Unable to open the database',e.message);}}
 function followCarLink(target){if(target.databaseId!==db.id||!db.cars.some(c=>c.id===target.carId)){render();toast('This car link belongs to another collection or a missing car. Open the matching collection first.',true);return;}switchCollection('local');page='Cars';carId=target.carId;section='Overview';render();}
 let queuedCarLink=null;
 window.slotforge.onOpenCar(target=>{if(db)followCarLink(target);else queuedCarLink=target;});

@@ -61,8 +61,13 @@ function validate(value,definition=schema,path='$'){
   }
   if(t==='array'){if(value.length>(definition.maxItems??Infinity)||value.length<(definition.minItems??0))fail('invalid item count');value.forEach((v,i)=>validate(v,definition.items,path+'['+i+']'));}
   if(t==='string'){
-    let length=0;for(const character of value){length++;if(length>(definition.maxLength??Infinity))fail('invalid text length');}
-    if(length<(definition.minLength??0))fail('invalid text length');
+    // UTF-16 length bounds Unicode code-point length. Most strings (especially
+    // base64 pictures) can be accepted without a per-character scan. Count only
+    // near a bound, preserving JSON Schema's code-point length semantics.
+    const min=definition.minLength??0,max=definition.maxLength??Infinity;
+    let length=value.length;
+    if(length>max||length<min*2){length=0;for(const character of value){length++;if(length>max)fail('invalid text length');}}
+    if(length<min)fail('invalid text length');
     if(definition.pattern&&!new RegExp(definition.pattern).test(value))fail('invalid text format');
     if(definition.format==='date-time'&&(!Number.isFinite(Date.parse(value))||new Date(value).toISOString()!==value))fail('expected an ISO UTC timestamp with milliseconds');
   }

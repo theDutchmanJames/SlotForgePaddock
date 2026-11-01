@@ -1,6 +1,6 @@
 const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('slotforge',{
-  read:()=>ipcRenderer.invoke('sf:read'),
+  read:known=>ipcRenderer.invoke('sf:read',known),
   mutate:(action,payload)=>ipcRenderer.invoke('sf:mutate',action,payload),
   club:(action,payload)=>ipcRenderer.invoke('sf:club',action,payload),
   plan:(action,payload)=>ipcRenderer.invoke('sf:plan',action,payload),

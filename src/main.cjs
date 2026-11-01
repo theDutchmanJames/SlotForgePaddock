@@ -78,7 +78,7 @@ app.whenReady().then(async()=>{
   win.webContents.on('did-start-loading',()=>{rendererReady=false;});
   win.webContents.setWindowOpenHandler(()=>({action:'deny'}));win.webContents.on('will-navigate',event=>event.preventDefault());
   win.webContents.session.setPermissionRequestHandler((wc,permission,callback)=>callback(permission==='fullscreen'&&wc===win.webContents&&wc.getURL()===pathToFileURL(entry).href));
-  ipcMain.handle('sf:read',reply(()=>{rendererReady=true;const openCar=pendingCarLink;pendingCarLink=null;return {openCar,data:club.store.snapshot(),club:club.status(),network:network.status(),remote:network.cached,collection:club.store.metadata(),version:app.getVersion(),dataPath:club.store.file};}));
+  ipcMain.handle('sf:read',reply(known=>{rendererReady=true;const openCar=pendingCarLink;pendingCarLink=null;const current=club.store,unchanged=known?.databaseId===current.data.id&&known?.revision===current.data.revision&&known?.dataPath===current.file;return {openCar,data:unchanged?null:current.snapshot(),club:club.status(),network:network.status(),remote:known?undefined:network.cached,collection:current.metadata(),version:app.getVersion(),dataPath:current.file};}));
   ipcMain.handle('sf:mutate',reply((action,payload)=>club.mutate(action,payload)));
   ipcMain.handle('sf:plan',reply((action,payload)=>club.store.plan(action,payload)));
   ipcMain.handle('sf:file',reply(files));
