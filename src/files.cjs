@@ -1,7 +1,19 @@
 const fs=require('node:fs');
 const path=require('node:path');
 const {randomUUID}=require('node:crypto');
-function readJSON(file){if(fs.statSync(file).size>256*1024*1024)throw new Error('File exceeds 256 MB.');return JSON.parse(fs.readFileSync(file,'utf8'));}
+function readJSON(file,maxBytes=256*1024*1024){
+  if(!Number.isSafeInteger(maxBytes)||maxBytes<=0)throw Error('Invalid JSON file limit.');
+  const fd=fs.openSync(file,'r'),chunks=[];let total=0;
+  try{
+    const stat=fs.fstatSync(fd);if(!stat.isFile())throw Error('Choose a JSON file.');
+    const tooLarge=()=>Error(`File exceeds ${maxBytes/(1024*1024)} MB.`);
+    if(stat.size>maxBytes)throw tooLarge();
+    // Bound the read itself as well as the stat: the file may grow while open.
+    for(;;){const chunk=Buffer.alloc(Math.min(65536,maxBytes-total+1)),size=fs.readSync(fd,chunk,0,chunk.length,null);if(!size)break;total+=size;if(total>maxBytes)throw tooLarge();chunks.push(chunk.subarray(0,size));}
+    let text;try{text=new TextDecoder('utf-8',{fatal:true}).decode(Buffer.concat(chunks));}catch{throw Error('Save the JSON file as UTF-8 text.');}
+    try{return JSON.parse(text);}catch{throw Error('Invalid JSON. Choose the completed .json file without Markdown code fences.');}
+  }finally{fs.closeSync(fd);}
+}
 function sameFile(a,b){
   const normal=p=>process.platform==='win32'?path.resolve(p).toLowerCase():path.resolve(p);
   if(normal(a)===normal(b))return true;

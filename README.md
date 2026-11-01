@@ -50,6 +50,19 @@ You can stop here and have a useful collection app. The workshop features are av
 
 ## For the tinkerer: your detailed slotcar workshop
 
+**Coming in the next release:** an optional **Real Car History** profile with livery
+classification, represented race entry, sources and reference photos. Download a
+car-specific **research template for your own AI**, then import selected fields
+from its completed JSON; English instructions and source/uncertainty fields are
+included. A **generic webpage reader** also proposes labelled facts for review,
+with no AI inside Paddock. Neither route automatically verifies the research.
+Also coming:
+**Compare pace** to find similarly paced cars using recorded best laps, median
+pace or uninterrupted 5/10-lap runs. Manual tests gain direction and magnet-status
+fields. [How history and comparisons work](docs/REAL-CAR-HISTORY-AND-PACE.md).
+Per-car **lane records** show the fastest eligible lap on each track and lane,
+with the driver and captured configuration; manual reported bests stay separate.
+
 *Know what is fitted, what you changed, what worked and what you want to try next.*
 
 The same car profiles can hold detailed technical records and connect directly to your parts inventory.
@@ -231,7 +244,7 @@ Current version: **1.0.1**. The project is under active development. **SlotForge
 
 The Paddock side of Timing integration is documented in the [Timing integration handoff](integration-handoff/timing-v1/README.md), including the exact contract, schemas, fixtures and local test host. It is included in v0.17.0. Version 0.19.0 migrates saved databases to **schema 11** for shared club collections. Create a complete backup before running it; v0.18.x and older builds cannot read schema-11 saves. Timing integration remains v1, with an optional catalogue revision that avoids unnecessary downloads after private edits or race-result uploads.
 
-Catalogue imports validate structure and help identify duplicates. Manufacturer facts and physical part compatibility still need your review; the app does not scrape websites or download product images automatically.
+Catalogue imports validate structure and help identify duplicates. Manufacturer facts and physical part compatibility still need your review; catalogue imports do not scrape websites or download product images automatically.
 
 Telemetry can read delivered Timing sessions using the existing Dealership password, keeping the original measured laps separate from race adjustments. The [Telemetry handoff](integration-handoff/telemetry-v1/README.md) includes the read API, schemas, correction/withdrawal fixtures and offline synchronisation rules. Telemetry provides the analysis interface; the host API is included from v1.0.1.
 

@@ -10,6 +10,9 @@ const {readJSON,exportJSON,exportBytes}=require('./files.cjs');
 const {timingPackage}=require('./timing-import.cjs');
 const {timingExport}=require('./timing-export.cjs');
 const catalogueImport=require('./catalogue-import.cjs');
+const historyResearch=require('../renderer/history-research-model.js');
+const historyWeb=require('./history-web.cjs');
+let historyWebBusy=false;
 const {TYPES,readDocument,validateDocument}=require('./documents.cjs');
 const reports=require('./reports.cjs');
 const temporaryDocuments=[];
@@ -32,6 +35,24 @@ async function files(action,p={}){
   const store=club.store;
   const protectedFiles=[club.main.file,club.cache.file,club.file].filter(Boolean).flatMap(file=>[file,file+'.previous',file+'.tmp']);
   if(action==='restore'&&store.data.club)throw Error('Shared club copies cannot restore or replace the official database. Use Connections to update the club copy.');
+  if(action==='history.source'){const url=require('./real-history.cjs').url(p.url);if(!url)throw Error('Missing source link.');await shell.openExternal(url);return {opened:true};}
+  if(['history.kit','history.pick','history.web'].includes(action)){
+    const car=store.data.cars.find(c=>c.id===p.carId);
+    const unchanged=()=>{if(club.store!==store||store.data.id!==p.databaseId||!car||store.data.cars.find(c=>c.id===p.carId)?.revision!==p.revision)throw Error('The car or collection changed. Reopen its research tools.');};unchanged();
+    if(action==='history.kit'){
+      const content=historyResearch.kit(store.data,car),r=await dialog.showSaveDialog(win,{title:'Save car research template for your AI',defaultPath:'SlotForge-car-research.json',filters:[{name:'Research JSON',extensions:['json']}]});
+      return r.canceled?null:exportBytes(r.filePath,JSON.stringify(content,null,2),protectedFiles);
+    }
+    let preview;
+    if(action==='history.pick'){
+      const r=await dialog.showOpenDialog(win,{title:'Review completed car research',properties:['openFile'],filters:[{name:'Research JSON',extensions:['json']}]});if(r.canceled)return null;unchanged();
+      preview=historyResearch.preview(readJSON(r.filePaths[0],1024*1024),p);
+    }else{
+      if(historyWebBusy)throw Error('A webpage is already being read. Please wait.');historyWebBusy=true;
+      try{preview=await historyWeb.read(p.url);}finally{historyWebBusy=false;}unchanged();
+    }
+    return preview;
+  }
   if(action==='report.preview'){const r=reports.render(store.snapshot(),p);return {title:r.title,body:r.body};}
   if(action==='report.pdf'){
     const report=reports.render(store.snapshot(),p),result=await dialog.showSaveDialog(win,{title:'Save printable PDF',defaultPath:'SlotForge-'+p.kind+'.pdf',filters:[{name:'PDF document',extensions:['pdf']}]});if(result.canceled)return null;

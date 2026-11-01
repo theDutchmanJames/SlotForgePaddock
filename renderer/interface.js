@@ -23,7 +23,7 @@ const uiIcons={
   gear:'<circle cx="12" cy="12" r="4"/><path d="M9 3h6v3l3 2 3-1v6l-3 1-1 3 1 3-6 1-1-3-3-1-3 1-2-6 3-1 1-3z"/>'
 };
 const uiPageIcons={Review:'inbox',Overview:'home',Showroom:'showroom',Cars:'car',Parts:'box',Workshop:'tool',Library:'library',Connections:'share','Import & Export':'transfer',Settings:'settings'};
-const uiSectionIcons={'Overview':'grid','Identity & ownership':'identity','Technical & parts':'gear','Setups':'setup','Maintenance':'tool','Performance':'timer','Photos & documents':'photos','History':'history'};
+const uiSectionIcons={'Overview':'grid','Identity & ownership':'identity','Technical & parts':'gear','Setups':'setup','Maintenance':'tool','Real Car History':'history','Performance':'timer','Photos & documents':'photos','History':'history'};
 const uiSettingsSections=[['Appearance','palette'],['Welcome banner','banner'],['Database','database'],['Custom fields','list'],['Saved views','bookmark']];
 let settingsSection='Appearance';
 function uiTile(name,tone='accent'){return `<span class="section-icon tone-${tone}">${icon(name)}</span>`;}
