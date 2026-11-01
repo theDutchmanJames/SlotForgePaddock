@@ -1,0 +1,4 @@
+{
+  "error": "Paddock results changed during transfer. Refresh to try again.",
+  "code": "SNAPSHOT_CHANGED"
+}

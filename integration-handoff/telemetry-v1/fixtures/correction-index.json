@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "databaseId": "paddock-demo",
+  "databaseRevision": 4,
+  "snapshot": "645153149b4aaca6e42337f1396573bbdc679cb2a0fd3add5ea8cae20dcbd7f5",
+  "changeToken": "645153149b4aaca6e42337f1396573bbdc679cb2a0fd3add5ea8cae20dcbd7f5",
+  "name": "Timing integration demo",
+  "entries": [
+    {
+      "sourceId": "timing-demo",
+      "sessionId": "session-normal",
+      "revision": 2,
+      "state": "active",
+      "contentHash": "12d2a64020341e4252a39be4c1d92be65d0c947eb3f285864aaaadca6a21315a",
+      "resultHash": "33be2bcca09b8d6ffe69a5fad05a5c95829f603724a76c05eb4f26b8a833020e",
+      "receivedAt": "2026-11-01T12:00:00.000Z",
+      "name": "Club race",
+      "type": "race",
+      "startedAt": "2026-10-31T10:01:00.000Z",
+      "endedAt": "2026-10-31T10:02:00.000Z",
+      "track": {
+        "sourceId": "timing-demo",
+        "id": "track-1",
+        "name": "Club circuit"
+      },
+      "carIds": [
+        "car-a"
+      ],
+      "summary": {
+        "name": "Club race",
+        "type": "race",
+        "startedAt": "2026-10-31T10:01:00.000Z",
+        "trackId": "track-1",
+        "trackName": "Club circuit",
+        "carIds": [
+          "car-a"
+        ]
+      }
+    }
+  ],
+  "nextOffset": null
+}

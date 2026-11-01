@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "databaseId": "paddock-demo",
+  "databaseRevision": 3,
+  "snapshot": "5f8ca8cc20e5c1f78c2240244db05b6d841bae8076d39a3fa89005aef05f2a67",
+  "changeToken": "5f8ca8cc20e5c1f78c2240244db05b6d841bae8076d39a3fa89005aef05f2a67",
+  "name": "Timing integration demo",
+  "entries": [
+    {
+      "sourceId": "timing-demo",
+      "sessionId": "session-endurance",
+      "revision": 1,
+      "state": "active",
+      "contentHash": "19353c91e3b399ec5bf5232512573ad0dada783a0e9b4afae0d907a5d269fe31",
+      "resultHash": "edb97b03159c2acd9b60297a66414c408c87add4f15af38e41daf4752ca770b9",
+      "receivedAt": "2026-11-01T12:00:00.000Z",
+      "name": "Endurance driver change",
+      "type": "endurance",
+      "startedAt": "2026-10-31T10:01:00.000Z",
+      "endedAt": "2026-10-31T10:02:00.000Z",
+      "track": {
+        "sourceId": "timing-demo",
+        "id": "track-1",
+        "name": "Club circuit"
+      },
+      "carIds": [
+        "car-a"
+      ],
+      "summary": {
+        "name": "Endurance driver change",
+        "type": "endurance",
+        "startedAt": "2026-10-31T10:01:00.000Z",
+        "trackId": "track-1",
+        "trackName": "Club circuit",
+        "carIds": [
+          "car-a"
+        ]
+      }
+    }
+  ],
+  "nextOffset": null
+}

@@ -1,0 +1,4 @@
+{
+  "error": "A different database is at this address.",
+  "code": "DATABASE_MISMATCH"
+}

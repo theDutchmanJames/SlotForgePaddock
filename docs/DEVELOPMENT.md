@@ -1,6 +1,12 @@
 # Development & release history
 
-The latest release is [v1.0.0](releases/v1.0.0.md), including the unified Dealership password, save improvements and the review fixes below.
+The latest release is [v1.0.1](releases/v1.0.1.md), adding the reviewed Telemetry lap-history API.
+
+## v1.0.1 — Telemetry analysis connection — 1 November 2026
+
+Read delivered Timing sessions using the existing Dealership password. Includes filtered browsing, historical configuration captures, corrections and withdrawals, stable result snapshots and quiet long-poll/SSE notifications. Existing Timing integration and manual records remain independent; no database migration is required.
+
+Validation: **360 automated tests passed**, syntax checks passed, and the existing Telemetry client passed local host/cache compatibility checks. See the [review](reviews/2026-11-01-telemetry.md) and [Telemetry handoff](../integration-handoff/telemetry-v1/README.md).
 
 ## Full review of v0.20.0 changes — 1 November 2026
 

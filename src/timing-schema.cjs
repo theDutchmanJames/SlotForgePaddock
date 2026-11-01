@@ -35,6 +35,9 @@ const timingCapability=object({versions:array({const:1},1,1),profile:{const:'/v1
 const status=object({protocol:{const:2},id,revision:integer(),name:str(),permissions:object({browse:{const:true},submit:{type:'boolean'},timingResults:{type:'boolean'}}),capabilities:object({timing:timingCapability})});
 // Additive response metadata, deliberately absent from each required list.
 status.properties.catalogueRevision=integer();
+status.properties.capabilities.properties.telemetry=object({version:{const:1},index:{const:'/v1/telemetry/results'},permission:{const:'timingResults'}});
+Object.assign(status.properties.capabilities.properties.telemetry.properties,{events:{const:'/v1/telemetry/events'},status:{const:'/v1/telemetry/status'},snapshot:{const:true},pageSize:{const:100}});
+Object.assign(status.properties.capabilities.properties.telemetry.properties,{changes:{const:'/v1/telemetry/changes'},filters:array({enum:['carId','sourceId','trackId','from','to']},5)});
 status.properties.clubId=id;
 status.properties.capabilities.properties.club={const:1};
 status.properties.permissions.properties.club={type:'boolean'};
@@ -47,6 +50,20 @@ const collection=object({schema:{const:1},id,revision:integer(),settings:object(
 collection.properties.catalogueRevision=integer();
 collection.properties.nextOffset=nullable(integer());
 const schema={$schema:'https://json-schema.org/draft/2020-12/schema',$id:'https://slotforge.invalid/contracts/timing-v1.schema.json',title:'SlotForge Paddock Timing integration v1',anyOf:[ref('active'),ref('withdrawal')],$defs:{active,withdrawal,configuration,summary,receipt,profile,error,status,collection,catalogueCar}};
+// Analysis responses reuse the unmodified Timing payload and receipt definitions.
+const telemetryBase={version:{const:1},databaseId:id,databaseRevision:integer(),snapshot:hash};
+const telemetryEntry=object({sourceId:id,sessionId:id,revision:integer(1000000,1),state:{enum:['active','withdrawn']},contentHash:hash,resultHash:hash,receivedAt:date,name:str(),type:nullable(active.properties.type),startedAt:nullable(date),endedAt:nullable(date),track:nullable(object({sourceId:id,id,name:str()})),carIds:array(id,10000)});
+Object.assign(schema.$defs,{
+  telemetryEntry,
+  telemetryIndex:object({...telemetryBase,name:str(),entries:array(ref('telemetryEntry'),100),nextOffset:nullable(integer(10000))}),
+  telemetryResult:object({...telemetryBase,payload:{anyOf:[ref('active'),ref('withdrawal')]},receipt:ref('receipt')}),
+  telemetryStatus:object(telemetryBase),
+  telemetryEvent:object({version:{const:1},databaseId:id,snapshot:hash})
+});
+telemetryEntry.properties.summary=nullable(object({name:str(),type:active.properties.type,startedAt:date,trackId:id,trackName:str(),carIds:array(id,256)}));
+schema.$defs.telemetryIndex.properties.changeToken=hash;
+schema.$defs.telemetryResult.properties.changeToken=hash;
+schema.$defs.telemetryChanges=object({version:{const:1},databaseId:id,changeToken:hash,changed:{type:'boolean'}});
 function validate(value,definition=schema,path='$'){
   const fail=message=>{const e=Error((path+': '+message).slice(0,1800));e.apiCode='INVALID_PAYLOAD';e.httpStatus=400;throw e;};
   if(definition.$ref)return validate(value,schema.$defs[definition.$ref.split('/').pop()],path);

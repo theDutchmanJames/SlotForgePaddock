@@ -3,6 +3,7 @@ const os = require('node:os');
 const crypto = require('node:crypto');
 const discovery=require('./discovery.cjs');
 const timing=require('./timing-integration.cjs');
+const telemetry=require('./telemetry-export.cjs');
 const { publicCar, makePackage, validatePackage } = require('./store.cjs');
 const MAX = 32 * 1024 * 1024;
 const PAGE_BYTES=16*1024*1024;
@@ -43,7 +44,7 @@ class Network {
     for(const key of ['allowSubmissions'])if(p[key]!==undefined)this[key]=p[key];
     if(credentialKey)this[credentialKey]=p.password;
     if(p.rotate===true){this.code=crypto.randomBytes(12).toString('hex');this.browseCode=crypto.randomBytes(12).toString('hex');this.timingCode=crypto.randomBytes(12).toString('hex');}
-    if(credentialKey||p.rotate===true)this.authAttempts?.clear();
+    if(credentialKey||p.rotate===true){this.authAttempts?.clear();this.telemetryEvents?.revalidate();}
     return this.status();
   }
   async discover(){if(!this.scanning)this.scanning=discovery.scan().finally(()=>{this.scanning=null;});return (await this.scanning).filter(h=>h.id!==this.store.data.id);}
@@ -69,7 +70,10 @@ class Network {
       // must not reset the limit while guessing a higher-permission password.
       try{
         const url=new URL(req.url,'http://localhost');
-        if(req.method==='GET'&&url.pathname==='/v1/status')return send(200,{protocol:2,id:this.store.data.id,revision:this.store.data.revision,catalogueRevision:this.store.data.catalogueRevision,name:this.store.data.settings.name,permissions:access,capabilities:{...timing.capabilities(),...(this.club?.coordinator?{club:1}:{})},...(this.club?.coordinator?{clubId:this.store.data.club.id}:{})});
+        if(req.method==='GET'&&url.pathname==='/v1/status')return send(200,{protocol:2,id:this.store.data.id,revision:this.store.data.revision,catalogueRevision:this.store.data.catalogueRevision,name:this.store.data.settings.name,permissions:access,capabilities:{telemetry:telemetry.capability,...timing.capabilities(),...(this.club?.coordinator?{club:1}:{})},...(this.club?.coordinator?{clubId:this.store.data.club.id}:{})});
+        if(url.pathname==='/v1/telemetry/events')return this.telemetryEvents.open(req,res,url,access,code);
+        if(url.pathname==='/v1/telemetry/changes')return this.telemetryEvents.wait(req,res,url,access,code);
+        if(url.pathname.startsWith('/v1/telemetry/'))return send(200,telemetry.handle(this.store.data,req.method,url,access,req.headers['x-slotforge-database']));
         if(url.pathname.startsWith('/v1/club/')&&this.club)return await this.club.handle(req,res,url,access,code);
         if(url.pathname.startsWith('/v1/timing/')){
           const expected=req.headers['x-slotforge-database'];
@@ -113,11 +117,12 @@ class Network {
         send(404,{error:'Unknown operation.'});
       }catch(e){send(e.httpStatus||(e.code?500:400),{error:e.code?'The host could not save the submission. Check storage on the sharing computer.':e.message,code:e.apiCode||(e.code?'STORAGE_FAILED':'INVALID_PAYLOAD')});}
     });
+    this.telemetryEvents=new telemetry.Events(this);
     this.server.requestTimeout=15000;this.server.headersTimeout=10000;this.server.maxConnections=30;
     const listening=new Promise((resolve,reject)=>{this.server.once('error',reject);this.server.listen(0,'0.0.0.0',resolve);});
-    try{await listening;this.port=this.server.address().port;try{this.advertiser=await discovery.advertise(()=>this.server?{id:this.store.data.id,name:this.store.data.settings.name,port:this.port}:null);this.discoveryError='';}catch{this.discoveryError='Discovery is unavailable on this computer. Members can still enter the displayed address and code.';}}catch(e){this.server=null;this.code='';throw e;}return this.status();
+    try{await listening;this.port=this.server.address().port;try{this.advertiser=await discovery.advertise(()=>this.server?{id:this.store.data.id,name:this.store.data.settings.name,port:this.port}:null);this.discoveryError='';}catch{this.discoveryError='Discovery is unavailable on this computer. Members can still enter the displayed address and code.';}}catch(e){this.telemetryEvents?.close();this.telemetryEvents=null;this.server=null;this.code='';throw e;}return this.status();
   }
-  async stop(){if(this.starting)await this.starting.catch(()=>{});const s=this.server;this.server=null;this.code='';this.browseCode='';this.timingCode='';this.clubCode='';this.port=0;if(this.advertiser){this.advertiser.close();this.advertiser=null;}this.discoveryError='';if(s){s.closeAllConnections();await new Promise(resolve=>s.close(resolve));}return this.status();}
+  async stop(){if(this.starting)await this.starting.catch(()=>{});this.telemetryEvents?.close();this.telemetryEvents=null;const s=this.server;this.server=null;this.code='';this.browseCode='';this.timingCode='';this.clubCode='';this.port=0;if(this.advertiser){this.advertiser.close();this.advertiser=null;}this.discoveryError='';if(s){s.closeAllConnections();await new Promise(resolve=>s.close(resolve));}return this.status();}
   async request(address,code,route,body,expectedDatabase,signal){
     const payload=body?JSON.stringify(body):undefined;if(payload&&Buffer.byteLength(payload)>MAX)throw new Error('Package exceeds the 32 MB network limit. Use a file export.');
     const response=await fetch(localAddress(address)+route,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+code,'Content-Type':'application/json','X-SlotForge-Pages':'1',...(expectedDatabase?{'X-SlotForge-Database':expectedDatabase}:{})},body:payload,redirect:'error',signal:signal?AbortSignal.any([signal,AbortSignal.timeout(10000)]):AbortSignal.timeout(10000)});
@@ -192,6 +197,6 @@ class Network {
     catch(e){this.notify();throw Error(e.message+' The retry copy is retained in Connections. Retry sends the same package, so the host can recognise an already received submission.');}finally{this.sending=false;}
   }
   discardSubmission(){if(this.sending)throw Error('Wait for the current submission to finish.');this.pending=null;this.notify();return this.status();}
-  close(){this.disconnect();if(this.advertiser){this.advertiser.close();this.advertiser=null;}this.server?.closeAllConnections();this.server?.close();}
+  close(){this.telemetryEvents?.close();this.telemetryEvents=null;this.disconnect();if(this.advertiser){this.advertiser.close();this.advertiser=null;}this.server?.closeAllConnections();this.server?.close();}
 }
 module.exports={Network,localAddress};

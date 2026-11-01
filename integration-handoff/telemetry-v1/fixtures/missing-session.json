@@ -1,0 +1,4 @@
+{
+  "error": "This session no longer exists.",
+  "code": "SESSION_NOT_FOUND"
+}

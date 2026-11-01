@@ -1341,6 +1341,55 @@
               ],
               "additionalProperties": false
             },
+            "telemetry": {
+              "type": "object",
+              "properties": {
+                "version": {
+                  "const": 1
+                },
+                "index": {
+                  "const": "/v1/telemetry/results"
+                },
+                "permission": {
+                  "const": "timingResults"
+                },
+                "events": {
+                  "const": "/v1/telemetry/events"
+                },
+                "status": {
+                  "const": "/v1/telemetry/status"
+                },
+                "snapshot": {
+                  "const": true
+                },
+                "pageSize": {
+                  "const": 100
+                },
+                "changes": {
+                  "const": "/v1/telemetry/changes"
+                },
+                "filters": {
+                  "type": "array",
+                  "items": {
+                    "enum": [
+                      "carId",
+                      "sourceId",
+                      "trackId",
+                      "from",
+                      "to"
+                    ]
+                  },
+                  "maxItems": 5,
+                  "minItems": 0
+                }
+              },
+              "required": [
+                "version",
+                "index",
+                "permission"
+              ],
+              "additionalProperties": false
+            },
             "club": {
               "const": 1
             }
@@ -1845,6 +1894,415 @@
       "required": [
         "id",
         "name"
+      ],
+      "additionalProperties": false
+    },
+    "telemetryEntry": {
+      "type": "object",
+      "properties": {
+        "sourceId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "sessionId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "state": {
+          "enum": [
+            "active",
+            "withdrawn"
+          ]
+        },
+        "contentHash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "resultHash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "receivedAt": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 24,
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "type": {
+          "anyOf": [
+            {
+              "enum": [
+                "practice",
+                "qualifying",
+                "race",
+                "endurance"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "startedAt": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 24,
+              "format": "date-time",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "endedAt": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 24,
+              "format": "date-time",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "track": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "sourceId": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 100,
+                  "pattern": "^[a-zA-Z0-9_-]+$"
+                },
+                "id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 100,
+                  "pattern": "^[a-zA-Z0-9_-]+$"
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200
+                }
+              },
+              "required": [
+                "sourceId",
+                "id",
+                "name"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "carIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "pattern": "^[a-zA-Z0-9_-]+$"
+          },
+          "maxItems": 10000,
+          "minItems": 0
+        },
+        "summary": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200
+                },
+                "type": {
+                  "enum": [
+                    "practice",
+                    "qualifying",
+                    "race",
+                    "endurance"
+                  ]
+                },
+                "startedAt": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 24,
+                  "format": "date-time",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+                },
+                "trackId": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 100,
+                  "pattern": "^[a-zA-Z0-9_-]+$"
+                },
+                "trackName": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200
+                },
+                "carIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100,
+                    "pattern": "^[a-zA-Z0-9_-]+$"
+                  },
+                  "maxItems": 256,
+                  "minItems": 0
+                }
+              },
+              "required": [
+                "name",
+                "type",
+                "startedAt",
+                "trackId",
+                "trackName",
+                "carIds"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "sourceId",
+        "sessionId",
+        "revision",
+        "state",
+        "contentHash",
+        "resultHash",
+        "receivedAt",
+        "name",
+        "type",
+        "startedAt",
+        "endedAt",
+        "track",
+        "carIds"
+      ],
+      "additionalProperties": false
+    },
+    "telemetryIndex": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "databaseId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "databaseRevision": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "snapshot": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "entries": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/telemetryEntry"
+          },
+          "maxItems": 100,
+          "minItems": 0
+        },
+        "nextOffset": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 10000
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "changeToken": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "required": [
+        "version",
+        "databaseId",
+        "databaseRevision",
+        "snapshot",
+        "name",
+        "entries",
+        "nextOffset"
+      ],
+      "additionalProperties": false
+    },
+    "telemetryResult": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "databaseId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "databaseRevision": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "snapshot": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "payload": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/active"
+            },
+            {
+              "$ref": "#/$defs/withdrawal"
+            }
+          ]
+        },
+        "receipt": {
+          "$ref": "#/$defs/receipt"
+        },
+        "changeToken": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "required": [
+        "version",
+        "databaseId",
+        "databaseRevision",
+        "snapshot",
+        "payload",
+        "receipt"
+      ],
+      "additionalProperties": false
+    },
+    "telemetryStatus": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "databaseId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "databaseRevision": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "snapshot": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "required": [
+        "version",
+        "databaseId",
+        "databaseRevision",
+        "snapshot"
+      ],
+      "additionalProperties": false
+    },
+    "telemetryEvent": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "databaseId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "snapshot": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "required": [
+        "version",
+        "databaseId",
+        "snapshot"
+      ],
+      "additionalProperties": false
+    },
+    "telemetryChanges": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "databaseId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "changeToken": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "changed": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "version",
+        "databaseId",
+        "changeToken",
+        "changed"
       ],
       "additionalProperties": false
     }

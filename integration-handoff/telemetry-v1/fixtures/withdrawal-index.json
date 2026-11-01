@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "databaseId": "paddock-demo",
+  "databaseRevision": 4,
+  "snapshot": "4a9e8ac8a145307f5f8d768de370814788198d8a22530034675242257e0dffa6",
+  "changeToken": "4a9e8ac8a145307f5f8d768de370814788198d8a22530034675242257e0dffa6",
+  "name": "Timing integration demo",
+  "entries": [
+    {
+      "sourceId": "timing-demo",
+      "sessionId": "session-normal",
+      "revision": 3,
+      "state": "withdrawn",
+      "contentHash": "9f0649008c66f31ecc76634dee3e024d35fa73110c60fdb1f3e195b86109d992",
+      "resultHash": "1e5d08ea9a1764f14105d00e252e41e875b8afd51dbeadd38294bf583b08828e",
+      "receivedAt": "2026-11-01T12:00:00.000Z",
+      "name": "Club race",
+      "type": null,
+      "startedAt": null,
+      "endedAt": null,
+      "track": null,
+      "carIds": [
+        "car-a"
+      ],
+      "summary": null
+    }
+  ],
+  "nextOffset": null
+}

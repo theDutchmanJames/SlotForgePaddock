@@ -12,7 +12,7 @@ class Club {
  }
  saveDevice(next=this.device){M.write(this.file,next);this.device=next;}
  password(value){M.check(typeof value==='string'&&value.length>=4&&value.length<=128&&/^[\x20-\x7e]+$/.test(value)&&value===value.trim(),'Choose a Dealership password of 4–128 letters, numbers, spaces or symbols, without spaces at either end.');return value;}
- setPassword(value){M.check(this.coordinator&&!this.active,'Change the password on the dealership computer.');const password=this.password(value);this.saveDevice({...this.device,hostPassword:password});if(this.network.hostingMode==='dealership'&&this.network.server)this.network.clubCode=password;this.network.authAttempts?.clear();for(const client of this.clients)client.res.end();this.clients.clear();this.notify({kind:'club'});return this.status();}
+ setPassword(value){M.check(this.coordinator&&!this.active,'Change the password on the dealership computer.');const password=this.password(value);this.saveDevice({...this.device,hostPassword:password});if(this.network.hostingMode==='dealership'&&this.network.server)this.network.clubCode=password;this.network.authAttempts?.clear();this.network.telemetryEvents?.revalidate();for(const client of this.clients)client.res.end();this.clients.clear();this.notify({kind:'club'});return this.status();}
  get coordinator(){return !!this.main.data.club&&!this.main.data.club.replica&&this.device.coordinator===this.main.data.club.id;}
  get store(){return this.active?this.cache:this.main;}
  hasCopy(){return !!(this.device.pair&&this.cache.data.id===this.device.pair.databaseId&&this.cache.data.club?.id===this.device.pair.clubId);}

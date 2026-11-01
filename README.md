@@ -169,7 +169,7 @@ When you want to go further, add spare parts in **Parts**, save a setup from a c
 
 ### Run on Windows
 
-[Download the latest release](https://github.com/theDutchmanJames/SlotForgePaddock/releases/latest), then open **SlotForge.Paddock.1.0.0.exe** from the release assets. It is portable and does not require Node.js. Close an earlier running copy before opening the updated version.
+[Download the latest release](https://github.com/theDutchmanJames/SlotForgePaddock/releases/latest), then open **SlotForge.Paddock.1.0.1.exe** from the release assets. It is portable and does not require Node.js. Close an earlier running copy before opening the updated version.
 
 The Windows executable is unsigned, so Windows may show an unknown-publisher warning. A `SHA256SUMS.txt` file is included with the download for integrity checking. Your collection is stored separately in your Windows user profile; moving the executable does not move your collection. Use the app's backup and export features to transfer your data.
 
@@ -190,7 +190,7 @@ To create the Windows portable build:
 npm run dist
 ```
 
-The current build is written to `dist/v1.0.0/`. Development notes, test commands, recovery information and release history are in [Development & release history](docs/DEVELOPMENT.md).
+The current build is written to `dist/v1.0.1/`. Development notes, test commands, recovery information and release history are in [Development & release history](docs/DEVELOPMENT.md).
 
 ### Linux and macOS downloads
 
@@ -213,7 +213,7 @@ Use the [current source](https://github.com/theDutchmanJames/SlotForgePaddock/ar
 
 ## Project status
 
-Current version: **1.0.0**. The project is under active development. **SlotForge Paddock** is the official name; earlier versions were called SlotForge Database.
+Current version: **1.0.1**. The project is under active development. **SlotForge Paddock** is the official name; earlier versions were called SlotForge Database.
 
 | Feature | Status |
 | --- | --- |
@@ -224,6 +224,7 @@ Current version: **1.0.0**. The project is under active development. **SlotForge
 | Car exports for SlotForge Timing | Available: select the Timing format when exporting; imports as new copies |
 | SlotForge Timing integration host API | Available from v0.17.0; Timing client and physical two-computer acceptance still pending |
 | Imported Timing performance sessions | Available from v0.17.0: captured configurations, corrections and withdrawals; manual records remain independent |
+| SlotForge Telemetry lap-history API | Available from v1.0.1: session downloads, captured configurations, filtered browsing and quiet change notifications |
 | RaceCoordinatorAI integration | Planned |
 | Windows portable build | Built and tested |
 | Native macOS and Linux builds | GitHub release build jobs and local builders available; interactive native acceptance testing remains outstanding |
@@ -231,6 +232,8 @@ Current version: **1.0.0**. The project is under active development. **SlotForge
 The Paddock side of Timing integration is documented in the [Timing integration handoff](integration-handoff/timing-v1/README.md), including the exact contract, schemas, fixtures and local test host. It is included in v0.17.0. Version 0.19.0 migrates saved databases to **schema 11** for shared club collections. Create a complete backup before running it; v0.18.x and older builds cannot read schema-11 saves. Timing integration remains v1, with an optional catalogue revision that avoids unnecessary downloads after private edits or race-result uploads.
 
 Catalogue imports validate structure and help identify duplicates. Manufacturer facts and physical part compatibility still need your review; the app does not scrape websites or download product images automatically.
+
+Telemetry can read delivered Timing sessions using the existing Dealership password, keeping the original measured laps separate from race adjustments. The [Telemetry handoff](integration-handoff/telemetry-v1/README.md) includes the read API, schemas, correction/withdrawal fixtures and offline synchronisation rules. Telemetry provides the analysis interface; the host API is included from v1.0.1.
 
 ## Licence and copyright
 

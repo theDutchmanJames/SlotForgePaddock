@@ -1,0 +1,175 @@
+{
+  "version": 1,
+  "databaseId": "paddock-demo",
+  "databaseRevision": 4,
+  "snapshot": "645153149b4aaca6e42337f1396573bbdc679cb2a0fd3add5ea8cae20dcbd7f5",
+  "changeToken": "645153149b4aaca6e42337f1396573bbdc679cb2a0fd3add5ea8cae20dcbd7f5",
+  "payload": {
+    "integrationVersion": 1,
+    "databaseId": "paddock-demo",
+    "source": {
+      "id": "timing-demo",
+      "name": "Club Timing PC",
+      "application": "SlotForge Timing"
+    },
+    "sessionId": "session-normal",
+    "revision": 2,
+    "state": "active",
+    "name": "Club race",
+    "type": "race",
+    "startedAt": "2026-10-31T10:01:00.000Z",
+    "endedAt": "2026-10-31T10:02:00.000Z",
+    "track": {
+      "id": "track-1",
+      "name": "Club circuit",
+      "lanes": [
+        {
+          "lane": 1,
+          "lengthM": 20
+        },
+        {
+          "lane": 2,
+          "lengthM": 20
+        }
+      ]
+    },
+    "heats": [
+      {
+        "id": "heat-1",
+        "name": "Heat 1",
+        "startedAtMs": 0,
+        "endedAtMs": 60000
+      }
+    ],
+    "participants": [
+      {
+        "id": "entry-1",
+        "kind": "physical",
+        "carId": "car-a",
+        "configuration": {
+          "databaseId": "paddock-demo",
+          "carId": "car-a",
+          "kind": "current",
+          "configurationId": "b45e252a52522a0b267ac5b440533e42efb74f64796f06ca2e4b1578ca0ef13a",
+          "revision": "b45e252a52522a0b267ac5b440533e42efb74f64796f06ca2e4b1578ca0ef13a",
+          "carRevision": 1,
+          "capturedAt": "2026-10-31T10:00:00.000Z",
+          "technical": {
+            "motor": "21.5k",
+            "pinion": "9",
+            "gear": "27"
+          },
+          "components": [],
+          "signature": "a366a131cf225af3270996c907d8901c09b070435d11ee413e4f4325ed4a7e3a"
+        },
+        "displayName": "Example GT3",
+        "drivers": [
+          {
+            "id": "driver-1",
+            "name": "Alex Example"
+          }
+        ],
+        "stints": [
+          {
+            "id": "stint-1",
+            "heatId": "heat-1",
+            "driverId": "driver-1",
+            "lane": 1,
+            "startedAtMs": 0,
+            "endedAtMs": 60000
+          }
+        ],
+        "laps": [
+          {
+            "id": "entry-0-lap-1",
+            "stintId": "stint-1",
+            "number": 1,
+            "durationMs": 10000,
+            "endedAtMs": 10000,
+            "valid": false,
+            "pit": false,
+            "recordEligible": false,
+            "countsForDistance": true,
+            "distanceM": 20,
+            "reason": "False trigger reviewed"
+          },
+          {
+            "id": "entry-0-lap-2",
+            "stintId": "stint-1",
+            "number": 2,
+            "durationMs": 11000,
+            "endedAtMs": 21000,
+            "valid": true,
+            "pit": false,
+            "recordEligible": true,
+            "countsForDistance": true,
+            "distanceM": 20,
+            "reason": ""
+          },
+          {
+            "id": "entry-0-lap-3",
+            "stintId": "stint-1",
+            "number": 3,
+            "durationMs": 10000,
+            "endedAtMs": 31000,
+            "valid": true,
+            "pit": true,
+            "recordEligible": false,
+            "countsForDistance": true,
+            "distanceM": 20,
+            "reason": "Pit lane"
+          }
+        ]
+      }
+    ],
+    "standings": [
+      {
+        "participantId": "entry-1",
+        "position": 1,
+        "status": "finished",
+        "classifiedLaps": 2,
+        "classifiedElapsedMs": 31000,
+        "points": 10
+      }
+    ],
+    "adjustments": [
+      {
+        "participantId": "entry-1",
+        "kind": "laps",
+        "amount": -1,
+        "reason": "False trigger removed from classification"
+      }
+    ],
+    "notes": "Reviewed by the Race Director."
+  },
+  "receipt": {
+    "ok": true,
+    "integrationVersion": 1,
+    "databaseId": "paddock-demo",
+    "sourceId": "timing-demo",
+    "sessionId": "session-normal",
+    "revision": 2,
+    "state": "active",
+    "contentHash": "12d2a64020341e4252a39be4c1d92be65d0c947eb3f285864aaaadca6a21315a",
+    "receivedAt": "2026-11-01T12:00:00.000Z",
+    "duplicate": false,
+    "warnings": [],
+    "summaries": [
+      {
+        "participantId": "entry-1",
+        "carId": "car-a",
+        "included": true,
+        "statistics": {
+          "validLaps": 1,
+          "recordEligibleLaps": 1,
+          "bestLapMs": 11000,
+          "averageLapMs": 11000,
+          "measuredTimeMs": 11000,
+          "distanceM": 60,
+          "distanceComplete": true,
+          "wins": 1
+        }
+      }
+    ]
+  }
+}
