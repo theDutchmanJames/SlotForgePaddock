@@ -1,10 +1,10 @@
 # Stock planning, setups, reports and showroom shelves
 
-These features are in the current source. They are not yet in a new GitHub release.
+These features are included in v0.18.0.
 
 ## Before opening an existing collection
 
-Create a complete backup using your current version. The updated source migrates
+Create a complete backup using your current version. Version 0.18.0 migrates
 the database to **schema 10** when it is next saved. Published v0.17.x executables
 cannot reopen a schema-10 database. All planning data is included in complete
 backups; the public car package and Timing v1 API remain unchanged.
@@ -56,7 +56,7 @@ uses the existing reviewed parts/substitution workflow.
 
 ## Plan a workshop job
 
-Open a job and select **Plan & checklist** to set its priority, target date,
+Open a job and select **Edit plan** to set its priority, target date,
 waiting status and up to 50 checklist steps. Check steps as you finish them.
 Complete every step and clear **Waiting for parts** before completing the job.
 Cancellation remains possible and preserves recorded physical changes.

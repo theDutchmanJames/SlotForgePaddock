@@ -4,3 +4,33 @@
 .job-photo-open{width:100%;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:0;cursor:zoom-in}.job-photo-full{display:block;max-width:100%;max-height:70vh;object-fit:contain;margin:auto}
 
 .job-plan-panel{margin-bottom:20px}.job-status.waiting{color:var(--amber);background:color-mix(in srgb,var(--amber) 8%,var(--panel));border-color:color-mix(in srgb,var(--amber) 40%,var(--line))}
+
+/* Job planning follows the same framed sections and amber accents as the workbench. */
+.job-plan-panel{border:1px solid var(--line);border-top:3px solid var(--amber);border-radius:12px;background:var(--panel);box-shadow:var(--card-shadow);overflow:hidden}
+.job-plan-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:20px 22px;background:color-mix(in srgb,var(--amber) 4%,var(--panel))}
+.job-plan-heading h2,.plan-section-heading h3{display:flex;align-items:center;gap:9px;margin:0;font-size:16px}
+.job-plan-heading h2 svg{width:20px;height:20px;color:var(--amber)}
+.job-plan-heading p{margin:5px 0 0;font-size:12px;color:var(--muted)}
+.job-plan-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin:0;padding:17px 22px;border-block:1px solid var(--line);background:color-mix(in srgb,var(--bg) 30%,var(--panel))}
+.job-plan-summary>div{min-width:0}.job-plan-summary dt{font-size:11px;color:var(--muted);margin-bottom:5px}.job-plan-summary dd{margin:0;font-size:13px;font-weight:600;overflow-wrap:anywhere}
+.job-plan-summary .plan-attention{color:var(--amber)}.job-waiting-note{padding:12px 22px;margin:0;border-bottom:1px solid var(--line);color:var(--muted);font-size:12px}
+.job-plan-columns{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+.plan-checklist-section,.shopping-section.is-embedded{padding:22px;min-width:0}
+.shopping-section.is-embedded{border-left:1px solid var(--line)}
+.plan-section-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.plan-section-heading h3{font-size:14px}.plan-section-heading h3 svg{width:17px;height:17px;color:var(--muted)}
+.plan-section-heading .badge{font-size:11px;font-weight:400}.plan-section-heading .btn{flex-shrink:0}
+.plan-empty{display:flex;gap:13px;align-items:center;padding:18px;border:1px dashed var(--line);border-radius:8px;background:color-mix(in srgb,var(--bg) 30%,var(--panel));min-height:92px}
+.plan-empty>svg{width:25px;height:25px;color:var(--muted);flex-shrink:0}.plan-empty strong{font-size:13px;font-weight:550}.plan-empty p{margin:5px 0 0;color:var(--muted);font-size:12px;line-height:1.6}
+.plan-help{font-size:12px;line-height:1.6;color:var(--muted);margin:14px 0 0}
+.plan-progress{display:block;width:100%;height:6px;border:0;border-radius:6px;background:var(--line);accent-color:var(--amber);overflow:hidden}
+.plan-progress::-webkit-progress-bar{background:var(--line);border-radius:6px}.plan-progress::-webkit-progress-value{background:var(--amber);border-radius:6px}
+.job-plan-panel .job-checklist{gap:0;margin-top:12px}.job-plan-panel .job-checklist .check-row{padding:12px 0;margin:0;border-bottom:1px solid var(--line);align-items:flex-start;gap:10px}.job-plan-panel .job-checklist .check-row:last-child{border-bottom:0}.job-checklist .check-row span{overflow-wrap:anywhere;min-width:0}.job-checklist .is-complete span{color:var(--muted);text-decoration:line-through}
+.job-plan-photos{padding:18px 22px;border-top:1px solid var(--line)}.job-plan-photos .plan-section-heading{margin-bottom:0}
+.job-plan-photos .job-photo-grid{grid-template-columns:repeat(auto-fill,minmax(180px,1fr))}.job-plan-photos .job-photo-grid img{height:160px}.job-plan-photos figcaption{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding-top:8px;font-size:12px}.job-plan-photos figcaption>span:not(.badge){flex:1;min-width:0;overflow-wrap:anywhere}
+.standalone-shopping{padding:22px;border:1px solid var(--line);border-top:3px solid var(--blue);border-radius:12px;background:var(--panel);box-shadow:var(--card-shadow);margin-top:18px}.standalone-shopping>.plan-section-heading h3 svg{color:var(--blue)}
+.shopping-items{display:grid;gap:12px}.shopping-section .shopping-line{display:flex;align-items:flex-start;gap:14px;padding:16px;margin:0;border:1px solid var(--line);border-radius:8px;background:var(--bg);min-width:0}
+.shopping-section .shopping-line .item-visual{float:none;flex-shrink:0;width:42px;height:42px;margin:0}.shopping-copy{min-width:0;flex:1}.shopping-copy h4{font-size:14px;margin:0;overflow-wrap:anywhere}.shopping-copy p{font-size:12px;margin:5px 0 0;overflow-wrap:anywhere}.shopping-copy .actions{margin-top:12px}.received-purchases{margin-top:16px}.received-purchases summary{font-size:12px;color:var(--muted);cursor:pointer}.received-purchases[open] summary{margin-bottom:12px}
+.catalogue-groups .part-group-card{border-top-color:var(--blue)}.catalogue-groups .part-group-arrow{color:var(--blue)}.catalogue-groups .part-group-card:hover{border-color:var(--blue);background:color-mix(in srgb,var(--blue) 5%,var(--panel))}.catalogue-groups .part-group-card:focus-visible{outline-color:var(--blue)}
+@media(max-width:1100px){.job-plan-columns{grid-template-columns:1fr}.shopping-section.is-embedded{border-left:0;border-top:1px solid var(--line)}}
+@media(max-width:650px){.job-plan-heading{align-items:flex-start;flex-wrap:wrap}.job-plan-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}

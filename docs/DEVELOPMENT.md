@@ -1,5 +1,37 @@
 # Development & release history
 
+## v0.18.0 — Collection planning and workshop improvements — 1 November 2026
+
+Publishes collection planning, shopping/receipts, setup comparisons, workshop
+plans/photos, printable reports and curated showroom shelves, together with the
+review fixes and workshop polish below. Also includes the changes since v0.17.1
+to connection passwords, Timing-format exports, English catalogue guidance and
+the source-available licence. See [release notes](releases/v0.18.0.md).
+
+Back up before updating: saved collections migrate to schema 10, which v0.17.x
+cannot reopen. The Timing v1 contract is unchanged. Validation passed: syntax
+checks, 284 unit/local-server tests and 174 isolated Electron checks, with no
+renderer errors. Packaged startup uses a separate empty profile; source/asset
+comparison and release SHA-256 verification cover the Windows download.
+Native Linux/macOS builds and physical two-computer acceptance remain untested.
+
+## Workshop layout and shopping button fixes — 1 November 2026
+
+- Replaced the loose job-plan controls with an amber-framed section: a status
+  summary, checklist progress, a dedicated purchases column and a photo section.
+  Empty states and completed jobs retain clear labels; columns stack on narrower
+  windows. The plan editor is now labelled **Edit plan**.
+- Fixed the general **Add shopping item** button: an omitted `data-id` reached
+  `startsWith()` as undefined. The dispatcher now handles the unlinked case;
+  purchasing from a job still preselects that job.
+- Catalogue main groups use the theme's blue accent for borders, arrows, hover
+  and keyboard focus. Owned stock retains its amber accent.
+- Verified 16 focused Electron workflows (existing planning, review regressions
+  and four new UI checks), with no renderer errors. Inspected dark/light and
+  narrow-window screenshots; syntax and whitespace checks passed.
+
+These changes are included in v0.18.0.
+
 ## Collection planning review — 1 November 2026
 
 Reviewed the changes from `5c5de96` through `bbcd4f7`: schema migration and

@@ -133,7 +133,7 @@ The same app works for personal and club collections—there is no separate host
 - **Export cars for Timing.** Choose the SlotForge Timing format for supported car details, race classes and photographs. Timing imports them as new copies; no host connection is needed. [File-transfer instructions](docs/TIMING-CAR-EXPORT.md).
 - **Keep private records local.** Personal ownership information, private notes, workshop records and document attachments are excluded from car-sharing packages and shared views. Complete backups retain private data.
 
-**Custom connection passwords (current source).** Start sharing in **Connections**, then choose **Set password…** for browse-only, submissions or Timing access. Use a different password for each access type. Passwords last for the sharing session and reset on restart or revocation.
+**Custom connection passwords.** Start sharing in **Connections**, then choose **Set password…** for browse-only, submissions or Timing access. Use a different password for each access type. Passwords last for the sharing session and reset on restart or revocation.
 
 Local sharing requires the host app to remain running and both computers to be able to communicate. It is intended for a trusted local network, not public internet hosting.
 
@@ -167,7 +167,7 @@ When you want to go further, add spare parts in **Parts**, save a setup from a c
 
 ### Run on Windows
 
-[Download the latest release](https://github.com/theDutchmanJames/SlotForgePaddock/releases/latest), then open **SlotForge.Paddock.0.17.1.exe** from the release assets. It is portable and does not require Node.js. Close an earlier running copy before opening the updated version.
+[Download the latest release](https://github.com/theDutchmanJames/SlotForgePaddock/releases/latest), then open **SlotForge.Paddock.0.18.0.exe** from the release assets. It is portable and does not require Node.js. Close an earlier running copy before opening the updated version.
 
 The Windows executable is unsigned, so Windows may show an unknown-publisher warning. A `SHA256SUMS.txt` file is included with the download for integrity checking. Your collection is stored separately in your Windows user profile; moving the executable does not move your collection. Use the app's backup and export features to transfer your data.
 
@@ -188,7 +188,7 @@ To create the Windows portable build:
 npm run dist
 ```
 
-The current build is written to `dist/v0.17.1/`. Development notes, test commands, recovery information and release history are in [Development & release history](docs/DEVELOPMENT.md).
+The current build is written to `dist/v0.18.0/`. Development notes, test commands, recovery information and release history are in [Development & release history](docs/DEVELOPMENT.md).
 
 ### Build Linux and macOS installers
 
@@ -203,7 +203,7 @@ Use the [current source](https://github.com/theDutchmanJames/SlotForgePaddock/ar
 
 ## Project status
 
-Current version: **0.17.1**. The project is under active development. **SlotForge Paddock** is the official name; earlier versions were called SlotForge Database.
+Current version: **0.18.0**. The project is under active development. **SlotForge Paddock** is the official name; earlier versions were called SlotForge Database.
 
 | Feature | Status |
 | --- | --- |
@@ -211,14 +211,14 @@ Current version: **0.17.1**. The project is under active development. **SlotForg
 | Build from Scratch and manufacturer catalogue imports | Available |
 | Local-network browsing and reviewed submissions | Implemented; physical two-computer Wi-Fi testing remains outstanding |
 | SlotForge Timing car imports | Available through supported Timing JSON exports |
-| Car exports for SlotForge Timing | Available in current source: select the Timing format when exporting; imports as new copies |
+| Car exports for SlotForge Timing | Available: select the Timing format when exporting; imports as new copies |
 | SlotForge Timing integration host API | Available from v0.17.0; Timing client and physical two-computer acceptance still pending |
 | Imported Timing performance sessions | Available from v0.17.0: captured configurations, corrections and withdrawals; manual records remain independent |
 | RaceCoordinatorAI integration | Planned |
 | Windows portable build | Built and tested |
 | Native macOS and Linux builds | Normal/quick installer builders available; native testing remains outstanding |
 
-The Paddock side of Timing integration is documented in the [Timing integration handoff](integration-handoff/timing-v1/README.md), including the exact contract, schemas, fixtures and local test host. It is included in v0.17.0. The current source now migrates saved databases to **schema 10** for collection planning. Create a complete backup before running it; published v0.17.x builds cannot read schema-10 saves. The Timing v1 API contract is unchanged.
+The Paddock side of Timing integration is documented in the [Timing integration handoff](integration-handoff/timing-v1/README.md), including the exact contract, schemas, fixtures and local test host. It is included in v0.17.0. Version 0.18.0 migrates saved databases to **schema 10** for collection planning. Create a complete backup before running it; published v0.17.x builds cannot read schema-10 saves. The Timing v1 API contract is unchanged.
 
 Catalogue imports validate structure and help identify duplicates. Manufacturer facts and physical part compatibility still need your review; the app does not scrape websites or download product images automatically.
 
