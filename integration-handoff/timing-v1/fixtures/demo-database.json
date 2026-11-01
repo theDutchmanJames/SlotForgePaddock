@@ -1,5 +1,6 @@
 {
-  "schema": 10,
+  "schema": 11,
+  "club": null,
   "planning": {
     "shopping": [],
     "jobs": [],
@@ -15,6 +16,7 @@
   "jobs": [],
   "id": "paddock-demo",
   "revision": 2,
+  "catalogueRevision": 2,
   "settings": {
     "name": "Timing integration demo",
     "theme": "dark",
@@ -31,8 +33,8 @@
     {
       "id": "car-a",
       "revision": 1,
-      "created": "2026-10-31T23:27:08.275Z",
-      "updated": "2026-10-31T23:27:08.277Z",
+      "created": "2026-11-01T10:49:14.153Z",
+      "updated": "2026-11-01T10:49:14.154Z",
       "usage": [],
       "tags": [],
       "technical": {
@@ -55,8 +57,8 @@
     {
       "id": "car-b",
       "revision": 1,
-      "created": "2026-10-31T23:27:08.281Z",
-      "updated": "2026-10-31T23:27:08.281Z",
+      "created": "2026-11-01T10:49:14.158Z",
+      "updated": "2026-11-01T10:49:14.158Z",
       "usage": [],
       "tags": [],
       "technical": {

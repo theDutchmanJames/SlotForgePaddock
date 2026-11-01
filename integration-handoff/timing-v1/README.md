@@ -2,7 +2,11 @@
 
 **Contract: Timing integration v1.** This is the Paddock host implementation, not the Timing client. Existing car sharing, car submission review, JSON imports and manual performance records remain separate.
 
+**New client brief, 1 November 2026:** [Dealership Mode handoff for Timing](DEALERSHIP-MODE-HANDOFF.md). Timing's scope is to browse public cars, select them for racing and return finalised results. The brief explains Paddock's club replication for context, the separate permissions, and the public API's current refresh limitations. Dealership Mode is included in v0.19.0.
+
 Start with [CONTRACT.md](CONTRACT.md). The exact request/response shapes and limits are in [timing-v1.schema.json](timing-v1.schema.json). [Fixtures](fixtures/) contain artificial, executable examples. [TESTING.md](TESTING.md) records validation and limitations.
+
+**Catalogue refresh upgrade, 1 November 2026:** Optional `catalogueRevision` is included in v0.19.0. Timing can skip catalogue downloads after private edits or race-result uploads. See [CATALOGUE-REVISION-HANDOFF.md](CATALOGUE-REVISION-HANDOFF.md) for semantics, compatibility and cross-project test results. The schema and status/collection fixtures have been updated; session requests remain v1.
 
 The 31 October review tightened measured-lap validation across heats and added the receipt warning `SESSION_REQUIRES_CORRECTION` for earlier stored sessions with overlapping intervals. Such sessions retain their original payload but contribute no statistics until corrected or withdrawn. See the contract for recovery semantics. Valid v1 request shapes are unchanged.
 

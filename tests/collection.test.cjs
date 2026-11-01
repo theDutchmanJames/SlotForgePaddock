@@ -45,7 +45,7 @@ test('column order persists independently in saved views and supports custom fie
   const restored=new Store();restored.restore(s.snapshot(),0);assert.deepEqual(restored.data.views[0].columns,columns);for(const invalid of [[],['maker'],['name','name'],['name','missing']])assert.throws(()=>action(s,'columns.save',{columns:invalid}),/columns/);
 });
 test('old schemas migrate to choice, document and column defaults without losing collection data',()=>{
-  const s=new Store();add(s);s.mutate('view.save',{name:'Old view'});const old=s.snapshot();old.schema=2;delete old.documents;delete old.choiceAliases;delete old.settings.columns;delete old.views[0].columns;const next=migrate(old);assert.equal(next.schema,10);assert.deepEqual(next.cars,old.cars);assert.deepEqual(next.documents,[]);assert.deepEqual(next.views[0].columns,next.settings.columns);assert.equal(old.schema,2);
+  const s=new Store();add(s);s.mutate('view.save',{name:'Old view'});const old=s.snapshot();old.schema=2;delete old.documents;delete old.choiceAliases;delete old.settings.columns;delete old.views[0].columns;const next=migrate(old);assert.equal(next.schema,11);assert.deepEqual(next.cars,old.cars);assert.deepEqual(next.documents,[]);assert.deepEqual(next.views[0].columns,next.settings.columns);assert.equal(old.schema,2);
 });
 test('documents survive complete restore but never enter car packages or duplication',()=>{
   const s=new Store(),id=add(s);s.mutate('document.add',{carId:id,revision:s.data.cars[0].revision,title:'Receipt',category:'Receipt',document:doc()});const packageText=JSON.stringify(makePackage(s.data,[id],{photos:true,setups:true,documents:true}));assert.ok(!packageText.includes('Private receipt'));assert.ok(!packageText.includes(doc().data));

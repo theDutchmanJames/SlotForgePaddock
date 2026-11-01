@@ -13,7 +13,12 @@ for(const [name,key]of [['normal','normal'],['multi-heat','multi'],['endurance',
 const withSummary=structuredClone(f.normal);withSummary.participants[0].summary=model.statistics(withSummary,withSummary.participants[0]);write('fixtures/normal-with-summary.json',withSummary);
 for(const [name,key]of [['normal','normal'],['correction','correction'],['withdrawal','withdrawal']]){const r=timing.receive(f.store,f[key]);r.receivedAt='2026-10-31T10:05:00.000Z';write('fixtures/'+name+'-response.json',r);}
 const duplicate=timing.receive(f.store,f.withdrawal);duplicate.receivedAt='2026-10-31T10:05:00.000Z';write('fixtures/duplicate-response.json',duplicate);
-write('fixtures/status-response.json',{protocol:2,id:f.store.data.id,revision:f.store.data.revision,name:f.store.data.settings.name,permissions:{browse:true,submit:false,timingResults:true},capabilities:timing.capabilities()});
+write('fixtures/status-response.json',{protocol:2,id:f.store.data.id,revision:f.store.data.revision,catalogueRevision:f.store.data.catalogueRevision,name:f.store.data.settings.name,permissions:{browse:true,submit:false,timingResults:true},capabilities:timing.capabilities()});
+const publicCars=f.store.data.cars.filter(c=>!c.archived).map(require('../src/store.cjs').publicCar);
+const collectionPage={schema:1,id:f.store.data.id,revision:f.store.data.revision,catalogueRevision:f.store.data.catalogueRevision,settings:{name:f.store.data.settings.name},setups:[],parts:[],assemblies:[],installations:[],events:[],tests:[],submissions:[],choices:{},views:[],customFields:[],permissions:{browse:true,submit:false,timingResults:true}};
+// Small illustrative pages, valid under the normal up-to-25-car pagination limit.
+write('fixtures/collection-page-1.json',{...collectionPage,cars:publicCars.slice(0,1),nextOffset:1});
+write('fixtures/collection-page-2.json',{...collectionPage,cars:publicCars.slice(1),nextOffset:null});
 write('fixtures/conflict-response.json',{error:'This revision already exists with different content.',code:'REVISION_CONFLICT'});
 write('fixtures/stale-response.json',{error:'A newer session revision is already stored.',code:'STALE_REVISION'});
 write('fixtures/discovery-request.json',{type:'slotforge-discover',version:1,nonce:'0123456789abcdef0123456789abcdef'});

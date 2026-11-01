@@ -33,7 +33,20 @@ const profile=object({integrationVersion:{const:1},databaseId:id,databaseRevisio
 const error=object({error:str(2000),code:str(100)});
 const timingCapability=object({versions:array({const:1},1,1),profile:{const:'/v1/timing/cars/{carId}'},sessions:{const:'/v1/timing/sessions'},receipt:{const:'/v1/timing/sessions/{sourceId}/{sessionId}'},permission:{const:'timingResults'},configurationKinds:array({const:'current'},1,1),maxRequestBytes:{const:8388608},maxLaps:{const:50000},maxParticipants:{const:256},laneBase:{const:1},durationUnit:{const:'ms'},distanceUnit:{const:'m'}});
 const status=object({protocol:{const:2},id,revision:integer(),name:str(),permissions:object({browse:{const:true},submit:{type:'boolean'},timingResults:{type:'boolean'}}),capabilities:object({timing:timingCapability})});
-const schema={$schema:'https://json-schema.org/draft/2020-12/schema',$id:'https://slotforge.invalid/contracts/timing-v1.schema.json',title:'SlotForge Paddock Timing integration v1',anyOf:[ref('active'),ref('withdrawal')],$defs:{active,withdrawal,configuration,summary,receipt,profile,error,status}};
+// Additive response metadata, deliberately absent from each required list.
+status.properties.catalogueRevision=integer();
+status.properties.clubId=id;
+status.properties.capabilities.properties.club={const:1};
+status.properties.permissions.properties.club={type:'boolean'};
+const catalogueFields=['number','maker','reference','marque','model','scale','vehicleYear','releaseYear','livery','colours','raceNumber','team','drivers','event','edition','origin','category','raceClass','description'];
+// Collection sharing has its own established publicCar projection. In particular,
+// its technicalNotes field is not part of the signed Timing profile projection.
+const catalogueCar=object({id,name:str()});
+Object.assign(catalogueCar.properties,Object.fromEntries(catalogueFields.map(k=>[k,text(20000)])),{technical:{...technical,properties:{...technical.properties,technicalNotes:text(20000)}},picture:text(12*1024*1024),usage:array(text(160),100)});
+const collection=object({schema:{const:1},id,revision:integer(),settings:object({name:str()}),cars:array(ref('catalogueCar'),10000),...Object.fromEntries(['setups','parts','assemblies','installations','events','tests','submissions','views','customFields'].map(k=>[k,array({},0)])),choices:object({}),permissions:status.properties.permissions});
+collection.properties.catalogueRevision=integer();
+collection.properties.nextOffset=nullable(integer());
+const schema={$schema:'https://json-schema.org/draft/2020-12/schema',$id:'https://slotforge.invalid/contracts/timing-v1.schema.json',title:'SlotForge Paddock Timing integration v1',anyOf:[ref('active'),ref('withdrawal')],$defs:{active,withdrawal,configuration,summary,receipt,profile,error,status,collection,catalogueCar}};
 function validate(value,definition=schema,path='$'){
   const fail=message=>{const e=Error((path+': '+message).slice(0,1800));e.apiCode='INVALID_PAYLOAD';e.httpStatus=400;throw e;};
   if(definition.$ref)return validate(value,schema.$defs[definition.$ref.split('/').pop()],path);

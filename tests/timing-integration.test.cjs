@@ -76,7 +76,7 @@ test('capture key persists before first profile, is stable after restart and rej
   const bad=reopened.snapshot();bad.timing.key='broken';assert.throws(()=>migrate(bad));
 });
 test('legacy migration, manual records, private exports, submissions and inventory stay independent',async t=>{
-  const h=await host(t),legacy=h.store.snapshot();legacy.schema=8;delete legacy.timing;assert.equal(migrate(legacy).schema,10);assert.equal(legacy.timing,undefined);
+  const h=await host(t),legacy=h.store.snapshot();legacy.schema=8;delete legacy.timing;assert.equal(migrate(legacy).schema,11);assert.equal(legacy.timing,undefined);
   h.store.mutate('test.add',{carId:'car-a',track:'Home',laps:'5',best:'9.5'});const before=h.store.snapshot();await send(h,h.normal);for(const field of ['tests','cars','parts','events','installations','jobs','supplies'])assert.deepEqual(h.store.data[field],before[field]);const pack=makePackage(h.store.data,['car-a']);assert.equal(pack.timing,undefined);const collection=(await h.request('/v1/collection')).body;assert.equal(collection.timing,undefined);assert.equal(collection.tests.length,0);
   const member=new Store();member.mutate('car.save',{data:{name:'Submitted car'}});const result=await h.request('/v1/submissions',makePackage(member.data,[member.data.cars[0].id]),{code:h.network.code});assert.equal(result.status,200);assert.equal(h.store.data.submissions[0].status,'pending');assert.equal(h.store.data.tests.length,1);
 });

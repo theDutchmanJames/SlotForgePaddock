@@ -98,7 +98,7 @@ function validateStored(db){
     contract.validate(r.lastName,contract.schema.$defs.active.properties.name,'$.lastName');
     check(Array.isArray(r.history)&&r.history.length<1000,'Invalid revision history.');let previous=0;
     for(const h of r.history){check(Number.isInteger(h.revision)&&h.revision>previous&&h.revision<r.payload.revision,'Invalid historical revision.');previous=h.revision;check(['active','withdrawn'].includes(h.state)&&/^[a-f0-9]{64}$/.test(h.contentHash)&&typeof h.receivedAt==='string'&&Number.isFinite(Date.parse(h.receivedAt)),'Invalid session audit record.');}
-    if(r.payload.state==='active')for(const p of r.payload.participants)if(p.carId){check(r.carIds.includes(p.carId),'Missing session car reference.');verifyConfiguration(db,p.carId,p.configuration);}
+    if(r.payload.state==='active')for(const p of r.payload.participants)if(p.carId){check(r.carIds.includes(p.carId),'Missing session car reference.');if(!db.club?.replica)verifyConfiguration(db,p.carId,p.configuration);}
   }
 }
 module.exports={capabilities,profile,receive,receipt,validateStored,validatePayload,verifyConfiguration,canonical,digest,fault,MAX_BYTES};

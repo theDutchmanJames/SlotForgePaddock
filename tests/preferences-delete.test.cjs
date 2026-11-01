@@ -12,7 +12,7 @@ test('all Timing themes and custom colours round trip through disk and backups',
   act(s,'settings.save',{customColors:{...Theme.DEFAULT,accent:'#abc'},banner});const reopened=new Store(s.file);assert.equal(reopened.data.settings.customColors.accent,'#aabbcc');assert.deepEqual(reopened.data.settings.banner,banner);
   const restored=new Store();restored.restore(reopened.snapshot(),0);assert.deepEqual(restored.data.settings,reopened.data.settings);
 });
-test('schema 5 migration leaves records and existing appearance untouched',()=>{const s=new Store();part(s);supply(s);const old=s.snapshot();old.schema=5;const expected=structuredClone(old);const next=migrate(old);assert.deepEqual(old,expected);assert.equal(next.schema,10);assert.deepEqual({...next,schema:5},old);});
+test('schema 5 migration leaves records and existing appearance untouched',()=>{const s=new Store();part(s);supply(s);const old=s.snapshot();old.schema=5;const expected=structuredClone(old);const next=migrate(old);assert.deepEqual(old,expected);assert.equal(next.schema,11);assert.deepEqual({...next,schema:5},old);});
 test('invalid themes, injected colours and malformed banner data never partially save',()=>{
   const s=new Store(),before=s.snapshot();for(const patch of [{theme:'missing'},{theme:'custom',customColors:{...Theme.DEFAULT,bg:'url(https://bad)'}},{customColors:null},{customColors:[]},{banner:{}},{banner:{...banner,line1:''}},{banner:{...banner,line2:'x'.repeat(201)}},{banner:{...banner,line3:'one\ntwo'}}]){assert.throws(()=>act(s,'settings.save',{name:'Should not persist',...patch}));assert.deepEqual(s.snapshot(),before);}
 });

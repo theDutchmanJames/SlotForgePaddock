@@ -1260,6 +1260,9 @@
             },
             "timingResults": {
               "type": "boolean"
+            },
+            "club": {
+              "type": "boolean"
             }
           },
           "required": [
@@ -1337,12 +1340,26 @@
                 "distanceUnit"
               ],
               "additionalProperties": false
+            },
+            "club": {
+              "const": 1
             }
           },
           "required": [
             "timing"
           ],
           "additionalProperties": false
+        },
+        "catalogueRevision": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "clubId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[a-zA-Z0-9_-]+$"
         }
       },
       "required": [
@@ -1352,6 +1369,482 @@
         "name",
         "permissions",
         "capabilities"
+      ],
+      "additionalProperties": false
+    },
+    "collection": {
+      "type": "object",
+      "properties": {
+        "schema": {
+          "const": 1
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "settings": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            }
+          },
+          "required": [
+            "name"
+          ],
+          "additionalProperties": false
+        },
+        "cars": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/catalogueCar"
+          },
+          "maxItems": 10000,
+          "minItems": 0
+        },
+        "setups": {
+          "type": "array",
+          "items": {},
+          "maxItems": 0,
+          "minItems": 0
+        },
+        "parts": {
+          "type": "array",
+          "items": {},
+          "maxItems": 0,
+          "minItems": 0
+        },
+        "assemblies": {
+          "type": "array",
+          "items": {},
+          "maxItems": 0,
+          "minItems": 0
+        },
+        "installations": {
+          "type": "array",
+          "items": {},
+          "maxItems": 0,
+          "minItems": 0
+        },
+        "events": {
+          "type": "array",
+          "items": {},
+          "maxItems": 0,
+          "minItems": 0
+        },
+        "tests": {
+          "type": "array",
+          "items": {},
+          "maxItems": 0,
+          "minItems": 0
+        },
+        "submissions": {
+          "type": "array",
+          "items": {},
+          "maxItems": 0,
+          "minItems": 0
+        },
+        "views": {
+          "type": "array",
+          "items": {},
+          "maxItems": 0,
+          "minItems": 0
+        },
+        "customFields": {
+          "type": "array",
+          "items": {},
+          "maxItems": 0,
+          "minItems": 0
+        },
+        "choices": {
+          "type": "object",
+          "properties": {},
+          "required": [],
+          "additionalProperties": false
+        },
+        "permissions": {
+          "type": "object",
+          "properties": {
+            "browse": {
+              "const": true
+            },
+            "submit": {
+              "type": "boolean"
+            },
+            "timingResults": {
+              "type": "boolean"
+            },
+            "club": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "browse",
+            "submit",
+            "timingResults"
+          ],
+          "additionalProperties": false
+        },
+        "catalogueRevision": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "nextOffset": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "schema",
+        "id",
+        "revision",
+        "settings",
+        "cars",
+        "setups",
+        "parts",
+        "assemblies",
+        "installations",
+        "events",
+        "tests",
+        "submissions",
+        "views",
+        "customFields",
+        "choices",
+        "permissions"
+      ],
+      "additionalProperties": false
+    },
+    "catalogueCar": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "number": {
+          "type": "string",
+          "maxLength": 20000
+        },
+        "maker": {
+          "type": "string",
+          "maxLength": 20000
+        },
+        "reference": {
+          "type": "string",
+          "maxLength": 20000
+        },
+        "marque": {
+          "type": "string",
+          "maxLength": 20000
+        },
+        "model": {
+          "type": "string",
+          "maxLength": 20000
+        },
+        "scale": {
+          "type": "string",
+          "maxLength": 20000
+        },
+        "vehicleYear": {
+          "type": "string",
+          "maxLength": 20000
+        },
+        "releaseYear": {
+          "type": "string",
+          "maxLength": 20000
+        },
+        "livery": {
+          "type": "string",
+          "maxLength": 20000
+        },
+        "colours": {
+          "type": "string",
+          "maxLength": 20000
+        },
+        "raceNumber": {
+          "type": "string",
+          "maxLength": 20000
+        },
+        "team": {
+          "type": "string",
+          "maxLength": 20000
+        },
+        "drivers": {
+          "type": "string",
+          "maxLength": 20000
+        },
+        "event": {
+          "type": "string",
+          "maxLength": 20000
+        },
+        "edition": {
+          "type": "string",
+          "maxLength": 20000
+        },
+        "origin": {
+          "type": "string",
+          "maxLength": 20000
+        },
+        "category": {
+          "type": "string",
+          "maxLength": 20000
+        },
+        "raceClass": {
+          "type": "string",
+          "maxLength": 20000
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 20000
+        },
+        "technical": {
+          "type": "object",
+          "properties": {
+            "body": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "bodyMaterial": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "bodySettings": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "chassis": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "wheelbase": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "motor": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "motorLayout": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "pod": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "podSettings": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "ratedRpm": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "ratedVoltage": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "measuredRpm": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "measuredVoltage": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "measuredDate": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "pinion": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "gear": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "gearType": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "pinionPart": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "gearPart": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "frontAxle": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "rearAxle": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "frontBearings": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "rearBearings": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "frontWheels": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "rearWheels": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "frontTyres": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "rearTyres": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "frontDiameter": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "rearDiameter": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "frontAxlePlay": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "rearAxlePlay": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "guide": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "braids": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "wiring": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "lights": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "digitalSystem": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "chip": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "magnets": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "ballast": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "suspension": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "fasteners": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "weight": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "clearance": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "frontWidth": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "rearWidth": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "motorTorque": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "torqueVoltage": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "torqueType": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "motorType": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "technicalNotes": {
+              "type": "string",
+              "maxLength": 20000
+            }
+          },
+          "additionalProperties": false
+        },
+        "picture": {
+          "type": "string",
+          "maxLength": 12582912
+        },
+        "usage": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "maxItems": 100,
+          "minItems": 0
+        }
+      },
+      "required": [
+        "id",
+        "name"
       ],
       "additionalProperties": false
     }

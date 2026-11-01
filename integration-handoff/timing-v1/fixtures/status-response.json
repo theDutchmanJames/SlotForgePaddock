@@ -2,6 +2,7 @@
   "protocol": 2,
   "id": "paddock-demo",
   "revision": 5,
+  "catalogueRevision": 2,
   "name": "Timing integration demo",
   "permissions": {
     "browse": true,

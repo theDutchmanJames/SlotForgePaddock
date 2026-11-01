@@ -1,0 +1,41 @@
+{
+  "schema": 1,
+  "id": "paddock-demo",
+  "revision": 5,
+  "catalogueRevision": 2,
+  "settings": {
+    "name": "Timing integration demo"
+  },
+  "setups": [],
+  "parts": [],
+  "assemblies": [],
+  "installations": [],
+  "events": [],
+  "tests": [],
+  "submissions": [],
+  "choices": {},
+  "views": [],
+  "customFields": [],
+  "permissions": {
+    "browse": true,
+    "submit": false,
+    "timingResults": true
+  },
+  "cars": [
+    {
+      "id": "car-b",
+      "name": "Example prototype",
+      "maker": "Example maker",
+      "raceClass": "GT3",
+      "technical": {
+        "motor": "21.5k",
+        "pinion": "9",
+        "gear": "27",
+        "technicalNotes": "private technical note"
+      },
+      "picture": "",
+      "usage": []
+    }
+  ],
+  "nextOffset": null
+}

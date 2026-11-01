@@ -1,5 +1,49 @@
 # Development & release history
 
+## v0.19.0 — quiet Timing catalogue refresh — 1 November 2026
+
+- Added persistent `catalogueRevision` to host status and collection responses.
+  It changes with the actual public catalogue, including approved car edits and
+  public specifications affected by workshop operations. Private-only edits,
+  pending/rejected proposals and Timing result uploads leave it unchanged.
+- Existing pagination still guards the complete database revision. Atomic writes,
+  migrations, same-database restore and authoritative club-copy replication retain
+  consistent counters. No Timing request version or public push endpoint is added.
+- Updated the integration contract, response schema, generated fixtures and
+  `integration-handoff/timing-v1/CATALOGUE-REVISION-HANDOFF.md`.
+- Validation: 314 Paddock tests, application syntax checks and 68 Timing client
+  tests passed. An actual Timing client/local Paddock host check also verified
+  status-only refresh after result/private changes and a download after a rename.
+  Physical multi-computer acceptance remains outstanding. See [release notes](releases/v0.19.0.md).
+
+## v0.19.0 — Dealership Mode — 1 November 2026
+
+- Added a shared club collection with one authoritative dealership computer and
+  separately saved copies on trusted club PCs. Local personal collections remain
+  separate. No new app edition, remote-access service or Timing client is added.
+- Club edits, including edits made on the dealership computer, become durable
+  proposals. Review displays original/current/proposed values, validates stock,
+  checks for intervening changes, and atomically records approval or rejection.
+  Existing public car submissions and reviewed Timing sessions retain their flows.
+- Separate club credentials grant the full private club copy. Ordinary browse,
+  car-submission and Timing codes cannot read it. Replicas omit the Timing signing
+  key and cannot re-host, including after ordinary restore.
+- Revision notifications use an event stream with 15-second heartbeats. Change
+  batches preserve record identity and omit unchanged photos. Tests cover queued
+  notifications, an interrupted delta racing a snapshot refresh, and lost receipts.
+- Stale reconnects require explicit backed-up replacement. Unsent proposals survive
+  restarts and replacement; deliberate discard creates a recovery file first.
+- Schema 11 migrates existing collections. Instructions, limits, recovery files and
+  the physical-computer acceptance procedure are in [Shared club collections](SHARED-CLUB.md).
+- Validation: 303 unit/server tests pass, including 19 new club cases. The full
+  isolated Electron suite passed 181 workflow checks with no captured renderer
+  errors; the seven club workflows were rerun after the Dealership Mode rename.
+  Dark/light and minimum-width review screenshots were inspected. Syntax and diff
+  checks pass. These are same-computer local-network simulations; physical
+  three-computer Wi-Fi and this feature on macOS/Linux remain unverified.
+- Included with the catalogue refresh upgrade in v0.19.0.
+
+
 ## Native GitHub release builds — 1 November 2026
 
 - Added native Ubuntu x64/ARM64 and macOS universal jobs, triggered by published

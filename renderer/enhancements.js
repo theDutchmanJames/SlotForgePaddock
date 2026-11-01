@@ -94,7 +94,7 @@ let checklistQueue=Promise.resolve(),pendingChecklistChanges=0;
 function saveChecklistStep(el){
   const payload={jobId:el.dataset.jobId,id:el.dataset.jobStep,done:el.checked};el.disabled=true;pendingChecklistChanges++;
   checklistQueue=checklistQueue.then(async()=>{
-    try{await planningChange('job.check',payload);}catch(error){toast(error.message,true);}
+    try{await planningChange('job.check',payload);}catch(error){if(!finishClubQueued(error))toast(error.message,true);}
     finally{
       pendingChecklistChanges--;
       if(!pendingChecklistChanges&&page==='Workshop'&&workshopJob?.job.id===payload.jobId){await refreshJob();render();}

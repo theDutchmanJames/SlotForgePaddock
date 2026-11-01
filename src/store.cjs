@@ -1,4 +1,5 @@
 const fs = require('node:fs');
+const clubModel=require('./club-model.cjs');
 const path = require('node:path');
 const { randomUUID } = require('node:crypto');
 const {isDeepStrictEqual}=require('node:util');
@@ -50,11 +51,21 @@ function carData(input) {
   for (const k of ['archived','favourite']) if (Object.hasOwn(input,k)) { assert(typeof input[k]==='boolean','Invalid flag.'); out[k]=input[k]; }
   return out;
 }
-function initial() { return {schema:10,planning:planning.empty(),timing:{key:null,sessions:[]},buildDrafts:[],supplies:[],jobs:[],id:randomUUID(),revision:0,settings:{name:'My collection',theme:'dark',columns:[...collection.DEFAULT_COLUMNS]},cars:[],parts:[],assemblies:[],installations:[],setups:[],events:[],tests:[],submissions:[],choices:{},choiceAliases:[],documents:[],views:[],customFields:[]}; }
-function migrate(input){const db=clone(object(input));if(db.schema===1){db.schema=2;db.assemblies=[];}if(db.schema===2){db.schema=3;db.choiceAliases=[];db.documents=[];object(db.settings).columns=[...collection.DEFAULT_COLUMNS];if(Array.isArray(db.views))for(const view of db.views)view.columns=[...collection.DEFAULT_COLUMNS];}if(db.schema===3){db.schema=4;db.jobs=[];}if(db.schema===4){db.schema=5;db.supplies=[];if(Array.isArray(db.parts))for(const p of db.parts){Object.assign(p,catalogue.classify(p.category,p.partType));for(const key of ['maker','scale','dimensions','material','compatibility','picture'])p[key]??='';}}if(db.schema===5)db.schema=6;if(db.schema===6)db.schema=7;if(db.schema===7){db.schema=8;db.buildDrafts=[];}if(db.schema===8){db.schema=9;db.timing??={key:null,sessions:[]};}if(db.schema===9){db.schema=10;db.planning??=planning.empty();}if(Array.isArray(db.submissions))for(const sub of db.submissions){object(sub);sub.package=validatePackage(sub.package);}return validateDatabase(db);}
+function initial() { return {schema:11,club:null,planning:planning.empty(),timing:{key:null,sessions:[]},buildDrafts:[],supplies:[],jobs:[],id:randomUUID(),revision:0,catalogueRevision:0,settings:{name:'My collection',theme:'dark',columns:[...collection.DEFAULT_COLUMNS]},cars:[],parts:[],assemblies:[],installations:[],setups:[],events:[],tests:[],submissions:[],choices:{},choiceAliases:[],documents:[],views:[],customFields:[]}; }
+function migrate(input){const db=clone(object(input));if(db.schema===1){db.schema=2;db.assemblies=[];}if(db.schema===2){db.schema=3;db.choiceAliases=[];db.documents=[];object(db.settings).columns=[...collection.DEFAULT_COLUMNS];if(Array.isArray(db.views))for(const view of db.views)view.columns=[...collection.DEFAULT_COLUMNS];}if(db.schema===3){db.schema=4;db.jobs=[];}if(db.schema===4){db.schema=5;db.supplies=[];if(Array.isArray(db.parts))for(const p of db.parts){Object.assign(p,catalogue.classify(p.category,p.partType));for(const key of ['maker','scale','dimensions','material','compatibility','picture'])p[key]??='';}}if(db.schema===5)db.schema=6;if(db.schema===6)db.schema=7;if(db.schema===7){db.schema=8;db.buildDrafts=[];}if(db.schema===8){db.schema=9;db.timing??={key:null,sessions:[]};}if(db.schema===9){db.schema=10;db.planning??=planning.empty();}if(db.schema===10){db.schema=11;db.club??=null;}if(db.schema===11&&!Object.hasOwn(db,'catalogueRevision'))db.catalogueRevision=0;if(Array.isArray(db.submissions))for(const sub of db.submissions){object(sub);sub.package=validatePackage(sub.package);}return validateDatabase(db);}
 function publicCar(car) {
   const result = {id:car.id,...cleanMap(car,PUBLIC_FIELDS),technical:cleanMap(car.technical || {},TECH_FIELDS),picture:car.picture || '',usage:clone(car.usage || [])};
   return result;
+}
+// Compare exactly the visible catalogue (including its name and ordering), not
+// car revision stamps or a hand-maintained list of mutation types. Some workshop
+// actions change public specifications; others only add private history.
+function publicCatalogue(db){return {id:db.id,name:db.settings.name,cars:db.cars.filter(c=>!c.archived).map(publicCar)};}
+function advanceCatalogue(before,after){
+  const changed=!isDeepStrictEqual(publicCatalogue(before),publicCatalogue(after));
+  const revision=before.catalogueRevision+(changed?1:0);
+  assert(Number.isSafeInteger(revision)&&revision>=0,'Public catalogue revision limit reached.');
+  after.catalogueRevision=revision;
 }
 function makePackage(db, ids, options={}) {
   assert(Array.isArray(ids)&&ids.length>0&&ids.length<=1000,'Select 1–1,000 cars.');assert(new Set(ids).size===ids.length,'Duplicate car selection.');
@@ -81,8 +92,9 @@ function validatePackage(input) {
   return {format:input.format,version:1,packageId:ident(input.packageId),source:ident(input.source),sender:text(input.sender,200),created:text(input.created,100),cars};
 }
 function validateDatabase(db) {
-  object(db); assert(db.schema===10,'Unsupported database version.');planning.validate(db);ident(db.id);build.validateDrafts(db);timing.validateStored(db);
+  object(db); assert(db.schema===11,'Unsupported database version.');clubModel.validate(db);planning.validate(db);ident(db.id);build.validateDrafts(db);timing.validateStored(db);
   assert(Number.isSafeInteger(db.revision) && db.revision>=0,'Invalid database revision.');
+  assert(Number.isSafeInteger(db.catalogueRevision)&&db.catalogueRevision>=0,'Invalid public catalogue revision.');
   for(const k of ['cars','parts','installations','setups','events','tests','submissions','views','customFields']){assert(Array.isArray(db[k]),'Invalid database: '+k);unique(db[k],k);}
   assert(db.cars.length<=10000 && db.parts.length<=50000,'Database limit exceeded.');
   object(db.settings);text(db.settings.name,200);assert(db.settings.name.trim(),'Missing database name.');preferences.validate(db.settings,collection.metadata(db,collectionContext).columns);
@@ -108,12 +120,15 @@ function validateDatabase(db) {
   return db;
 }
 class Store {
-  constructor(file) {this.file=file;this.data=initial();if(file&&fs.existsSync(file))this.data=migrate(readJSON(file));}
+  constructor(file) {this.listeners=new Set();this.file=file;this.data=initial();if(file&&fs.existsSync(file))this.data=migrate(readJSON(file));}
   snapshot(){return clone(this.data);}
+  subscribe(fn){this.listeners.add(fn);return ()=>this.listeners.delete(fn);}
+  emit(){for(const fn of this.listeners)try{fn();}catch{}}
+  replace(data){validateDatabase(data);this.persist(data);this.data=data;this.emit();return this.snapshot();}
   metadata(){return collection.metadata(this.data,collectionContext);}
   plan(action,p={}){if(action==='catalogue.preview')return catalogueImport.preview(this.data,p.input);if(action==='catalogue.selection')return catalogueImport.selected(this.data,p);if(action==='build.preview')return build.plan(this.data,p);if(action==='part.delete')return inventory.deletion(this.data,p.id);if(action==='job.view')return jobs.model(this.data,p.id,TECH_FIELDS);if(action==='choices.catalogue')return collection.catalogue(this.data,collectionContext);if(action==='setup.options')return workshop.setupOptions(this.data,p.id);if(['setup.preview','choice.preview','bulk.preview'].includes(action)){const draft=this.snapshot(),result=action==='setup.preview'?workshop.applySetup(draft,p,true):action==='choice.preview'?collection.renameChoice(draft,p,collectionContext,true):collection.applyBulk(draft,p,true);validateDatabase(draft);return result;}throw new Error('Unknown preview.');}
   persist(db){if(!this.file)return;fs.mkdirSync(path.dirname(this.file),{recursive:true});const temp=this.file+'.tmp'; const fd=fs.openSync(temp,'w');try{fs.writeFileSync(fd,JSON.stringify(db));fs.fsyncSync(fd);}finally{fs.closeSync(fd);}if(fs.existsSync(this.file))fs.copyFileSync(this.file,this.file+'.previous');fs.renameSync(temp,this.file);}
-  transact(fn){const draft=clone(this.data);const result=fn(draft);planning.pruneFocus(draft,this.data);draft.revision++;validateDatabase(draft);this.persist(draft);this.data=draft;return result;}
+  transact(fn){const draft=clone(this.data);const result=fn(draft);planning.pruneFocus(draft,this.data);draft.revision++;advanceCatalogue(this.data,draft);validateDatabase(draft);this.persist(draft);this.data=draft;this.emit();return result;}
   mutate(action,p={}) {object(p);let result;if(action.startsWith('planning.')){this.transact(db=>{result=planning.mutate(db,action,p);});return {result,data:this.snapshot(),collection:this.metadata()};}
     if(action==='submission.add'){const pack=validatePackage(p.package);const existing=this.data.submissions.find(s=>s.package.packageId===pack.packageId);if(existing){assert(isDeepStrictEqual(existing.package,pack),'This package identity was already used for different content. Export a new package for changed cars.');return {result:'duplicate',data:this.snapshot()};}}
     this.transact(db=>{
@@ -154,6 +169,6 @@ class Store {
       const prior=new Map(this.data.cars.map(c=>[c.id,c.revision]));for(const c of db.cars)if(prior.get(c.id)!==c.revision)remember(c);
     });return {result,data:this.snapshot(),collection:this.metadata()};
   }
-  restore(input,revision){const data=migrate(input);assert(this.data.revision===revision,'Database changed. Export again before restoring.');data.revision=this.data.revision+1;this.persist(data);this.data=data;return this.snapshot();}
+  restore(input,revision){const data=migrate(input);assert(this.data.revision===revision,'Database changed. Export again before restoring.');data.revision=this.data.revision+1;if(data.id===this.data.id){const previous={...this.data,catalogueRevision:Math.max(this.data.catalogueRevision,data.catalogueRevision)};advanceCatalogue(previous,data);}validateDatabase(data);this.persist(data);this.data=data;this.emit();return this.snapshot();}
 }
-module.exports={Store,initial,migrate,validateDatabase,validatePackage,makePackage,publicCar,PUBLIC_FIELDS,TECH_FIELDS,COMPONENT_FIELDS,TEXT_FIELDS};
+module.exports={Store,initial,migrate,validateDatabase,validatePackage,makePackage,publicCar,publicCatalogue,PUBLIC_FIELDS,TECH_FIELDS,COMPONENT_FIELDS,TEXT_FIELDS};
