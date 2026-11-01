@@ -67,7 +67,8 @@ Files are written to dist/v<version>/. Nothing is installed automatically.`);
   }
   const output = path.join(root, 'dist', `v${pkg.version}`);
   const extensions = platform === 'mac' ? ['dmg', 'zip'] : ['AppImage', 'deb'];
-  const files = extensions.map(ext => `SlotForgePaddock-${pkg.version}-${platform}-${arch}.${ext}`);
+  // electron-builder uses each Linux package format's native architecture label.
+  const files = extensions.map(ext => `SlotForgePaddock-${pkg.version}-${platform}-${platform === 'linux' && arch === 'x64' ? (ext === 'deb' ? 'amd64' : 'x86_64') : arch}.${ext}`);
   const signature = stat => [stat.dev,stat.ino,stat.size,stat.mtimeMs,stat.ctimeMs].join('/');
   const previous = new Map(files.map(file=>{try{return [file,signature(fs.statSync(path.join(output,file)))];}catch(error){if(error.code!=='ENOENT')throw error;return [file,null];}}));
   const started = Date.now();

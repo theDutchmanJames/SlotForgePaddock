@@ -79,7 +79,28 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
           PLATFORM: ${{ matrix.platform }}
           ARCH: ${{ matrix.arch }}
-        run: node scripts/build-desktop.cjs "$PLATFORM" --arch "$ARCH" --no-pause
+        run: |
+          npm ci
+          npm run check
+          npm test
+          npm run "dist:$PLATFORM" -- "--$ARCH" --publish never
+      - name: Create manifests for the exact expected installers
+        working-directory: dist/v${{ needs.source.outputs.version }}
+        env:
+          PLATFORM: ${{ matrix.platform }}
+          ARCH: ${{ matrix.arch }}
+          RELEASE_VERSION: ${{ needs.source.outputs.version }}
+        run: |
+          node <<'NODE'
+          const fs=require('fs'),crypto=require('crypto');
+          const {PLATFORM:p,ARCH:a,RELEASE_VERSION:v}=process.env;
+          const names=(p==='mac'?['dmg','zip']:['AppImage','deb']).map(ext=>`SlotForgePaddock-${v}-${p}-${p==='linux'&&a==='x64'?(ext==='deb'?'amd64':'x86_64'):a}.${ext}`);
+          const sums=names.map(name=>{
+            if(!fs.statSync(name).isFile()||!fs.statSync(name).size)throw Error(`Missing installer: ${name}`);
+            return `${crypto.createHash('sha256').update(fs.readFileSync(name)).digest('hex')}  ${name}`;
+          }).join('\n')+'\n';
+          fs.writeFileSync(`SHA256SUMS-${p}-${a}.txt`,sums);
+          NODE
       - name: Verify installer checksums
         working-directory: dist/v${{ needs.source.outputs.version }}
         env:
@@ -93,7 +114,7 @@ jobs:
           compression-level: 0
           retention-days: 14
           path: |
-            dist/v${{ needs.source.outputs.version }}/SlotForgePaddock-${{ needs.source.outputs.version }}-${{ matrix.platform }}-${{ matrix.arch }}.*
+            dist/v${{ needs.source.outputs.version }}/SlotForgePaddock-${{ needs.source.outputs.version }}-${{ matrix.platform }}-*
             dist/v${{ needs.source.outputs.version }}/SHA256SUMS-${{ matrix.platform }}-${{ matrix.arch }}.txt
 
   publish:
@@ -129,7 +150,7 @@ jobs:
           const files=[];
           const hash=file=>crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
           for(const [platform,arch,extensions] of [['linux','x64',['AppImage','deb']],['linux','arm64',['AppImage','deb']],['mac','universal',['dmg','zip']]]){
-            const names=extensions.map(ext=>`SlotForgePaddock-${version}-${platform}-${arch}.${ext}`);
+            const names=extensions.map(ext=>`SlotForgePaddock-${version}-${platform}-${platform==='linux'&&arch==='x64'?(ext==='deb'?'amd64':'x86_64'):arch}.${ext}`);
             const sums=`SHA256SUMS-${platform}-${arch}.txt`;
             const expected=names.map(name=>`${hash(name)}  ${name}`).join('\n')+'\n';
             assert.equal(fs.readFileSync(sums,'utf8'),expected,`Invalid manifest: ${sums}`);

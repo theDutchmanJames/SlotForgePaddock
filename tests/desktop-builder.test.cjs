@@ -29,7 +29,8 @@ function fixture(t) {
         const arch = argv.find(a => ['--x64', '--arm64', '--universal'].includes(a)).slice(2);
         const output = path.join(root, 'dist/v1.2.3'); fs.mkdirSync(output, {recursive: true});
         for (const ext of platform === 'mac' ? ['dmg', 'zip'] : ['AppImage', 'deb']) {
-          const file = path.join(output, `SlotForgePaddock-1.2.3-${platform}-${arch}.${ext}`);
+          const packageArch = platform === 'linux' && arch === 'x64' ? (ext === 'deb' ? 'amd64' : 'x86_64') : arch;
+          const file = path.join(output, `SlotForgePaddock-1.2.3-${platform}-${packageArch}.${ext}`);
           fs.writeFileSync(file, 'fake installer');
           if (stale) fs.utimesSync(file, new Date(0), new Date(0));
         }
@@ -48,8 +49,8 @@ test('normal native build checks before packaging and writes usable checksums', 
   assert.equal(result.code, 0);
   assert.deepEqual(result.calls, ['ci', 'run check', 'test', 'run dist:linux -- --x64 --publish never']);
   const sums = fs.readFileSync(path.join(root, 'dist/v1.2.3/SHA256SUMS-linux-x64.txt'), 'utf8');
-  assert.match(sums, /^[a-f0-9]{64}  SlotForgePaddock-1.2.3-linux-x64.AppImage\n/);
-  assert.match(sums, /\.deb\n$/);
+  assert.match(sums, /^[a-f0-9]{64}  SlotForgePaddock-1.2.3-linux-x86_64.AppImage\n/);
+  assert.match(sums, /linux-amd64\.deb\n$/);
 });
 test('failed checks stop packaging and never claim success', t => {
   const {execute} = fixture(t), result = execute([], {fail: 'run check'});

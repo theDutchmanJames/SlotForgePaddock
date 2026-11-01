@@ -89,7 +89,8 @@ Files are written to `dist/v<version>/`:
 
 | Platform | Files |
 | --- | --- |
-| Linux | `SlotForgePaddock-<version>-linux-<arch>.AppImage` and `.deb` |
+| Linux x64 | `SlotForgePaddock-<version>-linux-x86_64.AppImage` and `SlotForgePaddock-<version>-linux-amd64.deb` |
+| Linux ARM64 | `SlotForgePaddock-<version>-linux-arm64.AppImage` and `.deb` |
 | macOS | `SlotForgePaddock-<version>-mac-<arch>.dmg` and `.zip` |
 
 Each builder also writes a platform/architecture-specific SHA-256 checksum file. Local builds do not upload anything; only the separate GitHub workflow publishes downloads. The existing Windows builder remains `npm run dist`.
