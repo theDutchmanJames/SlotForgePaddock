@@ -1,5 +1,25 @@
 # Development & release history
 
+## Native GitHub release builds — 1 November 2026
+
+- Added native Ubuntu x64/ARM64 and macOS universal jobs, triggered by published
+  releases or manual dispatch. Jobs build the exact tag commit and check its
+  package version before packaging. Release assets upload only after all builds
+  succeed, with separate SHA-256 manifests and no overwriting of existing files.
+- Backfilled v0.18.0 with AppImage/deb downloads for both Linux architectures and
+  a universal DMG/ZIP for Intel and Apple Silicon. The application source tag and
+  existing Windows assets remain unchanged.
+- The first native run exposed electron-builder's Linux x64 naming conventions:
+  AppImage uses `x86_64`, Debian uses `amd64`. Fixed the local builder's output
+  verification and covered those names in its tests. The workflow packages
+  directly so it can also build the existing v0.18.0 tag without changing it.
+- All three corrected native jobs passed. Local builder tests (7) and publishing
+  guard checks (6) passed; the publisher checks manifests, tag identity, existing
+  asset conflicts and uploaded SHA-256 hashes. Workflow run:
+  https://github.com/theDutchmanJames/SlotForgePaddock/actions/runs/41256345315
+- macOS uses ad-hoc signing, not Developer ID/notarisation. Interactive native
+  installation/startup and physical two-computer tests remain outstanding.
+
 ## v0.18.0 — Collection planning and workshop improvements — 1 November 2026
 
 Publishes collection planning, shopping/receipts, setup comparisons, workshop
