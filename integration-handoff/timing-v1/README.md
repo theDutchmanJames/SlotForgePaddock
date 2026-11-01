@@ -12,7 +12,7 @@ The 31 October review tightened measured-lap validation across heats and added t
 
 ## Connect in five steps
 
-1. Run updated Paddock source. In **Connections**, start sharing and select **Allow Timing results**. Use the actual displayed IPv4 address **and dynamic port**, and the separate **Timing connection code**. Results permission starts disabled whenever sharing starts; codes change on restart or revocation.
+1. For Dealership Mode, enable it in Connections and choose a password. Use the displayed address **and dynamic port** plus that same remembered **Dealership password** in Timing. It authorises results immediately (`permissions.timingResults: true`) and survives host restarts. A legacy sharing host still uses its dedicated temporary Timing credential.
 2. Timing's Electron **main process** discovers hosts or accepts an address, then calls `GET /v1/status` with `Authorization: Bearer <code>`. Pair with the returned database `id`; persist that identity. Check `capabilities.timing.versions` contains `1` and `permissions.timingResults` before uploading. Older hosts without Timing capabilities still support collection browsing.
 3. Browse `/v1/collection` using the existing pagination protocol. Fetch `/v1/timing/cars/{carId}` with `X-SlotForge-Database: <paired-id>`. Cache the public car profile and the **entire opaque configuration object** locally. Refresh/capture before a race when connected; if racing from cache, retain the actual cached capture and show its age. Do not fabricate a fresh capture timestamp.
 4. After Race Director review, save a complete session locally and queue `POST /v1/timing/sessions`. Supply the immutable pre-race capture for each linked physical car. Queue retries retain the same source ID, session ID, revision and JSON content. Never change a payload while keeping its revision.
@@ -58,4 +58,4 @@ Release v0.17.0 includes this host API. The older v0.16.3 executable predates it
 
 ## Custom password compatibility
 
-Updated Paddock source lets hosts choose session-only passwords in place of generated credentials. The request header is unchanged. Timing 1.99.4 currently restricts its connection input to 24 hexadecimal characters; its client must accept opaque printable-ASCII credentials before using custom passwords. Keep the generated Timing code until that validation is updated. See CONTRACT.md for limits and HTTP 429 authentication backoff.
+Dealership passwords are remembered and accept 4–128 printable ASCII characters. Timing source inspected on 1 November 2026 accepts 8–128 characters: use at least eight until Timing lowers its minimum to four and updates the connection wording. The request header and endpoints are unchanged. Legacy custom credentials remain session-only with an eight-character minimum. See DEALERSHIP-MODE-HANDOFF.md for the precise client change.

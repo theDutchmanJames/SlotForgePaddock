@@ -3,9 +3,9 @@ const {Store}=require('../src/store.cjs'),{Network}=require('../src/network.cjs'
 module.exports=async({win,store,network,js,wait,click,fill,submit,qa})=>{
  const checks=[],club=network.club;
  await click('[data-action="nav"][data-id="Connections"]');
- await click('[data-action="club-enable"]');await fill({name:'Main club computer'});
+ await click('[data-action="club-enable"]');await fill({name:'Main club computer',password:'race',confirm:'race'});
  await js(`document.querySelector('[name="confirmed"]').checked=true`);await submit();
- assert.equal(club.coordinator,true);await wait(`document.body.innerText.includes('Dealership Mode')`);checks.push('Dealership Mode enabled with recovery backup');
+ assert.equal(club.coordinator,true);await wait(`document.body.innerText.includes('Dealership Mode')`);assert.equal(network.clubCode,'race');assert.equal(network.hostingMode,'dealership');assert.equal(await js("!!document.querySelector('[data-action=\"set-host-password\"]')"),false);await click('[data-action="club-stop"]');await click('[data-action="club-start"]');assert.equal(network.clubCode,'race');fs.writeFileSync(path.join(qa,'dealership-password-host.png'),(await win.webContents.capturePage()).toPNG());checks.push('Dealership Mode starts with one remembered password and separate hosting controls');
  await click('[data-action="nav"][data-id="Cars"]');await click('[data-action="add-car"]');
  await fill({name:'Club review UI car',maker:'NSR','technical.motor':'21.5k RPM'});await submit();
  assert.ok(!store.data.cars.some(c=>c.name==='Club review UI car'));
@@ -26,7 +26,7 @@ module.exports=async({win,store,network,js,wait,click,fill,submit,qa})=>{
  const remoteStore=new Store(path.join(folder,'database.json'));remoteStore.mutate('car.save',{data:{name:'Remote club Lexus'}});
  const remoteNet=new Network(remoteStore),remoteClub=new Club(remoteStore,remoteNet,folder);
  try{
-  remoteClub.enable('Other club dealership computer');await remoteNet.start();
+  remoteClub.enable('Other club dealership computer','Club test password');await remoteNet.start();
   await click('[data-action="nav"][data-id="Connections"]');
   // The local dealership computer can keep its collection and open another club copy.
   await js(`clubJoin()`);await fill({address:'127.0.0.1:'+remoteNet.port,name:'Club laptop',code:remoteNet.clubCode});await submit();

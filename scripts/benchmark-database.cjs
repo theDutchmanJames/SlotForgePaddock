@@ -8,9 +8,8 @@ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'paddock-benchmark-')),s=new Stor
 const measure=(name,fn)=>{const start=performance.now(),v=fn();report[name]=Math.round(performance.now()-start);return v;};
 (async()=>{try{
  for(let i=0;i<40;i++)s.mutate('car.save',{data:{name:'Benchmark car '+i}});
- const picture='data:image/jpeg;base64,'+Buffer.alloc(512*1024,72).toString('base64');
- s.transact(db=>{for(const car of db.cars)car.picture=picture;});report.databaseMiB=Math.round(Buffer.byteLength(JSON.stringify(s.data))/1024/1024);
- net=new Network(s);club=new Club(s,net,dir);club.enable('Benchmark');
+ s.transact(db=>{for(const [i,car] of db.cars.entries())car.picture='data:image/jpeg;base64,'+Buffer.alloc(512*1024,72+i).toString('base64');});report.databaseMiB=Math.round(Buffer.byteLength(JSON.stringify(s.data))/1024/1024);
+ net=new Network(s);club=new Club(s,net,dir);club.enable('Benchmark','Club test password');
  measure('snapshot',()=>s.snapshot());measure('sharedSnapshot',()=>M.shared(s.data));measure('conflictDigest',()=>M.digest(s.data));
  measure('firstTimingProfile',()=>timing.profile(s,s.data.cars[0].id));measure('nextTimingProfile',()=>timing.profile(s,s.data.cars[0].id));
  measure('privateTransaction',()=>s.mutate('work.add',{carId:s.data.cars[0].id,type:'maintenance',title:'Private work'}));

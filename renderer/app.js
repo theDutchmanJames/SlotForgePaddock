@@ -14,7 +14,13 @@ const local=()=>source==='local';
 function acceptSnapshot(next){if(db&&db.id===next.id&&db.revision>next.revision)return;db=next;}
 function switchCollection(next){workshopJob=null;recentWorkLimit=3;source=next;carId=null;section='Overview';selected.clear();usage=[];query='';archived=false;matchAll=false;}
 const car=()=>current().cars.find(c=>c.id===carId);
-async function api(method,...args){const r=await window.slotforge[method](...args);if(r.error)throw new Error(r.error);return r.value;}
+async function api(method,...args){
+ const baseline=db,baselinePath=dataPath;
+ if(method==='mutate'&&baseline)args[2]={databaseId:baseline.id,revision:baseline.revision,dataPath:baselinePath};
+ const r=await window.slotforge[method](...args);if(r.error)throw new Error(r.error);
+ if(r.value?.dataPatch){const p=r.value.dataPatch;if(!baseline||baseline.id!==p.databaseId||baseline.revision!==p.revision||baselinePath!==p.dataPath)throw Error('The collection changed while refreshing. Reopen the collection.');r.value.data=slotforgeSnapshot.apply(baseline,p.changes);delete r.value.dataPatch;}
+ return r.value;
+}
 function toast(message,error=false){clearTimeout(toastTimer);const t=$('#toast');t.textContent=message;t.className=error?'error':'';t.hidden=false;toastTimer=setTimeout(()=>t.hidden=true,error?10000:4000);}
 async function change(action,p={}){if(!local())throw new Error('Switch to your local database to make changes.');const r=await api('mutate',action,p);acceptSnapshot(r.data);if(r.collection)collectionMeta=r.collection;if(r.club)clubState=r.club;clubQueued(r);return r.result;}
 function placeholder(label='Add your own photograph'){return `<div class="placeholder">${icon('car')}<span>${esc(label)}</span></div>`;}
@@ -28,7 +34,7 @@ function render(){
   prepareShowroom();
   applyTheme();
   $('#header').innerHTML=`<div class="header-top"><div class="brand"><span class="brand-mark">${icon('car')}</span><div>SlotForge Paddock<small>Collection & workshop</small></div></div>${reviewButton()}</div><nav class="main-nav" aria-label="Main navigation">${navs.map(n=>`<button class="nav-btn ${page===n?'active':''}" data-action="nav" data-id="${esc(n)}" aria-current="${page===n?'page':'false'}">${icon(uiPageIcons[n])}${esc(n)}</button>`).join('')}</nav>`;
-  $('#database-bar').innerHTML=`<span class="muted">Database</span><select id="database-select" aria-label="Current database"><option value="local">${esc(db.settings.name)}</option>${remote?`<option value="remote" ${source==='remote'?'selected':''}>${esc(remote.settings.name)} · Shared</option>`:''}</select><span class="db-state">${icon('database')} ${local()?(clubState?.active?'Dealership collection copy':clubState?.role==='coordinator'?'Dealership Mode':'Local database'):net.remote?.permissions?.submit?'Shared collection · Submit for review':'Shared collection · Browse only'}</span><span class="spacer"></span><span class="db-state"><span class="dot ${local()?clubState?.active&&clubState.state!=='connected'?'offline':'':net.remote?.state!=='connected'?'offline':''}"></span>${local()?(clubState?.active?(clubState.state==='connected'?'Dealership connected':clubState.state==='outdated'?'Collection copy out of date':'Dealership offline · saved copy'):'Saved on this computer'):net.remote?.state==='connected'?'Connected':'Saved view · offline'}</span>${net.sharing?badge('Sharing enabled','good'):''}`;
+  $('#database-bar').innerHTML=`<span class="muted">Database</span><select id="database-select" aria-label="Current database"><option value="local">${esc(db.settings.name)}</option>${remote?`<option value="remote" ${source==='remote'?'selected':''}>${esc(remote.settings.name)} · Shared</option>`:''}</select><span class="db-state">${icon('database')} ${local()?(clubState?.active?'Dealership collection copy':clubState?.role==='coordinator'?'Dealership Mode':'Local database'):net.remote?.permissions?.submit?'Shared collection · Submit for review':'Shared collection · Browse only'}</span><span class="spacer"></span><span class="db-state"><span class="dot ${local()?clubState?.active&&clubState.state!=='connected'?'offline':'':net.remote?.state!=='connected'?'offline':''}"></span>${local()?(clubState?.active?(clubState.state==='connected'?'Dealership connected':clubState.state==='outdated'?'Collection copy out of date':'Dealership offline · saved copy'):'Saved on this computer'):net.remote?.state==='connected'?'Connected':'Saved view · offline'}</span>${net.sharing?badge(net.hostingMode==='dealership'?'Dealership online':'Sharing enabled','good'):''}`;
   const views={'Overview':renderOverview,'Showroom':renderShowroom,'Cars':()=>carId&&car()?renderProfile():renderCars(),'Parts':renderParts,'Workshop':renderWorkshop,'Library':renderLibrary,'Connections':renderConnections,'Import & Export':renderExchange,'Settings':renderSettings,'Review':renderReviewHub};
   $('#main').dataset.page=page;
   $('#main').innerHTML=clubBanner()+'<div id="remote-notice">'+remoteNotice()+'</div>'+views[page]();paintCustomTile();applyPhotoFocus();
@@ -199,7 +205,6 @@ document.addEventListener('click',async event=>{
       case 'connect':connectDialog();return;
       case 'discover-hosts':await findHosts();return;
       case 'connect-discovered':connectDialog(discoveredHosts[Number(id)].address);return;
-      case 'toggle-timing-results':net=await api('network','controls',{allowTimingResults:!net.allowTimingResults});break;
       case 'toggle-submissions':net=await api('network','controls',{allowSubmissions:!net.allowSubmissions});break;
       case 'set-host-password':hostPasswordDialog(id);return;
       case 'rotate-codes':modal('Revoke connection codes and passwords', '<p>Replace all three codes or passwords with random codes now. Existing members will need a new code for future reads or submissions. Public data they have already read cannot be withdrawn.</p>',async()=>{net=await api('network','controls',{rotate:true});},'Revoke and replace codes');return;

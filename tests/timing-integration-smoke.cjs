@@ -6,8 +6,8 @@ module.exports=async({win,store,network,js,wait,click,qa})=>{
   store.mutate('test.add',{carId:'car-a',track:'Independent manual test',best:'9.5'});
   const reload=async()=>{await js(`(async()=>{const r=await api('read');db=r.data;net=r.network;collectionMeta=r.collection;switchCollection('local');page='Cars';carId='car-a';section='Performance';render();})()`);};
   await reload();assert.match(await js('document.body.innerText'),/No Timing sessions received/);
-  await js(`page='Connections';render()`);await click('[data-action="start-sharing"]');await wait('net.sharing');assert.match(await js('document.body.innerText'),/Timing results are disabled/);
-  await click('[data-action="toggle-timing-results"]');assert.equal(network.allowTimingResults,true);assert.match(await js('document.body.innerText'),/Timing results are enabled/);
+  await js(`page='Connections';render()`);await click('[data-action="start-sharing"]');await wait('net.sharing');assert.match(await js('document.body.innerText'),/dedicated Timing code or password/);
+  assert.equal(await js("document.querySelector('[data-action=\"toggle-timing-results\"]')===null"),true);assert.equal(network.access(network.timingCode).timingResults,true);
   const response=await fetch('http://127.0.0.1:'+network.port+'/v1/timing/sessions',{method:'POST',headers:{Authorization:'Bearer '+network.timingCode,'Content-Type':'application/json','X-SlotForge-Database':store.data.id},body:JSON.stringify(f.endurance)});assert.equal(response.status,200);
   await wait(`document.querySelector('#toast').innerText.includes('Timing results updated')`);assert.ok(!(await js(`document.querySelector('#toast').innerText`)).includes('club submission'));await reload();assert.match(await js('document.body.innerText'),/Endurance driver change/);assert.match(await js('document.body.innerText'),/Independent manual test/);assert.match(await js('document.body.innerText'),/Sam Example/);
   await click('[data-action="timing-session"]');await wait(`document.querySelector('#dialog').innerText.includes('Measured laps')`);await js(`document.querySelectorAll('#dialog details').forEach(d=>d.open=true)`);
@@ -17,5 +17,5 @@ module.exports=async({win,store,network,js,wait,click,qa})=>{
   win.setSize(1440,980);await js(`new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))`);fs.writeFileSync(path.join(qa,'timing-performance-dark.png'),(await win.webContents.capturePage()).toPNG());
   await js(`db.settings.theme='light';render()`);win.setSize(960,900);await js(`new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))`);assert.equal(await js('document.documentElement.scrollWidth<=window.innerWidth'),true);fs.writeFileSync(path.join(qa,'timing-performance-light.png'),(await win.webContents.capturePage()).toPNG());
   await js(`db.settings.theme='dark';render()`);win.setSize(1440,980);await network.stop();
-  return ['Timing permission toggle and dedicated connection code','HTTP Timing delivery appears beside independent manual records','captured configuration and endurance drivers visible without private notes','corrected/withdrawn sessions and derived totals refresh','Timing performance view fits dark and narrow light layouts'];
+  return ['Timing credential authorises results immediately without a permission toggle','HTTP Timing delivery appears beside independent manual records','captured configuration and endurance drivers visible without private notes','corrected/withdrawn sessions and derived totals refresh','Timing performance view fits dark and narrow light layouts'];
 };

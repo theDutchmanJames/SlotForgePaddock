@@ -20,31 +20,38 @@ function localAddress(address) {
 }
 class Network {
   constructor(store,onChange=()=>{},onNetwork=()=>{}){this.store=store;this.onChange=onChange;this.onNetwork=onNetwork;this.server=null;this.code='';this.browseCode='';this.allowSubmissions=true;this.remote=null;this.cached=null;this.pending=null;this.generation=0;this.readAbort=new AbortController();this.starting=null;this.advertiser=null;this.discoveryError='';this.refreshing=null;this.nextPoll=0;this.failures=0;this.scanning=null;this.sending=false;}
-  status(){return {clubCode:this.club?.coordinator?(this.clubCode||''):'',timingCode:this.timingCode||'',allowTimingResults:!!this.allowTimingResults,sharing:!!this.server&&!!this.port,code:this.code,browseCode:this.browseCode,allowSubmissions:this.allowSubmissions,discoverable:!!this.advertiser,discoveryError:this.discoveryError,port:this.port||0,addresses:this.server?Object.values(os.networkInterfaces()).flat().filter(i=>i.family==='IPv4'&&!i.internal).map(i=>i.address+':'+this.port):[],remote:this.remote?{address:this.remote.address,name:this.remote.name,id:this.remote.id,state:this.remote.state,lastSync:this.remote.lastSync,lastError:this.remote.lastError,permissions:this.remote.permissions,autoRefresh:this.remote.autoRefresh}:null,pending:this.pending?{hostId:this.pending.hostId,name:this.pending.name,count:this.pending.bundle.cars.length}:null};}
+  status(){return {hostingMode:this.server?this.hostingMode:null,clubCode:this.club?.coordinator?(this.clubCode||''):'',timingCode:this.timingCode||'',sharing:!!this.server&&!!this.port,code:this.code,browseCode:this.browseCode,allowSubmissions:this.allowSubmissions,discoverable:!!this.advertiser,discoveryError:this.discoveryError,port:this.port||0,addresses:this.server?Object.values(os.networkInterfaces()).flat().filter(i=>i.family==='IPv4'&&!i.internal).map(i=>i.address+':'+this.port):[],remote:this.remote?{address:this.remote.address,name:this.remote.name,id:this.remote.id,state:this.remote.state,lastSync:this.remote.lastSync,lastError:this.remote.lastError,permissions:this.remote.permissions,autoRefresh:this.remote.autoRefresh}:null,pending:this.pending?{hostId:this.pending.hostId,name:this.pending.name,count:this.pending.bundle.cars.length}:null};}
   notify(data){try{this.onNetwork({status:this.status(),...(data?{data}: {})});}catch{}}
-  access(code){const token=Buffer.from(String(code||''));for(const [value,submit,timingResults]of [[this.code,true,false],[this.browseCode,false,false],[this.timingCode||'',false,true],[this.club?.coordinator?this.clubCode||'':'',false,false]]){const expected=Buffer.from(value);if(expected.length&&token.length===expected.length&&crypto.timingSafeEqual(token,expected))return {browse:true,submit:submit&&this.allowSubmissions,timingResults:timingResults&&!!this.allowTimingResults,...(value===this.clubCode?{club:true}:{})};}return null;}
+  access(code){const token=Buffer.from(String(code||''));const matches=value=>{const expected=Buffer.from(value||'');return expected.length>0&&token.length===expected.length&&crypto.timingSafeEqual(token,expected);};
+    if(this.hostingMode==='dealership')return this.club?.coordinator&&matches(this.clubCode)?{browse:true,submit:true,timingResults:true,club:true}:null;
+    for(const [value,submit,timingResults]of [[this.code,true,false],[this.browseCode,false,false],[this.timingCode,false,true]])if(matches(value))return {browse:true,submit:submit&&this.allowSubmissions,timingResults};return null;
+  }
   controls(p={}){
+    if(this.club?.coordinator)throw Error('Use the Dealership password and hosting controls.');
     if(!this.server)throw Error('Start sharing first.');
     // Validate every change before applying any of it, including permission flags.
-    for(const key of ['allowSubmissions','allowTimingResults'])if(p[key]!==undefined&&typeof p[key]!=='boolean')throw Error('Invalid permission.');
+    for(const key of ['allowSubmissions'])if(p[key]!==undefined&&typeof p[key]!=='boolean')throw Error('Invalid permission.');
     let credentialKey;
     if(p.password!==undefined){
-      if(p.access==='club'&&!this.club?.coordinator)throw Error('Enable a shared club collection first.');
-      credentialKey=({browse:'browseCode',submit:'code',timing:'timingCode',club:'clubCode'})[p.access];
-      if(!['browse','submit','timing','club'].includes(p.access)||!credentialKey)throw Error('Choose a valid access type.');
+
+      credentialKey=({browse:'browseCode',submit:'code',timing:'timingCode'})[p.access];
+      if(!['browse','submit','timing'].includes(p.access)||!credentialKey)throw Error('Choose a valid access type.');
       if(p.rotate===true)throw Error('Set a password or revoke all passwords separately.');
       if(typeof p.password!=='string'||p.password.length<8||p.password.length>128||!/^[\x20-\x7e]+$/.test(p.password)||p.password!==p.password.trim())throw Error('Use 8–128 characters: English letters, numbers, spaces or symbols, with no spaces at either end.');
       if(['code','browseCode','timingCode','clubCode'].some(key=>key!==credentialKey&&this[key]===p.password))throw Error('Use a different password for each access type.');
     }
-    for(const key of ['allowSubmissions','allowTimingResults'])if(p[key]!==undefined)this[key]=p[key];
+    for(const key of ['allowSubmissions'])if(p[key]!==undefined)this[key]=p[key];
     if(credentialKey)this[credentialKey]=p.password;
-    if(p.rotate===true){this.code=crypto.randomBytes(12).toString('hex');this.browseCode=crypto.randomBytes(12).toString('hex');this.timingCode=crypto.randomBytes(12).toString('hex');this.clubCode=crypto.randomBytes(12).toString('hex');}
+    if(p.rotate===true){this.code=crypto.randomBytes(12).toString('hex');this.browseCode=crypto.randomBytes(12).toString('hex');this.timingCode=crypto.randomBytes(12).toString('hex');}
     if(credentialKey||p.rotate===true)this.authAttempts?.clear();
     return this.status();
   }
   async discover(){if(!this.scanning)this.scanning=discovery.scan().finally(()=>{this.scanning=null;});return (await this.scanning).filter(h=>h.id!==this.store.data.id);}
-  async start(){this.club?.assertHost();if(this.starting){await this.starting;return this.status();}if(this.server)return this.status();this.starting=this.startHost();try{await this.starting;}finally{this.starting=null;}return this.status();}
-  async startHost(){this.clubCode=crypto.randomBytes(12).toString('hex');this.code=crypto.randomBytes(12).toString('hex');this.browseCode=crypto.randomBytes(12).toString('hex');this.timingCode=crypto.randomBytes(12).toString('hex');this.allowSubmissions=true;this.allowTimingResults=false;this.authAttempts=new Map();
+  async start(){this.club?.assertHost();if(this.starting){await this.starting;return this.status();}if(this.server&&this.hostingMode!==(this.club?.coordinator?'dealership':'legacy'))await this.stop();if(this.server)return this.status();this.starting=this.startHost();try{await this.starting;}finally{this.starting=null;}return this.status();}
+  async startHost(){this.hostingMode=this.club?.coordinator?'dealership':'legacy';
+    if(this.hostingMode==='dealership'){this.clubCode=this.club.password(this.club.device.hostPassword);this.code='';this.browseCode='';this.timingCode='';}
+    else{this.clubCode='';this.code=crypto.randomBytes(12).toString('hex');this.browseCode=crypto.randomBytes(12).toString('hex');this.timingCode=crypto.randomBytes(12).toString('hex');}
+    this.allowSubmissions=true;this.authAttempts=new Map();
     this.server=http.createServer(async(req,res)=>{
       const send=(status,value)=>{if(res.destroyed||res.writableEnded)return;if(res.headersSent){res.destroy();return;}res.writeHead(status,{'Content-Type':'application/json','Cache-Control':'no-store','X-Content-Type-Options':'nosniff',...(status>=400&&!req.url.startsWith('/v1/timing/')?{'Connection':'close'}:{})});if(status>=400){let discarded=0;const timer=setTimeout(()=>{if(!req.complete)req.destroy();},2000);timer.unref();req.once('end',()=>clearTimeout(timer));req.on('data',chunk=>{discarded+=chunk.length;if(discarded>16*1024*1024)req.destroy();});req.resume();}res.end(JSON.stringify(value));};
       if(Object.hasOwn(req.headers,'origin'))return send(403,{error:'Browser access is not supported.',code:'BROWSER_ORIGIN_FORBIDDEN'});
@@ -70,7 +77,7 @@ class Network {
           if(expected!==this.store.data.id)throw timing.fault('DATABASE_MISMATCH','A different database is at this address.',409);
           const carMatch=url.pathname.match(/^\/v1\/timing\/cars\/([a-zA-Z0-9_-]{1,100})$/);
           if(req.method==='GET'&&carMatch){const before=this.store.data.revision,value=timing.profile(this.store,carMatch[1]);if(this.store.data.revision!==before)try{this.onChange({kind:'timing-capture'});}catch{}return send(200,value);}
-          if(!access.timingResults)throw timing.fault('TIMING_PERMISSION_REQUIRED','Enable Allow Timing results and use the dedicated Timing code.',403);
+          if(!access.timingResults)throw timing.fault('TIMING_PERMISSION_REQUIRED','Use the Dealership password, or the Timing credential on a legacy host, to send and check results.',403);
           const receiptMatch=url.pathname.match(/^\/v1\/timing\/sessions\/([a-zA-Z0-9_-]{1,100})\/([a-zA-Z0-9_-]{1,100})$/);
           if(req.method==='GET'&&receiptMatch){const record=this.store.data.timing.sessions.find(r=>r.payload.source.id===receiptMatch[1]&&r.payload.sessionId===receiptMatch[2]);if(!record)throw timing.fault('SESSION_NOT_FOUND','No session with that source and session ID is stored.',404);return send(200,timing.receipt(this.store.data,record));}
           if(req.method==='POST'&&url.pathname==='/v1/timing/sessions'){
@@ -110,7 +117,7 @@ class Network {
     const listening=new Promise((resolve,reject)=>{this.server.once('error',reject);this.server.listen(0,'0.0.0.0',resolve);});
     try{await listening;this.port=this.server.address().port;try{this.advertiser=await discovery.advertise(()=>this.server?{id:this.store.data.id,name:this.store.data.settings.name,port:this.port}:null);this.discoveryError='';}catch{this.discoveryError='Discovery is unavailable on this computer. Members can still enter the displayed address and code.';}}catch(e){this.server=null;this.code='';throw e;}return this.status();
   }
-  async stop(){if(this.starting)await this.starting.catch(()=>{});const s=this.server;this.server=null;this.code='';this.browseCode='';this.timingCode='';this.clubCode='';this.allowTimingResults=false;this.port=0;if(this.advertiser){this.advertiser.close();this.advertiser=null;}this.discoveryError='';if(s){s.closeAllConnections();await new Promise(resolve=>s.close(resolve));}return this.status();}
+  async stop(){if(this.starting)await this.starting.catch(()=>{});const s=this.server;this.server=null;this.code='';this.browseCode='';this.timingCode='';this.clubCode='';this.port=0;if(this.advertiser){this.advertiser.close();this.advertiser=null;}this.discoveryError='';if(s){s.closeAllConnections();await new Promise(resolve=>s.close(resolve));}return this.status();}
   async request(address,code,route,body,expectedDatabase,signal){
     const payload=body?JSON.stringify(body):undefined;if(payload&&Buffer.byteLength(payload)>MAX)throw new Error('Package exceeds the 32 MB network limit. Use a file export.');
     const response=await fetch(localAddress(address)+route,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+code,'Content-Type':'application/json','X-SlotForge-Pages':'1',...(expectedDatabase?{'X-SlotForge-Database':expectedDatabase}:{})},body:payload,redirect:'error',signal:signal?AbortSignal.any([signal,AbortSignal.timeout(10000)]):AbortSignal.timeout(10000)});

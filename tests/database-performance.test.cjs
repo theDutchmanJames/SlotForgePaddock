@@ -38,7 +38,7 @@ test('fast string validation retains Unicode code-point limits, patterns and dat
 test('review approval performs one fresh simulation and still refuses a stale token',async t=>{
  const {Network}=require('../src/network.cjs'),{Club}=require('../src/club.cjs');
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'paddock-review-perf-')),s=new Store(),net=new Network(s),club=new Club(s,net,dir);t.after(()=>{club.close();net.close();fs.rmSync(dir,{recursive:true,force:true});});
- s.mutate('car.save',{data:{name:'Original'}});club.enable('Main');const id=s.data.cars[0].id;
+ s.mutate('car.save',{data:{name:'Original'}});club.enable('Main','Club test password');const id=s.data.cars[0].id;
  await club.mutate('car.save',{id,revision:1,data:{name:'Proposed'}});const proposal=s.data.club.proposals[0].id,preview=club.preview(proposal);
  s.mutate('car.save',{id,revision:1,data:{name:'Intervening edit'}});assert.throws(()=>club.review({id:proposal,token:preview.token,decision:'accept'}),/changed again/);
  const current=club.preview(proposal);let calls=0,simulate=club.simulation.bind(club);club.simulation=(...args)=>{calls++;return simulate(...args);};

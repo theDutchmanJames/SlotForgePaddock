@@ -133,9 +133,9 @@ The same app works for personal and club collections—there is no separate host
 - **Export cars for Timing.** Choose the SlotForge Timing format for supported car details, race classes and photographs. Timing imports them as new copies; no host connection is needed. [File-transfer instructions](docs/TIMING-CAR-EXPORT.md).
 - **Keep private records local.** Personal ownership information, private notes, workshop records and document attachments are excluded from car-sharing packages and shared views. Complete backups retain private data.
 
-**Shared club computers — new in v0.19.0.** Enable **Dealership Mode** on one computer and open a saved club copy on other trusted PCs. Changes enter **REVIEW → Dealership changes** for approval, connected copies receive incremental updates, and outdated copies require a backed-up, confirmed refresh. Personal collections remain separate. Trusted club copies include the full private club collection. [Setup, review and recovery guide](docs/SHARED-CLUB.md). Included in v0.19.0.
+**Dealership Mode — one collection across your computers.** Enable it on one computer and choose **one remembered password for Paddock and Timing**. Its own start/stop and password controls replace the older sharing controls. Connected Paddock copies receive incremental updates; edits enter **REVIEW → Dealership changes** for approval, while finalized Timing results are stored directly. Outdated copies require a backed-up, confirmed refresh. Personal collections remain separate; trusted copies include the full private collection. [Setup, review and recovery guide](docs/SHARED-CLUB.md).
 
-**Custom connection passwords.** Start sharing in **Connections**, then choose **Set password…** for browse-only, submissions or Timing access. Use a different password for each access type. Passwords last for the sharing session and reset on restart or revocation.
+**Simple, remembered access.** Dealership passwords accept 4–128 characters and survive hosting and app restarts. Current Timing versions need at least eight characters until their validation is updated. Legacy sharing outside Dealership Mode still offers separate, temporary browse, submission and Timing credentials.
 
 Local sharing requires the host app to remain running and both computers to be able to communicate. It is intended for a trusted local network, not public internet hosting.
 
@@ -169,7 +169,7 @@ When you want to go further, add spare parts in **Parts**, save a setup from a c
 
 ### Run on Windows
 
-[Download the latest release](https://github.com/theDutchmanJames/SlotForgePaddock/releases/latest), then open **SlotForge.Paddock.0.19.1.exe** from the release assets. It is portable and does not require Node.js. Close an earlier running copy before opening the updated version.
+[Download the latest release](https://github.com/theDutchmanJames/SlotForgePaddock/releases/latest), then open **SlotForge.Paddock.0.20.0.exe** from the release assets. It is portable and does not require Node.js. Close an earlier running copy before opening the updated version.
 
 The Windows executable is unsigned, so Windows may show an unknown-publisher warning. A `SHA256SUMS.txt` file is included with the download for integrity checking. Your collection is stored separately in your Windows user profile; moving the executable does not move your collection. Use the app's backup and export features to transfer your data.
 
@@ -190,7 +190,7 @@ To create the Windows portable build:
 npm run dist
 ```
 
-The current build is written to `dist/v0.19.1/`. Development notes, test commands, recovery information and release history are in [Development & release history](docs/DEVELOPMENT.md).
+The current build is written to `dist/v0.20.0/`. Development notes, test commands, recovery information and release history are in [Development & release history](docs/DEVELOPMENT.md).
 
 ### Linux and macOS downloads
 
@@ -213,7 +213,7 @@ Use the [current source](https://github.com/theDutchmanJames/SlotForgePaddock/ar
 
 ## Project status
 
-Current version: **0.19.1**. The project is under active development. **SlotForge Paddock** is the official name; earlier versions were called SlotForge Database.
+Current version: **0.20.0**. The project is under active development. **SlotForge Paddock** is the official name; earlier versions were called SlotForge Database.
 
 | Feature | Status |
 | --- | --- |

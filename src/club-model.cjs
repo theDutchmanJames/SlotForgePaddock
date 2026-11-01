@@ -1,9 +1,9 @@
-const fs=require('node:fs'),crypto=require('node:crypto');
+const fs=require('node:fs');
 const {isDeepStrictEqual}=require('node:util');
 const {cloneJSON}=require('./json-data.cjs');
 const ACTIONS=new Set('car.save car.favourite car.duplicate car.archive car.bulk part.save part.delete part.appearance part.install part.remove assembly.create assembly.replace assembly.install assembly.remove assembly.dismantle setup.save setup.apply work.add test.add job.edit job.note job.start job.fit job.remove job.setting job.complete job.cancel supply.save supply.delete supply.archive document.add document.remove choice.add choice.rename columns.save settings.save view.save view.delete custom.add build.draft.save build.draft.delete build.create catalogue.apply submission.add planning.shopping.add planning.receive planning.shopping.remove planning.job.save planning.job.check planning.job.photo planning.job.photo.remove planning.shelf.save planning.shelf.remove planning.focus'.split(' '));
 const check=(v,m)=>{if(!v)throw Error(m);};
-const hash=value=>crypto.createHash('sha256').update(JSON.stringify(value)).digest('hex');
+const {hash}=require('./json-encoding.cjs');
 function clean(value){if(value&&typeof value==='object'){for(const key of Object.keys(value)){check(!['__proto__','prototype','constructor'].includes(key),'Unsafe change property.');clean(value[key]);}}}
 function approved(db){const copy=cloneJSON(db);delete copy.club;delete copy.revision;delete copy.catalogueRevision;if(copy.timing)copy.timing.key=null;return copy;}
 function digest(db){return hash(approved(db));}
@@ -34,7 +34,7 @@ function delta(a,b,path=[],out=[]){
  }else out.push({path,value:cloneJSON(b)});
  return out;
 }
-function apply(db,changes){const copy=cloneJSON(db);check(Array.isArray(changes)&&changes.length<=200000,'Invalid club changes.');for(const c of changes){check(Array.isArray(c.path)&&c.path.length>0&&c.path.length<40,'Invalid change path.');check(c.path.every(k=>(typeof k==='string'&&!['__proto__','prototype','constructor'].includes(k))||(Number.isSafeInteger(k)&&k>=0)),'Invalid change key.');let obj=copy;for(const k of c.path.slice(0,-1)){check(obj&&Object.hasOwn(obj,k),'Missing change parent.');obj=obj[k];}const k=c.path.at(-1);if(c.order){check(Array.isArray(obj[k])&&Array.isArray(c.order)&&Array.isArray(c.records)&&new Set(c.order).size===c.order.length,'Invalid record changes.');const records=new Map(obj[k].map(x=>[x.id,x]));for(const r of c.records){check(typeof r.id==='string','Invalid record identity.');records.set(r.id,r.changes?apply(records.get(r.id),r.changes):cloneJSON(r.value));check(records.get(r.id)?.id===r.id,'Changed record identity.');}obj[k]=c.order.map(id=>{check(records.has(id),'Missing changed record.');return records.get(id);});}else if(c.trim!==undefined){check(Array.isArray(obj[k])&&Number.isSafeInteger(c.trim)&&c.trim>=0&&c.trim<=obj[k].length,'Invalid array change.');obj[k].length=c.trim;}else if(c.remove)delete obj[k];else{check(Object.hasOwn(c,'value'),'Missing change value.');obj[k]=cloneJSON(c.value);}}return copy;}
+const {apply}=require('../renderer/snapshot-patch.js');
 function describe(value){if(value===undefined)return 'Not recorded';if(typeof value==='string'&&value.startsWith('data:'))return 'Image / attachment';const text=typeof value==='string'?value:JSON.stringify(value);return (text??'Empty').slice(0,500);}
 function summary(a,b,action=''){
  const rows=[],ignored=new Set(['id','revision','updated','created','date','received','reviewed']);

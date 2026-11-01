@@ -4,15 +4,27 @@ const {Network}=require('../src/network.cjs');
 const integration=require('../src/timing-integration.cjs'),contract=require('../src/timing-schema.cjs'),model=require('../renderer/timing-results-model.js');
 const {fixtures}=require('./support/timing-fixtures.cjs');
 const clone=structuredClone;
-async function host(t){const f=fixtures(),network=new Network(f.store);await network.start();t.after(()=>network.stop());network.controls({allowTimingResults:true});const base='http://127.0.0.1:'+network.port;const request=async(route,body,options={})=>{const r=await fetch(base+route,{method:body===undefined?'GET':'POST',headers:{Authorization:'Bearer '+(options.code??network.timingCode),'X-SlotForge-Database':f.store.data.id,'Content-Type':'application/json',...options.headers},...(body===undefined?{}:{body:typeof body==='string'?body:JSON.stringify(body)})});return {status:r.status,body:await r.json()};};return {...f,network,base,request};}
+async function host(t){const f=fixtures(),network=new Network(f.store);await network.start();t.after(()=>network.stop());const base='http://127.0.0.1:'+network.port;const request=async(route,body,options={})=>{const r=await fetch(base+route,{method:body===undefined?'GET':'POST',headers:{Authorization:'Bearer '+(options.code??network.timingCode),'X-SlotForge-Database':f.store.data.id,'Content-Type':'application/json',...options.headers},...(body===undefined?{}:{body:typeof body==='string'?body:JSON.stringify(body)})});return {status:r.status,body:await r.json()};};return {...f,network,base,request};}
 const send=(h,p,options)=>h.request('/v1/timing/sessions',p,options);
+test('one Dealership password authorises browsing, car submissions, replication and Timing results',async t=>{
+  const h=await host(t),dir=fs.mkdtempSync(path.join(os.tmpdir(),'paddock-timing-access-')),{Club}=require('../src/club.cjs');
+  const oldCodes=[h.network.code,h.network.browseCode,h.network.timingCode],club=new Club(h.store,h.network,dir);t.after(()=>{club.close();fs.rmSync(dir,{recursive:true,force:true});});club.enable('Dealership','race');await h.network.start();
+  const request=async(route,body,code='race')=>{const r=await fetch('http://127.0.0.1:'+h.network.port+route,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+code,'X-SlotForge-Database':h.store.data.id,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});return {status:r.status,body:await r.json()};};
+  for(const code of oldCodes)assert.equal((await request('/v1/status',undefined,code)).status,401);
+  const status=await request('/v1/status');assert.deepEqual(status.body.permissions,{browse:true,submit:true,timingResults:true,club:true});contract.validate(status.body,contract.schema.$defs.status);
+  assert.equal((await request('/v1/collection')).status,200);assert.equal((await request('/v1/club/status')).status,200);
+  const packageData=makePackage(h.store.data,['car-a']);assert.equal((await request('/v1/submissions',packageData)).status,200);assert.equal(h.store.data.submissions[0].status,'pending');
+  for(const payload of [h.normal,h.correction,h.withdrawal])assert.equal((await request('/v1/timing/sessions',payload)).status,200);
+  await h.network.stop();await h.network.start();assert.deepEqual((await request('/v1/status')).body.permissions,{browse:true,submit:true,timingResults:true,club:true});
+});
 test('Timing API advertises version, limits, actual port and distinct permissions',async t=>{
   const h=await host(t);const status=await h.request('/v1/status');assert.equal(status.body.protocol,2);assert.deepEqual(status.body.capabilities.timing.versions,[1]);assert.equal(status.body.permissions.timingResults,true);assert.equal(status.body.permissions.submit,false);assert.ok(h.network.port>0);
   for(const code of [h.network.browseCode,h.network.code]){const r=await send(h,h.normal,{code});assert.equal(r.status,403);assert.equal(r.body.code,'TIMING_PERMISSION_REQUIRED');assert.equal((await h.request('/v1/timing/cars/car-a',undefined,{code})).status,200);}
   assert.equal((await send(h,h.normal,{code:'bad'})).body.code,'UNAUTHENTICATED');assert.equal((await send(h,h.normal,{headers:{Origin:'https://example.com'}})).body.code,'BROWSER_ORIGIN_FORBIDDEN');
-  h.network.controls({allowTimingResults:false});assert.equal((await send(h,h.normal)).status,403);assert.equal((await h.request('/v1/collection')).status,200);
-  const oldCode=h.network.timingCode;h.network.controls({rotate:true,allowTimingResults:true});assert.equal((await send(h,h.normal,{code:oldCode})).status,401);
-  await h.network.stop();await h.network.start();assert.equal(h.network.status().allowTimingResults,false);
+  h.network.controls({allowSubmissions:false});assert.equal((await h.request('/v1/status')).body.permissions.timingResults,true);assert.equal((await send(h,h.normal)).status,200);
+  const oldCode=h.network.timingCode;h.network.controls({rotate:true});assert.equal((await send(h,h.normal,{code:oldCode})).status,401);
+  await h.network.stop();await h.network.start();assert.equal(Object.hasOwn(h.network.status(),'allowTimingResults'),false);assert.equal(h.network.access(h.network.timingCode).timingResults,true);
+  const restarted=await fetch('http://127.0.0.1:'+h.network.port+'/v1/timing/sessions',{method:'POST',headers:{Authorization:'Bearer '+h.network.timingCode,'X-SlotForge-Database':h.store.data.id,'Content-Type':'application/json'},body:JSON.stringify(h.normal)});assert.equal(restarted.status,200);assert.equal((await restarted.json()).duplicate,true);
 });
 test('profile excludes private fields, preserves identity across renames, and captures historical configuration',async t=>{
   const h=await host(t),r=await h.request('/v1/timing/cars/car-a');assert.equal(r.status,200);contract.validate(r.body,contract.schema.$defs.profile);const serialized=JSON.stringify(r.body);assert.ok(!serialized.includes('private'));assert.equal(r.body.configuration.technical.technicalNotes,undefined);assert.equal(r.body.car.owner,undefined);
@@ -31,9 +43,9 @@ test('oversized fixed and chunked bodies rejected before mutation',async t=>{
   const h=await host(t);const big=' '.repeat(integration.MAX_BYTES+1);assert.equal((await send(h,big)).status,413);
   const response=await new Promise((resolve,reject)=>{const req=http.request(h.base+'/v1/timing/sessions',{method:'POST',headers:{Authorization:'Bearer '+h.network.timingCode,'X-SlotForge-Database':h.store.data.id,'Content-Type':'application/json'}},res=>{let data='';res.on('data',c=>data+=c);res.on('end',()=>resolve({status:res.statusCode,body:JSON.parse(data)}));});req.on('error',reject);req.write(big.slice(0,5000000));req.end(big.slice(5000000));});assert.equal(response.status,413);assert.equal(response.body.code,'PAYLOAD_TOO_LARGE');assert.equal(h.store.data.timing.sessions.length,0);
 });
-test('permission revocation during streamed upload prevents saving',async t=>{
+test('Timing password revocation during streamed upload prevents saving',async t=>{
   const h=await host(t),body=JSON.stringify(h.normal);
-  const response=await new Promise((resolve,reject)=>{const req=http.request(h.base+'/v1/timing/sessions',{method:'POST',headers:{Authorization:'Bearer '+h.network.timingCode,'X-SlotForge-Database':h.store.data.id,'Content-Type':'application/json'}},res=>{let data='';res.on('data',c=>data+=c);res.on('end',()=>resolve({status:res.statusCode,body:JSON.parse(data)}));});req.on('error',reject);req.write(body.slice(0,100));setTimeout(()=>{h.network.controls({allowTimingResults:false});req.end(body.slice(100));},30);});assert.equal(response.status,403);assert.equal(h.store.data.timing.sessions.length,0);
+  const response=await new Promise((resolve,reject)=>{const req=http.request(h.base+'/v1/timing/sessions',{method:'POST',headers:{Authorization:'Bearer '+h.network.timingCode,'X-SlotForge-Database':h.store.data.id,'Content-Type':'application/json'}},res=>{let data='';res.on('data',c=>data+=c);res.on('end',()=>resolve({status:res.statusCode,body:JSON.parse(data)}));});req.on('error',reject);req.write(body.slice(0,100));setTimeout(()=>{h.network.controls({access:'timing',password:'Replacement timing password'});req.end(body.slice(100));},30);});assert.equal(response.status,403);assert.equal(h.store.data.timing.sessions.length,0);
 });
 test('idempotent revisions, conflict, correction, withdrawal and stale retry cannot double count',async t=>{
   const h=await host(t);let r=await send(h,h.normal);assert.equal(r.status,200);contract.validate(r.body,contract.schema.$defs.receipt);const revision=h.store.data.revision;
@@ -91,9 +103,9 @@ test('simultaneous identical HTTP deliveries commit once; failure returns storag
   const persist=h.store.persist;h.store.persist=()=>{throw Error('disk failed');};assert.equal((await send(h,h.correction)).body.code,'STORAGE_FAILED');assert.equal(h.store.data.timing.sessions[0].payload.revision,1);h.store.persist=persist;assert.equal((await send(h,h.correction)).status,200);
 });
 test('HTTP retry after server and store restart preserves session and withdrawal identity',async t=>{
-  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'paddock-restart-'));t.after(()=>fs.rmSync(dir,{recursive:true,force:true}));const f=fixtures();f.store.file=path.join(dir,'db.json');let network=new Network(f.store);t.after(()=>network.stop());await network.start();network.controls({allowTimingResults:true});
+  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'paddock-restart-'));t.after(()=>fs.rmSync(dir,{recursive:true,force:true}));const f=fixtures();f.store.file=path.join(dir,'db.json');let network=new Network(f.store);t.after(()=>network.stop());await network.start();
   const send=async payload=>{const r=await fetch('http://127.0.0.1:'+network.port+'/v1/timing/sessions',{method:'POST',headers:{Authorization:'Bearer '+network.timingCode,'X-SlotForge-Database':f.store.data.id,'Content-Type':'application/json'},body:JSON.stringify(payload)});return {status:r.status,body:await r.json()};};
-  assert.equal((await send(f.normal)).body.duplicate,false);await network.stop();network=new Network(new Store(f.store.file));await network.start();network.controls({allowTimingResults:true});assert.equal((await send(f.normal)).body.duplicate,true);assert.equal((await send(f.withdrawal)).status,200);await network.stop();network=new Network(new Store(f.store.file));await network.start();network.controls({allowTimingResults:true});assert.equal((await send(f.normal)).body.code,'STALE_REVISION');
+  assert.equal((await send(f.normal)).body.duplicate,false);await network.stop();network=new Network(new Store(f.store.file));await network.start();assert.equal((await send(f.normal)).body.duplicate,true);assert.equal((await send(f.withdrawal)).status,200);await network.stop();network=new Network(new Store(f.store.file));await network.start();assert.equal((await send(f.normal)).body.code,'STALE_REVISION');
 });
 test('published schema, example requests and receipts match the executable contract',()=>{
   const root=path.join(__dirname,'..','integration-handoff','timing-v1'),read=name=>JSON.parse(fs.readFileSync(path.join(root,name),'utf8'));

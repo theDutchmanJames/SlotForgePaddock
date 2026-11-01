@@ -1,6 +1,6 @@
 # Dealership Mode — shared collections
 
-Available in v0.19.0. Back up your collection before upgrading: schema-11 saves cannot be reopened in v0.18.x or older.
+Dealership replication is available in v0.19.0. The single remembered password and separate hosting controls described here are available in v0.20.0. Back up your collection before upgrading: schema-11 saves cannot be reopened in v0.18.x or older.
 
 Run the same Paddock app on your home or club computers. Enable **Dealership Mode** on one computer: it holds the official collection, approves changes and serves Timing. Other trusted computers keep a separate saved copy of that collection. Their personal collection stays separate.
 
@@ -8,10 +8,10 @@ Run the same Paddock app on your home or club computers. Enable **Dealership Mod
 
 1. Open the collection you want to share across your trusted computers.
 2. In **Connections → Dealership Mode**, choose **Enable Dealership Mode…**.
-3. Name the computer and confirm that this collection may be shared in full. Paddock saves a recovery backup first.
-4. Start sharing. Give the other trusted computers the displayed **address including its port** and the separate **dealership code/password**. You can choose **Set dealership password…**.
+3. Name the computer, choose and confirm a password (4–128 printable ASCII characters), and confirm that this collection may be shared in full. Paddock saves a recovery backup first and starts the Dealership.
+4. Give Paddock and Timing the same displayed **address including its port** and **Dealership password**. Use **Start Dealership**, **Stop Dealership** and **Change password…** on this card. Existing Dealerships without a saved password first show **Set password…**.
 
-Trusted club access includes private club ownership records, documents, stock, jobs, proposals and results. Give this password only to computers authorised to hold that complete collection. The existing public browse, car-submission and Timing permissions remain separate and do not grant this access.
+Trusted club access includes private club ownership records, documents, stock, jobs, proposals and results. Give this password only to computers authorised to hold that complete collection. The password grants all application permissions, including public car browsing, submissions for review, private replication and Timing results. Legacy sharing credentials and controls are not used while hosting a Dealership.
 
 ## Join from another computer
 
@@ -21,7 +21,7 @@ Trusted club access includes private club ownership records, documents, stock, j
 
 Joining does not merge existing personal databases. To contribute personal cars, use the existing reviewed car-submission or file-import workflow. One saved club connection is supported per installation.
 
-Passwords are held in memory for the running session. Reconnect after restarting Paddock. As with existing sharing, starting the host again creates new codes/passwords and may select a different port. Use the current details shown by the dealership computer.
+The host remembers its password across hosting and app restarts. Joined Paddock copies remember their connection password too; reconnecting pre-fills it. Hosting can select a different port after restart, so use the current address. A deliberate password change invalidates the old password and connected copies must reconnect with the new one.
 
 ## Propose, compare and approve
 
@@ -33,7 +33,7 @@ Passwords are held in memory for the running session. Reconnect after restarting
 - Conflict detection is deliberately conservative: a change anywhere in the approved collection can require confirmation. Queuing another proposal alone does not create a content conflict.
 - Existing car edits submit only the changed fields, so approving a name change does not reset an unrelated configuration field. Other operations show their full effects for review.
 
-Incoming public car packages keep their existing **Incoming cars** review workflow on the dealership computer. Finalised Timing sessions retain their existing separate permission and API: results reviewed in Timing are stored directly by the dealership computer and then distributed to connected club copies. They do not require a second Dealership changes approval.
+Incoming public car packages keep their existing **Incoming cars** review workflow on the dealership computer. Finalised Timing sessions use the same Dealership password and the existing Timing API: results reviewed in Timing are stored directly by the dealership computer and then distributed to connected club copies. They do not require a second Dealership changes approval.
 
 ## Quiet updates and disconnected computers
 
@@ -55,7 +55,7 @@ Data files live beside the application's normal database:
 | --- | --- |
 | `database.json` | This installation's original collection, or its official dealership collection |
 | `club-copy.json` | Separate saved club copy, marked as a replica |
-| `club-device.json` | Computer identity, pairing information and durable outbox; no connection password |
+| `club-device.json` | Computer identity, remembered host/connection passwords, pairing information and durable outbox; local to this installation |
 | `club-backups/` | Recovery snapshots before setup, replacement or leaving, and explicitly discarded outboxes |
 
 The latest recovery path is shown in Connections. These are private files. Normal complete backups include private collection data. A copy omits the dealership computer's Timing capture-signing secret and cannot re-host or become a dealership computer through ordinary backup restore. Replacing a live club database with a general backup is blocked. Dealership transfer/disaster recovery is not automated in this first implementation; retain the dealership computer's profile and backups.
@@ -64,7 +64,7 @@ The database schema is now 11. Older collections migrate on opening and save in 
 
 ## Timing and network scope
 
-Point Timing at the **dealership computer's address and current port**, using the existing Timing permission. The Paddock Timing v1 contract is unchanged. Approved catalogue changes and finalised results become visible in connected club copies. Timing's live browser, local racing cache and outgoing queue remain the responsibility of the Timing app.
+Point Timing at the **dealership computer's address and current port**, using the same remembered Dealership password as Paddock. It authorises results immediately, with no additional enable switch or Timing password. Reconnect with the current address if the port changes. Current Timing source accepts passwords of 8–128 characters; accepting 4–7 character Dealership passwords requires its small validation update. The Paddock Timing v1 contract is unchanged. Approved catalogue changes and finalised results become visible in connected club copies. Timing's live browser, local racing cache and outgoing queue remain the responsibility of the Timing app.
 
 Club connections use private/local IPv4 addresses and existing local-network HTTP sharing. They are not an encrypted or internet-facing service. A shared club password authorises a trusted computer; the displayed computer name is not a verified individual account. No remote-access service is added. Guest Wi-Fi isolation or a firewall can prevent local connections.
 

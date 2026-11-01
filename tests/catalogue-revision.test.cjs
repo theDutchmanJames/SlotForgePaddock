@@ -77,7 +77,7 @@ test('safe-integer exhaustion rejects a public edit atomically but permits priva
 
 test('review queue and rejections are quiet; approving public changes advances exactly once',async t=>{
  const dir=disk(t),s=new Store(path.join(dir,'database.json')),id=car(s),net=new Network(s),club=new Club(s,net,dir);t.after(()=>{club.close();net.close();});
- const n=s.data.catalogueRevision;club.enable('Club');assert.equal(s.data.catalogueRevision,n);
+ const n=s.data.catalogueRevision;club.enable('Club','Club test password');assert.equal(s.data.catalogueRevision,n);
  async function propose(data,decision){await club.mutate('car.save',{id,revision:s.data.cars[0].revision,data});assert.equal(s.data.catalogueRevision,expected);const q=s.data.club.proposals[0],p=club.preview(q.id);club.review({id:q.id,token:p.token,decision});}
  let expected=n;await propose({name:'Rejected'},'reject');assert.equal(s.data.catalogueRevision,expected);
  await propose({privateNotes:'Approved private note'},'accept');assert.equal(s.data.catalogueRevision,expected);

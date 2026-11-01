@@ -5,7 +5,7 @@ const {migrate}=require('../src/store.cjs');
 const timing=require('../src/timing-integration.cjs');
 module.exports=async({win,qa,store,network,js,wait,click})=>{
   await network.stop();let f=fixtures();store.data=f.store.snapshot();store.data.timing.key=null;store.persist(store.data);
-  await network.start();network.controls({allowTimingResults:true});
+  await network.start();
   const reload=()=>js(`(async()=>{const r=await api('read');db=r.data;net=r.network;collectionMeta=r.collection;switchCollection('local');page='Cars';carId='car-a';section='Performance';render();})()`);
   await reload();await js(`document.querySelector('#toast').textContent='';document.querySelector('#toast').hidden=true`);
   const r=await fetch('http://127.0.0.1:'+network.port+'/v1/timing/cars/car-a',{headers:{Authorization:'Bearer '+network.browseCode,'X-SlotForge-Database':store.data.id}});assert.equal(r.status,200);await r.json();

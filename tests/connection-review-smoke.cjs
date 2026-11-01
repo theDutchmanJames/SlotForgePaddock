@@ -39,10 +39,24 @@ module.exports=async({win,store,network,js,wait,click,fill})=>{
  }finally{await js('api=window.reviewRealApi;delete window.reviewRealApi;delete window.releaseReviewInit;delete window.reviewInitHeld;');}
  checks.push('notifications arriving during the initial read are applied after startup');
 
+ // Save through the actual preload/main IPC path. The renderer must rebuild
+ // the patch against the snapshot captured before the asynchronous request.
+ await js(`(async()=>{source='local';await reloadClub();})()`);
+ const first=store.data.cars[0];
+ if(first){
+  const picture=first.picture;
+  const queued=await js(`(async()=>{const r=await api('mutate','car.save',{id:${JSON.stringify(first.id)},revision:db.cars.find(c=>c.id===${JSON.stringify(first.id)}).revision,data:{name:'IPC refresh checked'}});acceptSnapshot(r.data);if(r.club)clubState=r.club;return !!r.queued;})()`);
+  assert.equal(store.data.cars.find(c=>c.id===first.id).name,queued?first.name:'IPC refresh checked');
+  if(queued)assert.equal(store.data.club.proposals[0].payload.data.name,'IPC refresh checked');
+  assert.equal(await js(`db.cars.find(c=>c.id===${JSON.stringify(first.id)}).picture`),picture);
+  assert.equal(await js('db.revision'),store.data.revision);
+  checks.push('saving through preload rebuilds the updated snapshot and retains photos');
+ }
+
  await click('[data-action="nav"][data-id="Connections"]');
  assert.equal(await js(`document.querySelector('#main .panel').classList.contains('club-connections')`),true);
  assert.match(await js(`document.querySelector('.club-connections h2').innerText`),/Dealership Mode/);
- assert.equal(await js(`!!document.querySelector('.connection-cards')`),true);
+ assert.equal(await js(`!!document.querySelector('.connection-cards')`),!network.club.coordinator);
  for(const theme of ['dark','light']){
   await js(`db.settings.theme=${JSON.stringify(theme)};render()`);win.setSize(960,760);
   assert.equal(await js('document.documentElement.scrollWidth>innerWidth+1'),false);

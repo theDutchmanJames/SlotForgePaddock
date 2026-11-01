@@ -17,6 +17,7 @@ const timing=require('./timing-integration.cjs');
 const catalogueImport=require('./catalogue-import.cjs');
 const iconAppearance=require('../renderer/icon-catalogue.js');
 const {validateDocument}=require('./documents.cjs');
+const encoding=require('./json-encoding.cjs');
 
 const ID = /^[a-zA-Z0-9_-]{1,100}$/;
 const UNSAFE_IDS=new Set([...Object.getOwnPropertyNames(Object.prototype),'prototype']);
@@ -39,7 +40,7 @@ function guardInstalled(db,car,changes){for(const i of db.installations.filter(i
 function strings(value) { assert(Array.isArray(value) && value.length <= 100, 'Too many labels.'); return [...new Set(value.map(v => text(v, 160).trim()).filter(Boolean))]; }
 function object(value) { assert(value && typeof value === 'object' && !Array.isArray(value), 'Invalid record.'); return value; }
 function cleanMap(value, fields) { const result = {}; object(value); for (const k of fields) if (Object.hasOwn(value,k)) result[k] = text(value[k]); return result; }
-function photo(value) { text(value, 12 * 1024 * 1024); assert(!value || /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(value), 'Use a PNG, JPEG or WebP image.'); return value; }
+function photo(value) { text(value, 12 * 1024 * 1024); assert(encoding.isPhoto(value), 'Use a PNG, JPEG or WebP image.'); return value; }
 function carData(input) {
   object(input); const out = cleanMap(input, TEXT_FIELDS);
   if(out.name!==undefined)text(out.name,200);
@@ -116,7 +117,7 @@ function validateDatabase(db,encoded) {
   toolbox.validate(db,photo);catalogueImport.validateStored(db);
   assert(Array.isArray(db.documents),'Invalid document collection.');unique(db.documents,'document');const docCounts=new Map();for(const d of db.documents){assert(ids.has(d.carId),'Orphan document.');validateDocument(d);text(d.title,200);assert(d.title.trim(),'Missing document title.');text(d.category,160);text(d.added,100);docCounts.set(d.carId,(docCounts.get(d.carId)||0)+1);assert(docCounts.get(d.carId)<=100,'Maximum 100 documents per car.');}
   const packages=new Set();for(const s of db.submissions){const pack=validatePackage(s.package);assert(!packages.has(pack.packageId),'Duplicate submission package.');packages.add(pack.packageId);assert(['pending','reviewed'].includes(s.status),'Invalid submission status.');object(s.outcomes);text(s.received,100);for(const [id,outcome]of Object.entries(s.outcomes)){assert(pack.cars.some(c=>c.id===id),'Unknown review outcome.');object(outcome);assert(['accept','reject'].includes(outcome.decision),'Invalid review decision.');text(outcome.date,100);text(outcome.note||'');}assert((s.status==='reviewed')===pack.cars.every(c=>Object.hasOwn(s.outcomes,c.id)),'Review status and decisions disagree.');}
-  const json=JSON.stringify(db);assert(Buffer.byteLength(json)<=200*1024*1024,'Database exceeds 200 MB. Export or reduce image sizes.');if(encoded)encoded.json=json;
+  assert(encoding.byteLength(db)<=200*1024*1024,'Database exceeds 200 MB. Export or reduce image sizes.');if(encoded)encoded.json=encoding.stringify(db);
   return db;
 }
 class Store {
@@ -128,7 +129,7 @@ class Store {
   metadata(){return collection.metadata(this.data,collectionContext);}
   plan(action,p={}){if(action==='catalogue.preview')return catalogueImport.preview(this.data,p.input);if(action==='catalogue.selection')return catalogueImport.selected(this.data,p);if(action==='build.preview')return build.plan(this.data,p);if(action==='part.delete')return inventory.deletion(this.data,p.id);if(action==='job.view')return jobs.model(this.data,p.id,TECH_FIELDS);if(action==='choices.catalogue')return collection.catalogue(this.data,collectionContext);if(action==='setup.options')return workshop.setupOptions(this.data,p.id);if(['setup.preview','choice.preview','bulk.preview'].includes(action)){const draft=this.snapshot(),result=action==='setup.preview'?workshop.applySetup(draft,p,true):action==='choice.preview'?collection.renameChoice(draft,p,collectionContext,true):collection.applyBulk(draft,p,true);validateDatabase(draft);return result;}throw new Error('Unknown preview.');}
   persist(db,json){if(!this.file)return;fs.mkdirSync(path.dirname(this.file),{recursive:true});const temp=this.file+'.tmp'; const fd=fs.openSync(temp,'w');try{fs.writeFileSync(fd,json??JSON.stringify(db));fs.fsyncSync(fd);}finally{fs.closeSync(fd);}if(fs.existsSync(this.file))fs.copyFileSync(this.file,this.file+'.previous');fs.renameSync(temp,this.file);}
-  transact(fn){const draft=clone(this.data);const result=fn(draft);planning.pruneFocus(draft,this.data);draft.revision++;advanceCatalogue(this.data,draft);const encoded={};validateDatabase(draft,encoded);this.persist(draft,encoded.json);this.data=draft;this.emit();return result;}
+  transact(fn){const draft=clone(this.data);const result=fn(draft);planning.pruneFocus(draft,this.data);draft.revision++;advanceCatalogue(this.data,draft);const encoded=this.file?{}:undefined;validateDatabase(draft,encoded);this.persist(draft,encoded?.json);this.data=draft;this.emit();return result;}
   mutate(action,p={}) {object(p);let result;if(action.startsWith('planning.')){this.transact(db=>{result=planning.mutate(db,action,p);});return {result,data:this.snapshot(),collection:this.metadata()};}
     if(action==='submission.add'){const pack=validatePackage(p.package);const existing=this.data.submissions.find(s=>s.package.packageId===pack.packageId);if(existing){assert(isDeepStrictEqual(existing.package,pack),'This package identity was already used for different content. Export a new package for changed cars.');return {result:'duplicate',data:this.snapshot()};}}
     this.transact(db=>{

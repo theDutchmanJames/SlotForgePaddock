@@ -1,5 +1,96 @@
 # Development & release history
 
+The changes below are published in [v0.20.0](releases/v0.20.0.md), including the save improvements and unified Dealership password.
+
+## v0.20.0 — one remembered Dealership password — 1 November 2026
+
+Supersedes the separate-credential approach below for Dealership Mode. Its card
+now owns setup, Start Dealership, Stop Dealership and Change password. Enabling
+the mode asks for one user-defined password and starts hosting. While in this
+mode, legacy sharing controls are hidden and inactive; legacy credentials are
+not accepted. Its one password grants browse, submission, Timing results and
+private replication permissions. Proposed edits still require host review.
+
+Passwords accept 4–128 printable ASCII characters, without leading/trailing
+spaces. Host and joined-client passwords are saved in local `club-device.json`
+and survive restarts. They are not replicated, included in database backups,
+advertised or returned by public status endpoints. Discarded-outbox recovery
+files omit the saved password. Password changes persist before live access
+changes and revoke old credentials/streams; failed writes leave access intact.
+Older Dealership installations without a saved password show Set password first.
+Starting hosting can still select a different network port.
+
+Timing's existing catalogue/results protocol works unchanged with this password.
+The inspected Timing source accepts 8–128 characters; only its minimum-length
+validation, labels and related tests need updating for 4–7 character passwords.
+The exact guidance is in the updated integration handoff. No Timing files were
+edited. Validation: **335 automated tests and 188 isolated desktop checks passed**,
+including real local HTTP result uploads using the same short Dealership password,
+legacy-credential rejection, app restarts, password-save rollback and review flow.
+
+## Superseded working approach — dedicated Timing credential — 1 November 2026
+
+Removed the separate Allow/Pause Timing results switch and its restart-reset
+flag. While hosting, the dedicated Timing code or password grants
+`permissions.timingResults: true` immediately, including in Dealership Mode.
+Browse, car-submission and trusted Dealership credentials do not gain Timing
+results access. Pausing car submissions does not pause Timing results.
+Changing/revoking the Timing credential still invalidates an in-flight upload;
+stopping hosting stops access. Codes/passwords still change on a hosting restart,
+so Timing must reconnect with the current credential before retrying its queue.
+
+Updated Connections, the empty performance view and the Timing handoff documents.
+The API version, permission field, session validation and retry semantics remain
+unchanged; Timing does not need a client change for this simplification.
+Validation: **333 automated tests and 8 affected isolated Electron workflow
+checks passed**. Coverage includes immediate dedicated-credential access,
+Dealership credential separation, custom passwords, restart retries, corrections,
+withdrawals and credential revocation during uploads. No Timing source or user
+collection was modified.
+
+## v0.20.0 — remaining save/submission pauses — 1 November 2026
+
+Reduced repeated photo processing and full-collection transfers during saves.
+Long immutable strings reuse a bounded JSON encoding/validation cache; conflict
+hashes consume those encodings without constructing another complete JSON
+document. In-memory proposal validation still validates the full database and
+its size, but does not assemble an unused save string. Durable disk writes,
+previous-file recovery and validation before publishing a transaction remain.
+
+Desktop saves and background refreshes now send a patch against the renderer's
+explicit database ID, storage path and revision. Up to four previously delivered
+snapshots are retained per window; missing baselines use a complete snapshot.
+Reloading clears the baseline history. Responses are rebuilt against the snapshot
+captured when their request began, so an intervening refresh cannot change their
+baseline. The patch application code is shared with Dealership replication.
+Neither the database schema nor the public network/Timing contract changed.
+
+Three alternating local benchmark runs with 40 different synthetic 512 KiB
+photos (27 MiB JSON collection), comparing v0.19.1 with working source:
+
+| Operation | v0.19.1 median | Working source median |
+| --- | ---: | ---: |
+| Workshop save | 151 ms | 84 ms |
+| Dealership proposal | 487 ms | 185 ms |
+| Review preview | 131 ms | 25 ms |
+| Review approval | 388 ms | 147 ms |
+
+The isolated Electron check measured save round trips of 59–72 ms and proposal
+round trips of 209–230 ms, with roughly 13–15 KB responses instead of the photo
+collection. These are synthetic local measurements, not a two-computer Wi-Fi
+measurement or a guarantee of pause-free operation. Initial downloads, new
+photos, document decoding and synchronous durable writes still incur work;
+larger collections can exceed the encoding cache's 128 MiB accounting budget.
+`npm run benchmark:database` now uses a different payload for every car.
+
+Validation: **332 automated tests and 188 isolated Electron workflow checks
+passed**, with no captured renderer errors. New tests cover byte/hash equivalence,
+photo validation, patch reconstruction, changed photos, reordered records,
+out-of-order replies, baseline eviction and collection/path isolation. Existing
+rollback, retry, conflict and approval tests also pass. The discovery UI test now
+selects its temporary host by database ID, so a real nearby host cannot be picked
+accidentally. No user collection was opened or modified for these checks.
+
 ## v0.19.1 — responsiveness and Dealership reliability — 1 November 2026
 
 Publishes the database responsiveness improvements, Dealership-first Connections

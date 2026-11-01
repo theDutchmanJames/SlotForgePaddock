@@ -34,18 +34,18 @@ Full Paddock feature context: [Shared club collections](../../docs/SHARED-CLUB.m
 
 ## Connection and permissions
 
-On the dealership computer, the user starts sharing in Connections, enables **Allow Timing results**, and supplies the **Timing connection code/password** to Timing.
+On the dealership computer, the user enables Dealership Mode, chooses a password, and supplies that same **Dealership password** to Paddock and Timing. Dealership hosting has its own start/stop controls; legacy sharing controls are hidden and inactive.
 
-- Use the **Timing credential**, not the separate trusted-club credential. Trusted-club access grants the complete private Paddock collection and is unnecessary for Timing.
+- Use the **single Dealership password**. Status returns `{browse: true, submit: true, timingResults: true, club: true}`. Timing should continue using only catalogue/profile and timing-session routes. No private replication implementation is requested.
 - Make requests from Electron **main**, not the renderer. Paddock rejects any `Origin` header; do not weaken that protection.
 - Use the local HTTP address with its actual port. The host selects a dynamic port; never hard-code it. Discovery and manual entry are both supported by the existing contract.
-- Treat credentials as opaque, case-sensitive text. Generated codes are 24 hex characters; custom passwords are 8–128 printable ASCII characters. Do not restrict the input to hex codes.
+- Treat credentials as opaque, case-sensitive text. Dealership passwords are 4–128 printable ASCII characters, without leading/trailing spaces. Current Timing `paddock.js` requires at least eight: lower its credential validator and any form minimum to four, update matching tests, and label the connection input "Dealership password" (with legacy Timing-code compatibility). Existing eight-character-or-longer passwords already work.
 - Call `GET /v1/status` to establish the database identity and permissions. Persist the returned database `id` as the pairing identity.
-- Check that `capabilities.timing.versions` includes `1`. Check `permissions.timingResults` before uploading. Read-only access can still browse cars; show when results permission needs enabling.
+- Check that `capabilities.timing.versions` includes `1`. Check `permissions.timingResults` before uploading. Read-only access can still browse cars; ask for the Dealership password (or a dedicated Timing credential on a legacy host) if results permission is false.
 - Current Dealership hosts additionally advertise `capabilities.club: 1` and `clubId`. These describe Paddock's club-copy feature. Do not require them for ordinary Timing v1 compatibility, and do not use `clubId` instead of the database `id`.
 - Addresses, ports and names may change. Reconnect to the same database identity; never silently pair with a different database found at an old address. Keep queued results tied to their original database.
 
-Codes/passwords reset when sharing restarts or is revoked. Timing results permission also starts disabled after a sharing restart. Ask for renewed access when needed and retain unsent results.
+The Dealership password is remembered on the host across restarts. A deliberate password change revokes old access; ports can still change on restart. Legacy hosts continue rotating their temporary codes/passwords. Retain queued results and existing permission checks, database identity checks and retry semantics. No catalogue or results protocol rewrite is needed.
 
 ## Browse and select cars
 
@@ -61,7 +61,7 @@ Use these existing endpoints:
 | `POST /v1/timing/sessions` | Submit a reviewed session, complete correction or withdrawal |
 | `GET /v1/timing/sessions/{sourceId}/{sessionId}` | Reconcile an uncertain delivery or revision conflict |
 
-Every request uses `Authorization: Bearer <Timing credential>`. All `/v1/timing/*` requests also require `X-SlotForge-Database: <paired database ID>`.
+Every request uses `Authorization: Bearer <Dealership password>`. All `/v1/timing/*` requests also require `X-SlotForge-Database: <paired database ID>`.
 
 For collection pagination, send `X-SlotForge-Pages: 1`. Follow `nextOffset` with `?offset=N&revision=R&database=ID`. Validate that all pages have the same identity and revision; restart a changed transfer on HTTP 409. Replace the local catalogue cache only after a complete, verified transfer. Never replace a good cache with half a download.
 
@@ -71,7 +71,7 @@ Archived cars are omitted from the collection listing; direct profiles report ar
 
 ### Refresh without flooding the network
 
-The private `/v1/club/events`, `/v1/club/changes` and `/v1/club/snapshot` routes belong to Paddock replication. **They are not available through the Timing credential and must not be used by Timing.**
+The private `/v1/club/events`, `/v1/club/changes` and `/v1/club/snapshot` routes belong to Paddock replication. **The shared Dealership password authorises them, but Timing does not need them and should continue using its existing public catalogue flow.**
 
 Timing v1 currently has no public catalogue push feed. Implement the requested browsable connected database using:
 

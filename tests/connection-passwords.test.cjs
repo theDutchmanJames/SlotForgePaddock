@@ -6,10 +6,10 @@ test('custom passwords replace only their access code and retain separate permis
   host.controls({access:'browse',password:'club visitors'});
   host.controls({access:'submit',password:'club members'});
   host.controls({access:'timing',password:'race night 2026!'});
-  for(const [password,submit,timingResults]of [['club visitors',false,false],['club members',true,false],['race night 2026!',false,false]]){
+  for(const [password,submit,timingResults]of [['club visitors',false,false],['club members',true,false],['race night 2026!',false,true]]){
     const response=await client.request(address,password,'/v1/status');assert.deepEqual(response.permissions,{browse:true,submit,timingResults});
   }
-  host.controls({allowTimingResults:true});assert.equal((await client.request(address,'race night 2026!','/v1/status')).permissions.timingResults,true);
+  assert.equal((await client.request(address,'race night 2026!','/v1/status')).permissions.timingResults,true);
   await client.connect(address,'club visitors');assert.equal(client.remote.permissions.submit,false);
   for(const key of [old.code,old.browseCode,old.timingCode,'Club visitors'])await assert.rejects(client.request(address,key,'/v1/status'),e=>e.httpStatus===401);
   assert.equal(JSON.stringify(host.store.snapshot()).includes('club visitors'),false);
@@ -18,7 +18,7 @@ test('custom passwords replace only their access code and retain separate permis
 });
 test('password validation is atomic and prevents permission collisions',async t=>{
   const {host}=await hostFor(t);host.controls({access:'browse',password:'Visitors 2026'});const before=host.status();
-  for(const change of [{access:'submit',password:'Visitors 2026'},{access:'bogus',password:'Valid pass'},{access:'__proto__',password:'Valid pass'},{access:'browse',password:'short'},{access:'browse',password:' leading spaces'},{access:'browse',password:'trailing spaces '},{access:'browse',password:'newline\npassword'},{access:'browse',password:'é'.repeat(10)},{access:'browse',password:'a'.repeat(129)},{access:'browse',password:null},{access:'browse',password:'Valid pass',rotate:true},{access:'browse',password:'Valid pass',allowTimingResults:'yes'}]){
+  for(const change of [{access:'submit',password:'Visitors 2026'},{access:'bogus',password:'Valid pass'},{access:'__proto__',password:'Valid pass'},{access:'browse',password:'short'},{access:'browse',password:' leading spaces'},{access:'browse',password:'trailing spaces '},{access:'browse',password:'newline\npassword'},{access:'browse',password:'é'.repeat(10)},{access:'browse',password:'a'.repeat(129)},{access:'browse',password:null},{access:'browse',password:'Valid pass',rotate:true},{access:'browse',password:'Valid pass',allowSubmissions:'yes'}]){
     assert.throws(()=>host.controls({allowSubmissions:false,...change}));assert.deepEqual(host.status(),before);
   }
   host.controls({access:'browse',password:'a'.repeat(128)});assert.ok(host.access('a'.repeat(128)));
