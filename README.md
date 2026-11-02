@@ -8,6 +8,10 @@
 
 **Your virtual slotcar garage. Your detailed workshop. One collection.**
 
+SlotForge Paddock is a desktop app for collecting, displaying, building and maintaining slotcars. Add a car and a photograph to start your virtual showroom, or go deeper into parts, setups, maintenance and racing preparation.
+
+Both approaches use the same collection. **You decide how much detail to record.**
+
 <table>
   <tr>
     <th width="50%">Your Showroom · light theme</th>
@@ -20,10 +24,6 @@
 </table>
 
 *Your own cars, your own photographs. Click any screenshot to view it at full size. These screenshots show the earlier SlotForge Database branding.*
-
-SlotForge Paddock is a desktop app for collecting, displaying, building and maintaining slotcars. Add a car and a photograph to start your virtual showroom, or go deeper into parts, setups, maintenance and racing preparation.
-
-Both approaches use the same collection. **You decide how much detail to record.**
 
 [Virtual showroom](#for-the-collector-your-virtual-showroom) · [Build calculations](#plan-your-build-with-gearing-torque-and-power-calculations) · [Detailed workshop](#for-the-tinkerer-your-detailed-slotcar-workshop) · [Club sharing](#connect-with-your-club) · [Getting started](#getting-started) · [Project status](#project-status) · [App Collection](#slotforge-app-collection)
 
