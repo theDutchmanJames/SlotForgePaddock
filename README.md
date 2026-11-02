@@ -4,6 +4,8 @@
 
 # SlotForge Paddock
 
+<img src="assets/icon.png" alt="SlotForge Paddock icon" width="96" align="right">
+
 **Your virtual slotcar garage. Your detailed workshop. One collection.**
 
 <table>
