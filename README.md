@@ -1,3 +1,7 @@
+<p align="left">
+  <img src="docs/images/slotforge-brand.png" alt="SlotForge — Slotcar App Collection" width="400">
+</p>
+
 # SlotForge Paddock
 
 **Your virtual slotcar garage. Your detailed workshop. One collection.**
