@@ -23,7 +23,7 @@ SlotForge Paddock is a desktop app for collecting, displaying, building and main
 
 Both approaches use the same collection. **You decide how much detail to record.**
 
-[Virtual showroom](#for-the-collector-your-virtual-showroom) · [Build calculations](#plan-your-build-with-gearing-torque-and-power-calculations) · [Detailed workshop](#for-the-tinkerer-your-detailed-slotcar-workshop) · [Club sharing](#connect-with-your-club) · [Getting started](#getting-started) · [Project status](#project-status)
+[Virtual showroom](#for-the-collector-your-virtual-showroom) · [Build calculations](#plan-your-build-with-gearing-torque-and-power-calculations) · [Detailed workshop](#for-the-tinkerer-your-detailed-slotcar-workshop) · [Club sharing](#connect-with-your-club) · [Getting started](#getting-started) · [Project status](#project-status) · [App Collection](#slotforge-app-collection)
 
 ## For the collector: your virtual showroom
 
@@ -251,6 +251,18 @@ The Paddock side of Timing integration is documented in the [Timing integration 
 Catalogue imports validate structure and help identify duplicates. Manufacturer facts and physical part compatibility still need your review; catalogue imports do not scrape websites or download product images automatically.
 
 Telemetry can read delivered Timing sessions using the existing Dealership password, keeping the original measured laps separate from race adjustments. The [Telemetry handoff](integration-handoff/telemetry-v1/README.md) includes the read API, schemas, correction/withdrawal fixtures and offline synchronisation rules. Telemetry provides the analysis interface; the host API is included from v1.0.1.
+
+## SlotForge App Collection
+
+Paddock is part of the **SlotForge App Collection**: tools for collecting, building, decorating and racing your slotcars. Explore the other apps:
+
+| App | What you can do |
+| --- | --- |
+| [SlotForge Timing](https://github.com/theDutchmanJames/SlotForgeTiming) | Time laps, run races and manage results for analogue slotcar tracks. |
+| [SlotForge Telemetry](https://github.com/theDutchmanJames/SlotForgeTelemetry) | Explore setup calculations, analyse lap data and compare performance. |
+| [SlotForge Decals](https://github.com/theDutchmanJames/SlotForgeDecals) | Design, scale and arrange decal artwork into printable sheets. |
+| [SlotForge Livery](https://github.com/theDutchmanJames/SlotForgeLivery) | Plan colour schemes, stripes and decals on your own car templates before painting. |
+| [SlotForge Circuit](https://github.com/theDutchmanJames/SlotForgeTrackBuilder) | Design track layouts with sectional pieces or routed-track drawing tools. Formerly SlotForge Track Builder. |
 
 ## Licence and copyright
 
