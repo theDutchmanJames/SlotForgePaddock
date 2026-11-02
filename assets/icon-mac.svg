@@ -1,8 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 256 256">
-  <rect x="8" y="8" width="240" height="240" rx="36" fill="#ed414b"/>
-  <g fill="none" stroke="#fff" stroke-width="10" stroke-linejoin="round">
-    <path d="M64 112l19-40h91l18 40"/>
-    <path d="M55 112h146v65H55z"/>
-    <path d="M74 177v16m108-16v16M76 138h19m67 0h19"/>
+  <title>SlotForge Paddock — Collection</title>
+  <rect id="tile" x="8" y="8" width="240" height="240" rx="45" fill="#ed414b"/>
+  <g id="collection" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M68 72 43 79Q33 82 36 94L57 188Q59 199 70 196"/>
+    <path d="m188 72 25 7q10 3 7 15l-21 94q-2 11-13 8"/>
+    <rect x="77" y="49" width="102" height="160" rx="17"/>
   </g>
+  <path fill="#fff" fill-rule="evenodd" d="M123 67C115 68 113 76 104 81Q99 84 99 92V112L104 118V151L100 157V180Q100 190 111 192L116 199H140L145 192Q156 190 156 180V157L152 151V118L157 112V92Q157 84 152 81C143 76 141 68 133 67V101H123ZM111 115Q128 103 145 115L140 134H116ZM118 142H138L141 168H115ZM120 176H136V190H120ZM105 97H109V112H105ZM147 97H151V112H147Z"/>
 </svg>

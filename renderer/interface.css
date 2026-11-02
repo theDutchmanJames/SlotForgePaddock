@@ -33,3 +33,5 @@ dialog:not(.showroom-viewer){border-top:3px solid var(--accent);width:min(960px,
 
 /* Preserve exactly what members must type, including repeated password spaces. */
 .connection-cards .code{white-space:pre-wrap}
+
+.paddock-brand-symbol{display:block;width:36px;height:36px;background:currentColor;mask:url("../assets/brand-mark.svg") center/contain no-repeat;-webkit-mask:url("../assets/brand-mark.svg") center/contain no-repeat}

@@ -97,6 +97,13 @@ Each builder also writes a platform/architecture-specific SHA-256 checksum file.
 
 For direct packaging after dependencies are installed, use `npm run dist:linux -- --x64 --publish never` or `npm run dist:mac -- --universal --publish never`. Direct npm packaging skips the launchers' checks and checksum generation.
 
+## App icon artwork
+
+The Collection icon is maintained in `assets/icon.svg`. After changing that
+source, run `npm run build:app-icon` to regenerate the 1024px PNG, multi-size
+Windows ICO, macOS SVG and theme-aware header mask. This opens a hidden Electron
+renderer; it does not open a collection. Commit the generated assets together.
+
 ## Validation status
 
 Native workflow results are recorded in GitHub Actions. Successful packaging and

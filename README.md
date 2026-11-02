@@ -188,7 +188,7 @@ When you want to go further, add spare parts in **Parts**, save a setup from a c
 
 ### Run on Windows
 
-[Download the latest release](https://github.com/theDutchmanJames/SlotForgePaddock/releases/latest), then open **SlotForge.Paddock.1.0.1.exe** from the release assets. It is portable and does not require Node.js. Close an earlier running copy before opening the updated version.
+[Download the latest release](https://github.com/theDutchmanJames/SlotForgePaddock/releases/latest), then open **SlotForge.Paddock.1.1.2.exe** from the release assets. It is portable and does not require Node.js. Close an earlier running copy before opening the updated version.
 
 The Windows executable is unsigned, so Windows may show an unknown-publisher warning. A `SHA256SUMS.txt` file is included with the download for integrity checking. Your collection is stored separately in your Windows user profile; moving the executable does not move your collection. Use the app's backup and export features to transfer your data.
 
@@ -209,7 +209,7 @@ To create the Windows portable build:
 npm run dist
 ```
 
-The current build is written to `dist/v1.0.1/`. Development notes, test commands, recovery information and release history are in [Development & release history](docs/DEVELOPMENT.md).
+The current build is written to `dist/v1.1.2/`. Development notes, test commands, recovery information and release history are in [Development & release history](docs/DEVELOPMENT.md).
 
 ### Linux and macOS downloads
 
@@ -232,7 +232,7 @@ Use the [current source](https://github.com/theDutchmanJames/SlotForgePaddock/ar
 
 ## Project status
 
-Current version: **1.0.1**. The project is under active development. **SlotForge Paddock** is the official name; earlier versions were called SlotForge Database.
+Current version: **1.1.2**. The project is under active development. **SlotForge Paddock** is the official name; earlier versions were called SlotForge Database.
 
 | Feature | Status |
 | --- | --- |

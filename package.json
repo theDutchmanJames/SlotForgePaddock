@@ -1,6 +1,6 @@
 {
   "name": "slotforge-database",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Slot-car collections, parts and setup history",
   "author": "theDutchmanJames",
   "private": true,
@@ -15,7 +15,8 @@
     "dist:linux": "electron-builder --linux",
     "build:icons": "node scripts/build-icons.cjs",
     "build:diagram": "node scripts/build-diagram.cjs",
-    "benchmark:database": "node scripts/benchmark-database.cjs"
+    "benchmark:database": "node scripts/benchmark-database.cjs",
+    "build:app-icon": "electron scripts/build-app-icon.cjs"
   },
   "devDependencies": {
     "electron": "45.1.0",
