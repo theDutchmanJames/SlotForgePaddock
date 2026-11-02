@@ -80,7 +80,7 @@ class Network {
           if(!expected)throw timing.fault('DATABASE_REQUIRED','Send X-SlotForge-Database with the paired database ID.');
           if(expected!==this.store.data.id)throw timing.fault('DATABASE_MISMATCH','A different database is at this address.',409);
           const carMatch=url.pathname.match(/^\/v1\/timing\/cars\/([a-zA-Z0-9_-]{1,100})$/);
-          if(req.method==='GET'&&carMatch){const before=this.store.data.revision,value=timing.profile(this.store,carMatch[1]);if(this.store.data.revision!==before)try{this.onChange({kind:'timing-capture'});}catch{}return send(200,value);}
+          if(req.method==='GET'&&carMatch)return await this.store.withIdle(()=>{if(expected!==this.store.data.id)throw timing.fault('DATABASE_MISMATCH','The host database changed while waiting.',409);if(!this.access(code)?.browse)throw timing.fault('UNAUTHENTICATED','Connection access changed while waiting.',401);const before=this.store.data.revision,value=timing.profile(this.store,carMatch[1]);if(this.store.data.revision!==before)try{this.onChange({kind:'timing-capture'});}catch{}return send(200,value);});
           if(!access.timingResults)throw timing.fault('TIMING_PERMISSION_REQUIRED','Use the Dealership password, or the Timing credential on a legacy host, to send and check results.',403);
           const receiptMatch=url.pathname.match(/^\/v1\/timing\/sessions\/([a-zA-Z0-9_-]{1,100})\/([a-zA-Z0-9_-]{1,100})$/);
           if(req.method==='GET'&&receiptMatch){const record=this.store.data.timing.sessions.find(r=>r.payload.source.id===receiptMatch[1]&&r.payload.sessionId===receiptMatch[2]);if(!record)throw timing.fault('SESSION_NOT_FOUND','No session with that source and session ID is stored.',404);return send(200,timing.receipt(this.store.data,record));}
@@ -92,7 +92,7 @@ class Network {
             if(expected!==this.store.data.id)throw timing.fault('DATABASE_MISMATCH','The host database changed during upload.',409);
             if(!this.access(code)?.timingResults)throw timing.fault('TIMING_PERMISSION_REQUIRED','Timing access changed during upload.',403);
             let payload;try{payload=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(Buffer.concat(chunks)));}catch{throw timing.fault('INVALID_JSON','Request must contain valid UTF-8 JSON.');}
-            const result=timing.receive(this.store,payload);if(!result.duplicate)try{this.onChange({kind:'timing'});}catch{}return send(200,result);
+            return await this.store.withIdle(()=>{if(expected!==this.store.data.id)throw timing.fault('DATABASE_MISMATCH','The host database changed during upload.',409);if(!this.access(code)?.timingResults)throw timing.fault('TIMING_PERMISSION_REQUIRED','Timing access changed during upload.',403);const result=timing.receive(this.store,payload);if(!result.duplicate)try{this.onChange({kind:'timing'});}catch{}return send(200,result);});
           }
           throw timing.fault('NOT_FOUND','Unknown Timing operation.',404);
         }
@@ -112,7 +112,7 @@ class Network {
           let size=0;const chunks=[];for await(const chunk of req){size+=chunk.length;if(size>MAX){send(413,{error:'Package exceeds the 32 MB network limit. Use a file export.'});return;}chunks.push(chunk);}
           if(req.headers['x-slotforge-database']&&req.headers['x-slotforge-database']!==this.store.data.id)return send(409,{error:'The host database changed during upload.'});
           if(!this.access(code)?.submit)return send(403,{error:'Submission access changed during upload. Reconnect with a current submission code.'});
-          const result=this.store.mutate('submission.add',{package:JSON.parse(Buffer.concat(chunks).toString())});if(result.result!=='duplicate'){try{this.onChange();}catch{/* Notification failure must not change a successful save response. */}}return send(200,{ok:true,duplicate:result.result==='duplicate'});
+          return await this.store.withIdle(()=>{if(req.headers['x-slotforge-database']&&req.headers['x-slotforge-database']!==this.store.data.id)return send(409,{error:'The host database changed during upload.'});if(!this.access(code)?.submit)return send(403,{error:'Submission access changed during upload. Reconnect with a current submission code.'});const result=this.store.mutate('submission.add',{package:JSON.parse(Buffer.concat(chunks).toString())});if(result.result!=='duplicate'){try{this.onChange();}catch{/* Notification failure must not change a successful save response. */}}return send(200,{ok:true,duplicate:result.result==='duplicate'});});
         }
         send(404,{error:'Unknown operation.'});
       }catch(e){send(e.httpStatus||(e.code?500:400),{error:e.code?'The host could not save the submission. Check storage on the sharing computer.':e.message,code:e.apiCode||(e.code?'STORAGE_FAILED':'INVALID_PAYLOAD')});}

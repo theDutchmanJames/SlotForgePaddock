@@ -1,10 +1,20 @@
 const historyClassifications=['Unverified','Real Racing Car','Fantasy Livery','Tribute Livery','Road / Show Car'];
 const historyFields=[['team','Racing team'],['drivers','Drivers'],['event','Event / circuit'],['year','Year'],['raceNumber','Race number'],['qualifying','Qualifying result'],['finish','Finishing result (including DNF / DNS)'],['history','History of the represented entry']];
+function liveryClassification(value){
+  const styles={
+    'Unverified':['unverified','history','Ready for research','The original car or livery has not been classified yet.'],
+    'Real Racing Car':['racing','flag','Race-inspired history','Recorded as representing a real racing car and livery.'],
+    'Fantasy Livery':['fantasy','palette','Creative by design','Recorded as an imagined racing colour scheme.'],
+    'Tribute Livery':['tribute','bookmark','A nod to racing history','Recorded as a tribute to another car, team or era.'],
+    'Road / Show Car':['road','car','Beyond the race circuit','Recorded as a road car or show-car appearance.']
+  },name=Object.hasOwn(styles,value)?value:'Unverified',[tone,symbol,kicker,description]=styles[name];
+  return `<section class="livery-classification livery-${tone}"><span class="livery-emblem">${icon(symbol)}</span><div><div class="label">Livery classification · ${esc(kicker)}</div><h3>${esc(name)}</h3><p>${esc(description)}</p><small>Collector classification · not independently verified</small></div></section>`;
+}
 function historySourceButton(url,label){return url?`<button type="button" class="btn ghost small" data-action="history-source" data-url="${esc(url)}">${esc(label||url)} ${icon('next')}</button>`:'';}
 function renderRealHistory(c){
   const h=c.realHistory||{},photos=h.photos||[];
   return `<div class="page-head"><div><h2>Real Car History</h2><p class="muted">The full-size car and livery represented by this model.</p></div>${local()?btn('Edit history','history-edit','primary',c.id):''}</div>`+
-    `<div class="history-classification">${badge(h.classification||'Unverified','info')}<p class="tiny muted">A classification recorded by the collector, supported by the sources below. Missing evidence does not mean a fantasy livery.</p></div>`+
+    liveryClassification(h.classification)+
     (local()?historyResearchTools(c):'')+
     `<div class="two-col mt">${panel('Represented racing entry',dl(historyFields.filter(([key])=>key!=='history').map(([key,label])=>[label,h[key]])))}${panel('Research notes',`<p class="prewrap">${esc(h.history||'Add the story of the original car, or leave this section empty.')}</p>`)}</div>`+
     `<div class="mt">${panel('Sources',h.sources?.length?`<ul class="history-sources">${h.sources.map(s=>`<li>${historySourceButton(s.url,s.title||s.url)}${s.title?`<div class="tiny muted">${esc(s.url)}</div>`:''}</li>`).join('')}</ul>`:'<p class="muted">No sources recorded. Add event results, manufacturer references or historical photographs as evidence.</p>')}</div>`+

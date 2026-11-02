@@ -1,5 +1,10 @@
-.history-classification,.pace-reference{padding:18px 20px;border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:10px;background:var(--panel)}
-.history-classification p{margin:10px 0 0}
+.pace-reference{padding:18px 20px;border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:10px;background:var(--panel)}
+.livery-classification{--livery:var(--blue);display:flex;align-items:center;gap:20px;padding:22px 24px;border:1px solid color-mix(in srgb,var(--livery) 55%,var(--line));border-left:5px solid var(--livery);border-radius:12px;background:linear-gradient(110deg,color-mix(in srgb,var(--livery) 13%,var(--panel)),var(--panel) 75%);margin-bottom:20px}
+.livery-racing{--livery:var(--green)}.livery-fantasy{--livery:var(--accent)}.livery-tribute{--livery:var(--amber)}.livery-road{--livery:var(--blue)}.livery-unverified{--livery:var(--muted)}
+.livery-emblem{display:grid;place-items:center;width:66px;height:66px;flex-shrink:0;border:1px solid color-mix(in srgb,var(--livery) 65%,var(--line));border-radius:18px;background:color-mix(in srgb,var(--livery) 16%,var(--panel));color:var(--livery)}.livery-emblem svg{width:32px;height:32px}
+.livery-classification h3{font-size:25px;letter-spacing:-.02em;margin:5px 0}.livery-classification p{margin:4px 0 8px}.livery-classification small{color:var(--muted);font-size:11px}.livery-classification .label{font-size:10px;letter-spacing:.09em}
+.review-stock-return{border-left:3px solid var(--amber);padding-left:16px}.review-return-note{padding:12px 14px;border-radius:8px;background:color-mix(in srgb,var(--amber) 10%,var(--panel));font-size:13px;line-height:1.6}.review-return-note svg{width:16px;height:16px;vertical-align:middle;color:var(--amber);margin-right:5px}
+@media(max-width:650px){.livery-classification{padding:18px;gap:14px}.livery-emblem{width:48px;height:48px}.livery-classification h3{font-size:21px}.review-field .check-row{flex-wrap:wrap}}
 .research-proposals{display:grid;gap:14px;margin-top:18px}.research-proposal{padding:16px;border:1px solid var(--line);border-radius:8px;background:var(--panel);overflow-wrap:anywhere}
 .research-values{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin:14px 0}.research-values p{margin:6px 0}.research-proposal .btn{max-width:100%;white-space:normal;text-align:left}
 @media(max-width:650px){.research-values{grid-template-columns:1fr}}

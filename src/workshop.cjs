@@ -37,6 +37,21 @@ function detachAssembly(db,a,location){
   for(const component of a.components){const p=db.parts.find(p=>p.id===component.partId);p.condition='Used';p.location=location;p.updated=now();}
   a.carId=null;a.location=location;a.updated=now();touch(db,from);event(db,from,'Removed assembly: '+a.name,'Kept together in '+location);
 }
+// A reviewed replacement releases just this component. Other assembly members
+// remain fitted; the old installation keeps its assembly identity for history.
+function returnReviewedPart(db,i){
+  const a=i.assemblyId?liveAssemblies(db).find(a=>a.id===i.assemblyId):null;
+  if(a){
+    const before=clone(a.components),remaining=a.components.filter(c=>c.partId!==i.partId);
+    check(before.length!==remaining.length,'Assembly component no longer exists.');
+    if(remaining.length){a.components=remaining;(a.history??=[]).push({date:now(),before,after:clone(remaining),removedName:db.parts.find(p=>p.id===i.partId).name,installedName:'Returned to used stock'});}
+    else {a.dismantled=now();a.carId=null;}
+    a.updated=now();delete i.assemblyId;
+  }
+  returnPart(db,i);
+  if(a)i.assemblyId=a.id;
+  event(db,i.carId,'Review override: returned '+(i.name||db.parts.find(p=>p.id===i.partId).name)+' to stock',`${i.quantity} piece(s) returned to Used spares${a?' from '+a.name+(a.dismantled?'; assembly dismantled':'; other components stay fitted'):''}. Incoming value is an untracked specification.`);
+}
 function installAssembly(db,a,carId){
   const from=a.carId;check(from!==carId,'Assembly is already installed on this car.');
   if(from){for(const i of active(db).filter(i=>i.assemblyId===a.id))endInstallation(db,i,'transfer');touch(db,from);event(db,from,'Transferred assembly: '+a.name,'To '+db.cars.find(c=>c.id===carId)?.name);}
@@ -203,4 +218,4 @@ function mutateWorkshop(db,action,p,techFields){
     a.dismantled=now();a.updated=now();
   }else throw new Error('Unknown workshop operation.');
 }
-module.exports={available,assemblyForPart,validateWorkshop,setupOptions,applySetup,mutateWorkshop,requirements,compatible,active,liveAssemblies,touch,event,addInstallation,endInstallation,returnPart,detachAssembly,installAssembly};
+module.exports={available,assemblyForPart,validateWorkshop,setupOptions,applySetup,mutateWorkshop,requirements,compatible,active,liveAssemblies,touch,event,addInstallation,endInstallation,returnPart,returnReviewedPart,detachAssembly,installAssembly};

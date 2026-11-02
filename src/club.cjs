@@ -7,6 +7,7 @@ const MAX=220*1024*1024;
 class Club {
  constructor(store,network,folder,notify=()=>{}){
   this.main=store;this.network=network;network.club=this;this.folder=folder;this.file=path.join(folder,'club-device.json');this.cache=new Store(path.join(folder,'club-copy.json'));this.notify=notify;this.clients=new Set();this.journal=[];this.journalBytes=0;this.last=M.shared(store.data);this.state='offline';this.active=false;this.busy=false;this.closed=false;this.serial=Promise.resolve();
+  this.prevalidated=new WeakMap();
   this.device=fs.existsSync(this.file)?readJSON(this.file):{version:1,id:crypto.randomUUID(),name:require('node:os').hostname().slice(0,100),pair:null,outbox:[]};
   M.check(this.device.version===1&&typeof this.device.id==='string'&&Array.isArray(this.device.outbox),'Invalid club device settings.');this.code=this.device.pair?.password||undefined;this.saveDevice();this.unsubscribe=store.subscribe(()=>this.changed());
  }
@@ -26,12 +27,22 @@ class Club {
  enable(name,password){password=this.password(password);M.check(!this.active,'Switch to the local collection first.');M.check(!this.main.data.club,'This collection is already shared.');M.check(typeof name==='string'&&name.trim()&&name.length<=100,'Enter a computer name.');this.backup(this.main,'before-sharing');const id=crypto.randomUUID();this.saveDevice({...this.device,coordinator:id,name:name.trim(),hostPassword:password});this.main.transact(db=>{db.club={id,proposals:[]};});this.last=M.shared(this.main.data);return this.status();}
  assertHost(){M.check(!this.active&&!this.main.data.club?.replica,'A club copy cannot host or serve Timing. Switch to your personal collection, or use the dealership computer.');M.check(!this.main.data.club||this.coordinator,'This shared collection is not authorised for Dealership Mode on this computer.');}
  simulation(action,payload,rebase=true,store=this.main){const db=store.data,s=new Store();s.data=store.snapshot();const p=cloneJSON(payload);if(rebase&&Object.hasOwn(p,'revision')){let c;if(['car.save','car.favourite','car.archive'].includes(action))c=db.cars.find(x=>x.id===p.id);if(action==='document.add')c=db.cars.find(x=>x.id===p.carId);if(action==='document.remove'){const d=db.documents.find(x=>x.id===p.id);c=db.cars.find(x=>x.id===d?.carId);}p.revision=c?c.revision:db.revision;}if(rebase&&Object.hasOwn(p,'carRevision'))p.carRevision=db.cars.find(x=>x.id===p.carId)?.revision;const r=s.mutate(action,p);return {data:s.data,result:r.result,changes:M.summary(db,s.data,action)};}
- receive(input){
+ receipt(input){
   M.check(this.coordinator,'This computer is not in Dealership Mode.');M.command(input);M.check(typeof input.id==='string'&&/^[a-zA-Z0-9_-]{1,100}$/.test(input.id),'Invalid proposal ID.');M.check(input.databaseId===this.main.data.id&&input.clubId===this.main.data.club.id,'Wrong club collection.');
-  const receiptHash=M.hash(input),old=this.main.data.club.proposals.find(p=>p.id===input.id);if(old){M.check(old.receiptHash===receiptHash,'This proposal identity has different content.');return {id:old.id,status:old.status,duplicate:true};}
+  const receiptHash=M.hash(input),old=this.main.data.club.proposals.find(p=>p.id===input.id);if(old){M.check(old.receiptHash===receiptHash,'This proposal identity has different content.');return {existing:{id:old.id,status:old.status,duplicate:true}};}
   M.check(this.main.data.club.proposals.length<5000,'Club review history is full. Export a backup before maintenance.');M.check(this.main.data.club.proposals.filter(p=>p.status==='pending').length<200,'Review the pending club changes before sending more.');
-  if(input.base===M.digest(this.main.data))this.simulation(input.action,input.payload);
-  this.main.transact(db=>db.club.proposals.unshift({...cloneJSON(input),receiptHash,status:'pending',received:new Date().toISOString()}));return {id:input.id,status:'pending'};
+  // Only locally produced proposals may reuse the validation just performed
+  // against this exact immutable state. Network submissions still validate.
+  const validated=this.prevalidated.get(input);this.prevalidated.delete(input);
+  if(validated!==this.main.data&&input.base===M.digest(this.main.data))this.simulation(input.action,input.payload);
+  return {record:{...cloneJSON(input),receiptHash,status:'pending',received:new Date().toISOString()}};
+ }
+ receive(input){const receipt=this.receipt(input);if(receipt.existing)return receipt.existing;this.main.transact(db=>db.club.proposals.unshift(receipt.record));return {id:input.id,status:'pending'};}
+ async receiveAsync(input,authorize=()=>{}){
+  return this.main.withIdle(async()=>{
+   authorize();const receipt=this.receipt(input);if(receipt.existing)return receipt.existing;
+   await this.main.transactAsync(db=>db.club.proposals.unshift(receipt.record));return {id:input.id,status:'pending'};
+  });
  }
  inspect(id){M.check(this.coordinator&&!this.active,'Only the dealership computer can review club proposals.');const p=this.main.data.club.proposals.find(p=>p.id===id);M.check(p&&p.status==='pending','This proposal has already been reviewed.');let simulation,error='';try{simulation=this.simulation(p.action,p.payload);}catch(e){error=e.message;}const base=M.digest(this.main.data);return {simulation,view:{id,device:p.device,action:p.action,editing:!!p.payload.id,original:p.original,changes:simulation?.changes||[],error,conflict:p.base!==base,token:M.hash({base,receipt:p.receiptHash})}};}
  preview(id){return this.inspect(id).view;}
@@ -40,13 +51,17 @@ class Club {
    // must still advance the revision so copies receive the review decision.
    simulation.data.revision=this.main.data.revision+1;this.main.replace(simulation.data);
   }else this.main.transact(db=>Object.assign(db.club.proposals.find(x=>x.id===q.id),{status:'rejected',reviewed:new Date().toISOString(),reviewer:this.device.name}));return this.status();}
- async mutate(action,payload={}){
+ mutate(action,payload={}){
+  const store=this.store;
+  return store.withIdle(()=>{M.check(this.store===store,'The collection changed while saving. Reopen the editor.');return this.mutateReady(action,payload);});
+ }
+ async mutateReady(action,payload={}){
   if(!this.store.data.club)return this.store.mutate(action,payload);
   if(action==='submission.review'){M.check(this.coordinator&&!this.active,'Incoming member cars must be reviewed on the dealership computer.');return this.main.mutate(action,payload);}
   M.check(!this.active||this.state==='connected','This club copy is offline or out of date. Reconnect and update before proposing changes.');
   const simulation=this.simulation(action,payload,false,this.store);
   const input={id:crypto.randomUUID(),databaseId:this.store.data.id,clubId:this.store.data.club.id,sourceId:this.device.id,device:this.device.name,action,payload:M.compactPayload(this.store.data,action,payload),base:M.digest(this.store.data),original:simulation.changes};M.command(input);
-  if(this.active){this.saveDevice({...this.device,outbox:[...this.device.outbox,input]});await this.sendOutbox();}else this.receive(input);
+  if(this.active){this.saveDevice({...this.device,outbox:[...this.device.outbox,input]});await this.sendOutbox();}else {this.prevalidated.set(input,this.main.data);await this.receiveAsync(input);}
   return {queued:true,message:this.device.outbox.length?'Proposal saved on this computer; retry delivery in Connections.':'Change submitted to club Review. The approved collection is unchanged.',data:this.store.snapshot(),collection:this.store.metadata(),club:this.status()};
  }
  async request(route,body,connection){const {pair,code}=connection||{pair:this.device.pair,code:this.code};M.check(pair&&code,'Reconnect with the dealership computer’s club password.');const {localAddress}=require('./network.cjs');const response=await fetch(localAddress(pair.address)+route,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+code,'Content-Type':'application/json','X-SlotForge-Database':pair.databaseId},body:body?JSON.stringify(body):undefined,redirect:'error',signal:AbortSignal.timeout(60000)});M.check(Number(response.headers.get('content-length')||0)<=MAX,'Club snapshot too large.');let size=0,chunks=[];for await(const c of response.body){size+=c.length;M.check(size<=MAX,'Club snapshot too large.');chunks.push(c);}const data=JSON.parse(Buffer.concat(chunks).toString());M.check(response.ok,data?.error||'Club connection failed.');return data;}
@@ -97,7 +112,7 @@ class Club {
    }
    if(req.method==='POST'&&url.pathname==='/v1/club/proposals'){
     if(Number(req.headers['content-length'])>16*1024*1024){send(413,{error:'Club proposal exceeds 16 MiB.'});req.resume();return;}
-    M.check(/^application\/json(?:;\s*charset=utf-8)?$/i.test(req.headers['content-type']||''),'Send application/json.');M.check(!req.headers['content-encoding']||req.headers['content-encoding']==='identity','Compressed submissions are unsupported.');let size=0,chunks=[];for await(const c of req.iterator({destroyOnReturn:false})){size+=c.length;if(size>16*1024*1024){send(413,{error:'Club proposal exceeds 16 MiB.'});req.resume();return;}chunks.push(c);}M.check(this.coordinator&&this.main.data.id===databaseId&&this.main.data.club.id===clubId&&this.network.access(code)?.club,'Club permission or identity changed during upload.');const value=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(Buffer.concat(chunks)));send(200,this.receive(value));return;
+    M.check(/^application\/json(?:;\s*charset=utf-8)?$/i.test(req.headers['content-type']||''),'Send application/json.');M.check(!req.headers['content-encoding']||req.headers['content-encoding']==='identity','Compressed submissions are unsupported.');let size=0,chunks=[];for await(const c of req.iterator({destroyOnReturn:false})){size+=c.length;if(size>16*1024*1024){send(413,{error:'Club proposal exceeds 16 MiB.'});req.resume();return;}chunks.push(c);}M.check(this.coordinator&&this.main.data.id===databaseId&&this.main.data.club.id===clubId&&this.network.access(code)?.club,'Club permission or identity changed during upload.');const value=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(Buffer.concat(chunks)));send(200,await this.receiveAsync(value,()=>M.check(this.coordinator&&this.main.data.id===databaseId&&this.main.data.club.id===clubId&&this.network.access(code)?.club,'Club permission or identity changed during upload.')));return;
    }
    send(404,{error:'Unknown club operation.'});
   }catch(e){send(400,{error:e.message,code:'CLUB_REQUEST_FAILED'});}

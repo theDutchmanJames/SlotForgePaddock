@@ -15,6 +15,7 @@ function renderReviewHub(){
   return head+nav+(s.maintenance.length?groups.filter(([,items])=>items.length).map(([title,items,tone])=>`<section class="review-maintenance-section"><div class="section-heading"><h2>${title} <span class="badge">${items.length}</span></h2></div><div class="review-maintenance-grid">${items.map(e=>{const c=db.cars.find(c=>c.id===e.carId),job=s.jobs.find(j=>j.carId===c.id);return `<article class="panel review-maintenance-card ${tone}"><div class="row">${uiTile('calendar',tone==='overdue'?'accent':'amber')}<div><h3>${esc(e.task||e.title)}</h3><p class="muted">${esc(c.name)}</p></div></div><p class="review-due">${title==='Upcoming'?'Due':title} · ${date(e.nextDue)}</p><div class="actions">${btn('Open car','open-car','small',c.id)}${job?btn('Resume job','open-job','small',job.id):btn('Plan workshop job','maintenance-job','small',e.id)}</div></article>`;}).join('')}</div></section>`).join(''):empty('No maintenance reminders','Record maintenance on a car and set its next due date to see it here.'));
 }
 async function reviewAction(action,id){
+  if(action==='review-select-safe'||action==='review-select-none'){document.querySelectorAll('[data-review-field]').forEach(e=>{e.checked=action==='review-select-safe'&&!e.hasAttribute('data-stock-override');});return true;}
   if(action==='open-review'){openReview();return true;}
   if(action==='review-tab'){if(['Club changes','Incoming cars','Workshop jobs','Maintenance'].includes(id)){reviewTab=id;render();}return true;}
   if(action==='edit-job'){editWorkshopJob(id);return true;}

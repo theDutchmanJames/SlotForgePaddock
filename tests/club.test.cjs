@@ -21,6 +21,17 @@ test('password changes are validated and durably saved before changing live acce
 });
 async function until(fn){for(let n=0;n<150;n++){if(fn())return;await new Promise(r=>setTimeout(r,20));}assert.fail('Expected club state was not reached');}
 function approve(c,id,confirmConflict=false){const p=c.preview(id);c.review({id,token:p.token,decision:'accept',confirmConflict});}
+
+test('incoming stock overrides on the dealership persist and replicate returned stock and selected specifications',async t=>{
+ const {h,make}=await host(t),carId=h.store.data.cars[0].id;
+ const partId=h.store.mutate('part.save',{data:{name:'Original tyres',quantity:6,tracking:'quantity',category:'Tyres'}}).result;
+ h.store.mutate('part.install',{carId,partId,quantity:2,field:'rearTyres'});
+ const pack=require('../src/store.cjs').makePackage(h.store.data,[carId]);pack.cars[0].technical={rearTyres:'Imported tyres',motor:'Unselected motor'};
+ const id=h.store.mutate('submission.add',{package:pack}).result,a=make('Stock laptop');await join(h,a);
+ await h.club.mutate('submission.review',{id,carId,decision:'accept',revision:h.store.data.cars[0].revision,fields:['technical.rearTyres'],stockOverrides:['rearTyres']});
+ await until(()=>a.club.cache.data.cars[0].technical.rearTyres==='Imported tyres');
+ const saved=new Store(h.store.file).data;assert.equal(saved.cars[0].technical.motor,'21.5k');assert.equal(saved.installations.filter(i=>!i.removed).length,0);assert.equal(saved.parts.find(p=>p.sourcePartId===partId).quantity,2);assert.deepEqual(a.club.cache.data.parts,saved.parts);assert.deepEqual(a.club.cache.data.installations,saved.installations);
+});
 test('schema 10 migrates safely; club proposals remain private in public exports',()=>{const old=new Store().snapshot();old.schema=10;delete old.club;const next=migrate(old);assert.equal(next.schema,11);assert.equal(next.club,null);assert.equal(old.club,undefined);});
 test('dealership computer edits queue; approval is atomic, durable and cannot be replayed',async t=>{const {h}=await host(t),id=h.store.data.cars[0].id;const result=await h.club.mutate('car.save',{id,revision:1,data:{technical:{motor:'25k'}}});assert.equal(result.queued,true);assert.equal(h.store.data.cars[0].technical.motor,'21.5k');const q=h.store.data.club.proposals[0];approve(h.club,q.id);assert.equal(h.store.data.cars[0].technical.motor,'25k');assert.equal(new Store(h.store.file).data.club.proposals[0].status,'accepted');assert.throws(()=>approve(h.club,q.id),/already/);});
 

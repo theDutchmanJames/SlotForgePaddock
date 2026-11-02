@@ -71,7 +71,7 @@ function summary(a,b,action=''){
 // later approval cannot overwrite an unrelated edit or resend an unchanged photo.
 function compactPayload(db,action,payload){
  const p=cloneJSON(payload);
- if(action==='car.save'&&p.id){const old=db.cars.find(x=>x.id===p.id);if(old)for(const key of Object.keys(p.data)){if(['technical','factory','custom'].includes(key)&&p.data[key]&&typeof p.data[key]==='object'){for(const sub of Object.keys(p.data[key]))if(isDeepStrictEqual(p.data[key][sub],old[key]?.[sub]))delete p.data[key][sub];if(!Object.keys(p.data[key]).length)delete p.data[key];}else if(isDeepStrictEqual(p.data[key],old[key]))delete p.data[key];}}
+ if(action==='car.save'&&p.id){const old=db.cars.find(x=>x.id===p.id);if(old)for(const key of Object.keys(p.data)){if(['technical','factory','custom','realHistory'].includes(key)&&p.data[key]&&typeof p.data[key]==='object'){for(const sub of Object.keys(p.data[key]))if(isDeepStrictEqual(p.data[key][sub],old[key]?.[sub]))delete p.data[key][sub];if(!Object.keys(p.data[key]).length)delete p.data[key];}else if(isDeepStrictEqual(p.data[key],old[key]))delete p.data[key];}}
  if(action==='part.save'&&p.id&&p.data?.picture===db.parts.find(x=>x.id===p.id)?.picture)delete p.data.picture;
  return p;
 }

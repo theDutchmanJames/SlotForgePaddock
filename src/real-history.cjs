@@ -17,4 +17,12 @@ function clean(input,photo,ident){
   if(Object.hasOwn(input,'photos'))out.photos=photos.map(p=>{check(p&&typeof p==='object','Invalid history photograph.');const id=ident(p.id);check(!ids.has(id),'Duplicate history photograph.');ids.add(id);check(p.data,'A reference photograph needs image data.');return {id,name:text(p.name,200),data:photo(p.data),caption:text(p.caption??'',1000),sourceUrl:url(p.sourceUrl??'')};});
   return out;
 }
-module.exports={classifications,fields,url,clean};
+function patch(current={},changes){
+  check(changes&&typeof changes==='object'&&!Array.isArray(changes),'Invalid real-car history.');
+  const next={...current,...changes};
+  // Sparse edits retain unrelated research, but never retain evidence for a
+  // value that was manually replaced without new supporting evidence.
+  if(!Object.hasOwn(changes,'evidence'))next.evidence=require('../renderer/history-research-model.js').editedEvidence(current,next,next.sources||[]);
+  return next;
+}
+module.exports={classifications,fields,url,clean,patch};

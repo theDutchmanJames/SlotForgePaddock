@@ -216,7 +216,7 @@ document.addEventListener('click',async event=>{
       case 'refresh-remote':{const result=await api('network','refresh');remote=result.data;net=result.status;toast('Shared collection refreshed.');break;}
       case 'disconnect':net=await api('network','disconnect');remote=null;switchCollection('local');break;
       case 'review-select':reviewId=id;reviewCarId=target.dataset.car;break;
-      case 'accept-review':case 'reject-review':{const fields=[...document.querySelectorAll('[data-review-field]:checked')].map(e=>e.dataset.reviewField);await change('submission.review',{id:reviewId,carId:reviewCarId,decision:action==='accept-review'?'accept':'reject',fields,revision:Number($('#review-revision').value),note:$('#review-note').value,includeSetups:!!$('#review-setups')?.checked});reviewCarId=null;toast(action==='accept-review'?'Selected changes accepted.':'Submission rejected.');break;}
+      case 'accept-review':case 'reject-review':{const fields=[...document.querySelectorAll('[data-review-field]:checked')].map(e=>e.dataset.reviewField);await change('submission.review',{id:reviewId,carId:reviewCarId,decision:action==='accept-review'?'accept':'reject',fields,stockOverrides:[...document.querySelectorAll('[data-stock-override]:checked')].map(e=>e.dataset.stockOverride),revision:Number($('#review-revision').value),note:$('#review-note').value,includeSetups:!!$('#review-setups')?.checked});reviewCarId=null;toast(action==='accept-review'?'Selected changes accepted.':'Submission rejected.');break;}
       default:return;
     }
     render();

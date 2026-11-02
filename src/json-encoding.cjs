@@ -6,6 +6,16 @@ const crypto=require('node:crypto');
 const {types}=require('node:util');
 const LIMIT=128*1024*1024,MIN=4096;
 const strings=new Map();let bytes=0;
+// Valid base64 photos contain only JSON-safe ASCII. Retain validation results,
+// not a second escaped copy of each photograph. Large collections otherwise
+// evict the ordinary string cache on every pass and repeatedly encode all photos.
+const photos=new Map(),PHOTO_LIMIT=256*1024*1024;let photoBytes=0;
+function knownPhoto(value){
+ if(photos.has(value))return true;
+ if(typeof value!=='string'||!value.startsWith('data:image/')||!/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(value))return false;
+ if(value.length<=PHOTO_LIMIT){while(photoBytes+value.length>PHOTO_LIMIT){const first=photos.keys().next().value;photos.delete(first);photoBytes-=first.length;}photos.set(value,true);photoBytes+=value.length;}
+ return true;
+}
 function encodedString(value){
  let entry=strings.get(value);if(entry)return entry;
  const json=JSON.stringify(value);entry={json,bytes:Buffer.byteLength(json)};
@@ -25,7 +35,10 @@ function prepare(value,key){
 }
 function* chunks(value,ancestors=new Set(),prepared=false){
  if(!prepared)value=prepare(value,'');
- if(typeof value==='string'){yield encodedString(value);return;}
+ if(typeof value==='string'){
+  if(knownPhoto(value)){yield {json:'"',bytes:1};yield {json:value,bytes:value.length};yield {json:'"',bytes:1};}
+  else yield encodedString(value);return;
+ }
  if(value===null||typeof value!=='object'){
   const json=JSON.stringify(value);if(json!==undefined)yield {json,bytes:Buffer.byteLength(json)};return;
  }
@@ -51,6 +64,11 @@ function stringify(value){
  if(parts.length)batches.push(parts.join(''));return batches.length?batches.join(''):undefined;
 }
 function byteLength(value){let size=0;for(const chunk of chunks(value))size+=chunk.bytes;if(!size)throw new TypeError('Value has no JSON representation');return size;}
+function* buffers(value){
+ let parts=[],size=0;
+ for(const chunk of chunks(value)){parts.push(chunk.json);size+=chunk.bytes;if(size>=65536){yield Buffer.from(parts.join(''));parts=[];size=0;}}
+ if(parts.length)yield Buffer.from(parts.join(''));
+}
 function hash(value){const digest=crypto.createHash('sha256');let any=false;for(const chunk of chunks(value)){any=true;digest.update(chunk.json);}if(!any)throw new TypeError('Value has no JSON representation');return digest.digest('hex');}
-function isPhoto(value){const entry=encodedString(value);return entry.photo??(entry.photo=!value||/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(value));}
-module.exports={stringify,byteLength,hash,isPhoto};
+function isPhoto(value){return !value||knownPhoto(value);}
+module.exports={stringify,byteLength,hash,isPhoto,buffers};

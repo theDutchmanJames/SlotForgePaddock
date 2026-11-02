@@ -27,13 +27,38 @@ The host remembers its password across hosting and app restarts. Joined Paddock 
 
 - Edits on a club copy **and on the dealership computer itself** become proposals. The official car or stock record stays unchanged until approved.
 - **REVIEW → Dealership changes** lists pending changes and recent decisions. Only the dealership computer offers the approval controls.
+- Review cards and comparison headings identify the affected car by name, with the operation and work/job title beneath it. Car references use stable identities; cars with identical names are not matched together.
 - The comparison shows the original, current and proposed values. Blank initial fields and bookkeeping timestamps are omitted. Up to 200 changed fields are listed; **Full submitted change** exposes the complete command, replacing inline image/document bytes with a size description. Use smaller batches for large catalogue imports.
+
 - Approval revalidates the command against the current database, including available stock. A failed validation does not partly apply a change.
 - If approved content changed after the proposal was created, the dealership computer must explicitly confirm the fresh comparison. If it changes again while that comparison is open, the reviewer must reopen it.
 - Conflict detection is deliberately conservative: a change anywhere in the approved collection can require confirmation. Queuing another proposal alone does not create a content conflict.
 - Existing car edits submit only the changed fields, so approving a name change does not reset an unrelated configuration field. Other operations show their full effects for review.
 
 Incoming public car packages keep their existing **Incoming cars** review workflow on the dealership computer. Finalised Timing sessions use the same Dealership password and the existing Timing API: results reviewed in Timing are stored directly by the dealership computer and then distributed to connected club copies. They do not require a second Dealership changes approval.
+
+### Incoming cars: select fields and return replaced stock
+
+Under **Review → Incoming cars**, technical specifications are separate choices.
+For example, accept a pinion or tyre update while leaving the driven gear and
+front tyres unchanged. Existing text values may be replaced directly.
+
+A change that conflicts with a fitted inventory component starts unchecked and
+shows **Returns fitted stock**. Selecting it explicitly authorises returning the
+fitted quantity to **Used spares** before applying the incoming specification.
+An individual part retains its inventory identity; quantity stock is returned as
+a separate used lot. Owned quantities are conserved. The new specification is
+text: it does not automatically fit a different inventory item.
+
+For an assembly component, only that component is released. Other components
+stay fitted and grouped. If the final component is released, the empty assembly
+is retired. Removal history and earlier setup snapshots are retained.
+
+**Select changes without stock returns** selects ordinary changes; stock returns
+still require an individual selection. **Clear selection** leaves every field
+unchecked. A stale comparison or failed save applies neither the field edits nor
+the stock returns. Approval on the dealership computer persists and replicates
+both together.
 
 ## Quiet updates and disconnected computers
 
