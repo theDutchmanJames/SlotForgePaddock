@@ -1,258 +1,18 @@
 <p align="left">
+  <img src="assets/icon.png" alt="SlotForge Paddock Collection icon" width="96" align="right">
   <img src="docs/images/slotforge-brand.png" alt="SlotForge — Slotcar App Collection" width="400">
 </p>
+<br clear="both">
 
 # SlotForge Paddock
 
-<img src="assets/icon.png" alt="SlotForge Paddock icon" width="96" align="right">
+**Your slotcar collection, on display. Your workshop, organised.**
 
-**Your virtual slotcar garage. Your detailed workshop. One collection.**
+SlotForge Paddock is a desktop app for collecting, displaying, building and maintaining slotcars. Give each car a photograph and a place in your virtual showroom, or track every fitted part, setup change, workshop job and recorded lap.
 
-SlotForge Paddock is a desktop app for collecting, displaying, building and maintaining slotcars. Add a car and a photograph to start your virtual showroom, or go deeper into parts, setups, maintenance and racing preparation.
+Start with a name and a picture. Add detail when you need it. **The same app serves the casual collector and the dedicated tinkerer**, with local storage and optional sharing between your home or club computers.
 
-Both approaches use the same collection. **You decide how much detail to record.**
-
-<table>
-  <tr>
-    <th width="50%">Your Showroom · light theme</th>
-    <th width="50%">Your Showroom · dark theme</th>
-  </tr>
-  <tr>
-    <td><a href="docs/screenshots/showroom-light.png"><img src="docs/screenshots/showroom-light.png" alt="Showroom in the Ocean light theme, featuring an Aston Martin Vantage V12 and the collection gallery" width="100%"></a></td>
-    <td><a href="docs/screenshots/showroom-dark.png"><img src="docs/screenshots/showroom-dark.png" alt="The same Aston Martin spotlight and collection gallery in the dark theme" width="100%"></a></td>
-  </tr>
-</table>
-
-*Your own cars, your own photographs. Click any screenshot to view it at full size. These screenshots show the earlier SlotForge Database branding.*
-
-[Virtual showroom](#for-the-collector-your-virtual-showroom) · [Build calculations](#plan-your-build-with-gearing-torque-and-power-calculations) · [Detailed workshop](#for-the-tinkerer-your-detailed-slotcar-workshop) · [Club sharing](#connect-with-your-club) · [Getting started](#getting-started) · [Project status](#project-status) · [App Collection](#slotforge-app-collection)
-
-## For the collector: your virtual showroom
-
-*Add a car, upload a photograph, and enjoy your own digital slotcar garage.*
-
-You don't need to enter technical specifications or manage spare parts to get started.
-
-- **Display your collection.** Showroom presents your cars in a photo gallery, with a featured spotlight car, favourites, full-screen viewing and a slideshow. Create ordered **shelves** for selected cars, adjust each photograph’s focal point, and use a clean presentation view.
-- **Build a profile for each car.** Start with its name and photograph, then optionally add manufacturer, scale, model, livery, racing number and other identifying details.
-- **Keep your collection organised.** Search, filter and label cars—for example, Collection / Display, Home racing, Club racing or Competition.
-- **Record ownership details.** Keep track of storage locations, condition, packaging, purchases, valuations and loans.
-- **Keep photographs and documents together.** Add extra pictures and attach relevant paperwork to each car.
-- **Choose how you browse.** Switch between gallery and table views, customise table columns and save frequently used views.
-- **Make it feel like your garage.** Choose a colour theme, customise the three-line welcome banner and select which information appears on car overview panels.
-
-You can stop here and have a useful collection app. The workshop features are available whenever you want them.
-
-<table>
-  <tr>
-    <th width="50%">Your collection at a glance</th>
-    <th width="50%">Browse and organise your cars</th>
-  </tr>
-  <tr>
-    <td><a href="docs/screenshots/overview.png"><img src="docs/screenshots/overview.png" alt="Overview with a personalised welcome banner, collection totals, active jobs and recent activity" width="100%"></a></td>
-    <td><a href="docs/screenshots/car-collection.png"><img src="docs/screenshots/car-collection.png" alt="Cars gallery with photographs, search, usage filters and saved-view controls" width="100%"></a></td>
-  </tr>
-</table>
-
-## For the tinkerer: your detailed slotcar workshop
-
-**Coming in the next release:** an optional **Real Car History** profile with livery
-classification, represented race entry, sources and reference photos. Download a
-car-specific **research template for your own AI**, then import selected fields
-from its completed JSON; English instructions and source/uncertainty fields are
-included. A **generic webpage reader** also proposes labelled facts for review,
-with no AI inside Paddock. Neither route automatically verifies the research.
-Also coming:
-**Compare pace** to find similarly paced cars using recorded best laps, median
-pace or uninterrupted 5/10-lap runs. Manual tests gain direction and magnet-status
-fields. [How history and comparisons work](docs/REAL-CAR-HISTORY-AND-PACE.md).
-Per-car **lane records** show the fastest eligible lap on each track and lane,
-with the driver and captured configuration; manual reported bests stay separate.
-
-*Know what is fitted, what you changed, what worked and what you want to try next.*
-
-The same car profiles can hold detailed technical records and connect directly to your parts inventory.
-
-### Plan your build with gearing, torque and power calculations
-
-**See what changing a pinion, motor or tyre diameter means before fitting the parts.** In **Parts → Build from Scratch**, enter your gear tooth counts and optional motor and tyre specifications. Paddock calculates what your inputs support as you work.
-
-| Calculation | What it tells you |
-| --- | --- |
-| **Gear ratio** | Driven-gear teeth divided by pinion teeth—for example, 9/27 gives **3.00:1**. |
-| **Axle RPM and rollout** | How fast the rear axle turns at no load, and how far the car travels per motor revolution. |
-| **Theoretical speed** | Ideal no-load speed from motor RPM, gearing and rear tyre diameter. |
-| **Axle torque and driving force** | How gearing and tyre size translate a confirmed stall or rated-running motor torque into torque and force at the driven axle. |
-| **Estimated peak power and interactive curves** | Explore torque and mechanical power across motor speeds for a brushed DC motor with confirmed stall torque and matching rating voltages. |
-
-**Compare before you commit.** Keep the current build as a reference, change the inputs, and see the differences. Drafts preserve your inputs and comparison reference; the finished car and optional **As built** setup retain the entered specifications.
-
-Torque is entered in **gf·cm** (gram-force centimetres), with separate test voltages for RPM and torque. These are ideal estimates: they exclude drivetrain losses and tyre slip and do not predict acceleration, lap times or actual top speed. Stall torque and no-load speed describe different operating points.
-
-[Explore the formulas, assumptions and a worked 21,500 RPM example →](docs/THEORETICAL-PERFORMANCE.md)
-
-### Configurations and setups
-
-- **Record detailed configurations.** Document motors, motor pods, gearing, axles, bearings, wheels, tyres, guides, braids, electronics, ballast and more. Keep current specifications alongside factory reference information.
-- **Calculate gearing automatically.** Enter pinion and driven-gear tooth counts to see the ratio.
-- **Save and compare setups.** Compare saved setups with the current car or another saved setup, including technical fields and tracked inventory. Filter to differences and open linked workshop jobs or manual tests. Capture configurations with names, track information and notes. Review changes before applying a saved setup, including required stock, substitutions and transfers from other cars.
-- **Record testing results.** Manually log track tests and lap statistics against setup snapshots to relate performance to configuration changes.
-
-### Parts, assemblies and new builds
-
-- **Separate stock from your catalogue.** **My stock** shows owned part types; **Catalogue** includes zero-stock references. Keep a **Shopping list**, link purchases to workshop jobs, and receive quantities in stages without installing them automatically.
-- **Manage spare parts.** Browse stock by category, track quantities or individual items, and see what is available, fitted or reserved. Store specifications, locations, photographs and compatibility notes.
-- **Choose icons and colours.** Use automatic part-type icons or pick your own, with five preset colours for your preferred organisation scheme.
-- **Build assemblies.** Combine components into a ready-to-use unit, such as a complete rear axle or motor-pod assembly. Install, remove, transfer or replace its components while retaining their history.
-- **Build from Scratch.** Click parts on the exploded SVG diagram to assign inventory to a new car. Highlights follow the component shapes. Calculate the gearing ratio from pinion and crown / axle gear teeth, using explicit catalogue specifications or your own entries. Save unfinished drafts, or create a car with as little as one component. An optional **As built** setup records its starting configuration, including entered gearing.
-- **Import manufacturer catalogues.** Download an [AI-ready English template](docs/CATALOGUE-IMPORT.md) containing supported part and workshop-supply types, classification examples and a final self-check. Give it to your own AI with chosen manufacturer or retailer sources, then review the completed file and select which products to import. New entries start at **zero owned stock**; pack sizes do not become owned quantities.
-
-<table>
-  <tr>
-    <th width="50%">Parts organised by category</th>
-    <th width="50%">Build a car from your inventory</th>
-  </tr>
-  <tr>
-    <td><a href="docs/screenshots/parts-categories.png"><img src="docs/screenshots/parts-categories.png" alt="Parts category folders with stock counts for motors, gears, chassis, wheels and other components" width="100%"></a></td>
-    <td><a href="docs/screenshots/build-from-scratch.png"><img src="docs/screenshots/build-from-scratch.png" alt="Build from Scratch with the interactive exploded chassis diagram, inventory picker and new-car details" width="100%"></a></td>
-  </tr>
-</table>
-
-### Jobs, maintenance and your digital toolbox
-
-- **Plan workshop jobs.** Create maintenance or modification jobs, or work towards a saved setup in stages. Set priority and a target date, add a checklist, mark **Waiting for parts**, and attach before/after photographs. Edit job details, record progress, leave and resume work, then complete or cancel it.
-- **Keep a work history.** Record completed maintenance and modifications, set future maintenance dates and see what changed over time.
-- **Maintain a digital toolbox.** Track tools, oils, cleaners, adhesives and other workshop supplies, including storage locations, remaining amounts and low-stock thresholds.
-- **See what needs attention.** The **REVIEW** button brings incoming cars, workshop jobs and maintenance reminders together in one place.
-
-<table>
-  <tr>
-    <th width="50%">Plan and resume workshop jobs</th>
-    <th width="50%">Keep track of what needs attention</th>
-  </tr>
-  <tr>
-    <td><a href="docs/screenshots/workshop-jobs.png"><img src="docs/screenshots/workshop-jobs.png" alt="Workshop showing active job cards, completed jobs, upcoming maintenance and recent work" width="100%"></a></td>
-    <td><a href="docs/screenshots/review-hub.png"><img src="docs/screenshots/review-hub.png" alt="Review hub with tabs for incoming cars, workshop jobs and maintenance" width="100%"></a></td>
-  </tr>
-</table>
-
-## Printable car cards and reports
-
-Open **Cars → Print / PDF**, or **More → Print / PDF** on one car. Preview and save car cards with photos and desktop QR links, setup sheets, club scrutineering sheets, or a collection inventory. Purchase details are excluded unless explicitly selected. QR links open a matching collection in an installed desktop app; they are not public web pages.
-
-[Using stock planning, comparisons, reports and showroom shelves →](docs/COLLECTION-PLANNING.md)
-
-## Connect with your club
-
-The same app works for personal and club collections—there is no separate host or client edition.
-
-- **Browse a shared collection.** Connect to another running instance over a local network using its connection code or a host-defined password. Shared car information refreshes automatically while connected.
-- **Submit cars for approval.** Prepare an entry at home, then send it to the club when connected. The host reviews incoming submissions before accepting new cars or changes; members do not directly edit the host's records.
-- **Exchange files instead.** Export selected cars to JSON, send the file yourself, and let the recipient import and review it. You don't need to bring your computer to the club.
-- **Export cars for Timing.** Choose the SlotForge Timing format for supported car details, race classes and photographs. Timing imports them as new copies; no host connection is needed. [File-transfer instructions](docs/TIMING-CAR-EXPORT.md).
-- **Keep private records local.** Personal ownership information, private notes, workshop records and document attachments are excluded from car-sharing packages and shared views. Complete backups retain private data.
-
-**Dealership Mode — one collection across your computers.** Enable it on one computer and choose **one remembered password for Paddock and Timing**. Its own start/stop and password controls replace the older sharing controls. Connected Paddock copies receive incremental updates; edits enter **REVIEW → Dealership changes** for approval, while finalized Timing results are stored directly. Outdated copies require a backed-up, confirmed refresh. Personal collections remain separate; trusted copies include the full private collection. [Setup, review and recovery guide](docs/SHARED-CLUB.md).
-
-**Simple, remembered access.** Dealership passwords accept 4–128 characters and survive hosting and app restarts. Current Timing versions need at least eight characters until their validation is updated. Legacy sharing outside Dealership Mode still offers separate, temporary browse, submission and Timing credentials.
-
-Local sharing requires the host app to remain running and both computers to be able to communicate. It is intended for a trusted local network, not public internet hosting.
-
-<details>
-  <summary><strong>See imports, exports and complete backups</strong></summary>
-  <p>Bring in manufacturer catalogues and car files, export entries for your club, or keep a complete backup.</p>
-  <a href="docs/screenshots/import-export.png"><img src="docs/screenshots/import-export.png" alt="Import and Export with manufacturer catalogue templates, car import and export, backups and the review inbox" width="100%"></a>
-</details>
-
-## Useful whichever way you use it
-
-- **Reusable choices:** select previously entered values instead of repeatedly typing them. Correct or merge choices through the Library while preserving historical snapshots.
-- **Flexible organisation:** use labels, custom fields, saved views and reviewed bulk updates to suit your collection.
-- **Local storage:** everyday collection and workshop use works offline. A new collection starts empty, ready for your own cars and parts.
-- **Complete backups:** back up and restore your collection, photographs, documents, inventory, setups and workshop records.
-- **Personal appearance:** choose from eight preset themes or create a custom palette, with an interface inspired by SlotForge Timing.
-
-<details>
-  <summary><strong>Explore the themes and personalisation settings</strong></summary>
-  <p>Choose a preset or create your own colours, then customise your welcome banner and collection views.</p>
-  <a href="docs/screenshots/appearance-settings.png"><img src="docs/screenshots/appearance-settings.png" alt="Appearance settings offering eight preset themes and a custom colour palette" width="100%"></a>
-</details>
-
-## Getting started
-
-1. Open **Cars → Add car** and give your car a name.
-2. Add a photograph through **Photos & documents**.
-3. Open **Showroom** and enjoy your collection.
-
-When you want to go further, add spare parts in **Parts**, save a setup from a car profile, or create a job in **Workshop**. Technical detail is optional.
-
-### Run on Windows
-
-[Download the latest release](https://github.com/theDutchmanJames/SlotForgePaddock/releases/latest), then open **SlotForge.Paddock.1.1.2.exe** from the release assets. It is portable and does not require Node.js. Close an earlier running copy before opening the updated version.
-
-The Windows executable is unsigned, so Windows may show an unknown-publisher warning. A `SHA256SUMS.txt` file is included with the download for integrity checking. Your collection is stored separately in your Windows user profile; moving the executable does not move your collection. Use the app's backup and export features to transfer your data.
-
-### Run from source
-
-With Node.js and npm installed, run these commands in the project folder:
-
-```sh
-npm ci
-npm start
-```
-
-On Windows, after installing dependencies, you can also use `Start SlotForge.cmd`.
-
-To create the Windows portable build:
-
-```sh
-npm run dist
-```
-
-The current build is written to `dist/v1.1.2/`. Development notes, test commands, recovery information and release history are in [Development & release history](docs/DEVELOPMENT.md).
-
-### Linux and macOS downloads
-
-The [native release builds](https://github.com/theDutchmanJames/SlotForgePaddock/actions/workflows/native-release.yml)
-produce Linux **AppImage / .deb** packages for x64 and ARM64, and a **universal macOS DMG / ZIP** for Intel and Apple Silicon.
-When the jobs finish successfully, these files appear under the release's assets,
-with platform-specific checksums. macOS builds are ad-hoc signed, not notarised;
-you may need to approve opening the app in Privacy & Security.
-
-### Build Linux and macOS installers yourself
-
-Like SlotForge Timing, Paddock includes normal and quick build launchers:
-
-| Run on | Builder | Output |
-| --- | --- | --- |
-| Linux | `bash build-linux.sh` | AppImage and .deb installer |
-| macOS | `bash build-mac.command` | Universal DMG and ZIP for Intel and Apple Silicon |
-
-Use the [current source](https://github.com/theDutchmanJames/SlotForgePaddock/archive/refs/heads/main.zip) with Node.js **22.12 or newer**. These builders are included in v0.17.0 and newer. See [Building installers](docs/BUILDING.md) for quick builds, architecture choices, installation and signing details. Native builds still need testing on their respective systems.
-
-## Project status
-
-Current version: **1.1.2**. The project is under active development. **SlotForge Paddock** is the official name; earlier versions were called SlotForge Database.
-
-| Feature | Status |
-| --- | --- |
-| Collection, Showroom, parts, setups and workshop tools | Available |
-| Build from Scratch and manufacturer catalogue imports | Available |
-| Local-network browsing and reviewed submissions | Implemented; physical two-computer Wi-Fi testing remains outstanding |
-| SlotForge Timing car imports | Available through supported Timing JSON exports |
-| Car exports for SlotForge Timing | Available: select the Timing format when exporting; imports as new copies |
-| SlotForge Timing integration host API | Available from v0.17.0; Timing client and physical two-computer acceptance still pending |
-| Imported Timing performance sessions | Available from v0.17.0: captured configurations, corrections and withdrawals; manual records remain independent |
-| SlotForge Telemetry lap-history API | Available from v1.0.1: session downloads, captured configurations, filtered browsing and quiet change notifications |
-| RaceCoordinatorAI integration | Planned |
-| Windows portable build | Built and tested |
-| Native macOS and Linux builds | GitHub release build jobs and local builders available; interactive native acceptance testing remains outstanding |
-
-The Paddock side of Timing integration is documented in the [Timing integration handoff](integration-handoff/timing-v1/README.md), including the exact contract, schemas, fixtures and local test host. It is included in v0.17.0. Version 0.19.0 migrates saved databases to **schema 11** for shared club collections. Create a complete backup before running it; v0.18.x and older builds cannot read schema-11 saves. Timing integration remains v1, with an optional catalogue revision that avoids unnecessary downloads after private edits or race-result uploads.
-
-Catalogue imports validate structure and help identify duplicates. Manufacturer facts and physical part compatibility still need your review; catalogue imports do not scrape websites or download product images automatically.
-
-Telemetry can read delivered Timing sessions using the existing Dealership password, keeping the original measured laps separate from race adjustments. The [Telemetry handoff](integration-handoff/telemetry-v1/README.md) includes the read API, schemas, correction/withdrawal fixtures and offline synchronisation rules. Telemetry provides the analysis interface; the host API is included from v1.0.1.
+[Download Paddock](https://github.com/theDutchmanJames/SlotForgePaddock/releases/latest) · [See the app](#pictures-of-the-app) · [Explore the features](#features-and-functionality) · [How to install](#how-to-install) · [Report a problem](#reporting-problems)
 
 ## SlotForge App Collection
 
@@ -266,13 +26,260 @@ SlotForge Paddock is part of the **SlotForge App Collection**—apps for buildin
 
 Visit each app's repository for its features, downloads and getting-started guide. Circuit was previously called SlotForge Track Builder; its repository is now SlotForgeCircuit.
 
-## Licence and copyright
+## Pictures of the app
 
-SlotForge Paddock uses the [SlotForge Source-Available License 1.0](LICENSE), with the same terms as SlotForge Timing.
+<table>
+  <tr>
+    <th width="50%">Your Showroom · light theme</th>
+    <th width="50%">Your Showroom · dark theme</th>
+  </tr>
+  <tr>
+    <td><a href="docs/screenshots/showroom-light.png"><img src="docs/screenshots/showroom-light.png" alt="Showroom in the Ocean light theme, featuring an Aston Martin Vantage V12 and the collection gallery" width="100%"></a></td>
+    <td><a href="docs/screenshots/showroom-dark.png"><img src="docs/screenshots/showroom-dark.png" alt="The same Aston Martin spotlight and collection gallery in the dark theme" width="100%"></a></td>
+  </tr>
+</table>
 
-- **Free to use**, including personal, educational, club and internal business use.
-- **Free to study, modify and share**, keeping the licence and notices and identifying your modifications.
+*Your cars, your photographs, your collection. Click any screenshot for a closer look. These screenshots show an earlier interface with the SlotForge Database name; the app is now SlotForge Paddock.*
+
+<details>
+  <summary><strong>Explore the collection, workshop, parts and settings</strong></summary>
+
+<table>
+  <tr>
+    <th width="50%">Your collection at a glance</th>
+    <th width="50%">Browse and organise your cars</th>
+  </tr>
+  <tr>
+    <td><a href="docs/screenshots/overview.png"><img src="docs/screenshots/overview.png" alt="Overview with a personalised welcome banner, collection totals, active jobs and recent activity" width="100%"></a></td>
+    <td><a href="docs/screenshots/car-collection.png"><img src="docs/screenshots/car-collection.png" alt="Cars gallery with photographs, search, usage filters and saved-view controls" width="100%"></a></td>
+  </tr>
+</table>
+
+<table>
+  <tr>
+    <th width="50%">Parts organised by category</th>
+    <th width="50%">Build a car from your inventory</th>
+  </tr>
+  <tr>
+    <td><a href="docs/screenshots/parts-categories.png"><img src="docs/screenshots/parts-categories.png" alt="Parts category folders with stock counts for motors, gears, chassis, wheels and other components" width="100%"></a></td>
+    <td><a href="docs/screenshots/build-from-scratch.png"><img src="docs/screenshots/build-from-scratch.png" alt="Build from Scratch with the interactive exploded chassis diagram, inventory picker and new-car details" width="100%"></a></td>
+  </tr>
+</table>
+
+<table>
+  <tr>
+    <th width="50%">Plan and resume workshop jobs</th>
+    <th width="50%">Keep track of what needs attention</th>
+  </tr>
+  <tr>
+    <td><a href="docs/screenshots/workshop-jobs.png"><img src="docs/screenshots/workshop-jobs.png" alt="Workshop showing active job cards, completed jobs, upcoming maintenance and recent work" width="100%"></a></td>
+    <td><a href="docs/screenshots/review-hub.png"><img src="docs/screenshots/review-hub.png" alt="Review hub with tabs for incoming cars, workshop jobs and maintenance" width="100%"></a></td>
+  </tr>
+</table>
+
+<table>
+  <tr><th width="50%">Import, export and backups</th><th width="50%">Appearance settings</th></tr>
+  <tr>
+    <td><a href="docs/screenshots/import-export.png"><img src="docs/screenshots/import-export.png" alt="Car transfers, manufacturer catalogue imports and database backups" width="100%"></a></td>
+    <td><a href="docs/screenshots/appearance-settings.png"><img src="docs/screenshots/appearance-settings.png" alt="Preset themes and custom appearance settings" width="100%"></a></td>
+  </tr>
+</table>
+
+</details>
+
+## Features and functionality
+
+### Your virtual slotcar showroom
+
+**Add a car, add a photograph, enjoy your virtual garage.** Technical specifications are optional: you do not need an inventory or a racing setup to use Paddock.
+
+Showroom gives your collection a photo gallery, a featured spotlight car, favourites and a slideshow. Create named **shelves** for selected cars and arrange them in your preferred order. Use full-screen presentation to display your collection at home or at the club. Choose Fit or Fill and adjust a photograph's focal point without changing the original image.
+
+### Car profiles that grow with your hobby
+
+Keep each car's identity, ownership and technical information together:
+
+- Record manufacturer, model, scale, race number, class and identifying details.
+- Track location, condition, packaging, purchase information, valuation and loans.
+- Attach photographs and documents, and follow the car's recorded history.
+- Label cars for **Collection / Display**, **Home racing**, **Club racing**, **Competition** or your own uses.
+- Search and filter the collection, switch between gallery and table views, choose columns and save useful views.
+- Choose which car details and configuration fields appear on the overview panels.
+
+Previously entered values become reusable choices. Correct spellings and merge duplicates in **Library**, while historical snapshots retain their recorded values. Add custom text, choice, number, date, yes/no and notes fields when the built-in fields are not enough.
+
+### Parts inventory, catalogue and shopping list
+
+**Know what you own, where it is and what is fitted.** Browse parts through main groups covering bodywork, chassis, motors, transmission, axles, bearings, wheels, tyres, guides, wiring, suspension and fixings.
+
+| View | Purpose |
+| --- | --- |
+| **My stock** | Your owned part records, including parts fitted to cars or held in assemblies. |
+| **Catalogue** | Your full list of part references, including products you do not own yet. |
+| **Shopping list** | Planned purchases, suppliers, expected dates and quantities still to receive. |
+
+Track quantities or individual components, storage locations, specifications, compatibility notes and photographs. Part icons default to their category; choose a different icon and one of five preset colours for your own organisation scheme.
+
+Link purchases to workshop jobs and receive deliveries in stages. Receiving parts updates stock; fitting them to a car is a separate action. The overview counts **owned part types**, with individual quantities shown separately.
+
+### Assemblies and Build from Scratch
+
+An **assembly** groups components into a ready-to-use unit, such as a rear axle with wheels and gearing. Install, remove or transfer the unit, or replace its components while retaining their history.
+
+**Build from Scratch creates a new car from your inventory.** Click a component on the exploded chassis diagram, choose the part to fit there, and continue with whichever components you have. Additional positions support items such as bodywork, electronics, magnets and ballast.
+
+Only a name and **one component** are needed to save a car. Save unfinished builds as drafts, or create the car with an optional **As built** setup snapshot. Stock remains available while drafting and is fitted when the build is saved to Cars. The diagram supports planning; it does not certify physical compatibility.
+
+### Gearing, torque and theoretical performance
+
+**Explore a change before reaching for the tools.** The Build from Scratch calculator works with pinion and driven-gear teeth, motor RPM, torque ratings, test voltages and rear tyre diameter. Enter only the information you have.
+
+| Calculation | What it helps you understand |
+| --- | --- |
+| **Gear ratio** | Driven-gear teeth ÷ pinion teeth. A 9-tooth pinion and 27-tooth crown give **3.00:1**. |
+| **Axle RPM** | Rear-axle speed at the motor's specified no-load RPM. |
+| **Rollout** | Distance travelled per motor revolution for the selected gearing and tyre diameter. |
+| **Theoretical speed** | Ideal no-load speed from motor RPM, gearing and rear tyres. |
+| **Axle torque and driving force** | How gearing and tyre diameter translate a confirmed motor torque rating into force at the track. |
+| **Torque and power curves** | Explore operating points and estimated peak mechanical power for a brushed DC motor with confirmed stall torque and matching rating voltages. |
+
+Keep a calculation as a reference, change the inputs and compare the results. Drafts preserve both the inputs and reference; saved cars and optional As built snapshots retain their entered specifications.
+
+Torque uses **gf·cm**—gram-force centimetres. These are ideal estimates, not predictions of lap time, acceleration or actual top speed. Stall torque and no-load speed occur at different operating points. [Formulas, assumptions and a worked example](docs/THEORETICAL-PERFORMANCE.md).
+
+### Setups, changes and workshop jobs
+
+Keep the current configuration alongside factory reference information and named setup snapshots. Compare two saved setups, or a setup with the current car, showing technical specifications and tracked parts separately. Filter to differences and review stock needs, substitutions and transfers before applying a setup.
+
+Create a **Workshop job** for maintenance, a modification or a planned setup change:
+
+- Set priority, a target date and a checklist.
+- Mark a job **Waiting for parts** and link its shopping items.
+- Add before/after photographs and record progress.
+- Leave and resume work, then complete or cancel the job.
+
+Use **Record work** for maintenance or modifications already performed. Set future maintenance dates to create reminders. Workshop supplies provide a digital toolbox for tools, oils, cleaners, adhesives and other consumables, with locations, remaining amounts and low-stock thresholds.
+
+### Track tests, lap records and pace comparisons
+
+Record a manual test with its track, lane, driver, voltage, direction, magnet status, lap count and best or average time. Keep the configuration snapshot that describes the car at that test.
+
+Imported **SlotForge Timing** sessions add measured lap histories and the configuration captured before racing. Later changes to the car do not rewrite those historical specifications. Corrections replace earlier results; withdrawn sessions stop contributing to derived statistics.
+
+- **Lane records:** find the fastest eligible measured lap for each track and lane, with its driver, session and captured configuration. Reported manual bests are shown separately.
+- **Compare pace:** choose a reference run and find cars within a chosen time tolerance on the same track. Compare eligible best laps, median pace or uninterrupted 5/10-lap runs when measured laps are available.
+- **Compare fairly:** use lane and driver filters, inspect recorded conditions and keep unknown conditions visible. Invalid laps, pit laps and virtual participants do not become physical-car records.
+
+These tools compare recorded performance; they do not infer pace from motor specifications. For deeper analysis across sessions and setups, use **SlotForge Telemetry**. [History, conditions and comparison details](docs/REAL-CAR-HISTORY-AND-PACE.md).
+
+### The real car behind the model
+
+**Real Car History** records the full-size car or race entry represented by your slotcar: livery classification, team, drivers, event, year, race number, qualifying and finishing results, notes, sources and reference photographs.
+
+Enter the information yourself, read labelled facts from a public webpage, or download a car-specific research template for your own AI to fill. Import the completed JSON and choose individual suggestions before saving. Source links and uncertainty stay with imported research.
+
+Paddock has **no built-in AI**. Its generic webpage reader does not translate pages, execute website scripts or guarantee accurate identification of the car. Both research routes require your review; reference photographs remain separate from your slotcar's showroom pictures.
+
+### Manufacturer catalogues without manual retyping
+
+Download the **English catalogue import kit**, which includes supported part and workshop-supply categories, classification examples and instructions. Give it to your own AI with your chosen manufacturer or retailer sources, then import the completed JSON into Paddock.
+
+Review the file and select the categories or products you want. New references start at **zero owned stock**; a manufacturer's pack size is not a quantity you own. Paddock validates the file and helps identify duplicates, but you still check product facts and compatibility. It does not scrape a manufacturer's entire website automatically. [Catalogue import guide](docs/CATALOGUE-IMPORT.md).
+
+### Dealership Mode: one collection across your computers
+
+Use the same Paddock app on a main computer, laptop and other trusted home or club computers. **One dealership computer holds the official collection**; connected copies keep a separate saved copy, leaving their personal collections separate.
+
+Choose a remembered password in **Connections → Dealership Mode**. Connected Paddock copies receive incremental updates. Edits—including edits made on the dealership computer—enter **Review → Dealership changes** before changing the official collection. Compare the proposed and current information, then approve or reject it on the dealership computer.
+
+If a copy has fallen too far behind, Paddock asks for a backed-up refresh rather than silently merging incompatible changes. Joining a dealership does not merge existing personal databases.
+
+**Dealership access shares the full collection, including private records, stock, jobs and documents.** Use it between trusted computers on a local network. The dealership app must remain running; this is not a cloud or remote-internet service. [Connection, review and recovery guide](docs/SHARED-CLUB.md).
+
+### Connect Timing and Telemetry
+
+In **SlotForge Timing**, connect to Paddock's current host address and port using the Dealership password. Select catalogue cars for racing, then send finalised results back to Paddock. Timing retains its racing cache and queues transfers when disconnected. Results already reviewed in Timing are stored directly; they do not need a second Dealership approval.
+
+**SlotForge Telemetry** can read delivered sessions, measured laps and captured configurations from Paddock for analysis. Corrections and withdrawals are available to connected analysis clients. These integrations keep race execution in Timing, collection management in Paddock and deeper calculations in Telemetry.
+
+For developers: [Timing integration contract](integration-handoff/timing-v1/README.md) · [Telemetry read API](integration-handoff/telemetry-v1/README.md).
+
+### Share selected cars, review imports and protect your collection
+
+Export one or several cars as a Paddock JSON package, with optional additional photographs and setup snapshots. Send the file yourself; the recipient can import and review it without a network connection. Paddock also reads supported Timing car exports and can export supported car details, race classes and photographs in **SlotForge Timing format**.
+
+For lighter sharing, the separate local-network sharing tools let another Paddock browse public car information and submit new cars or updates for review. These public views and car packages exclude private ownership details, private notes, workshop records and unrelated documents. They are different from the full trusted copy shared by Dealership Mode.
+
+In **Review → Incoming cars**, choose individual incoming fields. If an accepted technical change conflicts with a fitted inventory part, explicitly return that part to stock before applying the new specification. Unselected fields stay unchanged; entering a replacement specification does not automatically fit a different stock item.
+
+Create a **complete backup** for recovery or moving a personal collection to another computer. Backups include private collection information. Restoring replaces the selected database; use selected-car imports when you only want to add entries. [Timing file-transfer guide](docs/TIMING-CAR-EXPORT.md).
+
+### Reports, personalisation and everyday use
+
+Produce **car cards**, **setup sheets**, **club scrutineering sheets** and a **collection inventory** through **Cars → Print / PDF**. Preview the report and save a PDF for printing. Purchase details are excluded unless explicitly selected. Car-card QR links open the matching collection in Paddock; they are not public web pages.
+
+Choose from eight preset themes or create your own colours. Edit the welcome banner, choose overview fields and save collection views. The **Review** button brings incoming cars, Dealership proposals, workshop jobs and maintenance reminders within reach.
+
+Everyday personal collection and workshop use works offline. A new collection starts empty, ready for **your** cars, photographs and parts. [Guide to planning, reports and showroom shelves](docs/COLLECTION-PLANNING.md).
+
+## How to install
+
+Open the **[latest GitHub release](https://github.com/theDutchmanJames/SlotForgePaddock/releases/latest)** and expand **Assets** to see the downloads. Choose a packaged app for your computer; you do not need Node.js or programming tools. GitHub's **Source code** ZIP and tar.gz files are for building the app yourself.
+
+| Your computer | Download | Open or install |
+| --- | --- | --- |
+| **Windows · Intel/AMD 64-bit** | `SlotForge.Paddock.…exe` | Save the portable executable in a folder you want to keep, then double-click it. |
+| **macOS · Intel or Apple Silicon** | Universal `.dmg` | Open the disk image and drag Paddock into Applications. A ZIP of the app is also available. |
+| **Linux · Ubuntu/Debian** | `.deb` matching your processor | Open it with your software installer, then launch Paddock from your applications menu. |
+| **Linux · other compatible distributions** | `.AppImage` matching your processor | Allow the file to run as a program in its permissions, then open it. |
+
+Linux packages target x64 and ARM64. Linux and macOS downloads are attached after the native build jobs succeed; if they are not listed yet, check the [build status](https://github.com/theDutchmanJames/SlotForgePaddock/actions/workflows/native-release.yml).
+
+Windows downloads are unsigned. macOS downloads are ad-hoc signed, not Apple-notarised. Your operating system may ask you to approve the app; verify that it came from this repository. SHA-256 manifests accompany the release assets for integrity checks.
+
+### Your first collection
+
+1. Open **Cars → Add car** and enter a name.
+2. Add a photograph in **Photos & documents**.
+3. Open **Showroom** to see your collection on display.
+4. Add parts, setups and workshop jobs whenever you want more detail.
+
+### Updating and moving to another computer
+
+Make a complete backup through **Import & Export**, close the running app and open the new version. Your collection is stored separately in your operating-system user profile. Moving or replacing the executable does not move the collection; use the backup/export tools to transfer your data. For a Dealership collection, follow its [recovery guidance](docs/SHARED-CLUB.md).
+
+### Run or build from source
+
+Install Node.js **22.12 or newer** with npm, download and extract the source, then open a terminal in the folder containing `package.json`:
+
+```sh
+npm ci
+npm start
+```
+
+On Windows, use `npm.cmd` if PowerShell blocks `npm.ps1`. After installing dependencies, `Start SlotForge.cmd` is also available.
+
+For your own installers, see [Building installers](docs/BUILDING.md). Contributor commands and implementation notes are in [Development](docs/DEVELOPMENT.md).
+
+## Reporting problems
+
+Open an **[issue on GitHub](https://github.com/theDutchmanJames/SlotForgePaddock/issues)** and include:
+
+- Paddock version, operating system and the download you used.
+- What you were doing, what you expected and what happened instead.
+- Steps to reproduce the problem, the exact error and a screenshot if useful.
+- For connection issues: which app/computer is hosting, the connected app versions and whether the issue affects browsing, submitting changes or receiving results.
+
+Do not post passwords or an unredacted collection backup. A small example with private details removed is more useful for reproducing a problem. Feature suggestions are welcome too—describe the task you want to make easier.
+
+## License and copyright
+
+Copyright © 2026 **theDutchmanJames and contributors**. SlotForge Paddock uses the **[SlotForge Source-Available License 1.0](LICENSE)**.
+
+- **Free to use** for personal, educational, club and internal business use.
+- **Free to study, modify and share without charging**, retaining the licence and notices and identifying modifications.
 - **No selling the software or charging for access**, including modified, bundled or hosted versions, without separate written permission from the relevant copyright holders.
-- **Your own original content remains available for commercial use**—including your collection records, setups, photographs and reports. Rights in third-party material remain separate.
+- **Your own original content can be used commercially**, including collection records, photographs and reports, subject to any third-party rights.
+- Voluntary donations are allowed when access and use do not depend on payment.
 
-These are custom **source-available** terms, not an OSI-approved open-source licence. The [full licence](LICENSE) controls over this summary. Electron and other third-party components retain their [own licences and notices](THIRD-PARTY-NOTICES.txt). For older releases, check the terms supplied with that download.
+These are custom **source-available** terms, not an OSI-approved open-source licence. The [full licence](LICENSE) governs use. Electron and other dependencies retain their [own licences and notices](THIRD-PARTY-NOTICES.txt).
