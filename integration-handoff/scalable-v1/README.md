@@ -2,7 +2,7 @@
 
 Paddock owns this host implementation. Timing owns its car cache, pre-race configuration capture and result delivery queue. Telemetry owns its analysis cache and calculations. Neither client opens Paddock's SQLite file or uses the private Dealership replica protocol.
 
-This is an **opt-in version 1 extension**. Existing Timing/Telemetry routes, submissions, signatures, result revisions, permissions and payload limits remain supported. Client implementations have not been changed or tested in their own repositories. The examples use artificial data only.
+This is an **opt-in version 1 extension**. Existing Timing/Telemetry routes, submissions, signatures, result revisions, permissions and payload limits remain supported. No client implementation changes are required. Timing v2.1.0's 122 Paddock tests have also been run against this host. The examples use artificial data only.
 
 ## Discover and connect
 
@@ -74,7 +74,11 @@ The host scans at most 32 retained transactions per change batch, returning at m
 - `epoch`: collection restore/replacement changed the generation.
 - `expired`: the needed history is unavailable.
 - `batch-size`: too many changed identifiers for a bounded batch.
-- `configuration-dependency`: a part/installation changed; refresh linked profiles because component names/assignments may have changed without a car revision change.
+- `configuration-dependency`: the host cannot safely enumerate affected configurations (an older journal entry or more than 512 dependent cars); refresh linked profiles.
+
+Current writes record configuration dependencies atomically with the changes. Renaming a fitted part invalidates only its affected cars; changing an installation invalidates its old/new cars. Editing spare stock quantities, locations or unused parts does not invalidate the car catalogue. Car and result feeds count only their respective identifiers toward the batch limit. These are narrower notifications within the existing schema, not a new API version.
+
+Timing session uploads now parse, validate, calculate summaries and commit in a background worker. Success still means the result is durably committed; this is not an asynchronous acceptance/202 API. Existing source/session/revision retries, conflict errors, corrections and withdrawals are unchanged. Receipt lookup reads only the addressed session. Temporary worker/storage failure remains retryable through Timing's existing results queue. Paddock's local desktop command receipts are private implementation details, separate from Timing session receipts and Dealership proposal identities.
 
 On reset, stage a complete new listing and reconcile the appropriate cached records before adopting the new cursor. Refresh all affected cached profiles/session heads even if their apparent revisions match. Do not silently clear offline race history or unsent results. A reset is a read-cache reconciliation, not permission to overwrite the Paddock database.
 

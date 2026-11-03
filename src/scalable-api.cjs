@@ -35,9 +35,15 @@ function changes(r,url){
  // Extract keys only inside SQLite; never send internal deltas or private values.
  const entries=r.db.prepare(`SELECT json_extract(c.value,'$.key') key,json_extract(c.value,'$.remove') removed
  FROM change_log l,json_each(l.json,'$.changes') c WHERE l.sequence>? AND l.sequence<=?
- AND (json_extract(c.value,'$.key') LIKE '["cars",%' OR json_extract(c.value,'$.key') LIKE '["timing","sessions",%' OR json_extract(c.value,'$.key') LIKE '["parts",%' OR json_extract(c.value,'$.key') LIKE '["installations",%') ORDER BY l.sequence,c.key LIMIT 513`).all(since.after,next);
+ AND json_extract(c.value,'$.key') LIKE ? ORDER BY l.sequence,c.key LIMIT 513`).all(since.after,next,kind==='cars'?'["cars",%':'["timing","sessions",%');
  if(entries.length>512)return reset('batch-size');const selected=new Map();
- for(const row of entries){const key=JSON.parse(row.key);if(kind==='cars'&&['parts','installations'].includes(key[0]))return reset('configuration-dependency');if(kind==='cars'&&key[0]==='cars'){const id=key[1].slice(3);selected.set(id,{carId:id,operation:row.removed?'remove':'invalidate'});}if(kind==='results'&&key[0]==='timing'&&key[1]==='sessions'){const [sourceId,sessionId]=JSON.parse(key[2].slice(8));selected.set(key[2],{sourceId,sessionId,operation:row.removed?'remove':'invalidate'});}}
+ if(kind==='cars')for(const row of r.db.prepare("SELECT json_type(json,'$.publicCars') type,json_extract(json,'$.publicCars') cars FROM change_log WHERE sequence>? AND sequence<=? AND EXISTS(SELECT 1 FROM json_each(change_log.json,'$.changes') c WHERE json_extract(c.value,'$.key') LIKE '[\"parts\",%' OR json_extract(c.value,'$.key') LIKE '[\"installations\",%') ORDER BY sequence").all(since.after,next)){
+  if(row.type!=='array')return reset('configuration-dependency');
+  for(const id of JSON.parse(row.cars)){if(typeof id!=='string'||!/^[a-zA-Z0-9_-]{1,100}$/.test(id))return reset('configuration-dependency');selected.set(id,{carId:id,operation:'invalidate'});}
+  if(selected.size>512)return reset('batch-size');
+ }
+ for(const row of entries){const key=JSON.parse(row.key);if(kind==='cars'&&key[0]==='cars'){const id=key[1].slice(3);selected.set(id,{carId:id,operation:row.removed?'remove':'invalidate'});}if(kind==='results'&&key[0]==='timing'&&key[1]==='sessions'){const [sourceId,sessionId]=JSON.parse(key[2].slice(8));selected.set(key[2],{sourceId,sessionId,operation:row.removed?'remove':'invalidate'});}}
+ if(selected.size>512)return reset('batch-size');
  return {version:1,databaseId:r.id,kind,resetRequired:false,reason:null,cursor:encode({databaseId:r.id,epoch:now.epoch,after:next}),entries:[...selected.values()],more:next<now.after};
 }
 function handle(store,method,url,access,expected){

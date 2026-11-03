@@ -104,4 +104,8 @@ function validateStored(db,previous=null){
     if(r.payload.state==='active')for(const p of r.payload.participants)if(p.carId){check(r.carIds.includes(p.carId),'Missing session car reference.');if(!db.club?.replica)verifyConfiguration(db,p.carId,p.configuration);}
   }
 }
-module.exports={capabilities,profile,receive,receipt,validateStored,validatePayload,verifyConfiguration,canonical,digest,fault,MAX_BYTES};
+async function receiveAsync(store,bytes,guard=()=>{}){
+ if(!store.file||store.expectedIdentity===null){await store.whenIdle();guard();let input;try{input=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));}catch{throw fault('INVALID_JSON','Request must contain valid UTF-8 JSON.');}return receive(store,input);}
+ return require('./domain-tasks.cjs').run(store,{kind:'timing',bytes},guard);
+}
+module.exports={capabilities,profile,receive,receiveAsync,receipt,validateStored,validatePayload,verifyConfiguration,canonical,digest,fault,MAX_BYTES};

@@ -223,7 +223,8 @@ class Store {
   preparePersistence(db,scope){
     if(scope?.kind==='scoped'){
       assert(this.deferredState&&this.persistedData===this.data&&this.file===this.persistedFile,'The scoped write no longer matches this collection.');
-      scope.packed.pinnedAssets=lazyAssets.pins(this.file);
+      scope.packed.pinnedAssets=[...lazyAssets.pins(this.file),...(this.additionalPins||[])];
+      if(scope.receipt)scope.packed.commandReceipt=scope.receipt;
       return {packed:scope.packed,currentAssets:new Set(),currentRefs:new Map()};
     }
     this.ensureLoaded();
@@ -235,7 +236,7 @@ class Store {
     const currentRefs=packed.partial?new Map(this.persistedReferences):new Map();for(const row of packed.records){if(row.refs.length)currentRefs.set(row.key,row.refs);else currentRefs.delete(row.key);}for(const key of packed.removed||[])currentRefs.delete(key);
     const currentAssets=new Set([...currentRefs.values()].flat());
     if(!packed.refreshAssets)packed.assets=packed.assets.filter(([hash])=>!this.persistedAssets.has(hash));
-    packed.pinnedAssets=lazyAssets.pins(this.file);
+    packed.pinnedAssets=[...lazyAssets.pins(this.file),...(this.additionalPins||[])];
     return {packed,currentAssets,currentRefs};
   }
   trimAssetCache(){this.assetHashes.clear();}
@@ -268,6 +269,15 @@ class Store {
   async addClubProposal(record){return transactions.runAsync(this,before=>this.prepareClubChange(before,record.id,club=>club.proposals.unshift(record)),{scoped:!!this.deferredState});}
   transact(fn){return transactions.run(this,before=>{const prepared=this.prepareDraft(before,fn);this.lastCommand={kind:'records.edit',scope:prepared.scope};return prepared;});}
   async mutateAsync(action,p={},options={}){
+    if(options.commandId&&this.file){
+      // Persist a new collection first so a rejected first command never leaves
+      // the main process believing an already-created database is still absent.
+      if(this.expectedIdentity===null)await transactions.runAsync(this,before=>this.expectedIdentity===null?{data:before}:{noop:true});
+      const command={id:options.commandId,action,payload:p,databaseId:options.databaseId||this.data.id,epoch:options.epoch||this.deferredState?.token.epoch||sqlite.syncState(this.file).epoch};
+      const response=await require('./domain-tasks.cjs').run(this,{kind:'command',command});
+      try{return {result:response.result,duplicate:response.duplicate,commandId:command.id,data:options.snapshot===false?undefined:this.snapshot(),collection:this.metadata()};}
+      catch(error){error.code='WRITE_UNCERTAIN';throw error;}
+    }
     if(this.deferredState){
       const result=await transactions.runAsync(this,()=>{
         // A preceding queued caller may explicitly request a full snapshot.

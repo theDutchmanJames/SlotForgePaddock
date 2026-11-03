@@ -153,12 +153,13 @@ function write(file,packed,expected){
   require('./query-index.cjs').ensure(db);
   if(db.prepare('PRAGMA user_version').get().user_version!==FORMAT)throw Error('SQLite storage migration is required before saving. Reopen Paddock.');
   if(state(db,'identity')!==expected)throw Error('The database changed in another process. Reopen Paddock before saving.');
+  const invalidations=require('./public-invalidations.cjs').begin(db,packed);
   const previous=state(db,'manifest');if(packed.partial&&!previous)throw Error('A partial write needs an existing collection.');
   const sizes=previous&&!packed.resetEpoch&&!packed.refreshAssets?require('./sqlite-sizes.cjs').tracker(db,expected,previous,packed.manifest):null;
   const getRecord=db.prepare('SELECT * FROM records WHERE key=?'),old=new Map((packed.partial?[...new Set([...packed.records.map(r=>r.key),...(packed.removed||[])])].map(key=>getRecord.get(key)).filter(Boolean):db.prepare('SELECT * FROM records').all()).map(r=>[r.key,r]));
   const putState=db.prepare('INSERT INTO state(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value');
   let epoch=state(db,'change_epoch');const from=expected?JSON.parse(expected):null,to=JSON.parse(packed.identity);
-  if(!epoch||!from||from[0]!==to[0]||to[1]<=from[1]||packed.resetEpoch){epoch=crypto.randomUUID();db.exec('DELETE FROM change_log; DELETE FROM field_versions;');putState.run('change_epoch',epoch);putState.run('field_floor',String(to[1]));}
+  if(!epoch||!from||from[0]!==to[0]||to[1]<=from[1]||packed.resetEpoch){epoch=crypto.randomUUID();db.exec('DELETE FROM change_log; DELETE FROM field_versions;');if(db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='command_receipts'").get())db.exec('DELETE FROM command_receipts');putState.run('change_epoch',epoch);putState.run('field_floor',String(to[1]));}
   const stamp=db.prepare('INSERT INTO field_versions(record,path,revision) VALUES(?,?,?) ON CONFLICT(record,path) DO UPDATE SET revision=excluded.revision');
   db.exec('DELETE FROM undo_records; DELETE FROM undo_assets;');
   if(previous)putState.run('previous_manifest',previous);
@@ -204,7 +205,7 @@ function write(file,packed,expected){
   db.prepare("DELETE FROM field_versions WHERE revision<? AND NOT EXISTS (SELECT 1 FROM record_fields f WHERE f.record=field_versions.record AND f.path=field_versions.path) AND (path<>'*' OR NOT EXISTS (SELECT 1 FROM records r WHERE r.key=field_versions.record))").run(floor);
   // Internal storage journal only. Public feeds must project and authorize it;
   // signing keys/private fields must never leak through an unfiltered endpoint.
-  const entry=JSON.stringify({manifestBefore:previous?fieldRecords.hash(previous):null,manifestAfter:fieldRecords.hash(packed.manifest),manifestChanges:require('./sqlite-delta.cjs').delta(previous?JSON.parse(previous):null,JSON.parse(packed.manifest)),changes});
+  const entry=JSON.stringify({publicCars:invalidations(),manifestBefore:previous?fieldRecords.hash(previous):null,manifestAfter:fieldRecords.hash(packed.manifest),manifestChanges:require('./sqlite-delta.cjs').delta(previous?JSON.parse(previous):null,JSON.parse(packed.manifest)),changes});
   const sequence=db.prepare('INSERT INTO change_log(epoch,from_identity,to_identity,json,bytes) VALUES(?,?,?,?,?)').run(epoch,expected,packed.identity,entry,Buffer.byteLength(entry)).lastInsertRowid;
   putState.run('change_sequence',String(sequence));require('./query-index.cjs').stamp(db);
   const pin=db.prepare('INSERT INTO change_assets(sequence,hash) VALUES(?,?)');for(const hash of changeAssets)pin.run(sequence,hash);
@@ -216,6 +217,7 @@ function write(file,packed,expected){
   db.exec('DELETE FROM assets WHERE hash NOT IN (SELECT hash FROM asset_refs) AND hash NOT IN (SELECT hash FROM undo_assets) AND hash NOT IN (SELECT hash FROM change_assets) AND hash NOT IN (SELECT hash FROM live_assets)');
   const metadata=db.prepare('SELECT meta FROM assets WHERE hash=?'),assetMetadata=[...new Set(packed.records.flatMap(r=>r.refs))].map(hash=>JSON.parse(metadata.get(hash).meta));
   require('./sqlite-sizes.cjs').save(db,packed.identity,packed.manifest,sizes);
+  if(packed.commandReceipt){if(packed.commandReceipt.epoch!==epoch)throw Error('Save receipt generation changed.');require('./command-receipts.cjs').insert(db,packed.commandReceipt);}
   db.exec('COMMIT');return {recordWrites,assetWrites,fieldWrites,assetMetadata};
  }catch(e){try{db.exec('ROLLBACK');}catch{}throw e;}finally{db.close();}
 }

@@ -85,7 +85,11 @@ class Network {
           if(req.method==='GET'&&carMatch)return await this.store.withIdle(()=>{if(expected!==this.store.data.id)throw timing.fault('DATABASE_MISMATCH','The host database changed while waiting.',409);if(!this.access(code)?.browse)throw timing.fault('UNAUTHENTICATED','Connection access changed while waiting.',401);const before=this.store.data.revision,value=timing.profile(this.store,carMatch[1]);if(this.store.data.revision!==before)try{this.onChange({kind:'timing-capture'});}catch{}return send(200,value);});
           if(!access.timingResults)throw timing.fault('TIMING_PERMISSION_REQUIRED','Use the Dealership password, or the Timing credential on a legacy host, to send and check results.',403);
           const receiptMatch=url.pathname.match(/^\/v1\/timing\/sessions\/([a-zA-Z0-9_-]{1,100})\/([a-zA-Z0-9_-]{1,100})$/);
-          if(req.method==='GET'&&receiptMatch){const record=this.store.data.timing.sessions.find(r=>r.payload.source.id===receiptMatch[1]&&r.payload.sessionId===receiptMatch[2]);if(!record)throw timing.fault('SESSION_NOT_FOUND','No session with that source and session ID is stored.',404);return send(200,timing.receipt(this.store.data,record));}
+          if(req.method==='GET'&&receiptMatch){return await this.store.withIdle(async()=>{
+            const guard=()=>{if(expected!==this.store.data.id)throw timing.fault('DATABASE_MISMATCH','The host database changed.',409);if(!this.access(code)?.timingResults)throw timing.fault('TIMING_PERMISSION_REQUIRED','Timing access changed.',403);};guard();
+            if(this.store.file&&this.store.expectedIdentity!==null)return send(200,await require('./domain-tasks.cjs').run(this.store,{kind:'timing-receipt',sourceId:receiptMatch[1],sessionId:receiptMatch[2]},guard));
+            const record=this.store.data.timing.sessions.find(r=>r.payload.source.id===receiptMatch[1]&&r.payload.sessionId===receiptMatch[2]);if(!record)throw timing.fault('SESSION_NOT_FOUND','No session with that source and session ID is stored.',404);return send(200,timing.receipt(this.store.data,record));
+          });}
           if(req.method==='POST'&&url.pathname==='/v1/timing/sessions'){
             if(!/^application\/json(?:\s*;\s*charset=utf-8)?$/i.test(req.headers['content-type']||''))throw timing.fault('CONTENT_TYPE_REQUIRED','Send application/json with UTF-8 encoding.',415);
             if(req.headers['content-encoding']&&req.headers['content-encoding']!=='identity')throw timing.fault('CONTENT_ENCODING_UNSUPPORTED','Compressed request bodies are not supported.',415);
@@ -93,9 +97,8 @@ class Network {
             const chunks=[];let size=0;for await(const chunk of req.iterator({destroyOnReturn:false})){size+=chunk.length;if(size>timing.MAX_BYTES){send(413,{error:'Timing sessions are limited to 8 MiB.',code:'PAYLOAD_TOO_LARGE'});return;}chunks.push(chunk);}
             if(expected!==this.store.data.id)throw timing.fault('DATABASE_MISMATCH','The host database changed during upload.',409);
             if(!this.access(code)?.timingResults)throw timing.fault('TIMING_PERMISSION_REQUIRED','Timing access changed during upload.',403);
-            let payload;try{payload=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(Buffer.concat(chunks)));}catch{throw timing.fault('INVALID_JSON','Request must contain valid UTF-8 JSON.');}
-
-            return await this.store.withIdle(()=>{if(expected!==this.store.data.id)throw timing.fault('DATABASE_MISMATCH','The host database changed during upload.',409);if(!this.access(code)?.timingResults)throw timing.fault('TIMING_PERMISSION_REQUIRED','Timing access changed during upload.',403);const result=timing.receive(this.store,payload);if(!result.duplicate)try{this.onChange({kind:'timing'});}catch{}return send(200,result);});
+            const result=await timing.receiveAsync(this.store,Buffer.concat(chunks),()=>{if(expected!==this.store.data.id)throw timing.fault('DATABASE_MISMATCH','The host database changed during upload.',409);if(!this.access(code)?.timingResults)throw timing.fault('TIMING_PERMISSION_REQUIRED','Timing access changed during upload.',403);});
+            if(!result.duplicate)try{this.onChange({kind:'timing'});}catch{}return send(200,result);
           }
           throw timing.fault('NOT_FOUND','Unknown Timing operation.',404);
         }

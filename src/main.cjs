@@ -36,7 +36,7 @@ const entry=path.join(__dirname,'..','renderer','index.html');
 const thumbnails=new (require('./thumbnail-cache.cjs').ThumbnailCache)(job=>{if(win&&!win.isDestroyed())win.webContents.send('sf:thumbnail',job);},url=>media.responseAsync(url));
 function mediaSweep(){media.retain([store?.data,club?.loadedCache?.data,network?.cached,...transfer.history.map(x=>x.data)]);}
 function trustedFrame(event){return win&&!win.isDestroyed()&&!event.sender.isDestroyed()&&event.sender===win.webContents&&event.senderFrame?.url===pathToFileURL(entry).href;}
-function reply(fn){return async(event,...args)=>{try{if(!win||win.isDestroyed()||event.sender.isDestroyed()||event.sender!==win.webContents||event.senderFrame?.url!==pathToFileURL(entry).href)return {error:'Unauthorised application frame.'};return {ok:true,value:media.project(await fn(...media.expand(args)))};}catch(e){return {error:e.message,code:e.code};}};}
+function reply(fn){return async(event,...args)=>{let value;try{if(!win||win.isDestroyed()||event.sender.isDestroyed()||event.sender!==win.webContents||event.senderFrame?.url!==pathToFileURL(entry).href)return {error:'Unauthorised application frame.'};value=await fn(...media.expand(args));return {ok:true,value:media.project(value)};}catch(e){return {error:e.message,code:value?.commandId?'WRITE_UNCERTAIN':e.code};}};}
 async function files(action,p={}){
   const store=club.store;
   const protectedFiles=[...club.main.protectedFiles(),...club.protectedFiles(),club.file,club.file+'.previous',club.file+'.tmp',...Array.from(media.byUrl.values(),e=>e.staged).filter(Boolean)];
@@ -144,7 +144,12 @@ app.whenReady().then(async()=>{
   ipcMain.on('sf:thumbnail-result',(event,id,result)=>{if(trustedFrame(event)&&typeof id==='string')thumbnails.receive(id,result);});
   const mediaTimer=setInterval(()=>{try{mediaSweep();}catch{}},30000);mediaTimer.unref();win.on('closed',()=>{clearInterval(mediaTimer);thumbnails.clear();media.clear();});
   ipcMain.handle('sf:read',reply(known=>club.store.withIdle(()=>{rendererReady=true;const openCar=pendingCarLink;pendingCarLink=null;const current=club.store,unchanged=known?.databaseId===current.data.id&&known?.revision===current.data.revision&&known?.dataPath===current.file;const result={openCar,data:unchanged?null:known?.queryView?require('./view-query.cjs').view(current,known.queryView):current.snapshot(),club:club.status(),network:network.status(),remote:known?.databaseId?undefined:network.cached,collection:current.metadata(),version:app.getVersion(),dataPath:current.file};return known?.queryView?result:transfer.encode(result,known,current.file);})));
-  ipcMain.handle('sf:mutate',reply(async(action,payload,known)=>{const current=club.store,result=await club.mutate(action,payload,{snapshot:!known?.queryView});if(known?.queryView){try{return {...result,data:require('./view-query.cjs').view(current,known.queryView)};}catch{return {...result,data:require('./view-query.cjs').view(current,{page:'Overview'})};}}return transfer.encode(result,known,current.file);}));
+  ipcMain.handle('sf:mutate',reply(async(action,payload,known)=>{
+   const current=club.store;if(known?.databaseId&&known.databaseId!==current.data.id||known?.dataPath&&known.dataPath!==current.file)throw Error('The selected collection changed. Reopen the editor.');
+   const result=await club.mutate(action,payload,{snapshot:!known?.queryView,commandId:known?.commandId,databaseId:known?.databaseId,epoch:known?.epoch});
+   try{if(known?.queryView){try{return {...result,data:require('./view-query.cjs').view(current,known.queryView)};}catch{return {...result,data:require('./view-query.cjs').view(current,{page:'Overview'})};}}return transfer.encode(result,known,current.file);}
+   catch(error){if(result.commandId)error.code='WRITE_UNCERTAIN';throw error;}
+  }));
   ipcMain.handle('sf:plan',reply((action,payload)=>club.store.plan(action,payload)));
   ipcMain.handle('sf:query',reply((operation,payload={})=>club.store.withIdle(()=>{
    if(operation==='session')return require('./sqlite-query.cjs').read(club.store,payload.token,r=>require('./query-timing.cjs').session(r,payload.sourceId,payload.sessionId,payload.carId,payload.offset)).value;

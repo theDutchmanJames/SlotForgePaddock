@@ -14,13 +14,25 @@ const local=()=>source==='local';
 function acceptSnapshot(next){if(db&&db.id===next.id&&db.revision>next.revision)return;db=next;}
 function switchCollection(next){workshopJob=null;recentWorkLimit=3;source=next;carId=null;section='Overview';selected.clear();usage=[];query='';archived=false;matchAll=false;}
 const car=()=>current().cars.find(c=>c.id===carId);
+// Pending identities contain hashes, never the entered values or photographs.
+const pendingSaveIds=new Map();
+async function saveIdentity(baseline,action,payload){
+ const epoch=baseline._view?.token?.epoch;
+ const bytes=new TextEncoder().encode(JSON.stringify([dataPath,baseline.id,epoch||'',action,payload]));
+ const key='paddock-save-'+Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),x=>x.toString(16).padStart(2,'0')).join('');
+ let id=pendingSaveIds.get(key);try{id||=localStorage.getItem(key);}catch{}
+ if(!/^[a-f0-9-]{36}$/.test(id||''))id=crypto.randomUUID();
+ pendingSaveIds.set(key,id);try{localStorage.setItem(key,id);}catch{}
+ return {id,epoch,clear(){pendingSaveIds.delete(key);try{localStorage.removeItem(key);}catch{}}};
+}
 async function api(method,...args){
  const baseline=db,baselinePath=dataPath;
- if(method==='mutate'&&baseline)args[2]={databaseId:baseline.id,revision:baseline.revision,dataPath:baselinePath,queryView:baseline._view&&!baseline._view.compatibility?(baseline._view.editor?baseline._view.request:desiredView()):undefined};
+ const command=method==='mutate'&&baseline&&!clubState?.active&&clubState?.role!=='coordinator'?await saveIdentity(baseline,args[0],args[1]):null;
+ if(method==='mutate'&&baseline)args[2]={...(command?{commandId:command.id,epoch:command.epoch}:{}),databaseId:baseline.id,revision:baseline.revision,dataPath:baselinePath,queryView:baseline._view&&!baseline._view.compatibility?(baseline._view.editor?baseline._view.request:desiredView()):undefined};
  if(method==='file'&&baseline?._view)args[2]={queryView:baseline._view.editor?baseline._view.request:desiredView()};
- const r=await window.slotforge[method](...args);if(r.error)throw Object.assign(new Error(r.error),{code:r.code});
+ const r=await window.slotforge[method](...args);if(r.error){if(r.code!=='WRITE_UNCERTAIN')command?.clear();throw Object.assign(new Error(r.error),{code:r.code});}
  if(r.value?.dataPatch){const p=r.value.dataPatch;if(!baseline||baseline.id!==p.databaseId||baseline.revision!==p.revision||baselinePath!==p.dataPath)throw Error('The collection changed while refreshing. Reopen the collection.');r.value.data=slotforgeSnapshot.apply(baseline,p.changes);delete r.value.dataPatch;}
- return r.value;
+ command?.clear();return r.value;
 }
 function toast(message,error=false){clearTimeout(toastTimer);const t=$('#toast');t.textContent=message;t.className=error?'error':'';t.hidden=false;toastTimer=setTimeout(()=>t.hidden=true,error?10000:4000);}
 async function change(action,p={}){if(!local())throw new Error('Switch to your local database to make changes.');const editor=db._view?.editor,r=await api('mutate',action,p);acceptSnapshot(r.data);if(editor&&db._view)db._view.editor=true;if(r.collection)collectionMeta=r.collection;if(r.club)clubState=r.club;clubQueued(r);return r.result;}
