@@ -22,12 +22,14 @@ module.exports=async({win,store,network,js,wait,click,fill,submit,qa})=>{
  fs.writeFileSync(path.join(qa,'club-review-light-small.png'),(await win.webContents.capturePage()).toPNG());
  assert.equal(await js(`document.documentElement.scrollWidth>innerWidth+1`),false);
  win.setSize(1440,980);await js(`db.settings.theme='dark';applyTheme()`);
- await fill({decision:'accept'});await submit();assert.ok(store.data.cars.some(c=>c.name==='Club review UI car'));
+ await submit();assert.ok(store.data.cars.some(c=>c.name==='Club review UI car'));
  checks.push('car creation queues and approval commits from Review UI');
  const car=store.data.cars.find(c=>c.name==='Club review UI car');
  await club.mutate('car.save',{id:car.id,revision:car.revision,data:{name:'Rejected name'}});
- await click('[data-action="club-review"]');await click('[data-action="club-compare"]');await fill({decision:'reject'});await submit();
+ await click('[data-action="club-review"]');await click('[data-action="club-compare"]');await click('[data-action="club-reject"]');await wait(`!document.querySelector('#dialog').open`);
  assert.equal(store.data.cars.find(c=>c.id===car.id).name,'Club review UI car');checks.push('dealership computer rejects a proposed edit without changing the car');
+ await club.mutate('car.save',{id:car.id,revision:store.data.cars.find(c=>c.id===car.id).revision,data:{name:'Selective UI name',livery:'Do not apply'}});
+ await click('[data-action="club-review"]');await click('[data-action="club-compare"]');await wait(`!!document.querySelector('[data-club-accept-field="livery"]')`);await js(`document.querySelector('[data-club-accept-field="livery"]').checked=false`);await submit();assert.equal(store.data.cars.find(c=>c.id===car.id).name,'Selective UI name');assert.notEqual(store.data.cars.find(c=>c.id===car.id).livery,'Do not apply');checks.push('Dealership review applies only selected independent text fields');
  const folder=fs.mkdtempSync(path.join(require('node:os').tmpdir(),'paddock-club-ui-'));
  const remoteStore=new Store(path.join(folder,'database.json'));remoteStore.mutate('car.save',{data:{name:'Remote club Lexus'}});
  const remoteNet=new Network(remoteStore),remoteClub=new Club(remoteStore,remoteNet,folder);
@@ -39,7 +41,7 @@ module.exports=async({win,store,network,js,wait,click,fill,submit,qa})=>{
   await wait(`clubState.active&&clubState.state==='connected'`);assert.equal(club.cache.data.cars[0].name,'Remote club Lexus');
   assert.ok(store.data.cars.some(c=>c.id===car.id));checks.push('joining preserves the separate local collection');
   fs.writeFileSync(path.join(qa,'club-connections.png'),(await win.webContents.capturePage()).toPNG());
-  club.disconnect();remoteStore.mutate('car.save',{id:remoteStore.data.cars[0].id,revision:1,data:{name:'New official Lexus'}});
+  club.disconnect();remoteStore.mutate('car.save',{id:remoteStore.data.cars[0].id,revision:1,data:{name:'New official Lexus'}});remoteStore.replace(remoteStore.snapshot());
   await click('[data-action="club-join"]');await fill({address:'127.0.0.1:'+remoteNet.port,name:'Club laptop',code:remoteNet.clubCode});await submit();
   await wait(`document.querySelector('.club-outdated')&&!!document.querySelector('[data-action="club-update"]')`);
   assert.equal(club.cache.data.cars[0].name,'Remote club Lexus');

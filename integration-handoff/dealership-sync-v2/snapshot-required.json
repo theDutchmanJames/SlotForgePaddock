@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "epoch": "24e02e26-cca3-4561-abb7-d8e384dc7655",
+  "latest": 3,
+  "identity": [
+    "173a8444-875e-4c6b-b06d-8b34ff2d32e2",
+    3
+  ],
+  "snapshotRequired": true,
+  "reason": "epoch"
+}

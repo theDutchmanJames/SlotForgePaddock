@@ -27,10 +27,10 @@ test('Timing profile capture waits for a proposal save and rechecks identity and
   }finally{hold.release();await net.stop();net.close();}
  });
 });
-test('streamed persistence preserves exact JSON bytes, prior backup and restart state',async t=>{
- const {s}=fixture(t);s.mutate('car.save',{data:{name:'Before',picture:'data:image/jpeg;base64,'+'A'.repeat(80000)}});const before=fs.readFileSync(s.file,'utf8');
+test('SQLite persistence preserves exact JSON exports, prior revision and restart state',async t=>{
+ const {s}=fixture(t);s.mutate('car.save',{data:{name:'Before',picture:'data:image/jpeg;base64,'+'A'.repeat(80000)}});const before=s.snapshot();
  await s.transactAsync(db=>{db.cars[0].name='After 😀 " \\';});
- assert.equal(fs.readFileSync(s.file,'utf8'),JSON.stringify(s.data));assert.equal(fs.readFileSync(s.file+'.previous','utf8'),before);assert.deepEqual(new Store(s.file).data,s.data);
+ assert.equal(JSON.stringify(new Store(s.file).data),JSON.stringify(s.data));assert.deepEqual(s.previousSnapshot(),before);assert.deepEqual(new Store(s.file).data,s.data);
  const values={photo:s.data.cars[0].picture,notes:'😀\n"\\'.repeat(40000),invalidPhoto:'data:image/png;base64,AA"'};
  assert.equal(Buffer.concat([...encoding.buffers(values)]).toString(),JSON.stringify(values));
 });
@@ -43,29 +43,23 @@ test('async commits serialize and publish only after durability; synchronous wri
  assert.throws(()=>s.transact(()=>{}),/saving/);assert.throws(()=>s.replace(before),/saving/);assert.throws(()=>s.restore(before,before.revision),/saving/);
  hold.release();assert.deepEqual(await Promise.all([first,second]),[1,2]);assert.equal(events,2);assert.equal(s.data.revision,before.revision+2);assert.equal(new Store(s.file).data.settings.name,'Second');
 });
-test('failed asynchronous replacement preserves committed data, removes temporary output and releases the queue',async t=>{
- const {s}=fixture(t);s.mutate('settings.save',{name:'Committed'});const before=s.snapshot(),bytes=fs.readFileSync(s.file,'utf8');
- const rename=fs.promises.rename;fs.promises.rename=async()=>{throw Error('disk rename failed');};
- try{await assert.rejects(s.transactAsync(db=>db.settings.name='Lost'),/rename failed/);}finally{fs.promises.rename=rename;}
- assert.deepEqual(s.data,before);assert.equal(fs.readFileSync(s.file,'utf8'),bytes);assert.equal(fs.existsSync(s.file+'.tmp'),false);assert.equal(s.pendingWrite,null);
+test('failed asynchronous SQLite commit preserves committed data and releases the queue',async t=>{
+ const {DatabaseSync}=require('node:sqlite'),{s}=fixture(t);s.mutate('settings.save',{name:'Committed'});const before=s.snapshot();
+ let connection=new DatabaseSync(s.file);connection.exec("CREATE TRIGGER fail_write BEFORE UPDATE ON records BEGIN SELECT RAISE(ABORT,'injected storage failure'); END");connection.close();
+ await assert.rejects(s.transactAsync(db=>db.settings.name='Lost'),/storage failure/);
+ assert.deepEqual(s.data,before);assert.deepEqual(new Store(s.file).data,before);assert.equal(s.pendingWrite,null);
+ connection=new DatabaseSync(s.file);connection.exec('DROP TRIGGER fail_write');connection.close();
  await s.transactAsync(db=>db.settings.name='Recovered');assert.equal(new Store(s.file).data.settings.name,'Recovered');
 });
-test('partial disk writes finish correctly; write, flush and backup failures never publish a draft',async t=>{
- const {s}=fixture(t);s.mutate('settings.save',{name:'Committed'});
- const open=fs.promises.open,copy=fs.promises.copyFile;let mode='partial',writes=0;
- fs.promises.open=async(...args)=>{const handle=await open(...args);return {
-  write(buffer,offset,length){writes++;if(mode==='write')return Promise.resolve({bytesWritten:0});return handle.write(buffer,offset,Math.min(length,97));},
-  sync(){if(mode==='flush')throw Error('flush failed');return handle.sync();},close(){return handle.close();}
- };};
- fs.promises.copyFile=async(...args)=>{if(mode==='backup')throw Error('backup failed');return copy(...args);};
- try{
-  await s.transactAsync(db=>db.settings.name='Partial writes completed');assert.ok(writes>1);assert.equal(new Store(s.file).data.settings.name,'Partial writes completed');
-  for(mode of ['write','flush','backup']){
-   const before=s.snapshot(),bytes=fs.readFileSync(s.file,'utf8');let notified=false;const unsubscribe=s.subscribe(()=>notified=true);
-   await assert.rejects(s.transactAsync(db=>db.settings.name='Should not save'));
-   assert.deepEqual(s.data,before);assert.equal(fs.readFileSync(s.file,'utf8'),bytes);assert.equal(fs.existsSync(s.file+'.tmp'),false);assert.equal(notified,false);assert.equal(s.pendingWrite,null);unsubscribe();
-  }
- }finally{fs.promises.open=open;fs.promises.copyFile=copy;}
+test('record, recovery and commit-marker failures roll back every SQLite change',async t=>{
+ const {DatabaseSync}=require('node:sqlite'),{s}=fixture(t);s.mutate('settings.save',{name:'Committed'});
+ for(const target of ['records','undo_records','state']){
+  const before=s.snapshot(),previous=s.previousSnapshot();let notified=false;const unsubscribe=s.subscribe(()=>notified=true);
+  let connection=new DatabaseSync(s.file);connection.exec(`CREATE TRIGGER fail_write BEFORE INSERT ON ${target} BEGIN SELECT RAISE(ABORT,'injected ${target} failure'); END`);connection.close();
+  await assert.rejects(s.transactAsync(db=>db.settings.name='Should not save'),/failure/);
+  assert.deepEqual(s.data,before);assert.deepEqual(new Store(s.file).data,before);assert.deepEqual(s.previousSnapshot(),previous);assert.equal(notified,false);assert.equal(s.pendingWrite,null);unsubscribe();
+  connection=new DatabaseSync(s.file);connection.exec('DROP TRIGGER fail_write');connection.close();
+ }
 });
 test('a failed queued write does not discard the following successful transaction',async()=>{
  const s=new Store(),hold=gate();let calls=0;

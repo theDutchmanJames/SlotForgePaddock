@@ -20,7 +20,7 @@ module.exports=async({win,store,js,wait,click,fill,submit,qa})=>{
   assert.deepEqual(await js(`(()=>{const svg=document.querySelector('.build-diagram');return [[355,700],[800,800],[270,750],[220,310],[1380,310],[370,310],[800,310]].map(([x,y])=>{const p=new DOMPoint(x,y).matrixTransform(svg.getScreenCTM());return document.elementFromPoint(p.x,p.y)?.closest('.build-hotspot')?.dataset.id||null;});})()`),[null,null,null,'frontTyres','frontTyres','frontWheels','frontAxle']);
   for(const theme of ['dark','light']){
     await js(`db.settings.theme='${theme}';render();window.scrollTo(0,0)`);
-    const p=await point(300,640);win.webContents.sendInputEvent({type:'mouseMove',...p});await new Promise(r=>setTimeout(r,120));
+    await wait('!viewPendingKey');win.webContents.focus();const p=await point(300,640);win.webContents.sendInputEvent({type:'mouseMove',...p});await new Promise(r=>setTimeout(r,120));
     assert.equal(await js(`document.querySelector('.build-hotspot[data-id="pod"]').matches(':hover')`),true);
     assert.match(await js(`getComputedStyle(document.querySelector('.build-hotspot[data-id="pod"] .build-part-art')).filter`),/build-outline-pod/);
     assert.equal(await js(`getComputedStyle(document.querySelector('.build-hotspot[data-id="chassis"] .build-part-art')).filter`),'none');

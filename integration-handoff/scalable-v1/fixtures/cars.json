@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "databaseId": "paddock-demo",
+  "snapshot": "eyJkYXRhYmFzZUlkIjoicGFkZG9jay1kZW1vIiwiZXBvY2giOiIxOTE0NTFlMy05ZGE1LTQxOGQtYjFmYS05OWFiNmYyNjBiY2EiLCJhZnRlciI6MX0",
+  "cursor": "eyJkYXRhYmFzZUlkIjoicGFkZG9jay1kZW1vIiwiZXBvY2giOiIxOTE0NTFlMy05ZGE1LTQxOGQtYjFmYS05OWFiNmYyNjBiY2EiLCJhZnRlciI6MX0",
+  "cars": [
+    {
+      "id": "car-a",
+      "revision": 1,
+      "name": "Example GT3",
+      "maker": "Example maker",
+      "marque": "",
+      "model": "",
+      "scale": "",
+      "raceClass": "GT3",
+      "availability": "Available",
+      "archived": false,
+      "media": null
+    },
+    {
+      "id": "car-b",
+      "revision": 1,
+      "name": "Example prototype",
+      "maker": "Example maker",
+      "marque": "",
+      "model": "",
+      "scale": "",
+      "raceClass": "GT3",
+      "availability": "Available",
+      "archived": false,
+      "media": null
+    }
+  ],
+  "nextOffset": null
+}

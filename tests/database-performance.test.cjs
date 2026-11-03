@@ -17,11 +17,11 @@ test('snapshots and protected copies cannot mutate live data or leak the signing
  assert.equal(M.digest(s.data),require('node:crypto').createHash('sha256').update(JSON.stringify((()=>{const db=structuredClone(s.data);delete db.club;delete db.revision;delete db.catalogueRevision;db.timing.key=null;return db;})())).digest('hex'));
 });
 
-test('transactions persist the exact validated JSON and keep failure rollback and previous backup',t=>{
+test('transactions persist the exact validated data and keep failure rollback and previous revision',t=>{
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'paddock-save-'));t.after(()=>fs.rmSync(dir,{recursive:true,force:true}));const s=new Store(path.join(dir,'db.json'));
- const persist=s.persist.bind(s);let count=0;s.persist=(db,json)=>{assert.equal(json,JSON.stringify(db));count++;persist(db,json);};
+ const persist=s.persist.bind(s);let count=0;s.persist=db=>{count++;persist(db);assert.deepEqual(new Store(s.file).data,db);};
  s.mutate('car.save',{data:{name:'Original'}});const before=s.snapshot();s.mutate('car.save',{id:s.data.cars[0].id,revision:1,data:{name:'Updated'}});
- assert.deepEqual(JSON.parse(fs.readFileSync(s.file+'.previous')),before);assert.deepEqual(new Store(s.file).data,s.data);assert.equal(count,2);
+ assert.deepEqual(s.previousSnapshot(),before);assert.deepEqual(new Store(s.file).data,s.data);assert.equal(count,2);
  const current=s.snapshot();s.persist=()=>{throw Error('disk full');};assert.throws(()=>s.transact(db=>db.cars[0].name='Rejected'),/disk full/);assert.deepEqual(s.data,current);assert.deepEqual(new Store(s.file).data,current);
 });
 

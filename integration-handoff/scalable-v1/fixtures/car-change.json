@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "databaseId": "paddock-demo",
+  "kind": "cars",
+  "resetRequired": false,
+  "reason": null,
+  "cursor": "eyJkYXRhYmFzZUlkIjoicGFkZG9jay1kZW1vIiwiZXBvY2giOiIxOTE0NTFlMy05ZGE1LTQxOGQtYjFmYS05OWFiNmYyNjBiY2EiLCJhZnRlciI6Mn0",
+  "entries": [
+    {
+      "carId": "car-a",
+      "operation": "invalidate"
+    }
+  ],
+  "more": false
+}

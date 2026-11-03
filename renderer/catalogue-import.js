@@ -24,7 +24,7 @@ function renderCatalogueReview(){
 function refreshCatalogueGroups(){const container=$('#catalogue-groups');if(!container)return;container.innerHTML=catalogueGroupRows();$('#catalogue-selection-count').textContent=catalogueSelected.size+' selected · '+catalogueReview.preview.rows.length+' products in file';}
 async function refreshCatalogueMatches(){
   const previousChoices=new Map(catalogueReview.preview.rows.map(row=>[row.index,JSON.stringify(catalogueChoice(row))]));
-  const r=await api('read');acceptSnapshot(r.data);if(catalogueReview.databaseId!==db.id){catalogueReview=null;throw Error('Database changed. Import the catalogue again.');}
+  const r=await readScreen();acceptSnapshot(r.data);if(catalogueReview.databaseId!==db.id){catalogueReview=null;throw Error('Database changed. Import the catalogue again.');}
   catalogueReview.preview=await api('plan','catalogue.preview',{input:catalogueReview.input});
   for(const row of catalogueReview.preview.rows){const choice=catalogueDecisions.get(row.index);if(choice&&((choice.targetId&&!row.matches.some(m=>m.id===choice.targetId))||(choice.create&&!['new','possible'].includes(row.status))))catalogueDecisions.delete(row.index);if(!catalogueSelectable(row)||previousChoices.get(row.index)!==JSON.stringify(catalogueChoice(row)))catalogueSelected.delete(row.index);}
 }

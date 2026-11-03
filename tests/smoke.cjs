@@ -3,16 +3,25 @@ const path=require('node:path');
 const assert=require('node:assert/strict');
 const {initial,Store,makePackage}=require('../src/store.cjs');
 const {dialog}=require('electron');
-module.exports=async(win,store,network)=>{
+module.exports=async(win,store,network,media)=>{
   win.webContents.setBackgroundThrottling(false);
+  // Electron can reject a capture while the compositor replaces an SVG frame.
+  // Retry only that transient capture failure; assertions and persistent
+  // capture errors still fail the suite normally.
+  const capture=win.webContents.capturePage.bind(win.webContents);
+  win.webContents.capturePage=async(...args)=>{for(let attempt=0;;attempt++){try{return await capture(...args);}catch(e){if(attempt>=2||!String(e).includes('UnknownVizError'))throw e;console.log('Retrying transient screenshot capture ('+(attempt+1)+'/2).');await new Promise(resolve=>setTimeout(resolve,200));}}};
   store.data=initial();store.persist(store.data);await win.webContents.reload();
   const errors=[];win.webContents.on('console-message',(_e,...args)=>{const message=args.find(x=>typeof x==='string');if(message&&/Uncaught|TypeError|ReferenceError/.test(message))errors.push(message);});
-  const js=code=>win.webContents.executeJavaScript(code,true);
-  const wait=async condition=>{for(let i=0;i<100;i++){if(await js(condition))return;await new Promise(r=>setTimeout(r,50));}throw Error('UI wait failed: '+condition);};
+  const js=async code=>{fs.writeFileSync(path.join(__dirname,'..','.qa','smoke-current.txt'),code);try{return await win.webContents.executeJavaScript(code,true);}catch(e){throw Error(e.message+'\nRenderer check: '+code,{cause:e});}};
+  const wait=async condition=>{for(let i=0;i<100;i++){if(await js(condition))return;await new Promise(r=>setTimeout(r,50));}throw Error('UI wait failed: '+condition+'; '+await js("document.querySelector('#form-error')?.textContent||document.querySelector('#toast')?.textContent||''"));};
   const click=async selector=>{await wait(`!!document.querySelector(${JSON.stringify(selector)})`);await js(`(()=>{const el=document.querySelector(${JSON.stringify(selector)});if(typeof el.click==='function')el.click();else el.dispatchEvent(new MouseEvent('click',{bubbles:true}));})()`);await new Promise(r=>setTimeout(r,90));};
   const fill=async values=>js(`(()=>{const values=${JSON.stringify(values)};for(const [name,value]of Object.entries(values)){const el=document.querySelector('[name="'+name+'"]');if(!el)throw Error('Missing field '+name);el.value=value;el.dispatchEvent(new Event('input',{bubbles:true}));}})()`);
   const submit=async()=>{await js(`document.querySelector('#modal-form').requestSubmit()`);await wait(`!document.querySelector('#dialog').open`);};
   await wait(`document.body.innerText.includes('On the workbench')`);
+  if(process.argv.includes('--backup-only')){console.log(await require('./backup-smoke.cjs')({win,store,network,js,wait,click,qa:path.join(__dirname,'..','.qa'),dialog}));assert.deepEqual(errors,[]);return;}
+  if(process.argv.includes('--context-only')){console.log(await require('./query-context-smoke.cjs')({store,js,wait,click,fill,submit}));assert.deepEqual(errors,[]);return;}
+  if(process.argv.includes('--query-only')){console.log(await require('./query-pages-smoke.cjs')({store,js,wait,click,fill,submit}));assert.deepEqual(errors,[]);return;}
+  if(process.argv.includes('--club-only')){const checks=await require('./club-smoke.cjs')({win,store,network,js,wait,click,fill,submit,qa:path.join(__dirname,'..','.qa')});assert.deepEqual(errors,[]);fs.writeFileSync(path.join(__dirname,'..','.qa','club-smoke-result.json'),JSON.stringify({passed:true,checks,rendererErrors:errors},null,2));console.log('PASS focused Dealership workflows: '+checks.length);return;}
   await click('[data-action="nav"][data-id="Cars"]');
   await wait(`document.body.innerText.includes('Your collection starts here')`);
   await click('[data-action="add-car"]');await fill({name:'Smoke test Corvette',maker:'NSR',number:'QA-001',usage:'Home racing, Club racing','technical.motor':'King Evo','technical.weight':'83.5'});await submit();assert.equal(store.data.cars.length,1);assert.equal(store.data.cars[0].technical.motor,'King Evo');
@@ -34,7 +43,7 @@ module.exports=async(win,store,network)=>{
   await click('[data-action="nav"][data-id="Import & Export"]');await click('[data-action="backup"]');assert.equal(JSON.parse(fs.readFileSync(backupPath)).database.cars.length,2);
   await click('[data-action="nav"][data-id="Cars"]');await click('[data-action="open-car"]');await click('[data-action="section"][data-id="Photos & documents"]');
   const imagePath=path.join(qa,'fixture.png');fs.writeFileSync(imagePath,(await win.webContents.capturePage()).toPNG());dialog.showOpenDialog=async()=>({canceled:false,filePaths:[imagePath]});
-  await click('[data-action="main-photo"]');await wait(`!!document.querySelector('.photo-grid img')`);assert.ok(store.data.cars.some(c=>c.picture?.startsWith('data:image/jpeg')));
+  await click('[data-action="main-photo"]');await wait(`!!document.querySelector('.photo-grid img')`);assert.ok(store.data.cars.some(c=>c.picture==='data:image/png;base64,'+fs.readFileSync(imagePath).toString('base64')));await wait(`document.querySelector('.photo-grid img').naturalWidth>0`);
   await click('[data-action="section"][data-id="Performance"]');await click('[data-action="add-test"]');await fill({track:'QA track',laps:'12',best:'6.42',notes:'Stable'});await submit();assert.equal(store.data.tests.length,1);
   const originalCar=store.data.cars.find(c=>c.name==='Smoke test Corvette').id;
   // A settings-only setup must return the currently tracked tyres to used spares.
@@ -82,9 +91,13 @@ module.exports=async(win,store,network)=>{
   reviewChecks.push(...await require('./new-additions-review-smoke.cjs')({win,store,network,js,wait,click,fill,submit,qa,dialog}));
   reviewChecks.push(...await require('./timing-integration-smoke.cjs')({win,store,network,js,wait,click,fill,submit,qa,dialog}));
   reviewChecks.push(...await require('./recent-code-review-smoke.cjs')({win,store,network,js,wait,click,fill,submit,qa,dialog}));
-  reviewChecks.push(...await require('./planning-smoke.cjs')({win,store,network,js,wait,click,fill,submit,qa,dialog}));
+  reviewChecks.push(...await require('./planning-smoke.cjs')({win,store,network,js,wait,click,fill,submit,qa,dialog,media}));
   reviewChecks.push(...await require('./planning-review-smoke.cjs')({win,store,network,js,wait,click,fill,submit,qa,dialog}));
   reviewChecks.push(...await require('./workshop-polish-smoke.cjs')({win,store,network,js,wait,click,fill,submit,qa,dialog}));
+  reviewChecks.push(...await require('./sqlite-smoke.cjs')({win,store,js,wait,click,qa,dialog,media}));
+  reviewChecks.push(...await require('./query-pages-smoke.cjs')({store,js,wait,click,fill,submit}));
+  reviewChecks.push(...await require('./query-context-smoke.cjs')({store,js,wait,click,fill,submit}));
+  reviewChecks.push(...await require('./backup-smoke.cjs')({win,store,network,js,wait,click,qa,dialog}));
   reviewChecks.push(...await require('./club-smoke.cjs')({win,store,network,js,wait,click,fill,submit,qa,dialog}));
   reviewChecks.push(...await require('./connection-review-smoke.cjs')({win,store,network,js,wait,click,fill,submit,qa,dialog}));
   assert.deepEqual(errors,[]);fs.writeFileSync(path.join(qa,'smoke-result.json'),JSON.stringify({passed:true,date:new Date().toISOString(),checks:['empty start','create car','reusable fields','setup snapshot','stock','installation','table view','maintenance','all navigation','dark/light themes','import inbox','selective review','backup file','photo import','manual test','settings-only setup application','assembly creation','assembly installation','assembly removal','reviewed assembly transfer through setup','assembly dismantling','screenshots',...reviewChecks],rendererErrors:errors},null,2));console.log('PASS Electron UI workflow checks.');

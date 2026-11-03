@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "snapshot": "snapshot-metadata.json",
+  "manifest": "{\"object\":[[\"schema\",{\"record\":\"[\\\"schema\\\"]\"}],[\"planning\",{\"object\":[[\"shopping\",{\"array\":[]}],[\"jobs\",{\"array\":[]}],[\"shelves\",{\"array\":[]}],[\"focus\",{\"array\":[]}]]}],[\"timing\",{\"object\":[[\"sessions\",{\"array\":[]}]]}],[\"buildDrafts\",{\"array\":[]}],[\"supplies\",{\"array\":[]}],[\"jobs\",{\"array\":[]}],[\"id\",{\"record\":\"[\\\"id\\\"]\"}],[\"settings\",{\"record\":\"[\\\"settings\\\"]\"}],[\"cars\",{\"array\":[{\"record\":\"[\\\"cars\\\",\\\"id:b1cc44e9-930a-42d9-90ca-b7ee336f57c7\\\"]\"}]}],[\"parts\",{\"array\":[]}],[\"assemblies\",{\"array\":[]}],[\"installations\",{\"array\":[]}],[\"setups\",{\"array\":[]}],[\"events\",{\"array\":[{\"record\":\"[\\\"events\\\",\\\"id:3d191817-a575-4e7a-8ccd-d4ea15664d0c\\\"]\"}]}],[\"tests\",{\"array\":[]}],[\"submissions\",{\"array\":[]}],[\"choices\",{\"record\":\"[\\\"choices\\\"]\"}],[\"choiceAliases\",{\"array\":[]}],[\"documents\",{\"array\":[]}],[\"views\",{\"array\":[]}],[\"customFields\",{\"array\":[]}]]}",
+  "records": [
+    [
+      "[\"cars\",\"id:b1cc44e9-930a-42d9-90ca-b7ee336f57c7\"]",
+      "836a58ccb7c17f78bede9e72a4b23b6d885824ae1e65eb2f8bc30c9c147ffc60"
+    ],
+    [
+      "[\"choices\"]",
+      "9edf2c91fdd3bddc117e6318475db5d121b8fe5662c62a69622a0d1e2e1576c6"
+    ],
+    [
+      "[\"events\",\"id:3d191817-a575-4e7a-8ccd-d4ea15664d0c\"]",
+      "cc5c1c6aa08ef5460dfc69f27d33079f3c7739789663eac67ab92c3f78aa2e7f"
+    ],
+    [
+      "[\"id\"]",
+      "f69bd38468ed83f2f8201ddc6304a3e9795c5b033ab8ecaf6d23fc86bdbf3b24"
+    ],
+    [
+      "[\"schema\"]",
+      "12ac7255cd92b5d4843a5d8d88a072b807878271e73fedef174adb271dfac27d"
+    ],
+    [
+      "[\"settings\"]",
+      "be651f04bdcc465f06249a318c97f865eb638dcb43d895ea4e4ea3bb2fd3d816"
+    ]
+  ],
+  "digest": "39ddbf62521ee5536a106ba9d38174ec2b2c9ffba25070b73d041cbe78996558"
+}

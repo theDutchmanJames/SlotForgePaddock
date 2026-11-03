@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "databaseId": "paddock-demo",
+  "sourceId": "timing-demo",
+  "sessionId": "session-multi",
+  "participantId": "entry-1",
+  "resultToken": "efac0483cb8b8b4b579b8cd1b7c742711839140b58aa1f2be9aaad71420e27c4",
+  "laps": [
+    {
+      "id": "entry-0-lap-1",
+      "stintId": "stint-1",
+      "number": 1,
+      "durationMs": 10000,
+      "endedAtMs": 10000,
+      "valid": true,
+      "pit": false,
+      "recordEligible": true,
+      "countsForDistance": true,
+      "distanceM": 20,
+      "reason": ""
+    },
+    {
+      "id": "entry-0-lap-2",
+      "stintId": "stint-1",
+      "number": 2,
+      "durationMs": 11000,
+      "endedAtMs": 21000,
+      "valid": true,
+      "pit": false,
+      "recordEligible": true,
+      "countsForDistance": true,
+      "distanceM": 20,
+      "reason": ""
+    },
+    {
+      "id": "entry-0-lap-3",
+      "stintId": "stint-1",
+      "number": 3,
+      "durationMs": 10000,
+      "endedAtMs": 31000,
+      "valid": true,
+      "pit": true,
+      "recordEligible": false,
+      "countsForDistance": true,
+      "distanceM": 20,
+      "reason": "Pit lane"
+    },
+    {
+      "id": "heat2-0",
+      "stintId": "stint-2",
+      "number": 1,
+      "durationMs": 10000,
+      "endedAtMs": 70000,
+      "valid": true,
+      "pit": false,
+      "recordEligible": true,
+      "countsForDistance": true,
+      "distanceM": 20,
+      "reason": ""
+    }
+  ],
+  "total": 4,
+  "nextOffset": null
+}

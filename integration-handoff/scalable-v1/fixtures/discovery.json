@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "databaseId": "paddock-demo",
+  "root": "/v1/scalable",
+  "cars": "/v1/scalable/cars",
+  "results": "/v1/scalable/results",
+  "changes": "/v1/scalable/changes",
+  "status": "/v1/scalable/status",
+  "events": "/v1/scalable/events",
+  "pageSize": 50,
+  "lapPageSize": 250,
+  "mediaChunkBytes": 262144,
+  "maxResponseBytes": 8388608
+}

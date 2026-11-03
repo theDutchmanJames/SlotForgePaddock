@@ -28,7 +28,7 @@ These launchers follow SlotForge Timing's normal/quick builder approach. Run the
 
 ## Requirements
 
-- Node.js **22.12 or newer**, including npm.
+- Node.js **24 or newer**, including npm. SQLite uses the built-in `node:sqlite` module; no separate database server or native npm addon is required. Packaged apps include their own Electron runtime.
 - The complete project source, including `package-lock.json`, extracted to a writable folder.
 - Internet access for the first build and whenever dependencies or packaging tools need downloading.
 - On macOS, install Apple's Command Line Tools if requested (`xcode-select --install`).

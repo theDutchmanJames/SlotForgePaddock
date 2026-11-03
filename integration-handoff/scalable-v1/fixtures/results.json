@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "databaseId": "paddock-demo",
+  "snapshot": "eyJkYXRhYmFzZUlkIjoicGFkZG9jay1kZW1vIiwiZXBvY2giOiIxOTE0NTFlMy05ZGE1LTQxOGQtYjFmYS05OWFiNmYyNjBiY2EiLCJhZnRlciI6N30",
+  "cursor": "eyJkYXRhYmFzZUlkIjoicGFkZG9jay1kZW1vIiwiZXBvY2giOiIxOTE0NTFlMy05ZGE1LTQxOGQtYjFmYS05OWFiNmYyNjBiY2EiLCJhZnRlciI6N30",
+  "results": [
+    {
+      "sourceId": "timing-demo",
+      "sessionId": "session-endurance",
+      "revision": 1,
+      "state": "active",
+      "name": "Endurance driver change",
+      "carIds": [
+        "car-a"
+      ],
+      "resultToken": "444d34b723fba7dee48bcc02664168081c529c1d8448e23caf6036b03b6461a5"
+    },
+    {
+      "sourceId": "timing-demo",
+      "sessionId": "session-multi",
+      "revision": 1,
+      "state": "active",
+      "name": "Two cars, two heats",
+      "carIds": [
+        "car-a",
+        "car-b"
+      ],
+      "resultToken": "efac0483cb8b8b4b579b8cd1b7c742711839140b58aa1f2be9aaad71420e27c4"
+    },
+    {
+      "sourceId": "timing-demo",
+      "sessionId": "session-normal",
+      "revision": 3,
+      "state": "withdrawn",
+      "name": "Club race",
+      "carIds": [
+        "car-a"
+      ],
+      "resultToken": "429dc6773a9c2bfd87ccfbb4ee2fae1093952b54b3a1d34c5fe73d3671860da6"
+    }
+  ],
+  "nextOffset": null
+}

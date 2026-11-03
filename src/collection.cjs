@@ -3,7 +3,7 @@ const DEFAULT_COLUMNS=['name','maker','scale','usage','location','availability']
 const CHOICE_FIELDS=['maker','marque','model','scale','livery','colours','team','drivers','event','edition','origin','owner','ownership','condition','packaging','location','availability','acquisitionMethod','seller','currency','disposalMethod','category','raceClass','usage','tags','track','driver'];
 const BULK_FIELDS=['owner','location','ownership','availability','raceClass','category','condition','packaging'];
 const check=(ok,message)=>{if(!ok)throw Error(message);};
-const clone=value=>structuredClone(value);
+const {cloneJSON:clone}=require('./json-data.cjs');
 const title=key=>key.replace(/([A-Z])/g,' $1').replace(/^./,c=>c.toUpperCase());
 function metadata(db,context){
   const custom=db.customFields.filter(f=>f.type==='choice').map(f=>({key:'custom_'+f.id,label:f.label,group:'Custom choices'}));

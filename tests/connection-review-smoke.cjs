@@ -7,8 +7,8 @@ module.exports=async({win,store,network,js,wait,click,fill})=>{
   store.mutate('custom.add',{label:'Shared inspection rating',type:'choice'});copies=0;
   for(let n=0;n<20;n++)win.webContents.send('sf:changed',{kind:'club'});
   await wait('db.revision==='+store.data.revision);await settle();
-  assert.equal(copies,1);assert.equal(await js(`collectionMeta.columns.some(c=>c.label==='Shared inspection rating')`),true);
-  checks.push('burst refresh updates custom-field metadata with one snapshot');
+  assert.equal(copies,0);assert.equal(await js(`collectionMeta.columns.some(c=>c.label==='Shared inspection rating')`),true);
+  checks.push('burst refresh updates custom-field metadata through a bounded SQL page');
   copies=0;for(let n=0;n<20;n++)win.webContents.send('sf:changed',{kind:'club'});
   await new Promise(r=>setTimeout(r,180));await settle();assert.equal(copies,0);
   checks.push('unchanged notification bursts do not transfer another snapshot');
@@ -16,9 +16,9 @@ module.exports=async({win,store,network,js,wait,click,fill})=>{
 
  await click('[data-action="add-car"]');await fill({name:'Keep my unsaved editor text'});
  store.mutate('custom.add',{label:'Another shared field',type:'text'});win.webContents.send('sf:changed',{kind:'club'});
- await wait('db.revision==='+store.data.revision);await settle();
+ await wait('!!pendingDatabaseChange');
  assert.equal(await js(`document.querySelector('#dialog').open&&document.querySelector('[name="name"]').value==='Keep my unsaved editor text'`),true);
- await js(`document.querySelector('#dialog').close();modalSubmit=null;render()`);
+ await js(`document.querySelector('#dialog').close();modalSubmit=null;render()`);await wait('db.revision==='+store.data.revision);await settle();
  checks.push('background refresh preserves open form values');
 
  // The main process can switch stores before the explicit reload finishes.

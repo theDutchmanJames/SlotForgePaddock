@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "databaseId": "paddock-demo",
+  "snapshot": "eyJkYXRhYmFzZUlkIjoicGFkZG9jay1kZW1vIiwiZXBvY2giOiIyNjRiMzQwZS1iZDQ2LTQwMzAtYmQyNC03OWM1M2NmOTgxYTMiLCJhZnRlciI6OX0",
+  "cursor": "eyJkYXRhYmFzZUlkIjoicGFkZG9jay1kZW1vIiwiZXBvY2giOiIyNjRiMzQwZS1iZDQ2LTQwMzAtYmQyNC03OWM1M2NmOTgxYTMiLCJhZnRlciI6OX0",
+  "cars": [
+    {
+      "id": "car-a",
+      "revision": 3,
+      "name": "Renamed example",
+      "maker": "Example maker",
+      "marque": "",
+      "model": "",
+      "scale": "",
+      "raceClass": "GT3",
+      "availability": "Available",
+      "archived": false,
+      "media": {
+        "hash": "3ccb3f8d95a14cd9ba294ee9c8a6ab0ad25d6868b57cf329237765107079f7c5",
+        "mime": "image/png",
+        "size": 118,
+        "encoding": "utf8-data-uri",
+        "url": "/v1/scalable/cars/car-a/media/3ccb3f8d95a14cd9ba294ee9c8a6ab0ad25d6868b57cf329237765107079f7c5"
+      }
+    },
+    {
+      "id": "car-b",
+      "revision": 1,
+      "name": "Example prototype",
+      "maker": "Example maker",
+      "marque": "",
+      "model": "",
+      "scale": "",
+      "raceClass": "GT3",
+      "availability": "Available",
+      "archived": false,
+      "media": null
+    }
+  ],
+  "nextOffset": null
+}

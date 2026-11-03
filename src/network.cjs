@@ -44,7 +44,7 @@ class Network {
     for(const key of ['allowSubmissions'])if(p[key]!==undefined)this[key]=p[key];
     if(credentialKey)this[credentialKey]=p.password;
     if(p.rotate===true){this.code=crypto.randomBytes(12).toString('hex');this.browseCode=crypto.randomBytes(12).toString('hex');this.timingCode=crypto.randomBytes(12).toString('hex');}
-    if(credentialKey||p.rotate===true){this.authAttempts?.clear();this.telemetryEvents?.revalidate();}
+    if(credentialKey||p.rotate===true){this.authAttempts?.clear();this.telemetryEvents?.revalidate();this.scalableEvents?.revalidate();}
     return this.status();
   }
   async discover(){if(!this.scanning)this.scanning=discovery.scan().finally(()=>{this.scanning=null;});return (await this.scanning).filter(h=>h.id!==this.store.data.id);}
@@ -70,10 +70,12 @@ class Network {
       // must not reset the limit while guessing a higher-permission password.
       try{
         const url=new URL(req.url,'http://localhost');
-        if(req.method==='GET'&&url.pathname==='/v1/status')return send(200,{protocol:2,id:this.store.data.id,revision:this.store.data.revision,catalogueRevision:this.store.data.catalogueRevision,name:this.store.data.settings.name,permissions:access,capabilities:{telemetry:telemetry.capability,...timing.capabilities(),...(this.club?.coordinator?{club:1}:{})},...(this.club?.coordinator?{clubId:this.store.data.club.id}:{})});
+        if(url.pathname==='/v1/scalable/events')return await this.scalableEvents.open(req,res,url,code);
+        if(url.pathname==='/v1/scalable'||url.pathname.startsWith('/v1/scalable/'))return await this.store.withIdle(()=>send(200,require('./scalable-api.cjs').handle(this.store,req.method,url,this.access(code)||{},req.headers['x-slotforge-database'])));
+        if(req.method==='GET'&&url.pathname==='/v1/status')return await this.store.withIdle(()=>{const currentAccess=this.access(code);if(!currentAccess)return send(403,{error:'Connection permission changed.',code:'PERMISSION_CHANGED'});const clubFieldReview=this.club?.coordinator?require('./field-review.cjs').capability(this.store):null;return send(200,{protocol:2,id:this.store.data.id,revision:this.store.data.revision,catalogueRevision:this.store.data.catalogueRevision,name:this.store.data.settings.name,permissions:currentAccess,capabilities:{...(req.headers['x-slotforge-extensions']==='scalable-v1'?{scalable:require('./scalable-api.cjs').capability}:{}),telemetry:telemetry.capability,...timing.capabilities(),...(this.club?.coordinator?{club:1}:{}),...(clubFieldReview?{clubFieldReview:1}:{})},...(this.club?.coordinator?{clubId:this.store.data.club.id}:{}),...(clubFieldReview?{clubFieldReview}:{})});});
         if(url.pathname==='/v1/telemetry/events')return this.telemetryEvents.open(req,res,url,access,code);
         if(url.pathname==='/v1/telemetry/changes')return this.telemetryEvents.wait(req,res,url,access,code);
-        if(url.pathname.startsWith('/v1/telemetry/'))return send(200,telemetry.handle(this.store.data,req.method,url,access,req.headers['x-slotforge-database']));
+        if(url.pathname.startsWith('/v1/telemetry/'))return await this.store.withIdle(()=>send(200,telemetry.handleStore(this.store,req.method,url,this.access(code)||{},req.headers['x-slotforge-database'])));
         if(url.pathname.startsWith('/v1/club/')&&this.club)return await this.club.handle(req,res,url,access,code);
         if(url.pathname.startsWith('/v1/timing/')){
           const expected=req.headers['x-slotforge-database'];
@@ -92,19 +94,21 @@ class Network {
             if(expected!==this.store.data.id)throw timing.fault('DATABASE_MISMATCH','The host database changed during upload.',409);
             if(!this.access(code)?.timingResults)throw timing.fault('TIMING_PERMISSION_REQUIRED','Timing access changed during upload.',403);
             let payload;try{payload=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(Buffer.concat(chunks)));}catch{throw timing.fault('INVALID_JSON','Request must contain valid UTF-8 JSON.');}
+
             return await this.store.withIdle(()=>{if(expected!==this.store.data.id)throw timing.fault('DATABASE_MISMATCH','The host database changed during upload.',409);if(!this.access(code)?.timingResults)throw timing.fault('TIMING_PERMISSION_REQUIRED','Timing access changed during upload.',403);const result=timing.receive(this.store,payload);if(!result.duplicate)try{this.onChange({kind:'timing'});}catch{}return send(200,result);});
           }
           throw timing.fault('NOT_FOUND','Unknown Timing operation.',404);
         }
-        if(req.method==='GET'&&url.pathname==='/v1/collection'){
-          const db=this.store.data,offset=Number(url.searchParams.get('offset')||0),all=db.cars.filter(c=>!c.archived);
-          if(req.headers['x-slotforge-pages']!=='1'){const view=publicView(db.id,db.revision,db.settings.name,all.map(publicCar));if(Buffer.byteLength(JSON.stringify(view))>MAX)return send(413,{error:'This photo collection needs a newer SlotForge client with paged transfers.'});return send(200,{...view,catalogueRevision:db.catalogueRevision,permissions:access});}
-          if(!Number.isSafeInteger(offset)||offset<0||offset>all.length)return send(400,{error:'Invalid collection page.'});
+        if(req.method==='GET'&&url.pathname==='/v1/collection')return await this.store.withIdle(()=>{
+          const access=this.access(code);if(!access?.browse)return send(403,{error:'Browsing access changed. Reconnect.'});
+          const db=this.store.data,offset=Number(url.searchParams.get('offset')||0),paged=req.headers['x-slotforge-pages']==='1'&&this.store.file&&this.store.expectedIdentity!==null&&Number.isSafeInteger(offset)&&offset>=0?require('./sqlite-query.cjs').read(this.store,null,r=>r.list('cars',{archived:false,offset,limit:25})).value:null,all=paged?null:db.cars.filter(c=>!c.archived),total=paged?paged.total:all.length;
+          if(req.headers['x-slotforge-pages']!=='1'){const view=publicView(db.id,db.revision,db.settings.name,all.map(publicCar));if(require('./json-encoding.cjs').byteLength(view)>MAX)return send(413,{error:'This photo collection needs a newer SlotForge client with paged transfers.'});return send(200,{...view,catalogueRevision:db.catalogueRevision,permissions:access});}
+          if(!Number.isSafeInteger(offset)||offset<0||offset>total)return send(400,{error:'Invalid collection page.'});
           if(offset>0&&(url.searchParams.get('revision')!==String(db.revision)||url.searchParams.get('database')!==db.id))return send(409,{error:'The shared collection changed during transfer. Refresh to try again.'});
           const cars=[];let size=0;
-          for(const car of all.slice(offset,offset+25)){const value=publicCar(car),bytes=Buffer.byteLength(JSON.stringify(value));if(cars.length&&size+bytes>PAGE_BYTES)break;cars.push(value);size+=bytes;}
-          return send(200,{...publicView(db.id,db.revision,db.settings.name,cars),catalogueRevision:db.catalogueRevision,permissions:access,nextOffset:offset+cars.length<all.length?offset+cars.length:null});
-        }
+          for(const car of (paged?paged.rows:all.slice(offset,offset+25))){const value=publicCar(car),bytes=require('./json-encoding.cjs').byteLength(value);if(cars.length&&size+bytes>PAGE_BYTES)break;cars.push(value);size+=bytes;}
+          return send(200,{...publicView(db.id,db.revision,db.settings.name,cars),catalogueRevision:db.catalogueRevision,permissions:access,nextOffset:offset+cars.length<total?offset+cars.length:null});
+        });
         if(req.method==='POST'&&req.url==='/v1/submissions'){
           if(req.headers['x-slotforge-database']&&req.headers['x-slotforge-database']!==this.store.data.id)return send(409,{error:'The database at this address changed. Reconnect to the original host.'});
           if(!access.submit)return send(403,{error:'This connection is browse-only or the host has paused submissions.'});
@@ -117,14 +121,14 @@ class Network {
         send(404,{error:'Unknown operation.'});
       }catch(e){send(e.httpStatus||(e.code?500:400),{error:e.code?'The host could not save the submission. Check storage on the sharing computer.':e.message,code:e.apiCode||(e.code?'STORAGE_FAILED':'INVALID_PAYLOAD')});}
     });
-    this.telemetryEvents=new telemetry.Events(this);
+    this.telemetryEvents=new telemetry.Events(this);this.scalableEvents=new (require('./scalable-api.cjs').Events)(this);
     this.server.requestTimeout=15000;this.server.headersTimeout=10000;this.server.maxConnections=30;
     const listening=new Promise((resolve,reject)=>{this.server.once('error',reject);this.server.listen(0,'0.0.0.0',resolve);});
-    try{await listening;this.port=this.server.address().port;try{this.advertiser=await discovery.advertise(()=>this.server?{id:this.store.data.id,name:this.store.data.settings.name,port:this.port}:null);this.discoveryError='';}catch{this.discoveryError='Discovery is unavailable on this computer. Members can still enter the displayed address and code.';}}catch(e){this.telemetryEvents?.close();this.telemetryEvents=null;this.server=null;this.code='';throw e;}return this.status();
+    try{await listening;this.port=this.server.address().port;try{this.advertiser=await discovery.advertise(()=>this.server?{id:this.store.data.id,name:this.store.data.settings.name,port:this.port}:null);this.discoveryError='';}catch{this.discoveryError='Discovery is unavailable on this computer. Members can still enter the displayed address and code.';}}catch(e){this.scalableEvents?.close();this.scalableEvents=null;this.telemetryEvents?.close();this.telemetryEvents=null;this.server=null;this.code='';throw e;}return this.status();
   }
-  async stop(){if(this.starting)await this.starting.catch(()=>{});this.telemetryEvents?.close();this.telemetryEvents=null;const s=this.server;this.server=null;this.code='';this.browseCode='';this.timingCode='';this.clubCode='';this.port=0;if(this.advertiser){this.advertiser.close();this.advertiser=null;}this.discoveryError='';if(s){s.closeAllConnections();await new Promise(resolve=>s.close(resolve));}return this.status();}
+  async stop(){if(this.starting)await this.starting.catch(()=>{});this.scalableEvents?.close();this.scalableEvents=null;this.telemetryEvents?.close();this.telemetryEvents=null;const s=this.server;this.server=null;this.code='';this.browseCode='';this.timingCode='';this.clubCode='';this.port=0;if(this.advertiser){this.advertiser.close();this.advertiser=null;}this.discoveryError='';if(s){s.closeAllConnections();await new Promise(resolve=>s.close(resolve));}return this.status();}
   async request(address,code,route,body,expectedDatabase,signal){
-    const payload=body?JSON.stringify(body):undefined;if(payload&&Buffer.byteLength(payload)>MAX)throw new Error('Package exceeds the 32 MB network limit. Use a file export.');
+    const payload=body?require('./json-encoding.cjs').boundedStringify(body,MAX,'Package exceeds the 32 MB network limit. Use a file export.'):undefined;
     const response=await fetch(localAddress(address)+route,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+code,'Content-Type':'application/json','X-SlotForge-Pages':'1',...(expectedDatabase?{'X-SlotForge-Database':expectedDatabase}:{})},body:payload,redirect:'error',signal:signal?AbortSignal.any([signal,AbortSignal.timeout(10000)]):AbortSignal.timeout(10000)});
     if(Number(response.headers.get('content-length'))>MAX){await response.body?.cancel();throw new Error('Response too large.');}
     if(!response.body)throw new Error('The host returned an empty response.');const reader=response.body.getReader();let size=0,chunks=[];
@@ -185,7 +189,7 @@ class Network {
     if(this.pending)throw Error('Resolve the previous submission first: retry it or discard its retry copy in Connections.');
     if(!this.remote)throw Error('Connect to a database first.');if(!this.remote.permissions.submit)throw Error('This connection is browse-only or submissions are paused.');
     if(this.remote.state!=='connected')throw Error('Reconnect before submitting cars.');
-    const bundle=makePackage(this.store.snapshot(),ids,options);if(Buffer.byteLength(JSON.stringify(bundle))>MAX)throw Error('Package exceeds the 32 MB network limit. Use a file export.');
+    const bundle=makePackage(this.store.snapshot(),ids,options);if(require('./json-encoding.cjs').byteLength(bundle)>MAX)throw Error('Package exceeds the 32 MB network limit. Use a file export.');
     this.pending={hostId:this.remote.id,name:this.remote.name,bundle};return this.retrySubmission();
   }
   async retrySubmission(){
@@ -197,6 +201,6 @@ class Network {
     catch(e){this.notify();throw Error(e.message+' The retry copy is retained in Connections. Retry sends the same package, so the host can recognise an already received submission.');}finally{this.sending=false;}
   }
   discardSubmission(){if(this.sending)throw Error('Wait for the current submission to finish.');this.pending=null;this.notify();return this.status();}
-  close(){this.telemetryEvents?.close();this.telemetryEvents=null;this.disconnect();if(this.advertiser){this.advertiser.close();this.advertiser=null;}this.server?.closeAllConnections();this.server?.close();}
+  close(){this.scalableEvents?.close();this.scalableEvents=null;this.telemetryEvents?.close();this.telemetryEvents=null;this.disconnect();if(this.advertiser){this.advertiser.close();this.advertiser=null;}this.server?.closeAllConnections();this.server?.close();}
 }
 module.exports={Network,localAddress};

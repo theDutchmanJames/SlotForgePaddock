@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "databaseId": "paddock-demo",
+  "kind": "results",
+  "resetRequired": false,
+  "reason": null,
+  "cursor": "eyJkYXRhYmFzZUlkIjoicGFkZG9jay1kZW1vIiwiZXBvY2giOiIxOTE0NTFlMy05ZGE1LTQxOGQtYjFmYS05OWFiNmYyNjBiY2EiLCJhZnRlciI6M30",
+  "entries": [
+    {
+      "sourceId": "timing-demo",
+      "sessionId": "session-normal",
+      "operation": "invalidate"
+    }
+  ],
+  "more": false
+}

@@ -1,0 +1,119 @@
+{
+  "version": 2,
+  "epoch": "24e02e26-cca3-4561-abb7-d8e384dc7655",
+  "latest": 3,
+  "identity": [
+    "173a8444-875e-4c6b-b06d-8b34ff2d32e2",
+    3
+  ],
+  "entries": [
+    {
+      "sequence": 3,
+      "from": [
+        "173a8444-875e-4c6b-b06d-8b34ff2d32e2",
+        2
+      ],
+      "to": [
+        "173a8444-875e-4c6b-b06d-8b34ff2d32e2",
+        3
+      ],
+      "manifestBefore": "3bbc981812e19ec63a1e39b345a9d56d57c5f297c3acf51f7af617c04420cc49",
+      "manifestAfter": "dd747a540fb7f29295e39f62310b0fbbb682cdf4a105fb3055956715ce240720",
+      "manifestChanges": [
+        {
+          "path": [
+            "object",
+            16,
+            1,
+            "array"
+          ],
+          "splice": {
+            "start": 0,
+            "remove": 0,
+            "items": [
+              {
+                "record": "[\"events\",\"id:365a640e-66b4-4a46-9133-10d74a593342\"]"
+              }
+            ]
+          }
+        }
+      ],
+      "changes": [
+        {
+          "key": "[\"revision\"]",
+          "before": "00d48be5f15cc25116a1d646e66effca3288a76e9a0abc599fe5118e72be57ce",
+          "header": "{\"shape\":{\"field\":\"[]\"},\"refs\":[],\"digest\":\"55b8995f70ac1a22336c04f443387566d3c8859aa42e0b7750eced6f9ee2f541\"}",
+          "fields": [
+            {
+              "path": "[]",
+              "json": "3"
+            }
+          ]
+        },
+        {
+          "key": "[\"catalogueRevision\"]",
+          "before": "2466ce49ce15d9adf1d6e3dd22dfa16f1d7a80ea167eed0caf9f1d4c23762525",
+          "header": "{\"shape\":{\"field\":\"[]\"},\"refs\":[],\"digest\":\"00d48be5f15cc25116a1d646e66effca3288a76e9a0abc599fe5118e72be57ce\"}",
+          "fields": [
+            {
+              "path": "[]",
+              "json": "2"
+            }
+          ]
+        },
+        {
+          "key": "[\"cars\",\"id:b1cc44e9-930a-42d9-90ca-b7ee336f57c7\"]",
+          "before": "836a58ccb7c17f78bede9e72a4b23b6d885824ae1e65eb2f8bc30c9c147ffc60",
+          "header": "{\"shape\":{\"object\":[[\"id\",{\"field\":\"[\\\"id\\\"]\"}],[\"revision\",{\"field\":\"[\\\"revision\\\"]\"}],[\"created\",{\"field\":\"[\\\"created\\\"]\"}],[\"updated\",{\"field\":\"[\\\"updated\\\"]\"}],[\"usage\",{\"field\":\"[\\\"usage\\\"]\"}],[\"tags\",{\"field\":\"[\\\"tags\\\"]\"}],[\"technical\",{\"object\":[]}],[\"factory\",{\"object\":[]}],[\"photos\",{\"field\":\"[\\\"photos\\\"]\"}],[\"custom\",{\"object\":[]}],[\"ownership\",{\"field\":\"[\\\"ownership\\\"]\"}],[\"availability\",{\"field\":\"[\\\"availability\\\"]\"}],[\"name\",{\"field\":\"[\\\"name\\\"]\"}],[\"maker\",{\"field\":\"[\\\"maker\\\"]\"}],[\"livery\",{\"field\":\"[\\\"livery\\\"]\"}]]},\"refs\":[],\"digest\":\"9126d9e045186a11e4db9470ee10cfaa61183f820030ce85728a34c83fa6d894\"}",
+          "fields": [
+            {
+              "path": "[\"revision\"]",
+              "json": "2"
+            },
+            {
+              "path": "[\"updated\"]",
+              "json": "\"2026-11-03T09:34:37.584Z\""
+            },
+            {
+              "path": "[\"name\"]",
+              "json": "\"Renamed GT car\""
+            }
+          ]
+        },
+        {
+          "key": "[\"events\",\"id:365a640e-66b4-4a46-9133-10d74a593342\"]",
+          "before": null,
+          "header": "{\"shape\":{\"object\":[[\"id\",{\"field\":\"[\\\"id\\\"]\"}],[\"carId\",{\"field\":\"[\\\"carId\\\"]\"}],[\"type\",{\"field\":\"[\\\"type\\\"]\"}],[\"title\",{\"field\":\"[\\\"title\\\"]\"}],[\"date\",{\"field\":\"[\\\"date\\\"]\"}],[\"notes\",{\"field\":\"[\\\"notes\\\"]\"}]]},\"refs\":[],\"digest\":\"dc7891027d3a997bf3fbf5f27bda23f82746392c643cf3a8df55e2c7cb9476ea\"}",
+          "fields": [
+            {
+              "path": "[\"id\"]",
+              "json": "\"365a640e-66b4-4a46-9133-10d74a593342\""
+            },
+            {
+              "path": "[\"carId\"]",
+              "json": "\"b1cc44e9-930a-42d9-90ca-b7ee336f57c7\""
+            },
+            {
+              "path": "[\"type\"]",
+              "json": "\"correction\""
+            },
+            {
+              "path": "[\"title\"]",
+              "json": "\"Details updated\""
+            },
+            {
+              "path": "[\"date\"]",
+              "json": "\"2026-11-03T09:34:37.584Z\""
+            },
+            {
+              "path": "[\"notes\"]",
+              "json": "\"\""
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "next": 3,
+  "more": false
+}

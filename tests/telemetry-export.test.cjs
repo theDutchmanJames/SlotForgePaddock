@@ -113,10 +113,11 @@ test('HTTP notifications are quiet on private edits and include only tokens on r
 });
 
 test('streams close on database replacement and hosting stop; subscriptions do not accumulate',async t=>{
+ // Hosting owns separate legacy Telemetry and optional scalable stream subscriptions.
  const h=await setup(t),baseline=h.store.listeners.size,s=await stream(h,t);await s.next();
  h.store.replace(new Store().data);assert.equal(await s.next(),null);
- const again=await stream(h,t);await again.next();await h.network.stop();assert.equal(await again.next(),null);assert.equal(h.store.listeners.size,baseline-1);
- await h.network.start();assert.equal(h.store.listeners.size,baseline);await h.network.stop();assert.equal(h.store.listeners.size,baseline-1);
+ const again=await stream(h,t);await again.next();await h.network.stop();assert.equal(await again.next(),null);assert.equal(h.store.listeners.size,baseline-2);
+ await h.network.start();assert.equal(h.store.listeners.size,baseline);await h.network.stop();assert.equal(h.store.listeners.size,baseline-2);
 });
 
 test('stream limits and backpressure do not allow unbounded buffering',async t=>{

@@ -212,7 +212,9 @@ For lighter sharing, the separate local-network sharing tools let another Paddoc
 
 In **Review → Incoming cars**, choose individual incoming fields. If an accepted technical change conflicts with a fitted inventory part, explicitly return that part to stock before applying the new specification. Unselected fields stay unchanged; entering a replacement specification does not automatically fit a different stock item.
 
-Create a **complete backup** for recovery or moving a personal collection to another computer. Backups include private collection information. Restoring replaces the selected database; use selected-car imports when you only want to add entries. [Timing file-transfer guide](docs/TIMING-CAR-EXPORT.md).
+Create a **complete portable backup** for recovery or moving a personal collection to another computer. Backups preserve original photographs and documents, run with progress and cancellation, and include private collection information. Restores verify the file and save a recovery backup before committing. Existing JSON backups remain supported. [Backup and recovery details](docs/PORTABLE-BACKUPS.md). Restoring replaces the selected database; use selected-car imports when you only want to add entries. [Timing file-transfer guide](docs/TIMING-CAR-EXPORT.md).
+
+Collections are stored locally in **SQLite**, with transactional saves and separately stored original photographs. Existing JSON databases migrate automatically after validation; the original file is retained. Galleries load smaller previews, while the photo viewer, exports and backups retain full-resolution originals. **Settings → Database → Export previous revision** provides an additional recovery option. [Storage and migration details](docs/SQLITE-STORAGE.md). Settings also shows database and media usage; see [current storage limits](docs/STORAGE-LIMITS.md).
 
 ### Reports, personalisation and everyday use
 
@@ -250,7 +252,7 @@ Make a complete backup through **Import & Export**, close the running app and op
 
 ### Run or build from source
 
-Install Node.js **22.12 or newer** with npm, download and extract the source, then open a terminal in the folder containing `package.json`:
+Install Node.js **24 or newer** with npm, download and extract the source, then open a terminal in the folder containing `package.json`:
 
 ```sh
 npm ci

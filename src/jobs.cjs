@@ -1,6 +1,6 @@
 const {randomUUID}=require('node:crypto');
 const w=require('./workshop.cjs');
-const clone=value=>structuredClone(value);
+const {cloneJSON:clone}=require('./json-data.cjs');
 const now=()=>new Date().toISOString();
 function check(ok,message){if(!ok)throw Error(message);}
 const signature=rows=>JSON.stringify(rows.map(i=>[i.partId,i.quantity,i.field||'',i.position||'',i.assemblyId||'']).sort((a,b)=>JSON.stringify(a).localeCompare(JSON.stringify(b))));

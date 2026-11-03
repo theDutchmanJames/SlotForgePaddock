@@ -82,9 +82,9 @@ function mutate(db,action,p,remember){
   for(const key of ['pinion','gear'])if(preview.gearing[key])car.technical[key]=preview.gearing[key];
   if(Performance.keys.some(key=>d.performance[key]&&d.performance[key]!=='Unknown'))for(const key of Performance.keys)if(d.performance[key])car.technical[key]=d.performance[key];
   const installations=w.active(db).filter(i=>i.carId===car.id).map(i=>({partId:i.partId,name:db.parts.find(p=>p.id===i.partId).name,quantity:i.quantity,field:i.field,position:i.position,...(i.assemblyId?{assemblyId:i.assemblyId,assemblyName:db.assemblies.find(a=>a.id===i.assemblyId).name}:{})}));
-  const event=(type,title)=>db.events.unshift({id:randomUUID(),carId:car.id,type,title,date:stamp,notes:'',technical:structuredClone(car.technical),installations:structuredClone(installations)});
+  const event=(type,title)=>db.events.unshift({id:randomUUID(),carId:car.id,type,title,date:stamp,notes:'',technical:require('./json-data.cjs').cloneJSON(car.technical),installations:require('./json-data.cjs').cloneJSON(installations)});
   event('created','Built from scratch');
-  if(d.saveSetup){db.setups.unshift({id:randomUUID(),carId:car.id,name:'As built',date:stamp,track:'',notes:'',technical:structuredClone(car.technical),installations:structuredClone(installations)});event('setup','Saved As built');}
+  if(d.saveSetup){db.setups.unshift({id:randomUUID(),carId:car.id,name:'As built',date:stamp,track:'',notes:'',technical:require('./json-data.cjs').cloneJSON(car.technical),installations:require('./json-data.cjs').cloneJSON(installations)});event('setup','Saved As built');}
   remember(car);
   if(p.draftId)db.buildDrafts=db.buildDrafts.filter(d=>d.id!==p.draftId);
   return car.id;

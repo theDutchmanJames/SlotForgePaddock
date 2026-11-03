@@ -1,5 +1,5 @@
 const {randomUUID}=require('node:crypto');
-const clone=value=>structuredClone(value);
+const {cloneJSON:clone}=require('./json-data.cjs');
 const now=()=>new Date().toISOString();
 function check(ok,message){if(!ok)throw new Error(message);}
 function label(value,max=200){check(typeof value==='string'&&value.trim()&&value.length<=max,'Enter a valid name or location.');return value.trim();}

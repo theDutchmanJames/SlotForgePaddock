@@ -4,7 +4,7 @@ const componentLabel=p=>p.name+(p.reference?' ['+p.reference+']':p.tracking==='i
 function stockEditAction(p){const a=liveAssemblies().find(a=>a.components.some(c=>c.partId===p.id));return a?`<p class="tiny muted">Reserved in ${esc(a.name)}. Dismantle the group before editing this stock.</p>${btn('View assemblies','parts-tab','','Assemblies')}`:btn('Edit part','edit-part','',p.id);}
 function renderParts(){
   if(!local())return renderStock();
-  const tabs=`<div class="tabs"><button data-action="parts-tab" data-id="Stock" class="${partsTab==='Stock'?'active':''}">${icon('box')}Stock</button><button data-action="parts-tab" data-id="Assemblies" class="${partsTab==='Assemblies'?'active':''}">${icon('assembly')}Assemblies (${liveAssemblies().length})</button><button data-action="parts-tab" data-id="Build from Scratch" class="${partsTab==='Build from Scratch'?'active':''}">${icon('car')}Build from Scratch</button></div>`;
+  const tabs=`<div class="tabs"><button data-action="parts-tab" data-id="Stock" class="${partsTab==='Stock'?'active':''}">${icon('box')}Stock</button><button data-action="parts-tab" data-id="Assemblies" class="${partsTab==='Assemblies'?'active':''}">${icon('assembly')}Assemblies (${db._view?.assemblies??liveAssemblies().length})</button><button data-action="parts-tab" data-id="Build from Scratch" class="${partsTab==='Build from Scratch'?'active':''}">${icon('car')}Build from Scratch</button></div>`;
   if(partsTab==='Stock')return renderStock(tabs);
   if(partsTab==='Build from Scratch')return renderBuild(tabs);
   return heading('Assemblies','Combine components into a physical unit, ready to install.',btn(icon('plus')+' Build assembly','add-assembly','primary'))+tabs+
@@ -13,7 +13,7 @@ function renderParts(){
       `<div class="row">${badge(a.carId?'Installed':'In storage',a.carId?'good':'')}<span class="muted">${esc(a.carId?db.cars.find(c=>c.id===a.carId)?.name:a.location)}</span></div>`+
       `<div class="assembly-components">${a.components.map(c=>{const p=db.parts.find(p=>p.id===c.partId);return `<div class="list-row"><div><strong>${esc(componentLabel(p))}</strong><div class="tiny muted">${c.quantity} piece(s) · ${esc(techLabels[c.field]||c.position)} · ${esc(p.condition)}</div></div></div>`;}).join('')}</div>`+
       `<p class="prewrap muted">${esc(a.notes)}</p>${a.history?.length?`<details><summary>Component replacement history (${a.history.length})</summary>${a.history.slice().reverse().map(e=>`<p class="tiny">${date(e.date)} · ${esc(e.removedName)} → ${esc(e.installedName)}</p>`).join('')}</details>`:''}<div class="actions">${btn(a.carId?'Transfer…':'Install on car…','install-assembly','primary small',a.id)}${a.carId?btn('Remove to storage…','remove-assembly','small',a.id):''}${btn('Replace component…','replace-assembly','small',a.id)}${btn('Dismantle…','dismantle-assembly','small',a.id)}</div>`)).join('')}</div>`:
-      empty('Build your first assembly','Choose components from available stock. They will remain linked as one physical group.',btn('Build assembly','add-assembly','primary')));
+      empty('Build your first assembly','Choose components from available stock. They will remain linked as one physical group.',btn('Build assembly','add-assembly','primary')))+viewPager(db._view?.list);
 }
 function assemblyRow(){
   const n=assemblyRowCount++;

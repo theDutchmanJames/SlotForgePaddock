@@ -33,7 +33,7 @@ function build(config) {
   const {platform, arch, quick} = config;
   if (config.help) {
     console.log(`SlotForge Paddock ${platform === 'mac' ? 'macOS' : 'Linux'} builder
-Run on the target operating system with Node.js >=22.12 and npm installed.
+Run on the target operating system with Node.js >=24 and npm installed.
 Normal build: install locked dependencies, run checks and tests, package installers.
   --quick       Reuse matching dependencies and skip checks/tests.
   --arch ARCH   ${platform === 'mac' ? 'universal (default), x64 or arm64' : 'x64 or arm64 (default: this machine)'}.
@@ -44,8 +44,8 @@ Files are written to dist/v<version>/. Nothing is installed automatically.`);
   }
   if (process.platform !== (platform === 'mac' ? 'darwin' : 'linux')) throw Error(`Run this builder on ${platform === 'mac' ? 'macOS' : 'Linux'}. It cannot build these installers on ${process.platform}.`);
   if (process.getuid?.() === 0) throw Error('Run the builder as your normal user, without sudo.');
-  const [major, minor] = process.versions.node.split('.').map(Number);
-  if (major < 22 || (major === 22 && minor < 12)) throw Error('Node.js 22.12 or newer is required by the pinned Electron toolchain.');
+  const major = Number(process.versions.node.split('.')[0]);
+  if (major < 24) throw Error('Node.js 24 or newer is required for the built-in SQLite database and tests.');
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
   const stampPath = path.join(root, 'node_modules', '.paddock-build-dependencies');
   const fingerprint = crypto.createHash('sha256').update(fs.readFileSync(path.join(root, 'package-lock.json'))).update(fs.readFileSync(path.join(root, 'package.json'))).update(`${process.platform}/${process.arch}/${major}`).digest('hex');

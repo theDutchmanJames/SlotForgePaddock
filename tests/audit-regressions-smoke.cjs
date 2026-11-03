@@ -18,7 +18,7 @@ module.exports=async({store,js,wait,click,fill,submit,qa,dialog})=>{
   if(await js(`document.querySelector('#main h1').textContent`)!=='Workshop')failures.push('All workshop jobs returns to Supplies after starting a setup job.');
   checks.push('resumed and newly started setup jobs return to the job queue after visiting Supplies');
 
-  await js(`page='Parts';partsTab='Stock';editPart('${part}');`);await fill({quantity:''});
+  await js(`(async()=>{page='Parts';partsTab='Stock';await queryAction('edit-part','${part}');editPart('${part}');})()`);await fill({quantity:''});
   await js(`document.querySelector('#modal-form').requestSubmit()`);await wait('!modalSaving');
   if(store.data.parts.find(p=>p.id===part).quantity!==4)failures.push('Clearing quantity silently removes all available stock.');
   if(await js(`document.querySelector('#dialog').open`)){

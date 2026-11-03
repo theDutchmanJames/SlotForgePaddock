@@ -118,4 +118,16 @@ class Events {
   }
   close(){this.unsubscribe();if(this.pending)clearImmediate(this.pending);for(const c of [...this.clients,...this.waiters])this.end(c);}
 }
-module.exports={capability,handle,manifest,Events};
+function handleStore(store,method,url,access,expected){
+ if(!store.file||store.expectedIdentity===null)return handle(store.data,method,url,access,expected);
+ authorize(store.data,method,access,expected);
+ return require('./sqlite-query.cjs').read(store,null,r=>{
+  const model={id:store.data.id,revision:store.data.revision,settings:store.data.settings,timing:{sessions:require('./query-timing.cjs').allMetadata(r)}};
+  const match=url.pathname.match(/^\/v1\/telemetry\/results\/([a-zA-Z0-9_-]{1,100})\/([a-zA-Z0-9_-]{1,100})$/);
+  // Materialize at most the requested session. Other entries contain only
+  // public index metadata, not configurations or measured lap arrays.
+  if(match){const record=require('./query-timing.cjs').full(r,match[1],match[2]);if(record){const index=model.timing.sessions.findIndex(s=>s.payload.source.id===match[1]&&s.payload.sessionId===match[2]);model.timing.sessions[index]=record;}}
+  return handle(model,method,url,access,expected);
+ }).value;
+}
+module.exports={capability,handle,handleStore,manifest,Events};

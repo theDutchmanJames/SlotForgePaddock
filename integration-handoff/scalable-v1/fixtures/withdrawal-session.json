@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "databaseId": "paddock-demo",
+  "resultToken": "429dc6773a9c2bfd87ccfbb4ee2fae1093952b54b3a1d34c5fe73d3671860da6",
+  "payload": {
+    "integrationVersion": 1,
+    "databaseId": "paddock-demo",
+    "source": {
+      "id": "timing-demo",
+      "name": "Club Timing PC",
+      "application": "SlotForge Timing"
+    },
+    "sessionId": "session-normal",
+    "revision": 3,
+    "state": "withdrawn",
+    "reason": "Session withdrawn by the Race Director."
+  },
+  "summaries": [],
+  "requiresCorrection": false,
+  "warnings": [],
+  "lapCounts": []
+}

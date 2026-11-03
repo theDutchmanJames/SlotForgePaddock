@@ -1,5 +1,17 @@
 # Development & release history
 
+## Unreleased — SQLite storage — 3 November 2026
+
+Desktop startup now loads current SQLite collections on demand. It validates the record directory and common definitions, then queries only the visible page; histories, inventory and Timing bodies are deferred. First writes retain full domain validation, with asynchronous integrity scanning and batched materialization. See the [startup review](reviews/2026-11-03-deferred-startup.md) for compatibility boundaries, recovery checks and measurements.
+
+A follow-up [performance refinement](reviews/2026-11-03-performance-tuning.md) removes unnecessary draft traversal and reuses unchanged committed manifest branches. Synthetic 5,000-car maintenance saves improved from 235.3 to 125.7 ms p95, with maximum synchronous preparation reduced from 185.5 to 78.1 ms. Validation and integration contracts are preserved; large-collection global checks still have a measurable cost.
+
+Migrates local collections and Dealership caches from JSON into validated SQLite storage, preserving the originals. Records and media are stored separately; saves write changed rows and new media atomically, with the preceding revision available for export. Existing domain rules and Timing, Telemetry and Dealership JSON contracts are retained.
+
+Renderer snapshots now use opaque local image references. Galleries load thumbnails; full viewers and exports use stored originals. New photo imports retain source bytes within the existing limit, with explicit consent required for an oversized smaller copy. A long-string cache collision issue discovered with large synthetic photo collections was also corrected.
+
+Phase 8 replaces the 200 MiB aggregate collection cap with a separate 200 MiB working-metadata guard: original photos/documents no longer count toward that guard. General writes use copy-on-write drafts, partial SQL persistence and unchanged-record validation reuse. Dealership catch-up decodes changed records; general-review baselines avoid original-media hashing; snapshot metadata streams. Active 2.1 GiB workflows, portable round-trips, 100–5,000-car qualification, full unit/desktop suites and packaged Windows workers are covered in [storage limits](STORAGE-LIMITS.md) and the [review](reviews/2026-11-03-sqlite-scalability.md). Individual-file and legacy transport limits remain. Native Linux/macOS, physical multi-computer and external scalable-client acceptance remain unverified; no release is created by this work.
+
 The latest release is [v1.0.1](releases/v1.0.1.md), adding the reviewed Telemetry lap-history API.
 
 ## v1.0.1 — Telemetry analysis connection — 1 November 2026
@@ -890,3 +902,7 @@ Paddock’s Timing integration host is implemented in current source; the Timing
 Paddock receives reviewed Timing results through the documented v1 host API. Race control, measurement and hardware support remain the responsibility of Timing; RaceCoordinatorAI integration is still planned.
 
 The original product scope and screen studies remain in `concept/`. They describe the broader target; the feature sections above describe the current implementation and its release history.
+
+### Scoped first writes
+
+Normal writes now validate scoped command workspaces and preserve omitted records in the committed manifest. `tests/scoped-write.test.cjs` covers the first-write boundary, stock/review/results compatibility, rollback and exact SQL size counters. `node scripts/qualify-first-write.cjs` compares fresh-process first writes using disposable copies of `.qa/tuning/collection.sqlite` (or a supplied synthetic fixture path). See [the scoped-write review](reviews/2026-11-03-scoped-first-writes.md) for measurements, coverage and intentional full-model exceptions.

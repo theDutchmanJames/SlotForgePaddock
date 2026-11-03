@@ -8,16 +8,16 @@ function canonical(value){if(Array.isArray(value))return '['+value.map(canonical
 const digest=value=>crypto.createHash('sha256').update(canonical(value)).digest('hex');
 const sign=(key,value)=>crypto.createHmac('sha256',key).update(canonical(value)).digest('hex');
 function capabilities(){return {timing:{versions:[1],profile:'/v1/timing/cars/{carId}',sessions:'/v1/timing/sessions',receipt:'/v1/timing/sessions/{sourceId}/{sessionId}',permission:'timingResults',configurationKinds:['current'],maxRequestBytes:MAX_BYTES,maxLaps:MAX_LAPS,maxParticipants:256,laneBase:1,durationUnit:'ms',distanceUnit:'m'}};}
-function profile(store,carId){
-  const car=store.data.cars.find(c=>c.id===carId);if(!car)throw fault('CAR_NOT_FOUND','The requested car does not exist.',404);
+function profile(store,carId,{includePicture=true}={}){
+  const car=store.file&&store.expectedIdentity!==null?require('./sqlite-query.cjs').read(store,null,r=>r.one('cars',carId)).value:store.data.cars.find(c=>c.id===carId);if(!car)throw fault('CAR_NOT_FOUND','The requested car does not exist.',404);
   // A capture must remain verifiable after restart, even for a previously unsaved collection.
-  if(!store.data.timing.key)store.transact(db=>{db.timing.key=crypto.randomBytes(32).toString('hex');});
-  const db=store.data,technical=Object.fromEntries(contract.fields.filter(k=>Object.hasOwn(car.technical,k)).map(k=>[k,car.technical[k]]));
+  if(!store.data.timing.key)store.scopedTransact('@timing-key',db=>{db.timing.key=crypto.randomBytes(32).toString('hex');});
+  const db=store.file&&store.expectedIdentity!==null?require('./sqlite-query.cjs').read(store,null,r=>{const installations=[];let offset=0;for(;;){const page=r.list('installations',{carId,offset,limit:200});installations.push(...page.rows);if(page.nextOffset===null)break;offset=page.nextOffset;}const parts=[...new Set(installations.filter(i=>!i.removed).map(i=>i.partId))].map(id=>r.one('parts',id));return {id:store.data.id,revision:store.data.revision,timing:store.data.timing,installations,parts};}).value:store.data,technical=Object.fromEntries(contract.fields.filter(k=>Object.hasOwn(car.technical,k)).map(k=>[k,car.technical[k]]));
   const components=db.installations.filter(i=>i.carId===carId&&!i.removed).map(i=>({partId:i.partId,name:db.parts.find(p=>p.id===i.partId).name,quantity:i.quantity,field:i.field,position:i.position,assemblyId:i.assemblyId||null})).sort((a,b)=>canonical(a).localeCompare(canonical(b),'en'));
   const revision=digest({databaseId:db.id,carId,kind:'current',technical,components});
   const unsigned={databaseId:db.id,carId,kind:'current',configurationId:revision,revision,carRevision:car.revision,capturedAt:new Date().toISOString(),technical,components};
   const configuration={...unsigned,signature:sign(db.timing.key,unsigned)};
-  const value={integrationVersion:1,databaseId:db.id,databaseRevision:db.revision,car:{id:car.id,name:car.name,...Object.fromEntries(['maker','marque','model','scale','raceClass','picture','availability'].map(k=>[k,car[k]||''])),archived:!!car.archived},configuration};
+  const value={integrationVersion:1,databaseId:db.id,databaseRevision:db.revision,car:{id:car.id,name:car.name,...Object.fromEntries(['maker','marque','model','scale','raceClass','picture','availability'].map(k=>[k,k==='picture'&&!includePicture?'':car[k]||''])),archived:!!car.archived},configuration};
   contract.validate(value,contract.schema.$defs.profile);return value;
 }
 function verifyConfiguration(db,carId,configuration){
@@ -71,6 +71,7 @@ function validatePayload(payload,{stored=false}={}){
 function receipt(db,record,duplicate=false){const warnings=[...record.warnings];if(results.requiresCorrection(record.payload))for(const p of record.payload.participants)if(p.carId)warnings.push({code:'SESSION_REQUIRES_CORRECTION',carId:p.carId});return {ok:true,integrationVersion:1,databaseId:db.id,sourceId:record.payload.source.id,sessionId:record.payload.sessionId,revision:record.payload.revision,state:record.payload.state,contentHash:record.contentHash,receivedAt:record.receivedAt,duplicate,warnings,summaries:results.summaries(record.payload)};}
 function receive(store,input){
   validatePayload(input);if(input.databaseId!==store.data.id)throw fault('DATABASE_MISMATCH','This session targets a different Paddock database.',409);
+  if(store.deferredState)return require('./scoped-write.cjs').receiveTiming(store,input);
   const contentHash=digest(input),existing=store.data.timing.sessions.find(s=>s.payload.source.id===input.source.id&&s.payload.sessionId===input.sessionId);
   if(existing){
     if(input.revision<existing.payload.revision)throw fault('STALE_REVISION','A newer session revision is already stored.',409);
@@ -84,14 +85,16 @@ function receive(store,input){
   if(history.length>=1000)throw fault('CAPACITY_EXCEEDED','Maximum 1,000 accepted revisions per session.',507);
   const record={payload:structuredClone(input),contentHash,receivedAt:new Date().toISOString(),warnings,carIds,history,lastName:input.state==='active'?input.name:existing?.lastName||input.sessionId};
   try{store.transact(db=>{const index=db.timing.sessions.findIndex(s=>s.payload.source.id===input.source.id&&s.payload.sessionId===input.sessionId);if(index<0)db.timing.sessions.push(record);else db.timing.sessions[index]=record;});}
-  catch(e){if(e.apiCode)throw e;throw fault(e.message.includes('200 MB')?'CAPACITY_EXCEEDED':'STORAGE_FAILED',e.message.includes('200 MB')?'Database exceeds 200 MiB. Export or reduce image sizes.':'Paddock could not save this session. Retry after checking host storage.',e.message.includes('200 MB')?507:500);}
+  catch(e){if(e.apiCode)throw e;throw fault(e.code==='COLLECTION_LIMIT'?'CAPACITY_EXCEEDED':'STORAGE_FAILED',e.code==='COLLECTION_LIMIT'?'Database metadata exceeds its working limit. Archive unneeded records before retrying.':'Paddock could not save this session. Retry after checking host storage.',e.code==='COLLECTION_LIMIT'?507:500);}
   return receipt(store.data,record);
 }
-function validateStored(db){
+function validateStored(db,previous=null){
   const t=db.timing;check(t&&typeof t==='object'&&!Array.isArray(t),'Missing Timing storage.');check(t.key===null||typeof t.key==='string'&&/^[a-f0-9]{64}$/.test(t.key),'Invalid Timing capture key.');check(Array.isArray(t.sessions)&&t.sessions.length<=MAX_SESSIONS,'Invalid Timing sessions.');
-  const ids=new Set();
+  // Only a validated immutable predecessor supplied by Store may be reused.
+  // Key, identity or replica-policy changes require signature validation again.
+  const unchanged=new Set(previous&&previous.id===db.id&&previous.timing.key===t.key&&!!previous.club?.replica===!!db.club?.replica?previous.timing.sessions:[]),ids=new Set();
   for(const r of t.sessions){
-    validatePayload(r.payload,{stored:true});check(r.payload.databaseId===db.id,'Stored session targets another database.');const id=r.payload.source.id+':'+r.payload.sessionId;check(!ids.has(id),'Duplicate stored session identity.');ids.add(id);
+    if(!unchanged.has(r))validatePayload(r.payload,{stored:true});check(r.payload.databaseId===db.id,'Stored session targets another database.');const id=r.payload.source.id+':'+r.payload.sessionId;check(!ids.has(id),'Duplicate stored session identity.');ids.add(id);if(unchanged.has(r))continue;
     check(r.contentHash===digest(r.payload),'Stored session hash mismatch.');
     contract.validate(receipt(db,r),contract.schema.$defs.receipt);
     check(Array.isArray(r.carIds)&&r.carIds.length<=10000&&new Set(r.carIds).size===r.carIds.length&&r.carIds.every(id=>typeof id==='string'&&/^[a-zA-Z0-9_-]{1,100}$/.test(id)),'Invalid session car references.');

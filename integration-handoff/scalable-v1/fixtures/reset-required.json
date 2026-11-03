@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "databaseId": "paddock-demo",
+  "kind": "cars",
+  "resetRequired": true,
+  "reason": "epoch",
+  "cursor": "eyJkYXRhYmFzZUlkIjoicGFkZG9jay1kZW1vIiwiZXBvY2giOiIyNjRiMzQwZS1iZDQ2LTQwMzAtYmQyNC03OWM1M2NmOTgxYTMiLCJhZnRlciI6OH0",
+  "entries": [],
+  "more": false
+}

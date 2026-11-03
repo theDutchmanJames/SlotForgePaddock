@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "databaseId": "paddock-demo",
+  "sourceId": "timing-demo",
+  "sessionId": "session-endurance",
+  "participantId": "entry-1",
+  "resultToken": "444d34b723fba7dee48bcc02664168081c529c1d8448e23caf6036b03b6461a5",
+  "laps": [
+    {
+      "id": "entry-0-lap-1",
+      "stintId": "stint-1",
+      "number": 1,
+      "durationMs": 10000,
+      "endedAtMs": 10000,
+      "valid": true,
+      "pit": false,
+      "recordEligible": true,
+      "countsForDistance": true,
+      "distanceM": 20,
+      "reason": ""
+    },
+    {
+      "id": "entry-0-lap-2",
+      "stintId": "stint-1",
+      "number": 2,
+      "durationMs": 11000,
+      "endedAtMs": 21000,
+      "valid": true,
+      "pit": false,
+      "recordEligible": true,
+      "countsForDistance": true,
+      "distanceM": 20,
+      "reason": ""
+    },
+    {
+      "id": "entry-0-lap-3",
+      "stintId": "stint-2",
+      "number": 3,
+      "durationMs": 10000,
+      "endedAtMs": 31000,
+      "valid": true,
+      "pit": true,
+      "recordEligible": false,
+      "countsForDistance": true,
+      "distanceM": 20,
+      "reason": "Pit lane"
+    }
+  ],
+  "total": 3,
+  "nextOffset": null
+}

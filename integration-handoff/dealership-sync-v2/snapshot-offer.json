@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "id": "d71d6cfd-7225-44ed-858d-3a68b20205c6",
+  "size": 2702,
+  "digest": "ff12282bafefd3ddc41a655690c1f8cbe9e457b58d6fc336ea0f91ef8547e554",
+  "cursor": {
+    "epoch": "24e02e26-cca3-4561-abb7-d8e384dc7655",
+    "after": 2,
+    "revision": 2
+  },
+  "chunkSize": 1048576
+}

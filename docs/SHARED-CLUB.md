@@ -102,3 +102,6 @@ Automated tests use independent databases and real HTTP connections on one Windo
 Electron tests exercise the actual Connections, car editor and Review screens. Physical three-computer Wi-Fi operation and this feature's native macOS/Linux behaviour still need hands-on testing.
 
 Before using a live club collection, try a small disposable collection on the three computers: propose competing edits, approve one, review the other's conflict, then disconnect a copy, change the dealership computer and reconnect. Confirm that the outdated warning and recovery backup appear before replacement.
+
+
+Collection recovery files created before enabling, replacing or leaving a Dealership now use verified `.sfpbackup` containers. Asynchronous paths write them in a background worker. Pending/reviewed proposals stored in the collection are included; device passwords, pairing and unsent-device queues remain separate. The unsent-proposals recovery file retains its JSON format. See [portable backup and recovery](PORTABLE-BACKUPS.md).

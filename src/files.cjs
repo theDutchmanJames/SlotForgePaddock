@@ -27,5 +27,5 @@ function exportBytes(destination,bytes,protectedFiles=[]){
   finally{if(fd!==undefined)fs.closeSync(fd);if(fs.existsSync(temp))fs.unlinkSync(temp);}
   return {path:destination};
 }
-function exportJSON(destination,content,protectedFiles=[]){return exportBytes(destination,JSON.stringify(content),protectedFiles);}
-module.exports={readJSON,exportJSON,exportBytes};
+function exportJSON(destination,content,protectedFiles=[]){const text=require('./json-encoding.cjs').boundedStringify(content,256*1024*1024,'JSON export exceeds 256 MiB. Use a portable backup, or export fewer cars.');return exportBytes(destination,text,protectedFiles);}
+module.exports={readJSON,exportJSON,exportBytes,sameFile};

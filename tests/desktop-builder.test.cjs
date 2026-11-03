@@ -11,9 +11,9 @@ function fixture(t) {
   t.after(() => fs.rmSync(root, {recursive: true, force: true}));
   fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({version: '1.2.3'}));
   fs.writeFileSync(path.join(root, 'package-lock.json'), '{}');
-  function execute(args = [], {host = 'linux', fail, missing = false, stale = false} = {}) {
+  function execute(args = [], {host = 'linux', node = '24.0.0', fail, missing = false, stale = false} = {}) {
     const calls = [], messages = [];
-    const fakeProcess = {platform: host, arch: 'x64', versions: {node: '22.12.0'}, getuid: () => 1000, execPath: '/node', env: {}, argv: ['node', 'builder', host === 'darwin' ? 'mac' : 'linux', '--no-pause', ...args], stdin: {isTTY: false}, stdout: {isTTY: false}};
+    const fakeProcess = {platform: host, arch: 'x64', versions: {node}, getuid: () => 1000, execPath: '/node', env: {}, argv: ['node', 'builder', host === 'darwin' ? 'mac' : 'linux', '--no-pause', ...args], stdin: {isTTY: false}, stdout: {isTTY: false}};
     const module = {exports: {}};
     const mockRequire = name => name === 'node:child_process' ? {spawnSync(command, argv) {
       const action = argv.join(' '); calls.push(action);
@@ -51,6 +51,10 @@ test('normal native build checks before packaging and writes usable checksums', 
   const sums = fs.readFileSync(path.join(root, 'dist/v1.2.3/SHA256SUMS-linux-x64.txt'), 'utf8');
   assert.match(sums, /^[a-f0-9]{64}  SlotForgePaddock-1.2.3-linux-x86_64.AppImage\n/);
   assert.match(sums, /linux-amd64\.deb\n$/);
+});
+
+test('builders reject pre-SQLite-supported Node versions before installing dependencies',t=>{
+ const {execute}=fixture(t);for(const node of ['20.19.0','22.12.0','23.0.0']){const result=execute([],{node});assert.equal(result.code,1);assert.deepEqual(result.calls,[]);assert.ok(result.messages.some(s=>s.includes('Node.js 24')));}
 });
 test('failed checks stop packaging and never claim success', t => {
   const {execute} = fixture(t), result = execute([], {fail: 'run check'});
