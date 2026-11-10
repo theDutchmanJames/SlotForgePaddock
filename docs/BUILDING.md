@@ -17,8 +17,7 @@ for 14 days. Releases created with another workflow's `GITHUB_TOKEN` do not trig
 release workflows: dispatch this workflow explicitly in that case.
 
 Each native runner installs locked dependencies, runs syntax checks and unit/local-server
-tests, builds installers, and verifies their checksums. Upload runs only after all
-three builds succeed, using the exact tagged source. Existing assets are never
+tests, builds installers, and verifies their checksums. Each platform uploads independently after its own build succeeds, using the exact tagged source. Existing assets are never
 overwritten; identical assets are accepted on upload retries, while conflicts stop
 publication for maintainer review. Windows downloads and their manifest are untouched.
 

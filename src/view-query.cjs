@@ -6,7 +6,7 @@ function shell(db){return {schema:db.schema,id:db.id,revision:db.revision,catalo
 // never treated as the complete collection for selectors or stock checks.
 function view(store,request={}){
  if(!request||typeof request!=='object'||typeof request.page!=='string')throw queries.fault('INVALID_QUERY','Choose a page.');
- const pages=['Overview','Cars','Review','Parts','Workshop','Showroom','Library','Connections','Import & Export','Settings'];
+ const pages=['Overview','Cars','Review','Parts','Build from Scratch','Workshop','Showroom','Library','Connections','Import & Export','Settings'];
  if(!pages.includes(request.page))throw queries.fault('INVALID_QUERY','Unknown page.');
  for(const value of [request.offset,...Object.values(request.detailOffsets||{})])if(value!==undefined&&(!Number.isSafeInteger(value)||value<0))throw queries.fault('INVALID_QUERY','Invalid page offset.');
  if(request.build){for(const key of ['types','partIds','assemblyIds'])if(request.build[key]!==undefined&&(!Array.isArray(request.build[key])||request.build[key].length>1000||request.build[key].some(v=>typeof v!=='string')))throw queries.fault('INVALID_QUERY','Invalid build selection.');}
@@ -16,6 +16,13 @@ function view(store,request={}){
   const {token,...viewRequest}=request;const db=store.data,data=shell(db),info={request:viewRequest,token:r.token};data._view=info;
   if(request.page==='Settings'&&!request.editor)info.storage=store.storageUsage(r.db);
   const summary=r.summary();info.review={incoming:summary.incoming,jobs:summary.jobs,due:summary.due,maintenance:summary.maintenance,club:store.pendingClubReviews()};
+  info.resultInbox=store.resultInbox?.read(r,request.page==='Review'&&request.reviewTab==='Race results'?(request.offset||0):null);
+  info.historyImports=require('./history-imports.cjs').inbox(r,request.page==='Review'&&request.reviewTab==='Historical imports'?(request.offset||0):null);
+  info.timingCollection=require('./timing-collection-review.cjs').inbox(r,request.page==='Review'&&request.reviewTab==='Timing collection');
+  if(require('./car-merge-storage.cjs').enabled()&&!db.club?.replica){
+   const pending=bucket=>r.db.prepare(`SELECT count(*) n FROM records r JOIN record_fields f ON f.record=r.key AND f.path='["status"]' AND f.json='"pending"' WHERE r.bucket=?`).get(JSON.stringify([bucket])).n;
+   const proposals=pending('mergeProposals'),history=pending('mergeInclusions');info.carMerges={proposals,history,total:proposals+history};
+  }
   const addCar=id=>{if(id&&!data.cars.some(c=>c.id===id)){const c=r.one('cars',id);if(c)data.cars.push(c);}};
   if(require('./view-context.cjs').extraView(db,data,r,request)){
    // Page-specific context supplied above.
@@ -36,7 +43,10 @@ function view(store,request={}){
   }else if(request.page==='Review'){
    const offset=request.offset||0,limit=20;if(!Number.isSafeInteger(offset)||offset<0)throw queries.fault('INVALID_QUERY','Invalid review page.');
    const tab=request.reviewTab||'Incoming cars';let total=0;
-   if(tab==='Club changes'){
+   if(tab==='Timing collection'){total=0;}
+   else if(tab==='Historical imports'){total=info.historyImports.count;}
+   else if(tab==='Race results'){total=info.resultInbox?.total||0;for(const row of info.resultInbox?.rows||[])row.cars.slice(0,5).forEach(addCar);}
+   else if(tab==='Club changes'){
     const all=db.club?.proposals||[],pending=all.filter(p=>request.reviewHistory?p.status!=='pending':p.status==='pending');info.reviewedCount=all.filter(p=>p.status!=='pending').length;total=pending.length;data.club.proposals=cloneJSON(pending.slice(offset,offset+limit));info.proposalContexts={};
     for(const p of data.club.proposals){const context=require('../renderer/review-model.js').proposalContext(db,p);info.proposalContexts[p.id]=context;addCar(context.carId);}
    }else if(tab==='Incoming cars'){
@@ -48,14 +58,15 @@ function view(store,request={}){
    else throw queries.fault('INVALID_QUERY','Unknown review section.');
    info.list={offset,limit,total,nextOffset:offset+limit<total?offset+limit:null};
   }else if(request.page==='Cars'&&!request.carId){
-   const result=r.list('cars',{query:request.query||'',usage:request.usage||[],matchAll:!!request.matchAll,archived:!!request.archived,sort:request.sort||'name',offset:request.offset||0,limit:48});data.cars=result.rows;info.list={total:result.total,nextOffset:result.nextOffset,offset:request.offset||0,limit:48};info.activeCars=r.count('cars',{archived:false});
+   const result=r.list('cars',{query:request.query||'',usage:request.usage||[],matchAll:!!request.matchAll,archived:!!request.archived,sort:request.sort||'name',direction:request.sortDirection,offset:request.offset||0,limit:48});data.cars=result.rows;info.list={total:result.total,nextOffset:result.nextOffset,offset:request.offset||0,limit:48};info.activeCars=r.count('cars',{archived:false});
    info.usage=r.db.prepare("SELECT DISTINCT u.value FROM query_records q,json_each(q.usage) u WHERE q.bucket=? ORDER BY u.value").all('["cars"]').map(x=>x.value);
   }else if(request.page==='Cars'){
    addCar(request.carId);if(!data.cars.length)throw queries.fault('CAR_NOT_FOUND','This car no longer exists.');
    const section=request.section||'Overview';
-   if(section==='Overview'){data.jobs=r.list('jobs',{carId:request.carId,status:'active',limit:1}).rows;info.maintenance=r.list('events',{carId:request.carId,types:['maintenance'],limit:2}).rows;}
+   if(section==='Overview'){const c=data.cars.find(c=>c.id===request.carId);info.rebuildLinks={};for(const kind of ['from','to']){const edge=c?.rebuild?.[kind];if(edge){const related=r.one('cars',edge.id);if(related){const entry={id:related.id,name:related.name};if(Object.hasOwn(related,'picture'))require('./lazy-assets.cjs').copyProperty(entry,'picture',related);info.rebuildLinks[kind]=entry;}}}data.jobs=r.list('jobs',{carId:request.carId,status:'active',limit:1}).rows;info.maintenance=r.list('events',{carId:request.carId,types:['maintenance'],limit:2}).rows;}
    if(section==='Performance'){
-    const timing=require('./query-timing.cjs').page(r,request.carId,request.sessionOffset||0);info.timing=timing;data.timing.sessions=timing.records;
+    info.originalHistoryCount=require('./shared-library-originals.cjs').count(r,request.carId);
+    const timing=request.historyView?{records:[],lanes:[],background:true}:require('./query-timing.cjs').page(r,request.carId,request.sessionOffset||0);info.timing=timing;data.timing.sessions=timing.records;
     const tests=r.list('tests',{carId:request.carId,offset:request.offset||0,limit:20});data.tests=tests.rows;data.setups=[...new Set(data.tests.map(t=>t.setupId).filter(Boolean))].map(id=>r.one('setups',id)).filter(Boolean);info.history={offset:request.offset||0,limit:20,total:tests.total,nextOffset:tests.nextOffset};
     const manual=require('../renderer/pace-model.js').laneRecords({...data,timing:{sessions:[]},tests:db.tests.filter(t=>t.carId===request.carId)},request.carId);info.lanes=[...timing.lanes,...manual].sort((a,b)=>a.kind.localeCompare(b.kind)||a.track.localeCompare(b.track)||a.trackKey.localeCompare(b.trackKey)||a.lane.localeCompare(b.lane,undefined,{numeric:true}));
     info.timing={...timing,records:undefined,lanes:undefined};

@@ -1,0 +1,7 @@
+{
+  "code": "RECOVERY_CHANGED",
+  "error": "This library was restored or replaced. Reconcile retained imports before submitting again.",
+  "databaseId": "paddock-demo",
+  "recoveryId": "new-recovery-generation",
+  "current": null
+}

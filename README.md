@@ -104,9 +104,17 @@ Keep each car's identity, ownership and technical information together:
 - Attach photographs and documents, and follow the car's recorded history.
 - Label cars for **Collection / Display**, **Home racing**, **Club racing**, **Competition** or your own uses.
 - Search and filter the collection, switch between gallery and table views, choose columns and save useful views.
+- Sort by name, manufacturer, car brand, model, scale, product reference or dates added and changed, in either direction.
+- Use **Select all** or **Select all results** to select matching cars across pages (up to 1,000 at a time).
 - Choose which car details and configuration fields appear on the overview panels.
 
 Previously entered values become reusable choices. Correct spellings and merge duplicates in **Library**, while historical snapshots retain their recorded values. Add custom text, choice, number, date, yes/no and notes fields when the built-in fields are not enough.
+
+### Compare two cars
+
+Open **Compare** on a car profile, or **Compare cars…** on the Cars page. Choose two cars, then open a side-by-side comparison of their identity, current technical specifications, gearing and custom fields. Highlight differences or hide matching details. Cars do not need recorded laps to be compared.
+
+Optionally choose a recorded run for each car to compare reported manual bests or measured Timing pace. The comparison shows the configuration captured with each run, separately from today's specifications, and warns when track, lane, driver or conditions differ or are unknown.
 
 ### Parts inventory, catalogue and shopping list
 
@@ -122,13 +130,17 @@ Track quantities or individual components, storage locations, specifications, co
 
 Link purchases to workshop jobs and receive deliveries in stages. Receiving parts updates stock; fitting them to a car is a separate action. The overview counts **owned part types**, with individual quantities shown separately.
 
+Manage the same product records from **Library → Parts catalogue**, with search, manufacturer and category filters, and a compact editable table. New catalogue entries start at zero owned stock. Select entries across pages and review a bulk deletion: owned parts and records linked to installations, setups, jobs, purchase history or saved build drafts are kept.
+
 ### Assemblies and Build from Scratch
 
 An **assembly** groups components into a ready-to-use unit, such as a rear axle with wheels and gearing. Install, remove or transfer the unit, or replace its components while retaining their history.
 
-**Build from Scratch creates a new car from your inventory.** Click a component on the exploded chassis diagram, choose the part to fit there, and continue with whichever components you have. Additional positions support items such as bodywork, electronics, magnets and ballast.
+**Build from Scratch plans a car from stock or catalogue parts.** Open it directly from the main menu, between Parts and Workshop. Click a component on the exploded chassis diagram, choose the part to fit there, and continue with whichever components you have. Additional positions support items such as bodywork, electronics, magnets and ballast.
 
-Only a name and **one component** are needed to save a car. Save unfinished builds as drafts, or create the car with an optional **As built** setup snapshot. Stock remains available while drafting and is fitted when the build is saved to Cars. The diagram supports planning; it does not certify physical compatibility.
+**Rebuild a car without losing its story.** Start from a car's More menu, Build from Scratch or a Rebuild Workshop job. Choose fitted parts to reuse and add replacements. Completing the rebuild returns unused components to stock, creates a new car and links both profiles with **Rebuilt as / Rebuilt from** cards. The archived original keeps its photos, setups, work history and race results; new work belongs to its successor. Drafts leave inventory unchanged until completion. [How rebuilds work](docs/REBUILDS.md).
+
+Only a name and **one component** are needed to save a car. Use **Save plan & update shopping** to save unfinished builds and add missing quantities to the shopping list, linked to that build. Receive purchases into stock before creating the physical car with an optional **As built** setup snapshot. Stock remains available while drafting and is fitted when the build is saved to Cars. The diagram supports planning; it does not certify physical compatibility.
 
 ### Gearing, torque and theoretical performance
 
@@ -153,12 +165,22 @@ Keep the current configuration alongside factory reference information and named
 
 Create a **Workshop job** for maintenance, a modification or a planned setup change:
 
+- Choose a category: General Work, Maintenance, Upgrades, Overhaul, Rebuild, Chassis, Tyres, Motor, Braids, Balancing, Front Assembly, Rear Assembly or Bodywork. Categories have labelled colour badges and a Workshop filter.
+- Use either a free-form plan or a saved setup target with any category.
 - Set priority, a target date and a checklist.
 - Mark a job **Waiting for parts** and link its shopping items.
 - Add before/after photographs and record progress.
 - Leave and resume work, then complete or cancel the job.
 
 Use **Record work** for maintenance or modifications already performed. Set future maintenance dates to create reminders. Workshop supplies provide a digital toolbox for tools, oils, cleaners, adhesives and other consumables, with locations, remaining amounts and low-stock thresholds.
+
+### Manuals and Part Guides
+
+Turn **Workshop → Manuals and Part Guides** into a reference wall for exploded views, part-number sheets and manufacturer catalogues. Upload a PDF or image, give it a name, and link it to a car—or keep it in the general reference library. Search by name or filename and filter by car.
+
+Images appear as poster previews; PDFs have a labelled cover. Click either to open the original in your default image or PDF application. Rename, reassign, export a copy or remove a guide whenever needed. Originals stay unchanged in the collection and are included in complete backups; they are excluded from public car exports and Timing/Telemetry catalogue views. Dealership copies share routine guide changes directly.
+
+Supported files: PDF, PNG, JPEG and WebP, up to 20 MiB each locally. Dealership uploads must also fit its existing 16 MiB request limit, including base64 encoding and command metadata. PDFs open externally; changes made in that external application do not replace the saved original.
 
 ### Track tests, lap records and pace comparisons
 
@@ -167,10 +189,19 @@ Record a manual test with its track, lane, driver, voltage, direction, magnet st
 Imported **SlotForge Timing** sessions add measured lap histories and the configuration captured before racing. Later changes to the car do not rewrite those historical specifications. Corrections replace earlier results; withdrawn sessions stop contributing to derived statistics.
 
 - **Lane records:** find the fastest eligible measured lap for each track and lane, with its driver, session and captured configuration. Reported manual bests are shown separately.
-- **Compare pace:** choose a reference run and find cars within a chosen time tolerance on the same track. Compare eligible best laps, median pace or uninterrupted 5/10-lap runs when measured laps are available.
+- **Compare pace:** choose two sessions from the same car or different cars. Filter by track name, lane and driver, then compare average and median pace, consistency, eligible best laps and uninterrupted 5/10-lap runs. Captured setup differences appear beside the results; missing evidence and differing conditions stay visible.
+- **Find similar pace:** the existing manual/earlier Timing run finder remains available from Compare pace. Find cars within a chosen time tolerance on the same track.
 - **Compare fairly:** use lane and driver filters, inspect recorded conditions and keep unknown conditions visible. Invalid laps, pit laps and virtual participants do not become physical-car records.
 
 These tools compare recorded performance; they do not infer pace from motor specifications. For deeper analysis across sessions and setups, use **SlotForge Telemetry**. [History, conditions and comparison details](docs/REAL-CAR-HISTORY-AND-PACE.md).
+
+### Research the exact slotcar product
+
+Open **Car → Technical & parts → Research this slotcar**, or **More → Research slotcar…**. Set the slotcar manufacturer and complete product reference first, then download a car-specific English template for your own AI. Model, scale, livery and edition help cross-check the exact product; reference suffixes matter.
+
+Import the completed JSON and review each sourced suggestion. Ambiguous identification and mismatched manufacturer, reference or scale are rejected. Selected original specifications go to **Factory reference**. For a car with no current specifications or fitted inventory, an optional checkbox initialises its current configuration too. Existing modifications remain separate. Sources and uncertainty are kept in factory technical notes. Paddock has no built-in AI, and a claimed exact match still needs your check against the source and product box.
+
+[Slotcar research template and import guide](docs/SLOTCAR-RESEARCH.md).
 
 ### The real car behind the model
 
@@ -190,7 +221,7 @@ Review the file and select the categories or products you want. New references s
 
 Use the same Paddock app on a main computer, laptop and other trusted home or club computers. **One dealership computer holds the official collection**; connected copies keep a separate saved copy, leaving their personal collections separate.
 
-Choose a remembered password in **Connections → Dealership Mode**. Connected Paddock copies receive incremental updates. Edits—including edits made on the dealership computer—enter **Review → Dealership changes** before changing the official collection. Compare the proposed and current information, then approve or reject it on the dealership computer.
+Choose a remembered password in **Connections → Dealership Mode**. Connected Paddock copies receive incremental updates. Everyday changes save directly: car details, preferences, inventory, Workshop jobs, shopping and build plans. New cars, completed builds, saved setup changes, bulk operations and permanent car deletions enter **Review → Dealership changes**. Compare and approve those important changes on the dealership computer.
 
 If a copy has fallen too far behind, Paddock asks for a backed-up refresh rather than silently merging incompatible changes. Joining a dealership does not merge existing personal databases.
 
@@ -202,7 +233,18 @@ In **SlotForge Timing**, connect to Paddock's current host address and port usin
 
 **SlotForge Telemetry** can read delivered sessions, measured laps and captured configurations from Paddock for analysis. Corrections and withdrawals are available to connected analysis clients. These integrations keep race execution in Timing, collection management in Paddock and deeper calculations in Telemetry.
 
-For developers: [Timing integration contract](integration-handoff/timing-v1/README.md) · [Telemetry read API](integration-handoff/telemetry-v1/README.md).
+
+### One shared library on the same computer
+
+Compatible versions of Paddock and Timing use **the same local SQLite library** under the same operating-system account. Existing cars and supported racing history are adopted with their original identities preserved. Either app can read and write while the other is closed; opening it later shows the updated collection. This does not require Dealership Mode, an address, a password or a running Paddock background service.
+
+Timing keeps live race recording, recovery and app-specific settings. Recorded history retains the car and configuration evidence available at the time; unknown historical details are not invented. Existing network and older local-service connections remain separate compatibility options. [Shared local library details](docs/SHARED-LOCAL-FOLDER.md).
+
+### Merge duplicate cars without losing information
+
+Choose **Car → More → Merge duplicate car**, or open **Review → Car merges**. Choose the main car, then select which details, photos, setups and racing history to include. Select all within a section or untick individual entries; every merge stays pending until you approve it.
+
+The retired car's complete original information is preserved in a read-only archive. Late-arriving old-car history receives a separate inclusion review. Excluded history remains historical evidence and does not contribute to the main car; original overall Timing records remain intact. Installed parts and source-specific Timing settings have explicit reconciliation choices.
 
 ### Share selected cars, review imports and protect your collection
 
@@ -216,11 +258,19 @@ Create a **complete portable backup** for recovery or moving a personal collecti
 
 Collections are stored locally in **SQLite**, with transactional saves and separately stored original photographs. Existing JSON databases migrate automatically after validation; the original file is retained. Galleries load smaller previews, while the photo viewer, exports and backups retain full-resolution originals. **Settings → Database → Export previous revision** provides an additional recovery option. [Storage and migration details](docs/SQLITE-STORAGE.md). Settings also shows database and media usage; see [current storage limits](docs/STORAGE-LIMITS.md).
 
+### Delete a car or start a fresh collection
+
+Use **Car profile → More → Permanently delete car…** to remove a car and its attached documents, setups, manual tests, workshop jobs and history. Type its exact name and confirm. Fitted loose parts return to Used spares; complete assemblies return intact to Used assemblies. Shared Timing sessions remain historical evidence, preserving other cars' results. Existing backups and received car packages are retained. In Dealership Mode, deletion is a proposal until approved.
+
+Use **Settings → Database → Reset database…** to start empty. Paddock requires you to type **RESET**, then saves and verifies a complete recovery backup before proceeding. If the backup fails, the collection stays intact. Reset is available on a personal database or the authoritative dealership computer, not a connected copy.
+
+The fresh collection receives a new identity and sharing stops. Reconnect Timing, Telemetry and Dealership copies to this new collection before importing fresh data. Old queued results cannot silently enter it. This resets the active collection; it does not erase external exports, recovery backups or other computers' copies.
+
 ### Reports, personalisation and everyday use
 
 Produce **car cards**, **setup sheets**, **club scrutineering sheets** and a **collection inventory** through **Cars → Print / PDF**. Preview the report and save a PDF for printing. Purchase details are excluded unless explicitly selected. Car-card QR links open the matching collection in Paddock; they are not public web pages.
 
-Choose from eight preset themes or create your own colours. Edit the welcome banner, choose overview fields and save collection views. The **Review** button brings incoming cars, Dealership proposals, workshop jobs and maintenance reminders within reach.
+Choose from eight preset themes or create your own colours. Under **Settings → Appearance**, set **Interface size** from 80% to 200% to resize text, buttons and menus together, or reset to 100%. Interface size is saved on this computer independently of your collections. Edit the welcome banner, choose overview fields and save collection views. The **Review** button brings incoming cars, Dealership proposals, workshop jobs and maintenance reminders within reach.
 
 Everyday personal collection and workshop use works offline. A new collection starts empty, ready for **your** cars, photographs and parts. [Guide to planning, reports and showroom shelves](docs/COLLECTION-PLANNING.md).
 

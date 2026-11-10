@@ -13,6 +13,7 @@ const number=value=>{check(typeof value==='number'||typeof value==='string'&&val
 function purchasePart(db,partId){const part=db.parts.find(p=>p.id===partId);check(part,'Choose a catalogue part.');check(!assemblyForPart(db,partId),'This stock belongs to an assembly. Choose its original catalogue record or add a separate stock record.');return part;}
 function validate(db){
   const p=db.planning;check(object(p),'Invalid collection planning.');
+  for(const s of p.shopping||[]){check(s.buildId===undefined||id(s.buildId),'Invalid shopping build link.');check(s.buildName===undefined||text(s.buildName),'Invalid shopping build name.');check(s.buildCarId===undefined||id(s.buildCarId),'Invalid completed build link.');}
   for(const [key,max]of [['shopping',10000],['jobs',10000],['shelves',100],['focus',50000]])check(Array.isArray(p[key])&&p[key].length<=max,'Too many '+key+' records.');
   for(const key of ['shopping','shelves']){const seen=new Set();for(const r of p[key]){check(object(r)&&id(r.id)&&!seen.has(r.id),'Invalid planning identity.');seen.add(r.id);}}
   for(const r of p.shopping){check(db.parts.some(x=>x.id===r.partId)&&(!r.jobId||db.jobs.some(j=>j.id===r.jobId)),'Shopping item has a missing part or job.');check(Number.isSafeInteger(r.quantity)&&r.quantity>0&&r.quantity<=1000000&&Number.isSafeInteger(r.received)&&r.received>=0&&r.received<=r.quantity,'Invalid shopping quantity.');check(text(r.notes,2000)&&text(r.supplier)&&date(r.date)&&text(r.created,100)&&text(r.updated,100),'Invalid shopping details.');}

@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "databaseId": "paddock-demo",
+  "recoveryId": "recovery-example-1",
+  "sourceId": "timing-demo",
+  "sessionId": "session-normal",
+  "participantId": "entry-1",
+  "resultToken": "6e8c6052c82e453b244ca8dc60caaef47189853f025c5eb288e314b8619d3376",
+  "format": "timing-v1",
+  "offset": 0,
+  "total": 3,
+  "nextOffset": null,
+  "laps": [
+    {
+      "id": "entry-0-lap-1",
+      "stintId": "stint-1",
+      "number": 1,
+      "durationMs": 10000,
+      "endedAtMs": 10000,
+      "valid": true,
+      "pit": false,
+      "recordEligible": true,
+      "countsForDistance": true,
+      "distanceM": 20,
+      "reason": ""
+    },
+    {
+      "id": "entry-0-lap-2",
+      "stintId": "stint-1",
+      "number": 2,
+      "durationMs": 11000,
+      "endedAtMs": 21000,
+      "valid": true,
+      "pit": false,
+      "recordEligible": true,
+      "countsForDistance": true,
+      "distanceM": 20,
+      "reason": ""
+    },
+    {
+      "id": "entry-0-lap-3",
+      "stintId": "stint-1",
+      "number": 3,
+      "durationMs": 10000,
+      "endedAtMs": 31000,
+      "valid": true,
+      "pit": true,
+      "recordEligible": false,
+      "countsForDistance": true,
+      "distanceM": 20,
+      "reason": "Pit lane"
+    }
+  ]
+}

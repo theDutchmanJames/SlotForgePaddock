@@ -1,0 +1,194 @@
+{
+  "status": "implemented-history-and-quarantined-review",
+  "notes": "Synthetic wire examples. Historical intake is review-only; public historical approval and richer writes remain disabled; qualified rich read/storage fixtures are separate.",
+  "fixtures": [
+    {
+      "file": "../fixtures/create.json",
+      "definition": "operation",
+      "http": 200
+    },
+    {
+      "file": "../fixtures/create-receipt.json",
+      "definition": "receipt",
+      "http": 200
+    },
+    {
+      "file": "../fixtures/duplicate-after-correction.json",
+      "definition": "receipt",
+      "http": 200
+    },
+    {
+      "file": "../fixtures/correction.json",
+      "definition": "operation",
+      "http": 200
+    },
+    {
+      "file": "../fixtures/correction-receipt.json",
+      "definition": "receipt",
+      "http": 200
+    },
+    {
+      "file": "../fixtures/withdrawal.json",
+      "definition": "operation",
+      "http": 200
+    },
+    {
+      "file": "../fixtures/withdrawal-receipt.json",
+      "definition": "receipt",
+      "http": 200
+    },
+    {
+      "file": "../fixtures/stale-editor.json",
+      "definition": "operation",
+      "http": 200
+    },
+    {
+      "file": "../fixtures/revision-conflict.json",
+      "definition": "error",
+      "http": 409
+    },
+    {
+      "file": "../fixtures/operation-conflict.json",
+      "definition": "error",
+      "http": 409
+    },
+    {
+      "file": "../fixtures/recovery-changed.json",
+      "definition": "error",
+      "http": 409
+    },
+    {
+      "file": "../fixtures/guard-required.json",
+      "definition": "error",
+      "http": 409
+    },
+    {
+      "file": "../fixtures/multi-heat.json",
+      "definition": "operation",
+      "http": 200
+    },
+    {
+      "file": "../fixtures/endurance.json",
+      "definition": "operation",
+      "http": 200
+    },
+    {
+      "file": "../fixtures/upload-start.json",
+      "definition": "uploadStart",
+      "http": 200
+    },
+    {
+      "file": "../fixtures/upload-chunk.json",
+      "definition": "chunk",
+      "http": 200
+    },
+    {
+      "file": "../fixtures/upload-status.json",
+      "definition": "uploadStatus",
+      "http": 200
+    },
+    {
+      "file": "../fixtures/upload-commit.json",
+      "definition": "uploadCommit",
+      "http": 200
+    },
+    {
+      "file": "../fixtures/upload-incomplete.json",
+      "definition": "error",
+      "http": 409
+    },
+    {
+      "file": "../fixtures/chunk-conflict.json",
+      "definition": "error",
+      "http": 409
+    },
+    {
+      "file": "list.json",
+      "definition": "list",
+      "http": 200
+    },
+    {
+      "file": "head.json",
+      "definition": "head",
+      "http": 200
+    },
+    {
+      "file": "laps.json",
+      "definition": "laps",
+      "http": 200
+    },
+    {
+      "file": "statistics.json",
+      "definition": "statistics",
+      "http": 200
+    },
+    {
+      "file": "upload-accepted.json",
+      "definition": "uploadStatus",
+      "http": 200
+    },
+    {
+      "file": "upload-cancel.json",
+      "definition": "uploadCancel",
+      "http": 200
+    },
+    {
+      "file": "import-request.json",
+      "definition": "importRequest",
+      "http": 200
+    },
+    {
+      "file": "import-pending.json",
+      "definition": "importReceipt",
+      "http": 200
+    },
+    {
+      "file": "import-rejected.json",
+      "definition": "importReceipt",
+      "http": 200
+    },
+    {
+      "file": "import-cancelled.json",
+      "definition": "importReceipt",
+      "http": 200
+    },
+    {
+      "file": "import-cancel.json",
+      "definition": "importCancel",
+      "http": 200
+    },
+    {
+      "file": "import-upload-start.json",
+      "definition": "uploadStart",
+      "http": 200
+    },
+    {
+      "file": "import-upload-chunk.json",
+      "definition": "chunk",
+      "http": 200
+    },
+    {
+      "file": "import-upload-commit.json",
+      "definition": "uploadCommit",
+      "http": 200
+    },
+    {
+      "file": "import-upload-staging.json",
+      "definition": "uploadStatus",
+      "http": 200
+    },
+    {
+      "file": "import-upload-committed.json",
+      "definition": "uploadStatus",
+      "http": 200
+    },
+    {
+      "file": "import-upload-after-cancellation.json",
+      "definition": "uploadStatus",
+      "http": 200
+    }
+  ],
+  "capability": "capability.json",
+  "statusExample": "status.json",
+  "schema": "schema.json"
+}

@@ -1,0 +1,7 @@
+{
+  "code": "CHUNK_CONFLICT",
+  "error": "This chunk index already contains different bytes.",
+  "databaseId": "paddock-demo",
+  "recoveryId": "recovery-example-1",
+  "current": null
+}

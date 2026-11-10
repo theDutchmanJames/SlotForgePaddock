@@ -140,7 +140,7 @@ test('migration preserves signed Timing results, Telemetry snapshots and pending
  const {file,dir}=fixture(t),f=require('./support/timing-fixtures.cjs').fixtures(),timing=require('../src/timing-integration.cjs'),telemetry=require('../src/telemetry-export.cjs'),{Network}=require('../src/network.cjs'),{Club}=require('../src/club.cjs');
  for(const payload of [f.normal,f.multi,f.endurance])timing.receive(f.store,payload);
  let net=new Network(f.store),club=new Club(f.store,net,dir);club.enable('Test dealership','Test password');
- await club.mutate('car.save',{id:'car-a',revision:f.store.data.cars[0].revision,data:{livery:'Pending livery'}});
+ await club.propose('car.save',{id:'car-a',revision:f.store.data.cars[0].revision,data:{livery:'Pending livery'}});
  const original=f.store.snapshot(),manifest=telemetry.manifest(original),digest=M.digest(original);club.close();net.close();
  fs.writeFileSync(file,JSON.stringify(original));const s=new Store(file);assert.deepEqual(s.data,original);assert.deepEqual(telemetry.manifest(s.data),manifest);assert.equal(M.digest(s.data),digest);assert.equal(timing.receive(s,f.normal).duplicate,true);
  net=new Network(s);club=new Club(s,net,dir);t.after(()=>{club.close();net.close();});assert.equal(club.status().password,'Test password');

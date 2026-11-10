@@ -1,0 +1,26 @@
+.merge-dialog{width:min(1180px,94vw);max-width:94vw;max-height:92vh;padding:0;border-top:3px solid var(--accent);}
+.merge-dialog .dialog-body{overflow:auto;max-height:70vh;padding:24px;}
+.merge-dialog .dialog-footer{flex-wrap:wrap;gap:8px;}
+.merge-dialog h2,.merge-dialog h3,.merge-dialog h4{overflow-wrap:anywhere;}
+.merge-dialog[aria-busy="true"] [data-merge],.merge-dialog[aria-busy="true"] input,.merge-dialog[aria-busy="true"] select{pointer-events:none;opacity:.65;}
+.merge-summary{display:grid;grid-template-columns:1fr 1fr;gap:20px;border-bottom:1px solid var(--line);margin-bottom:16px;}
+.merge-tabs,.merge-pager{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:16px 0;}
+.merge-tabs button:focus-visible,.merge-dialog button:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}
+.merge-cards{display:grid;gap:12px;margin:16px 0;}
+.merge-cards .panel{padding:16px;margin:0;}
+.merge-check{display:flex;align-items:center;gap:10px;font-weight:600;}
+.merge-check input{width:18px;height:18px;flex:none;}
+.merge-value,.merge-dialog pre{white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-width:440px;}
+.merge-dialog table{table-layout:fixed;width:100%;}
+.merge-dialog th,.merge-dialog td{vertical-align:top;padding:12px;}
+.merge-dialog th:first-child{width:21%;}.merge-dialog td:last-child{width:19%;}
+.merge-dialog select{max-width:100%;}.merge-dialog [data-merge-search]{display:flex;align-items:end;gap:12px;}
+.merge-dialog label:has(select){display:block;margin:16px 0;}
+.merge-media{max-width:90vw;max-height:90vh;}.merge-media img{display:block;max-width:80vw;max-height:75vh;object-fit:contain;margin-top:16px;}
+@media(max-width:800px){.merge-summary{grid-template-columns:1fr}.merge-dialog .dialog-body{padding:14px}.merge-dialog table{min-width:640px}.merge-dialog .table-wrap{overflow:auto}}
+
+.merge-tabs [aria-pressed="true"]{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,var(--panel));}
+
+.merge-different th{border-left:3px solid var(--accent)}
+.merge-archive-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:16px 0;}
+.merge-archive-grid .panel{padding:14px;margin:0;}.merge-archive-grid h4{margin:0 0 8px;}.merge-archive-grid p{margin:8px 0;}

@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "databaseId": "paddock-local-demo",
+  "submissionId": "ad4b97d6-66d5-4f6a-9e6a-326fe714c336",
+  "sourceId": "timing-home",
+  "transferId": "transfer-create",
+  "hash": "4d5f73c08b5734c1b5b62254f17e3cd621516f4c8fca7df02326e9c96f28934b",
+  "status": "pending",
+  "cars": [
+    {
+      "index": 0,
+      "itemId": "item-17e4720c498ef28bd80cdf22608a660362ee70d8a6d2148f1a0a45e559de750c",
+      "timingCarId": "timing-car-1",
+      "action": "create",
+      "paddockCarId": "local-timing-7be746d77dbcf9a452d449907a880b8e94437d3c37f5d05d5bf47d4b8f4694d5",
+      "decision": "pending",
+      "status": "pending",
+      "reviewedAt": null,
+      "carRevision": null,
+      "present": false,
+      "archived": false
+    },
+    {
+      "index": 1,
+      "itemId": "item-1ff6df965f30772118587b39c7968534c6e8fa7348d02e176fb79831fc4d042c",
+      "timingCarId": "timing-car-2",
+      "action": "create",
+      "paddockCarId": "local-timing-812eb71a304b26931b172d5dc54a25a7446cef6a731af6f3841c90c55905eead",
+      "decision": "pending",
+      "status": "pending",
+      "reviewedAt": null,
+      "carRevision": null,
+      "present": false,
+      "archived": false
+    }
+  ],
+  "duplicate": true
+}

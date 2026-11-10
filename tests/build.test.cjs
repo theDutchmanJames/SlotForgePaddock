@@ -46,7 +46,7 @@ test('drafts persist in backups without reserving stock and tolerate removed sto
   const s=new Store(),p=part(s,'Motor',1),d=data([row(p)]),id=act(s,'build.draft.save',{data:d});
   assert.equal(s.data.cars.length,0);assert.equal(w.available(s.data,s.data.parts[0]),1);
   const restored=new Store();restored.restore(s.snapshot(),0);assert.deepEqual(restored.data.buildDrafts,s.data.buildDrafts);
-  act(s,'part.delete',{id:p});assert.equal(s.data.buildDrafts.length,1);assert.throws(()=>s.plan('build.preview',{data:d,draftId:id}),/no longer exists/);
+  assert.throws(()=>act(s,'part.delete',{id:p}),/saved build drafts/);s.transact(db=>{db.parts=[];});assert.equal(s.data.buildDrafts.length,1);assert.throws(()=>s.plan('build.preview',{data:d,draftId:id}),/no longer exists/);
   act(s,'build.draft.delete',{id});assert.equal(s.data.buildDrafts.length,0);
 });
 test('a completed build consumes only its own draft and preserves an immutable setup',()=>{

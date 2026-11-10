@@ -30,7 +30,7 @@
   const signature=a=>JSON.stringify(a.components.map(c=>[c.partId,c.quantity,c.field,c.position]));
   const toothCount=value=>typeof value==='string'&&/^\d+$/.test(value.trim())&&Number.isSafeInteger(Number(value))&&Number(value)>0?String(Number(value)):'';
   function partTeeth(part){
-    const specs=(part?.catalogue?.specifications||[]).filter(s=>['teeth','tooth count','number of teeth'].includes(s.name.trim().toLowerCase()));
+    const specs=(part?.catalogue?.product?.specifications||part?.catalogue?.specifications||[]).filter(s=>['teeth','tooth count','number of teeth'].includes(s.name.trim().toLowerCase()));
     if(!specs.length||specs.some(s=>!toothCount(s.value)||!['','t','tooth','teeth'].includes(s.unit.trim().toLowerCase())))return '';
     const counts=[...new Set(specs.map(s=>toothCount(s.value)))];return counts.length===1?counts[0]:'';
   }

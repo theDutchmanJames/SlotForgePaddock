@@ -1,0 +1,292 @@
+{
+  "status": "proposal-not-implemented",
+  "fixtures": [
+    {
+      "file": "capability.json",
+      "definition": "capability",
+      "http": 200,
+      "status": "proposed"
+    },
+    {
+      "file": "status.json",
+      "definition": "status",
+      "http": 200,
+      "status": "proposed"
+    },
+    {
+      "file": "create.json",
+      "definition": "operation",
+      "http": 200,
+      "status": "proposed"
+    },
+    {
+      "file": "create-receipt.json",
+      "definition": "receipt",
+      "http": 200,
+      "status": "proposed"
+    },
+    {
+      "file": "duplicate-after-correction.json",
+      "definition": "receipt",
+      "http": 200,
+      "status": "proposed"
+    },
+    {
+      "file": "correction.json",
+      "definition": "operation",
+      "http": 200,
+      "status": "proposed"
+    },
+    {
+      "file": "correction-receipt.json",
+      "definition": "receipt",
+      "http": 200,
+      "status": "proposed"
+    },
+    {
+      "file": "withdrawal.json",
+      "definition": "operation",
+      "http": 200,
+      "status": "proposed"
+    },
+    {
+      "file": "withdrawal-receipt.json",
+      "definition": "receipt",
+      "http": 200,
+      "status": "proposed"
+    },
+    {
+      "file": "stale-editor.json",
+      "definition": "operation",
+      "http": 200,
+      "status": "proposed"
+    },
+    {
+      "file": "revision-conflict.json",
+      "definition": "error",
+      "http": 409,
+      "status": "proposed"
+    },
+    {
+      "file": "operation-conflict.json",
+      "definition": "error",
+      "http": 409,
+      "status": "proposed"
+    },
+    {
+      "file": "recovery-changed.json",
+      "definition": "error",
+      "http": 409,
+      "status": "proposed"
+    },
+    {
+      "file": "guard-required.json",
+      "definition": "error",
+      "http": 409,
+      "status": "proposed"
+    },
+    {
+      "file": "multi-heat.json",
+      "definition": "operation",
+      "http": 200,
+      "status": "proposed"
+    },
+    {
+      "file": "endurance.json",
+      "definition": "operation",
+      "http": 200,
+      "status": "proposed"
+    },
+    {
+      "file": "classes-and-eligibility.json",
+      "definition": "operation",
+      "http": 200,
+      "status": "proposed"
+    },
+    {
+      "file": "unlinked-and-virtual.json",
+      "definition": "operation",
+      "http": 200,
+      "status": "proposed"
+    },
+    {
+      "file": "origin-evidence.json",
+      "definition": "originEvidence",
+      "http": 200,
+      "status": "proposed"
+    },
+    {
+      "file": "historical-import.json",
+      "definition": "importRequest",
+      "http": 200,
+      "status": "proposed"
+    },
+    {
+      "file": "import-pending.json",
+      "definition": "importReceipt",
+      "http": 200,
+      "status": "proposed"
+    },
+    {
+      "file": "import-approved.json",
+      "definition": "importReceipt",
+      "http": 200,
+      "status": "proposed"
+    },
+    {
+      "file": "import-cancel.json",
+      "definition": "importCancel",
+      "http": 200,
+      "status": "proposed"
+    },
+    {
+      "file": "import-cancelled.json",
+      "definition": "importReceipt",
+      "http": 200,
+      "status": "proposed"
+    },
+    {
+      "file": "already-delivered-request.json",
+      "definition": "importRequest",
+      "http": 200,
+      "status": "proposed"
+    },
+    {
+      "file": "already-delivered.json",
+      "definition": "importReceipt",
+      "http": 200,
+      "status": "proposed"
+    },
+    {
+      "file": "partial-import.json",
+      "definition": "importRequest",
+      "http": 200,
+      "status": "proposed"
+    },
+    {
+      "file": "partial-import-cancel.json",
+      "definition": "importCancel",
+      "http": 200,
+      "status": "proposed"
+    },
+    {
+      "file": "partial-import-outcome.json",
+      "definition": "importReceipt",
+      "http": 200,
+      "status": "proposed"
+    },
+    {
+      "file": "session-head.json",
+      "definition": "head",
+      "http": 200,
+      "status": "proposed"
+    },
+    {
+      "file": "withdrawn-head.json",
+      "definition": "head",
+      "http": 200,
+      "status": "proposed"
+    },
+    {
+      "file": "lap-page.json",
+      "definition": "laps",
+      "http": 200,
+      "status": "proposed"
+    },
+    {
+      "file": "session-list.json",
+      "definition": "list",
+      "http": 200,
+      "status": "proposed"
+    },
+    {
+      "file": "car-statistics.json",
+      "definition": "statistics",
+      "http": 200,
+      "status": "proposed"
+    },
+    {
+      "file": "upload-start.json",
+      "definition": "uploadStart",
+      "http": 200,
+      "status": "proposed"
+    },
+    {
+      "file": "upload-chunk.json",
+      "definition": "chunk",
+      "http": 200,
+      "status": "proposed"
+    },
+    {
+      "file": "upload-status.json",
+      "definition": "uploadStatus",
+      "http": 200,
+      "status": "proposed"
+    },
+    {
+      "file": "upload-commit.json",
+      "definition": "uploadCommit",
+      "http": 200,
+      "status": "proposed"
+    },
+    {
+      "file": "upload-incomplete.json",
+      "definition": "error",
+      "http": 409,
+      "status": "proposed"
+    },
+    {
+      "file": "chunk-conflict.json",
+      "definition": "error",
+      "http": 409,
+      "status": "proposed"
+    }
+  ],
+  "implementedFixtures": "../../scalable-v1/fixtures/manifest.json",
+  "hashes": [
+    {
+      "file": "create.json",
+      "sha256": "3c71765a8bd0a8063eabf974833d505145de05b2d3d34c4bd06715200aff0336"
+    },
+    {
+      "file": "correction.json",
+      "sha256": "bff76a65970081d31eb81c2170ae680fdb45f301d37e03410bb6a52d0792c6e0"
+    },
+    {
+      "file": "withdrawal.json",
+      "sha256": "bb17eb1344c663e812c4fe9bedb2c9ed86b62a84623114456a0a5d4efbe53ec7"
+    },
+    {
+      "file": "stale-editor.json",
+      "sha256": "7e5463992c91473b042dd6211f97f941a6147437ee42e31cfbba193b97362bbc"
+    },
+    {
+      "file": "multi-heat.json",
+      "sha256": "a2264fc6ef7d9d5230c0910e08736297e11fe847a126807705c0eb27017da4b6"
+    },
+    {
+      "file": "endurance.json",
+      "sha256": "8cfcc4e4a22f147c0ce6cfd1d1a4c0d5b5ca847e978828dc9371e8f546a440b7"
+    },
+    {
+      "file": "classes-and-eligibility.json",
+      "sha256": "aae33a36abb1b89a5ceb55e4ecaa56c8e632bfbd6659de4364f1f31d1db09ae7"
+    },
+    {
+      "file": "unlinked-and-virtual.json",
+      "sha256": "ed7dc23cb013a3501872e9af38c51967995b1255bd166478e5c9a216ad381e72"
+    },
+    {
+      "file": "historical-import.json",
+      "sha256": "bc0eaa1f6298fd976eed5935c3d021ec120ca50f742ca9fb5355a95df43e4469"
+    },
+    {
+      "file": "already-delivered-request.json",
+      "sha256": "70c11746aed2f678005b3ee676613ee8e31c951815c8e7323a79511f312bfce9"
+    },
+    {
+      "file": "partial-import.json",
+      "sha256": "ccad52c7f91418edbbd381a38ee5d942bcba31ae04bc9912493247f91f1faaa3"
+    }
+  ]
+}

@@ -1,0 +1,490 @@
+{
+  "version": 1,
+  "databaseId": "paddock-demo",
+  "recoveryId": "approval-fixture-generation",
+  "operationId": "historical-review-batch",
+  "editor": {
+    "installationId": "timing-editor-a",
+    "application": "SlotForge Timing",
+    "name": "Example race director"
+  },
+  "items": [
+    {
+      "itemId": "item-1",
+      "sourceId": "timing-original-installation",
+      "sessionId": "historical-session-1",
+      "originHash": "b7e21bf7957013ef6cc73780b40e103bd4d6f0aedb9e740a5c36bde7641eeed6",
+      "bundle": {
+        "format": "history-v1",
+        "provenance": {
+          "kind": "historical",
+          "evidence": "Original saved Timing laps; no pre-race capture or crossing clock survived.",
+          "missing": [
+            "configuration",
+            "crossing-times",
+            "driver-boundaries",
+            "lane-lengths",
+            "record-eligibility",
+            "race-date"
+          ]
+        },
+        "race": {
+          "name": "Club race",
+          "type": "race",
+          "startedAt": null,
+          "endedAt": null,
+          "track": {
+            "id": "track-1",
+            "name": "Club circuit",
+            "lanes": [
+              {
+                "lane": 1,
+                "lengthM": null
+              },
+              {
+                "lane": 2,
+                "lengthM": null
+              }
+            ]
+          },
+          "heats": [
+            {
+              "id": "heat-1",
+              "name": "Heat 1",
+              "startedAtMs": null,
+              "endedAtMs": null
+            }
+          ],
+          "participants": [
+            {
+              "id": "entry-1",
+              "kind": "physical",
+              "carId": "car-a",
+              "configuration": null,
+              "displayName": "Example GT3",
+              "drivers": [
+                {
+                  "id": "driver-1",
+                  "name": "Alex Example"
+                }
+              ],
+              "stints": [],
+              "laps": [
+                {
+                  "id": "entry-0-lap-1",
+                  "stintId": null,
+                  "number": 1,
+                  "durationMs": 10000,
+                  "endedAtMs": null,
+                  "valid": true,
+                  "pit": false,
+                  "countsForDistance": true,
+                  "distanceM": null,
+                  "reason": "",
+                  "originLapId": null,
+                  "heatId": "heat-1",
+                  "driverId": "driver-1",
+                  "lane": 1,
+                  "personalRecordEligible": false,
+                  "trackRecordEligible": false,
+                  "flags": []
+                },
+                {
+                  "id": "entry-0-lap-2",
+                  "stintId": null,
+                  "number": 2,
+                  "durationMs": 11000,
+                  "endedAtMs": null,
+                  "valid": true,
+                  "pit": false,
+                  "countsForDistance": true,
+                  "distanceM": null,
+                  "reason": "",
+                  "originLapId": null,
+                  "heatId": "heat-1",
+                  "driverId": "driver-1",
+                  "lane": 1,
+                  "personalRecordEligible": false,
+                  "trackRecordEligible": false,
+                  "flags": []
+                },
+                {
+                  "id": "entry-0-lap-3",
+                  "stintId": null,
+                  "number": 3,
+                  "durationMs": 10000,
+                  "endedAtMs": null,
+                  "valid": true,
+                  "pit": true,
+                  "countsForDistance": true,
+                  "distanceM": null,
+                  "reason": "Pit lane",
+                  "originLapId": null,
+                  "heatId": "heat-1",
+                  "driverId": "driver-1",
+                  "lane": 1,
+                  "personalRecordEligible": false,
+                  "trackRecordEligible": false,
+                  "flags": []
+                }
+              ],
+              "teamId": null
+            }
+          ]
+        },
+        "context": {
+          "savedAt": "2026-10-31T10:02:00.000Z",
+          "endedBy": "race completed",
+          "resumed": 0,
+          "weather": null,
+          "teams": [],
+          "classes": [],
+          "classification": [
+            {
+              "participantId": "entry-1",
+              "scope": "overall",
+              "scopeId": null,
+              "classId": null,
+              "position": 1,
+              "status": "finished",
+              "laps": 3,
+              "elapsedMs": 31000,
+              "points": 10,
+              "score": null,
+              "scoreUnit": null,
+              "gap": null,
+              "countedHeatIds": [
+                "heat-1"
+              ],
+              "droppedHeatIds": [],
+              "incomplete": false,
+              "estimated": false,
+              "effects": []
+            }
+          ],
+          "systemChanges": [],
+          "scoringSnapshot": null,
+          "notes": "Reviewed by the Race Director."
+        }
+      }
+    },
+    {
+      "itemId": "item-2",
+      "sourceId": "timing-original-installation",
+      "sessionId": "historical-session-2",
+      "originHash": "e3c716f82a6796293d854cb12cc8fc608f6f54124f2aba25bd1730b53a2c80ca",
+      "bundle": {
+        "format": "history-v1",
+        "provenance": {
+          "kind": "historical",
+          "evidence": "Original saved Timing laps; no pre-race capture or crossing clock survived.",
+          "missing": [
+            "configuration",
+            "crossing-times",
+            "driver-boundaries",
+            "lane-lengths",
+            "record-eligibility",
+            "race-date"
+          ]
+        },
+        "race": {
+          "name": "Club race",
+          "type": "race",
+          "startedAt": null,
+          "endedAt": null,
+          "track": {
+            "id": "track-1",
+            "name": "Club circuit",
+            "lanes": [
+              {
+                "lane": 1,
+                "lengthM": null
+              },
+              {
+                "lane": 2,
+                "lengthM": null
+              }
+            ]
+          },
+          "heats": [
+            {
+              "id": "heat-1",
+              "name": "Heat 1",
+              "startedAtMs": null,
+              "endedAtMs": null
+            }
+          ],
+          "participants": [
+            {
+              "id": "entry-1",
+              "kind": "physical",
+              "carId": "car-a",
+              "configuration": null,
+              "displayName": "Example GT3",
+              "drivers": [
+                {
+                  "id": "driver-1",
+                  "name": "Alex Example"
+                }
+              ],
+              "stints": [],
+              "laps": [
+                {
+                  "id": "entry-0-lap-1",
+                  "stintId": null,
+                  "number": 1,
+                  "durationMs": 10000,
+                  "endedAtMs": null,
+                  "valid": true,
+                  "pit": false,
+                  "countsForDistance": true,
+                  "distanceM": null,
+                  "reason": "",
+                  "originLapId": null,
+                  "heatId": "heat-1",
+                  "driverId": "driver-1",
+                  "lane": 1,
+                  "personalRecordEligible": false,
+                  "trackRecordEligible": false,
+                  "flags": []
+                },
+                {
+                  "id": "entry-0-lap-2",
+                  "stintId": null,
+                  "number": 2,
+                  "durationMs": 11000,
+                  "endedAtMs": null,
+                  "valid": true,
+                  "pit": false,
+                  "countsForDistance": true,
+                  "distanceM": null,
+                  "reason": "",
+                  "originLapId": null,
+                  "heatId": "heat-1",
+                  "driverId": "driver-1",
+                  "lane": 1,
+                  "personalRecordEligible": false,
+                  "trackRecordEligible": false,
+                  "flags": []
+                },
+                {
+                  "id": "entry-0-lap-3",
+                  "stintId": null,
+                  "number": 3,
+                  "durationMs": 10000,
+                  "endedAtMs": null,
+                  "valid": true,
+                  "pit": true,
+                  "countsForDistance": true,
+                  "distanceM": null,
+                  "reason": "Pit lane",
+                  "originLapId": null,
+                  "heatId": "heat-1",
+                  "driverId": "driver-1",
+                  "lane": 1,
+                  "personalRecordEligible": false,
+                  "trackRecordEligible": false,
+                  "flags": []
+                }
+              ],
+              "teamId": null
+            }
+          ]
+        },
+        "context": {
+          "savedAt": "2026-10-31T10:02:00.000Z",
+          "endedBy": "race completed",
+          "resumed": 0,
+          "weather": null,
+          "teams": [],
+          "classes": [],
+          "classification": [
+            {
+              "participantId": "entry-1",
+              "scope": "overall",
+              "scopeId": null,
+              "classId": null,
+              "position": 1,
+              "status": "finished",
+              "laps": 3,
+              "elapsedMs": 31000,
+              "points": 10,
+              "score": null,
+              "scoreUnit": null,
+              "gap": null,
+              "countedHeatIds": [
+                "heat-1"
+              ],
+              "droppedHeatIds": [],
+              "incomplete": false,
+              "estimated": false,
+              "effects": []
+            }
+          ],
+          "systemChanges": [],
+          "scoringSnapshot": null,
+          "notes": "Reviewed by the Race Director."
+        }
+      }
+    },
+    {
+      "itemId": "item-3",
+      "sourceId": "timing-original-installation",
+      "sessionId": "historical-session-3",
+      "originHash": "db8e7848246bfc325f2f4f14e3a650eeaf23640812fb3774940311803ed2797d",
+      "bundle": {
+        "format": "history-v1",
+        "provenance": {
+          "kind": "historical",
+          "evidence": "Original saved Timing laps; no pre-race capture or crossing clock survived.",
+          "missing": [
+            "configuration",
+            "crossing-times",
+            "driver-boundaries",
+            "lane-lengths",
+            "record-eligibility",
+            "race-date"
+          ]
+        },
+        "race": {
+          "name": "Club race",
+          "type": "race",
+          "startedAt": null,
+          "endedAt": null,
+          "track": {
+            "id": "track-1",
+            "name": "Club circuit",
+            "lanes": [
+              {
+                "lane": 1,
+                "lengthM": null
+              },
+              {
+                "lane": 2,
+                "lengthM": null
+              }
+            ]
+          },
+          "heats": [
+            {
+              "id": "heat-1",
+              "name": "Heat 1",
+              "startedAtMs": null,
+              "endedAtMs": null
+            }
+          ],
+          "participants": [
+            {
+              "id": "entry-1",
+              "kind": "physical",
+              "carId": "car-a",
+              "configuration": null,
+              "displayName": "Example GT3",
+              "drivers": [
+                {
+                  "id": "driver-1",
+                  "name": "Alex Example"
+                }
+              ],
+              "stints": [],
+              "laps": [
+                {
+                  "id": "entry-0-lap-1",
+                  "stintId": null,
+                  "number": 1,
+                  "durationMs": 10000,
+                  "endedAtMs": null,
+                  "valid": true,
+                  "pit": false,
+                  "countsForDistance": true,
+                  "distanceM": null,
+                  "reason": "",
+                  "originLapId": null,
+                  "heatId": "heat-1",
+                  "driverId": "driver-1",
+                  "lane": 1,
+                  "personalRecordEligible": false,
+                  "trackRecordEligible": false,
+                  "flags": []
+                },
+                {
+                  "id": "entry-0-lap-2",
+                  "stintId": null,
+                  "number": 2,
+                  "durationMs": 11000,
+                  "endedAtMs": null,
+                  "valid": true,
+                  "pit": false,
+                  "countsForDistance": true,
+                  "distanceM": null,
+                  "reason": "",
+                  "originLapId": null,
+                  "heatId": "heat-1",
+                  "driverId": "driver-1",
+                  "lane": 1,
+                  "personalRecordEligible": false,
+                  "trackRecordEligible": false,
+                  "flags": []
+                },
+                {
+                  "id": "entry-0-lap-3",
+                  "stintId": null,
+                  "number": 3,
+                  "durationMs": 10000,
+                  "endedAtMs": null,
+                  "valid": true,
+                  "pit": true,
+                  "countsForDistance": true,
+                  "distanceM": null,
+                  "reason": "Pit lane",
+                  "originLapId": null,
+                  "heatId": "heat-1",
+                  "driverId": "driver-1",
+                  "lane": 1,
+                  "personalRecordEligible": false,
+                  "trackRecordEligible": false,
+                  "flags": []
+                }
+              ],
+              "teamId": null
+            }
+          ]
+        },
+        "context": {
+          "savedAt": "2026-10-31T10:02:00.000Z",
+          "endedBy": "race completed",
+          "resumed": 0,
+          "weather": null,
+          "teams": [],
+          "classes": [],
+          "classification": [
+            {
+              "participantId": "entry-1",
+              "scope": "overall",
+              "scopeId": null,
+              "classId": null,
+              "position": 1,
+              "status": "finished",
+              "laps": 3,
+              "elapsedMs": 31000,
+              "points": 10,
+              "score": null,
+              "scoreUnit": null,
+              "gap": null,
+              "countedHeatIds": [
+                "heat-1"
+              ],
+              "droppedHeatIds": [],
+              "incomplete": false,
+              "estimated": false,
+              "effects": []
+            }
+          ],
+          "systemChanges": [],
+          "scoringSnapshot": null,
+          "notes": "Reviewed by the Race Director."
+        }
+      }
+    }
+  ]
+}

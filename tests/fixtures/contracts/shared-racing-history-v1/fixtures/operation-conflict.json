@@ -1,0 +1,7 @@
+{
+  "code": "OPERATION_CONFLICT",
+  "error": "This operation ID already has different content.",
+  "databaseId": "paddock-demo",
+  "recoveryId": "recovery-example-1",
+  "current": null
+}

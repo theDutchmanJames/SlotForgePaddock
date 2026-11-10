@@ -20,7 +20,7 @@ function performanceCurve(input,kind){
   return `<figure class="performance-curve"><figcaption>${title}</figcaption><svg viewBox="0 0 350 200" role="img" aria-label="${title} versus motor RPM. ${torque?'Torque decreases linearly from stall torque at zero RPM to zero at no-load RPM.':'Power peaks at half the no-load RPM.'}"><path class="curve-grid" d="M50 24H330M50 89H330M50 154H330"/><path class="curve-axis" d="M50 24V154H330"/><polyline class="curve-line ${torque?'torque':'power'}" points="${points}"/><line class="curve-cursor" data-curve-cursor x1="${cursor}" x2="${cursor}" y1="24" y2="154"/><text x="44" y="28" text-anchor="end">${performanceNumber(max,1)}</text><text x="44" y="157" text-anchor="end">0</text><text x="50" y="175">0</text><text x="190" y="175" text-anchor="middle">${performanceNumber(m.ratedRpm/2,0)}</text><text x="330" y="175" text-anchor="end">${performanceNumber(m.ratedRpm,0)}</text><text x="190" y="194" text-anchor="middle">Motor RPM</text></svg></figure>`;
 }
 function buildPerformanceInput(){
-  const gear=BuildModel.gearing(buildState,db);
+  const gear=BuildModel.gearing(effectiveBuildState(),db);
   return {...PerformanceModel.blank(),...(buildState.performance||{}),pinion:gear.pinion.value,gear:gear.gear.value};
 }
 function buildPerformanceEditor(){

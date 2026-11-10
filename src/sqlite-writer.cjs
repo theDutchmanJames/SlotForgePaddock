@@ -11,7 +11,7 @@ class Writer {
   if(this.active||this.stopping||!this.queue.length)return;
   if(!this.worker){
    let worker;try{worker=this.createWorker();}catch(error){for(const job of this.queue.splice(0))job.reject(error);return;}this.worker=worker;
-   worker.on('message',message=>{if(this.worker!==worker)return;const job=this.active;if(!job||message.id!==job.id){this.failed(worker,Error('SQLite writer returned an unexpected acknowledgement.'));return;}clearTimeout(this.timer);this.active=null;message.error?job.reject(Object.assign(Error(message.error),{code:message.code,apiCode:message.apiCode,httpStatus:message.httpStatus})):job.resolve(message.value);if(this.queue.length)this.pump();else worker.unref();});
+   worker.on('message',message=>{if(this.worker!==worker)return;const job=this.active;if(!job||message.id!==job.id){this.failed(worker,Error('SQLite writer returned an unexpected acknowledgement.'));return;}clearTimeout(this.timer);this.active=null;message.error?job.reject(Object.assign(Error(message.error),{code:message.code,apiCode:message.apiCode,httpStatus:message.httpStatus,details:message.details})):job.resolve(message.value);if(this.queue.length)this.pump();else worker.unref();});
    worker.on('error',error=>this.failed(worker,error));
    worker.on('exit',code=>{if(this.worker===worker)this.failed(worker,Error('SQLite writer stopped before acknowledging the save ('+code+').'));});
   }

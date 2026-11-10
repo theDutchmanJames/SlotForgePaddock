@@ -11,13 +11,15 @@ function context(store,action,p={}){
  for(const key of common)data[key]=source[key];
  const oneCar=id=>state.read(r=>r.record(JSON.stringify(['cars','id:'+id]),{assetHandle:true}));
  const simpleCar=['car.favourite','car.archive','work.add'].includes(action)||action==='car.save'&&p.id&&!Object.hasOwn(p.data||{},'picture')&&!Object.hasOwn(p.data||{},'photos')&&!Object.hasOwn(p.data||{},'technical');
- if(simpleCar){
+ if(action==='car.delete'){for(const key of ['cars','parts','assemblies','installations','setups','tests','jobs','events','documents','planning','buildDrafts'])data[key]=source[key];}
+ else if(simpleCar){
   data.cars=[oneCar(action==='work.add'?p.carId:p.id)];
  }else if(action.startsWith('supply.'))data.supplies=source.supplies;
- else if(action==='submission.add')data.submissions=source.submissions;
+ else if(['submission.add','submission.cancelLocal'].includes(action))data.submissions=source.submissions;
  else if(['settings.save','view.save','view.delete','custom.add','choice.add','columns.save'].includes(action)){
   if(p.showroomFeaturedId)data.cars=[oneCar(p.showroomFeaturedId)];
  }else if(action==='@club')data.club=source.club;
+ else if(action==='@history-import'){data.timing.key=source.timing.key;data.timing.imports=[];}
  else if(action==='@timing-key'){
   data.timing.key=source.timing.key;
   const sessions=new Map(new Map(JSON.parse(state.manifest).object).get('timing').object).get('sessions').array;
@@ -38,12 +40,12 @@ function context(store,action,p={}){
   // stock group, including reservations and historic assembly references.
   for(const key of ['cars','parts','assemblies','installations','setups','jobs','planning'])data[key]=source[key];
   // History is append-only except when checking whether stock may be deleted.
-  if(action==='part.delete'){data.events=source.events;data.tests=source.tests;}
+  if(['part.delete','part.deleteMany'].includes(action)){data.events=source.events;data.tests=source.tests;data.buildDrafts=source.buildDrafts;}
   if(action==='choice.rename')data.tests=source.tests;
-  if(action.startsWith('document.'))data.documents=source.documents;
+  if(action.startsWith('document.')||action.startsWith('guide.'))data.documents=source.documents;
   if(action==='submission.review')data.submissions=source.submissions;
   if(action==='catalogue.apply')data.supplies=source.supplies;
-  if(action.startsWith('build.'))data.buildDrafts=source.buildDrafts;
+  if(action.startsWith('build.')||action.startsWith('rebuild.')||action.startsWith('job.'))data.buildDrafts=source.buildDrafts;
  }
  s.data=validateDatabase(data);return s;
 }
@@ -93,10 +95,10 @@ function clubChange(store,proposalId,fn,baseScope){
  fn(right.club);require('./club-model.cjs').validate(right);
  return prepare(store,left,right);
 }
-function receiveTiming(store,input){
+function receiveTiming(store,input,options){
  store.assertIdle();
  try{
-  const s=context(store,'@timing',input),before=s.data,result=require('./timing-integration.cjs').receive(s,input);
+  const s=context(store,'@timing',input),before=s.data,result=require('./timing-integration.cjs').receive(s,input,options);
   const prepared=prepare(store,before,s.data,result);
   return require('./transaction.cjs').run(store,()=>prepared,{scoped:true});
  }catch(error){

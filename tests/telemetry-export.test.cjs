@@ -151,7 +151,7 @@ test('multi-heat, endurance, invalid/pit laps and virtual entries retain exact m
 });
 
 test('published Telemetry fixtures and standalone schema match executable responses',()=>{
- const root=path.join(__dirname,'..','integration-handoff','telemetry-v1');
+ const root=path.join(__dirname,'fixtures','contracts','telemetry-v1');
  const schema=JSON.parse(fs.readFileSync(path.join(root,'telemetry-v1.schema.json'),'utf8'));assert.deepEqual(schema.$defs,contract.schema.$defs);
  for(const file of fs.readdirSync(path.join(root,'fixtures'))){
   const data=JSON.parse(fs.readFileSync(path.join(root,'fixtures',file),'utf8'));

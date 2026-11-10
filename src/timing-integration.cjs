@@ -10,6 +10,7 @@ const sign=(key,value)=>crypto.createHmac('sha256',key).update(canonical(value))
 function capabilities(){return {timing:{versions:[1],profile:'/v1/timing/cars/{carId}',sessions:'/v1/timing/sessions',receipt:'/v1/timing/sessions/{sourceId}/{sessionId}',permission:'timingResults',configurationKinds:['current'],maxRequestBytes:MAX_BYTES,maxLaps:MAX_LAPS,maxParticipants:256,laneBase:1,durationUnit:'ms',distanceUnit:'m'}};}
 function profile(store,carId,{includePicture=true}={}){
   const car=store.file&&store.expectedIdentity!==null?require('./sqlite-query.cjs').read(store,null,r=>r.one('cars',carId)).value:store.data.cars.find(c=>c.id===carId);if(!car)throw fault('CAR_NOT_FOUND','The requested car does not exist.',404);
+  if(car.rebuild?.to){const e=fault('CAR_REBUILT','This car has been rebuilt. Select its successor for future races.',409);e.details={successor:car.rebuild.to};throw e;}
   // A capture must remain verifiable after restart, even for a previously unsaved collection.
   if(!store.data.timing.key)store.scopedTransact('@timing-key',db=>{db.timing.key=crypto.randomBytes(32).toString('hex');});
   const db=store.file&&store.expectedIdentity!==null?require('./sqlite-query.cjs').read(store,null,r=>{const installations=[];let offset=0;for(;;){const page=r.list('installations',{carId,offset,limit:200});installations.push(...page.rows);if(page.nextOffset===null)break;offset=page.nextOffset;}const parts=[...new Set(installations.filter(i=>!i.removed).map(i=>i.partId))].map(id=>r.one('parts',id));return {id:store.data.id,revision:store.data.revision,timing:store.data.timing,installations,parts};}).value:store.data,technical=Object.fromEntries(contract.fields.filter(k=>Object.hasOwn(car.technical,k)).map(k=>[k,car.technical[k]]));
@@ -68,12 +69,15 @@ function validatePayload(payload,{stored=false}={}){
   // by the derived-statistics model until Timing sends a valid higher revision.
   if(!(stored&&results.requiresCorrection(payload)))for(const p of participants.values())if(p.summary){const expected=results.statistics(payload,p,true);for(const key of Object.keys(expected))if(typeof expected[key]==='number'&&typeof p.summary[key]==='number'?Math.abs(expected[key]-p.summary[key])>0.000001:expected[key]!==p.summary[key])throw fault('SUMMARY_MISMATCH','Participant '+p.id+' summary disagrees with measured laps: '+key);}
 }
-function receipt(db,record,duplicate=false){const warnings=[...record.warnings];if(results.requiresCorrection(record.payload))for(const p of record.payload.participants)if(p.carId)warnings.push({code:'SESSION_REQUIRES_CORRECTION',carId:p.carId});return {ok:true,integrationVersion:1,databaseId:db.id,sourceId:record.payload.source.id,sessionId:record.payload.sessionId,revision:record.payload.revision,state:record.payload.state,contentHash:record.contentHash,receivedAt:record.receivedAt,duplicate,warnings,summaries:results.summaries(record.payload)};}
-function receive(store,input){
+function formatReceipt(db,record,duplicate,requiresCorrection,summaries){const warnings=[...record.warnings];if(requiresCorrection)for(const p of record.payload.participants)if(p.carId)warnings.push({code:'SESSION_REQUIRES_CORRECTION',carId:p.carId});return {ok:true,integrationVersion:1,databaseId:db.id,sourceId:record.payload.source.id,sessionId:record.payload.sessionId,revision:record.payload.revision,state:record.payload.state,contentHash:record.contentHash,receivedAt:record.receivedAt,duplicate,warnings,summaries};}
+function receipt(db,record,duplicate=false){if(record.format==='history-v1')throw fault('RESULT_REQUIRES_SHARED_HISTORY','Read this session through the shared-history API.',409);return formatReceipt(db,record,duplicate,results.requiresCorrection(record.payload),results.summaries(record.payload));}
+function receive(store,input,{guarded=false}={}){
   validatePayload(input);if(input.databaseId!==store.data.id)throw fault('DATABASE_MISMATCH','This session targets a different Paddock database.',409);
-  if(store.deferredState)return require('./scoped-write.cjs').receiveTiming(store,input);
+  if(store.deferredState)return require('./scoped-write.cjs').receiveTiming(store,input,{guarded});
   const contentHash=digest(input),existing=store.data.timing.sessions.find(s=>s.payload.source.id===input.source.id&&s.payload.sessionId===input.sessionId);
+  if(existing?.format==='history-v1')throw fault('RESULT_REQUIRES_SHARED_HISTORY','This session requires the shared-history format; legacy writes cannot replace it.',409);
   if(existing){
+    if(existing.guard&&!guarded&&(input.revision!==existing.payload.revision||contentHash!==existing.contentHash))throw fault('HISTORY_GUARD_REQUIRED','This session uses guarded shared-history writes. Reload it and submit a guarded operation.',409);
     if(input.revision<existing.payload.revision)throw fault('STALE_REVISION','A newer session revision is already stored.',409);
     if(input.revision===existing.payload.revision){if(contentHash!==existing.contentHash)throw fault('REVISION_CONFLICT','This revision already exists with different content.',409);return receipt(store.data,existing,true);}
   }
@@ -83,7 +87,10 @@ function receive(store,input){
   const carIds=[...new Set([...(existing?.carIds||[]),...(input.state==='active'?input.participants.map(p=>p.carId).filter(Boolean):[])])];
   const history=[...(existing?.history||[]),...(existing?[{revision:existing.payload.revision,state:existing.payload.state,contentHash:existing.contentHash,receivedAt:existing.receivedAt}]:[])];
   if(history.length>=1000)throw fault('CAPACITY_EXCEEDED','Maximum 1,000 accepted revisions per session.',507);
-  const record={payload:structuredClone(input),contentHash,receivedAt:new Date().toISOString(),warnings,carIds,history,lastName:input.state==='active'?input.name:existing?.lastName||input.sessionId};
+  const record={payload:structuredClone(input),contentHash,receivedAt:new Date().toISOString(),warnings,carIds,history,lastName:input.state==='active'?input.name:existing?.lastName||input.sessionId,...(existing?.guard?{guard:existing.guard}:{})};
+  const active=input.state==='active'?input:existing?.payload.state==='active'?existing.payload:null;
+  if(active)record.lastActive={startedAt:active.startedAt,trackId:active.track.id,trackName:active.track.name};
+  else if(existing?.lastActive)record.lastActive=structuredClone(existing.lastActive);
   try{store.transact(db=>{const index=db.timing.sessions.findIndex(s=>s.payload.source.id===input.source.id&&s.payload.sessionId===input.sessionId);if(index<0)db.timing.sessions.push(record);else db.timing.sessions[index]=record;});}
   catch(e){if(e.apiCode)throw e;throw fault(e.code==='COLLECTION_LIMIT'?'CAPACITY_EXCEEDED':'STORAGE_FAILED',e.code==='COLLECTION_LIMIT'?'Database metadata exceeds its working limit. Archive unneeded records before retrying.':'Paddock could not save this session. Retry after checking host storage.',e.code==='COLLECTION_LIMIT'?507:500);}
   return receipt(store.data,record);
@@ -94,18 +101,24 @@ function validateStored(db,previous=null){
   // Key, identity or replica-policy changes require signature validation again.
   const unchanged=new Set(previous&&previous.id===db.id&&previous.timing.key===t.key&&!!previous.club?.replica===!!db.club?.replica?previous.timing.sessions:[]),ids=new Set();
   for(const r of t.sessions){
+    check(r.format===undefined||r.format==='history-v1','Unsupported stored session format.');
+    if(r.format==='history-v1'){require('./rich-history.cjs').validateRecord(db,r);const id=r.payload.source.id+':'+r.payload.sessionId;check(!ids.has(id),'Duplicate stored session identity.');ids.add(id);continue;}
     if(!unchanged.has(r))validatePayload(r.payload,{stored:true});check(r.payload.databaseId===db.id,'Stored session targets another database.');const id=r.payload.source.id+':'+r.payload.sessionId;check(!ids.has(id),'Duplicate stored session identity.');ids.add(id);if(unchanged.has(r))continue;
     check(r.contentHash===digest(r.payload),'Stored session hash mismatch.');
+    if(Object.hasOwn(r,'guard')){const s=require('./shared-history-schema.cjs');s.validate(r.guard,s.guard);check(r.guard.adoptedRevision<=r.payload.revision,'Invalid guarded adoption revision.');}
     contract.validate(receipt(db,r),contract.schema.$defs.receipt);
     check(Array.isArray(r.carIds)&&r.carIds.length<=10000&&new Set(r.carIds).size===r.carIds.length&&r.carIds.every(id=>typeof id==='string'&&/^[a-zA-Z0-9_-]{1,100}$/.test(id)),'Invalid session car references.');
+    if(Object.hasOwn(r,'lastActive')){const a=contract.schema.$defs.active.properties;contract.validate(r.lastActive,{type:'object',additionalProperties:false,required:['startedAt','trackId','trackName'],properties:{startedAt:a.startedAt,trackId:a.track.properties.id,trackName:a.track.properties.name}},'$.lastActive');if(r.payload.state==='active')check(canonical(r.lastActive)===canonical({startedAt:r.payload.startedAt,trackId:r.payload.track.id,trackName:r.payload.track.name}),'Invalid searchable history metadata.');}
     contract.validate(r.lastName,contract.schema.$defs.active.properties.name,'$.lastName');
     check(Array.isArray(r.history)&&r.history.length<1000,'Invalid revision history.');let previous=0;
     for(const h of r.history){check(Number.isInteger(h.revision)&&h.revision>previous&&h.revision<r.payload.revision,'Invalid historical revision.');previous=h.revision;check(['active','withdrawn'].includes(h.state)&&/^[a-f0-9]{64}$/.test(h.contentHash)&&typeof h.receivedAt==='string'&&Number.isFinite(Date.parse(h.receivedAt)),'Invalid session audit record.');}
     if(r.payload.state==='active')for(const p of r.payload.participants)if(p.carId){check(r.carIds.includes(p.carId),'Missing session car reference.');if(!db.club?.replica)verifyConfiguration(db,p.carId,p.configuration);}
   }
+  require('./shared-history.cjs').validateAudit(db,previous);
+  require('./history-imports.cjs').validateStored(db,previous);
 }
 async function receiveAsync(store,bytes,guard=()=>{}){
  if(!store.file||store.expectedIdentity===null){await store.whenIdle();guard();let input;try{input=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));}catch{throw fault('INVALID_JSON','Request must contain valid UTF-8 JSON.');}return receive(store,input);}
  return require('./domain-tasks.cjs').run(store,{kind:'timing',bytes},guard);
 }
-module.exports={capabilities,profile,receive,receiveAsync,receipt,validateStored,validatePayload,verifyConfiguration,canonical,digest,fault,MAX_BYTES};
+module.exports={capabilities,profile,receive,receiveAsync,receipt,formatReceipt,validateStored,validatePayload,verifyConfiguration,canonical,digest,fault,MAX_BYTES};

@@ -55,7 +55,7 @@ test('truncated JPEG marker sequences cannot crash metadata extraction',()=>{
 
 test('Dealership saves defer legacy photo checksums but retain exact immutable wire digests',async t=>{
  const {s,dir}=fixture(t),{Network}=require('../src/network.cjs'),{Club}=require('../src/club.cjs'),M=require('../src/club-model.cjs'),network=new Network(s),club=new Club(s,network,path.join(dir,'club'));t.after(()=>{club.close();network.close();});club.enable('Media test','Media password');lazy.clearCache();
- club.legacyRequested=true;await club.mutate('car.save',{id:s.data.cars[0].id,revision:s.data.cars[0].revision,data:{livery:'Proposed'}});assert.equal(lazy.stats().reads,0);const entry=club.journal.at(-1),expected=JSON.stringify(M.shared(s.data));const proposal=s.data.club.proposals[0],view=club.preview(proposal.id);await club.reviewAsync({id:proposal.id,token:view.token,decision:'accept'});assert.equal(lazy.stats().reads,1); // Only the explicit expected-value serialization read the photo.
+ club.legacyRequested=true;await club.propose('car.save',{id:s.data.cars[0].id,revision:s.data.cars[0].revision,data:{livery:'Proposed'}});assert.equal(lazy.stats().reads,0);const entry=club.journal.at(-1),expected=JSON.stringify(M.shared(s.data));const proposal=s.data.club.proposals[0],view=club.preview(proposal.id);await club.reviewAsync({id:proposal.id,token:view.token,decision:'accept'});assert.equal(lazy.stats().reads,1); // Only the explicit expected-value serialization read the photo.
  assert.equal(JSON.parse(JSON.stringify(entry)).digest,lazy.digest(expected));assert.equal(Object.keys(entry).includes('retainedBytes'),false);assert.ok(club.journalBytes<=32*1024*1024);
 });
 

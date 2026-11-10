@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "databaseId": "paddock-demo",
+  "recoveryId": "recovery-example-1",
+  "operationId": "import-two-items",
+  "itemIds": [
+    "item-1",
+    "item-2"
+  ]
+}

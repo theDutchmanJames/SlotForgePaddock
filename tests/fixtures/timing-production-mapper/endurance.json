@@ -1,0 +1,311 @@
+{
+  "name": "endurance",
+  "evidence": {
+    "session": {
+      "id": "real-session",
+      "setupName": "Saved endurance",
+      "sessionType": "endurance",
+      "trackId": "track",
+      "trackName": "Club",
+      "date": "2026-11-09T10:00:00.000Z",
+      "paddockJournal": {
+        "captures": {
+          "local": {
+            "name": "Captured car",
+            "configuration": {
+              "databaseId": "paddock-demo",
+              "carId": "car-a",
+              "kind": "current",
+              "configurationId": "b45e252a52522a0b267ac5b440533e42efb74f64796f06ca2e4b1578ca0ef13a",
+              "revision": "b45e252a52522a0b267ac5b440533e42efb74f64796f06ca2e4b1578ca0ef13a",
+              "carRevision": 1,
+              "capturedAt": "2026-10-31T10:00:00.000Z",
+              "technical": {
+                "motor": "21.5k",
+                "pinion": "9",
+                "gear": "27"
+              },
+              "components": [],
+              "signature": "a366a131cf225af3270996c907d8901c09b070435d11ee413e4f4325ed4a7e3a"
+            }
+          }
+        },
+        "lanes": [
+          20
+        ],
+        "heats": [
+          {
+            "id": "1",
+            "name": "Heat 1",
+            "startedAt": 100000,
+            "endedAt": 121000,
+            "entries": [
+              {
+                "carId": "local",
+                "driverId": "driver",
+                "driverName": "Driver",
+                "lane": 1,
+                "resultEffects": {
+                  "reviewMs": 0,
+                  "penaltyMs": 0,
+                  "pluginMs": 0
+                },
+                "changes": [
+                  {
+                    "at": 110500,
+                    "driverId": "relief",
+                    "driverName": "Relief"
+                  }
+                ],
+                "laps": [
+                  {
+                    "number": 1,
+                    "time": 10000,
+                    "at": 110000,
+                    "driverId": "driver",
+                    "driverName": "Driver",
+                    "removed": false,
+                    "valid": true,
+                    "pit": false
+                  },
+                  {
+                    "number": 2,
+                    "time": 11000,
+                    "at": 121000,
+                    "driverId": "relief",
+                    "driverName": "Driver",
+                    "removed": false,
+                    "valid": true,
+                    "pit": false
+                  }
+                ]
+              }
+            ],
+            "crossings": {
+              "0": [
+                {
+                  "at": 110000,
+                  "driverId": "driver",
+                  "driverName": "Driver"
+                },
+                {
+                  "at": 121000,
+                  "driverId": "driver",
+                  "driverName": "Driver"
+                }
+              ]
+            },
+            "endedBy": "Stopped",
+            "weatherNote": ""
+          }
+        ],
+        "classifiedTimes": {
+          "local": 21000
+        }
+      },
+      "standings": [
+        {
+          "carId": "local",
+          "driverId": "driver",
+          "driverName": "Driver",
+          "pos": 1,
+          "laps": 2,
+          "total": 21000,
+          "best": 10000,
+          "asTeam": true,
+          "teamId": "team-a",
+          "teamName": "Endurance team"
+        }
+      ]
+    },
+    "laps": [
+      {
+        "id": "saved-0",
+        "sessionId": "real-session",
+        "carId": "local",
+        "driverId": "driver",
+        "driverName": "Driver",
+        "lane": 1,
+        "lapNumber": 1,
+        "time": 10000,
+        "valid": true,
+        "pit": false
+      },
+      {
+        "id": "saved-1",
+        "sessionId": "real-session",
+        "carId": "local",
+        "driverId": "relief",
+        "driverName": "Driver",
+        "lane": 1,
+        "lapNumber": 2,
+        "time": 11000,
+        "valid": true,
+        "pit": false
+      }
+    ]
+  },
+  "historical": false,
+  "bundle": {
+    "format": "history-v1",
+    "provenance": {
+      "kind": "measured",
+      "evidence": "Original Timing crossing journal, captured configurations and saved reviewed classification.",
+      "missing": []
+    },
+    "race": {
+      "name": "Saved endurance",
+      "type": "endurance",
+      "startedAt": "1970-01-01T00:01:40.000Z",
+      "endedAt": "1970-01-01T00:02:01.000Z",
+      "track": {
+        "id": "track",
+        "name": "Club",
+        "lanes": [
+          {
+            "lane": 1,
+            "lengthM": 20
+          }
+        ]
+      },
+      "heats": [
+        {
+          "id": "heat-391552c099c101b131feaf24c5795a6a15bc8ec82015424e",
+          "name": "Heat 1",
+          "startedAtMs": 0,
+          "endedAtMs": 21000
+        }
+      ],
+      "participants": [
+        {
+          "id": "car-ea17e25c6c7aa6ef9407f976a670e87e37bc7e2a86b7bd4a",
+          "kind": "physical",
+          "carId": "car-a",
+          "configuration": {
+            "databaseId": "paddock-demo",
+            "carId": "car-a",
+            "kind": "current",
+            "configurationId": "b45e252a52522a0b267ac5b440533e42efb74f64796f06ca2e4b1578ca0ef13a",
+            "revision": "b45e252a52522a0b267ac5b440533e42efb74f64796f06ca2e4b1578ca0ef13a",
+            "carRevision": 1,
+            "capturedAt": "2026-10-31T10:00:00.000Z",
+            "technical": {
+              "motor": "21.5k",
+              "pinion": "9",
+              "gear": "27"
+            },
+            "components": [],
+            "signature": "a366a131cf225af3270996c907d8901c09b070435d11ee413e4f4325ed4a7e3a"
+          },
+          "displayName": "Captured car",
+          "teamId": "team-a",
+          "drivers": [
+            {
+              "id": "driver",
+              "name": "Driver"
+            },
+            {
+              "id": "relief",
+              "name": "Relief"
+            }
+          ],
+          "stints": [
+            {
+              "id": "stint-f3e3bb4f8c4ff257b37344f8a2e266133901b0bd5914ced9",
+              "heatId": "heat-391552c099c101b131feaf24c5795a6a15bc8ec82015424e",
+              "driverId": "driver",
+              "lane": 1,
+              "startedAtMs": 0,
+              "endedAtMs": 10500
+            },
+            {
+              "id": "stint-c190ae3b4d1fe976a3c5e78fdf1cc090c5ce6efd40fd6807",
+              "heatId": "heat-391552c099c101b131feaf24c5795a6a15bc8ec82015424e",
+              "driverId": "relief",
+              "lane": 1,
+              "startedAtMs": 10500,
+              "endedAtMs": 21000
+            }
+          ],
+          "laps": [
+            {
+              "id": "lap-44b4b57c89bf072e55ecd1818a13584fe2acf466dc8a3ef1",
+              "originLapId": "saved-0",
+              "stintId": "stint-f3e3bb4f8c4ff257b37344f8a2e266133901b0bd5914ced9",
+              "heatId": "heat-391552c099c101b131feaf24c5795a6a15bc8ec82015424e",
+              "driverId": "driver",
+              "lane": 1,
+              "number": 1,
+              "durationMs": 10000,
+              "endedAtMs": 10000,
+              "valid": true,
+              "pit": false,
+              "personalRecordEligible": true,
+              "trackRecordEligible": true,
+              "countsForDistance": true,
+              "distanceM": 20,
+              "flags": [],
+              "reason": ""
+            },
+            {
+              "id": "lap-99e3046d6a74fdb080347448ebbab9cc00d61309d835e83e",
+              "originLapId": "saved-1",
+              "stintId": "stint-c190ae3b4d1fe976a3c5e78fdf1cc090c5ce6efd40fd6807",
+              "heatId": "heat-391552c099c101b131feaf24c5795a6a15bc8ec82015424e",
+              "driverId": "relief",
+              "lane": 1,
+              "number": 2,
+              "durationMs": 11000,
+              "endedAtMs": 21000,
+              "valid": true,
+              "pit": false,
+              "personalRecordEligible": true,
+              "trackRecordEligible": true,
+              "countsForDistance": true,
+              "distanceM": 20,
+              "flags": [],
+              "reason": ""
+            }
+          ]
+        }
+      ]
+    },
+    "context": {
+      "savedAt": "2026-11-09T10:00:00.000Z",
+      "endedBy": null,
+      "resumed": null,
+      "weather": null,
+      "teams": [
+        {
+          "id": "team-a",
+          "name": "Endurance team"
+        }
+      ],
+      "classes": [],
+      "classification": [
+        {
+          "participantId": "car-ea17e25c6c7aa6ef9407f976a670e87e37bc7e2a86b7bd4a",
+          "scope": "overall",
+          "scopeId": null,
+          "classId": null,
+          "position": 1,
+          "status": "finished",
+          "laps": 2,
+          "elapsedMs": 21000,
+          "points": null,
+          "score": null,
+          "scoreUnit": null,
+          "gap": null,
+          "countedHeatIds": [],
+          "droppedHeatIds": [],
+          "incomplete": null,
+          "estimated": null,
+          "effects": []
+        }
+      ],
+      "systemChanges": [],
+      "scoringSnapshot": null,
+      "notes": "Saved reviewed classification. Adjustments are explanatory and must not be applied again. Unknown values stay unknown. "
+    }
+  }
+}

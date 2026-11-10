@@ -1,0 +1,300 @@
+{
+  "readRequest": {
+    "sourceId": "timing-test",
+    "carId": "main-car"
+  },
+  "cases": [
+    {
+      "name": "keep-main-by-default",
+      "main": {
+        "tyreCompound": "M",
+        "damageFactor": 2,
+        "serviceInterval": 500
+      },
+      "incoming": {
+        "tyreCompound": "SS",
+        "damageFactor": 0
+      },
+      "selected": {},
+      "response": {
+        "version": 1,
+        "databaseId": "merge-contract-fixture",
+        "recoveryId": "recovery-fixture",
+        "mergeRevision": 1,
+        "sourceId": "timing-test",
+        "carId": "main-car",
+        "bindingId": "companion-9c163a9de1f6802684ca7e810e226c154ac9c7449bbb1a6577243e8233505402",
+        "localCarId": "main-timing-car",
+        "revision": 1,
+        "bindingToken": "4cb1d27ed73306792976c061dc8feca78036be083484b3968aba8c0032d256ab",
+        "fields": {
+          "tyreCompound": "M",
+          "damageFactor": 2,
+          "serviceInterval": 500
+        },
+        "effective": {
+          "tyreCompound": "M",
+          "damageFactor": 2,
+          "failureFactor": 1,
+          "serviceInterval": 500
+        },
+        "provenance": {}
+      }
+    },
+    {
+      "name": "select-real-zero",
+      "main": {
+        "tyreCompound": "M",
+        "damageFactor": 2,
+        "serviceInterval": 500
+      },
+      "incoming": {
+        "damageFactor": 0
+      },
+      "selected": {
+        "damageFactor": 0
+      },
+      "response": {
+        "version": 1,
+        "databaseId": "merge-contract-fixture",
+        "recoveryId": "recovery-fixture",
+        "mergeRevision": 1,
+        "sourceId": "timing-test",
+        "carId": "main-car",
+        "bindingId": "companion-9c163a9de1f6802684ca7e810e226c154ac9c7449bbb1a6577243e8233505402",
+        "localCarId": "main-timing-car",
+        "revision": 1,
+        "bindingToken": "c258f6a9eb5d1c102ebe5f9ebddbdcaeaafcefddee704e8c75da663378491cb5",
+        "fields": {
+          "tyreCompound": "M",
+          "damageFactor": 0,
+          "serviceInterval": 500
+        },
+        "effective": {
+          "tyreCompound": "M",
+          "damageFactor": 0,
+          "failureFactor": 1,
+          "serviceInterval": 500
+        },
+        "provenance": {}
+      }
+    },
+    {
+      "name": "select-explicit-clear",
+      "main": {
+        "tyreCompound": "M",
+        "damageFactor": 2,
+        "serviceInterval": 500
+      },
+      "incoming": {
+        "damageFactor": null
+      },
+      "selected": {
+        "damageFactor": null
+      },
+      "response": {
+        "version": 1,
+        "databaseId": "merge-contract-fixture",
+        "recoveryId": "recovery-fixture",
+        "mergeRevision": 1,
+        "sourceId": "timing-test",
+        "carId": "main-car",
+        "bindingId": "companion-9c163a9de1f6802684ca7e810e226c154ac9c7449bbb1a6577243e8233505402",
+        "localCarId": "main-timing-car",
+        "revision": 1,
+        "bindingToken": "e3e404c772f56529fdc1aa9eb83715487fce9b19bb845f8fd1065da1b23f5d66",
+        "fields": {
+          "tyreCompound": "M",
+          "damageFactor": null,
+          "serviceInterval": 500
+        },
+        "effective": {
+          "tyreCompound": "M",
+          "damageFactor": 1,
+          "failureFactor": 1,
+          "serviceInterval": 500
+        },
+        "provenance": {}
+      }
+    },
+    {
+      "name": "missing-incoming-retains-main",
+      "main": {
+        "tyreCompound": "M",
+        "damageFactor": 2,
+        "serviceInterval": 500
+      },
+      "incoming": {},
+      "selected": {},
+      "response": {
+        "version": 1,
+        "databaseId": "merge-contract-fixture",
+        "recoveryId": "recovery-fixture",
+        "mergeRevision": 1,
+        "sourceId": "timing-test",
+        "carId": "main-car",
+        "bindingId": "companion-9c163a9de1f6802684ca7e810e226c154ac9c7449bbb1a6577243e8233505402",
+        "localCarId": "main-timing-car",
+        "revision": 1,
+        "bindingToken": "4cb1d27ed73306792976c061dc8feca78036be083484b3968aba8c0032d256ab",
+        "fields": {
+          "tyreCompound": "M",
+          "damageFactor": 2,
+          "serviceInterval": 500
+        },
+        "effective": {
+          "tyreCompound": "M",
+          "damageFactor": 2,
+          "failureFactor": 1,
+          "serviceInterval": 500
+        },
+        "provenance": {}
+      }
+    },
+    {
+      "name": "missing-both-uses-defaults",
+      "main": {},
+      "incoming": {},
+      "selected": {},
+      "response": {
+        "version": 1,
+        "databaseId": "merge-contract-fixture",
+        "recoveryId": "recovery-fixture",
+        "mergeRevision": 1,
+        "sourceId": "timing-test",
+        "carId": "main-car",
+        "bindingId": "companion-9c163a9de1f6802684ca7e810e226c154ac9c7449bbb1a6577243e8233505402",
+        "localCarId": "main-timing-car",
+        "revision": 1,
+        "bindingToken": "6436e1401b9f51f172920dac3439c7ffad07ec59e3d11143cc6defa2d9a9ef9c",
+        "fields": {},
+        "effective": {
+          "tyreCompound": "M",
+          "damageFactor": 1,
+          "failureFactor": 1,
+          "serviceInterval": null
+        },
+        "provenance": {}
+      }
+    },
+    {
+      "name": "preserve-unavailable-custom-tyre",
+      "main": {},
+      "incoming": {
+        "tyreCompound": "C_abc123"
+      },
+      "selected": {
+        "tyreCompound": "C_abc123"
+      },
+      "response": {
+        "version": 1,
+        "databaseId": "merge-contract-fixture",
+        "recoveryId": "recovery-fixture",
+        "mergeRevision": 1,
+        "sourceId": "timing-test",
+        "carId": "main-car",
+        "bindingId": "companion-9c163a9de1f6802684ca7e810e226c154ac9c7449bbb1a6577243e8233505402",
+        "localCarId": "main-timing-car",
+        "revision": 1,
+        "bindingToken": "f2ad35043fbb56a27961df041515b7db8b4f03d305a0bae9da52ea948a3e18dd",
+        "fields": {
+          "tyreCompound": "C_abc123"
+        },
+        "effective": {
+          "tyreCompound": "C_abc123",
+          "damageFactor": 1,
+          "failureFactor": 1,
+          "serviceInterval": null
+        },
+        "provenance": {}
+      }
+    }
+  ],
+  "writeRequest": {
+    "databaseId": "merge-contract-fixture",
+    "recoveryId": "recovery-fixture",
+    "operationId": "settings-patch-1",
+    "sourceId": "timing-test",
+    "carId": "main-car",
+    "action": "patch",
+    "expectedRevision": 1,
+    "expectedBindingToken": "4cb1d27ed73306792976c061dc8feca78036be083484b3968aba8c0032d256ab",
+    "set": {
+      "damageFactor": null,
+      "failureFactor": 0
+    }
+  },
+  "writeReceipt": {
+    "version": 1,
+    "databaseId": "merge-contract-fixture",
+    "recoveryId": "recovery-fixture",
+    "mergeRevision": 1,
+    "sourceId": "timing-test",
+    "carId": "main-car",
+    "bindingId": "companion-9c163a9de1f6802684ca7e810e226c154ac9c7449bbb1a6577243e8233505402",
+    "localCarId": "main-timing-car",
+    "revision": 2,
+    "bindingToken": "9266f49508474ca53f4f973a3474a40a7736c1d6291278f704df28ebd19f9c51",
+    "fields": {
+      "tyreCompound": "M",
+      "damageFactor": null,
+      "serviceInterval": 500,
+      "failureFactor": 0
+    },
+    "effective": {
+      "tyreCompound": "M",
+      "damageFactor": 1,
+      "failureFactor": 0,
+      "serviceInterval": 500
+    },
+    "provenance": {},
+    "duplicate": false
+  },
+  "retryReceipt": {
+    "version": 1,
+    "databaseId": "merge-contract-fixture",
+    "recoveryId": "recovery-fixture",
+    "mergeRevision": 1,
+    "sourceId": "timing-test",
+    "carId": "main-car",
+    "bindingId": "companion-9c163a9de1f6802684ca7e810e226c154ac9c7449bbb1a6577243e8233505402",
+    "localCarId": "main-timing-car",
+    "revision": 2,
+    "bindingToken": "9266f49508474ca53f4f973a3474a40a7736c1d6291278f704df28ebd19f9c51",
+    "fields": {
+      "tyreCompound": "M",
+      "damageFactor": null,
+      "serviceInterval": 500,
+      "failureFactor": 0
+    },
+    "effective": {
+      "tyreCompound": "M",
+      "damageFactor": 1,
+      "failureFactor": 0,
+      "serviceInterval": 500
+    },
+    "provenance": {},
+    "duplicate": true
+  },
+  "invalidPatches": [
+    {
+      "tyreCompound": null
+    },
+    {
+      "damageFactor": -1
+    },
+    {
+      "serviceInterval": 0
+    },
+    {
+      "serviceInterval": 1.5
+    }
+  ],
+  "expectedErrors": [
+    "SOURCE_MISMATCH",
+    "REVISION_CONFLICT",
+    "RECOVERY_CHANGED",
+    "CAR_MERGED",
+    "MERGE_SETTINGS_REQUIRED"
+  ]
+}

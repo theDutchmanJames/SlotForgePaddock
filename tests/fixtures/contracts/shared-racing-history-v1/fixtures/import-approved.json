@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "databaseId": "paddock-demo",
+  "recoveryId": "recovery-example-1",
+  "operationId": "import-batch-1",
+  "requestHash": "bc0eaa1f6298fd976eed5935c3d021ec120ca50f742ca9fb5355a95df43e4469",
+  "items": [
+    {
+      "itemId": "item-1",
+      "sourceId": "timing-original-installation",
+      "sessionId": "historical-session-1",
+      "status": "approved",
+      "accepted": {
+        "revision": 1,
+        "contentHash": "8b7734bfb721234299b2ecb8d0eb219c6f6310d642d65ce9174619830eb08a96",
+        "state": "active"
+      },
+      "message": "Accepted after review"
+    }
+  ]
+}

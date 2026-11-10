@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "databaseId": "paddock-demo",
+  "recoveryId": "recovery-example-1",
+  "uploadId": "upload-example-1",
+  "cancelled": true
+}

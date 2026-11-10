@@ -116,7 +116,7 @@ test('HTTP retry after server and store restart preserves session and withdrawal
   assert.equal((await send(f.normal)).body.duplicate,false);await network.stop();network=new Network(new Store(f.store.file));await network.start();assert.equal((await send(f.normal)).body.duplicate,true);assert.equal((await send(f.withdrawal)).status,200);await network.stop();network=new Network(new Store(f.store.file));await network.start();assert.equal((await send(f.normal)).body.code,'STALE_REVISION');
 });
 test('published schema, example requests and receipts match the executable contract',()=>{
-  const root=path.join(__dirname,'..','integration-handoff','timing-v1'),read=name=>JSON.parse(fs.readFileSync(path.join(root,name),'utf8'));
+  const root=path.join(__dirname,'fixtures','contracts','timing-v1'),read=name=>JSON.parse(fs.readFileSync(path.join(root,name),'utf8'));
   assert.deepEqual(read('timing-v1.schema.json'),contract.schema);const s=new Store();s.data=migrate(read('fixtures/demo-database.json'));
   for(const file of ['profile-car-a','profile-car-b']){const p=read('fixtures/'+file+'.json');contract.validate(p,contract.schema.$defs.profile);integration.verifyConfiguration(s.data,p.car.id,p.configuration);}
   for(const file of ['normal','multi-heat','endurance','correction','withdrawal'])integration.receive(s,read('fixtures/'+file+'.json'));

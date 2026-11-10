@@ -20,7 +20,9 @@ function readSession(r,source,id,lapsOnly){
  // Lap pages do not reconstruct every driver's configuration/stint metadata.
  const projection=lapsOnly?`json_object('contentHash',json_extract(json,'$.contentHash'),'receivedAt',json_extract(json,'$.receivedAt'),'warnings',json_extract(json,'$.warnings'),
  'payload',json_object('state',json_extract(json,'$.payload.state'),'participants',(SELECT json_group_array(json_object('id',json_extract(p.value,'$.id'))) FROM json_each(query_sessions.json,'$.payload.participants') p)))`:`json_remove(json,'$._query.runs')`;
- return r.db.prepare('SELECT key,'+projection+' json FROM query_sessions WHERE source=? AND session=?').get(source,id);
+ const row=r.db.prepare("SELECT key,json_extract(json,'$.format') format,"+projection+' json FROM query_sessions WHERE source=? AND session=?').get(source,id);
+ if(row?.format==='history-v1')fail('RESULT_REQUIRES_SHARED_HISTORY','Read this session through the shared-history API.',409);
+ return row;
 }
 function bounded(value){if(Buffer.byteLength(JSON.stringify(value))>MAX)fail('RESPONSE_TOO_LARGE','This response exceeds the supported 8 MiB limit. Use the existing v1 session endpoint where supported.',413);return value;}
 function changes(r,url){

@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "format",
+    "version",
+    "libraryKey",
+    "databaseId",
+    "name",
+    "profile",
+    "executable",
+    "args"
+  ],
+  "properties": {
+    "format": {
+      "const": "slotforge-local-library-launcher"
+    },
+    "version": {
+      "const": 1
+    },
+    "libraryKey": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "databaseId": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9_-]{1,100}$"
+    },
+    "name": {
+      "type": "string"
+    },
+    "profile": {
+      "type": "string"
+    },
+    "executable": {
+      "type": "string"
+    },
+    "args": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "maxItems": 2
+    }
+  },
+  "$comment": "Schema does not authorize launching. Validate same-user ownership, private ACL/mode, no redirection, absolute existing executable, exact argv and the selected library identity."
+}

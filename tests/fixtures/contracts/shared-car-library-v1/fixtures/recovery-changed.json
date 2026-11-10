@@ -1,0 +1,7 @@
+{
+  "error": "This library was restored or replaced. Reconcile pending operations; do not automatically resubmit with a new recovery identifier.",
+  "code": "RECOVERY_CHANGED",
+  "details": {
+    "recoveryId": "abd9d186-403a-474a-91c3-a39d39952eca"
+  }
+}

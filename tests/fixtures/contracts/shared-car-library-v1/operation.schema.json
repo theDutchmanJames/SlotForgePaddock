@@ -1,0 +1,276 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SlotForge trusted local shared-car operation v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "databaseId",
+    "recoveryId",
+    "sourceId",
+    "operationId",
+    "action"
+  ],
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "databaseId": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9_-]{1,100}$"
+    },
+    "recoveryId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "sourceId": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9_-]{1,100}$"
+    },
+    "operationId": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9_-]{1,100}$"
+    },
+    "action": {
+      "enum": [
+        "create",
+        "patch",
+        "archive",
+        "restore"
+      ]
+    },
+    "carId": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9_-]{1,100}$"
+    },
+    "expectedRevision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "set": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "maxLength": 200,
+          "minLength": 1
+        },
+        "maker": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "marque": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "model": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "reference": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "scale": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "number": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "livery": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "raceClass": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "availability": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "motor": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "motorLayout": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "rearTyres": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "frontTyres": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "guide": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "braids": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "chassis": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "body": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "pod": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "pinion": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000
+        },
+        "gear": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000
+        },
+        "weight": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "rearDiameter": {
+          "type": "number",
+          "minimum": 0.001,
+          "maximum": 1000
+        },
+        "frontDiameter": {
+          "type": "number",
+          "minimum": 0.001,
+          "maximum": 1000
+        },
+        "ratedRpm": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "ratedVoltage": {
+          "type": "number",
+          "minimum": 0.001,
+          "maximum": 1000
+        }
+      },
+      "additionalProperties": false
+    },
+    "clear": {
+      "type": "array",
+      "maxItems": 26,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "maker",
+          "marque",
+          "model",
+          "reference",
+          "scale",
+          "number",
+          "livery",
+          "raceClass",
+          "availability",
+          "motor",
+          "motorLayout",
+          "rearTyres",
+          "frontTyres",
+          "guide",
+          "braids",
+          "chassis",
+          "body",
+          "pod",
+          "pinion",
+          "gear",
+          "weight",
+          "rearDiameter",
+          "frontDiameter",
+          "ratedRpm",
+          "ratedVoltage"
+        ]
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "create"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "set"
+        ],
+        "properties": {
+          "set": {
+            "required": [
+              "name"
+            ]
+          }
+        },
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "carId"
+              ]
+            },
+            {
+              "required": [
+                "expectedRevision"
+              ]
+            }
+          ]
+        }
+      },
+      "else": {
+        "required": [
+          "carId",
+          "expectedRevision"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "enum": [
+              "archive",
+              "restore"
+            ]
+          }
+        }
+      },
+      "then": {
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "set"
+              ]
+            },
+            {
+              "required": [
+                "clear"
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "$comment": "The host additionally checks nonblank names, set/clear overlap, meaningful patches, revisions, installed components, database and recovery identity."
+}

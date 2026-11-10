@@ -1,3 +1,4 @@
+// Explicit legacy proposals remain supported; routine-save policy is covered in routine-dealership.test.cjs.
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path');
 const {Store,migrate}=require('../src/store.cjs'),{Network}=require('../src/network.cjs'),{Club}=require('../src/club.cjs'),M=require('../src/club-model.cjs');
 function fixture(t){const root=fs.mkdtempSync(path.join(os.tmpdir(),'paddock-club-'));const instances=[];t.after(async()=>{for(const x of instances){x.club.close();await x.net.stop();x.net.close();}fs.rmSync(root,{recursive:true,force:true});});return function instance(name){const dir=path.join(root,name),store=new Store(path.join(dir,'database.json'));store.mutate('car.save',{data:{name:name+' car',technical:{motor:'21.5k'}}});const net=new Network(store),club=new Club(store,net,dir);const out={dir,store,net,club};instances.push(out);return out;};}
@@ -28,12 +29,12 @@ test('incoming stock overrides on the dealership persist and replicate returned 
  h.store.mutate('part.install',{carId,partId,quantity:2,field:'rearTyres'});
  const pack=require('../src/store.cjs').makePackage(h.store.data,[carId]);pack.cars[0].technical={rearTyres:'Imported tyres',motor:'Unselected motor'};
  const id=h.store.mutate('submission.add',{package:pack}).result,a=make('Stock laptop');await join(h,a);
- await h.club.mutate('submission.review',{id,carId,decision:'accept',revision:h.store.data.cars[0].revision,fields:['technical.rearTyres'],stockOverrides:['rearTyres']});
+ await h.club.propose('submission.review',{id,carId,decision:'accept',revision:h.store.data.cars[0].revision,fields:['technical.rearTyres'],stockOverrides:['rearTyres']});
  await until(()=>a.club.cache.data.cars[0].technical.rearTyres==='Imported tyres');
  const saved=new Store(h.store.file).data;assert.equal(saved.cars[0].technical.motor,'21.5k');assert.equal(saved.installations.filter(i=>!i.removed).length,0);assert.equal(saved.parts.find(p=>p.sourcePartId===partId).quantity,2);assert.deepEqual(a.club.cache.data.parts,saved.parts);assert.deepEqual(a.club.cache.data.installations,saved.installations);
 });
 test('schema 10 migrates safely; club proposals remain private in public exports',()=>{const old=new Store().snapshot();old.schema=10;delete old.club;const next=migrate(old);assert.equal(next.schema,11);assert.equal(next.club,null);assert.equal(old.club,undefined);});
-test('dealership computer edits queue; approval is atomic, durable and cannot be replayed',async t=>{const {h}=await host(t),id=h.store.data.cars[0].id;const result=await h.club.mutate('car.save',{id,revision:1,data:{technical:{motor:'25k'}}});assert.equal(result.queued,true);assert.equal(h.store.data.cars[0].technical.motor,'21.5k');const q=h.store.data.club.proposals[0];approve(h.club,q.id);assert.equal(h.store.data.cars[0].technical.motor,'25k');assert.equal(new Store(h.store.file).data.club.proposals[0].status,'accepted');assert.throws(()=>approve(h.club,q.id),/already/);});
+test('dealership computer edits queue; approval is atomic, durable and cannot be replayed',async t=>{const {h}=await host(t),id=h.store.data.cars[0].id;const result=await h.club.propose('car.save',{id,revision:1,data:{technical:{motor:'25k'}}});assert.equal(result.queued,true);assert.equal(h.store.data.cars[0].technical.motor,'21.5k');const q=h.store.data.club.proposals[0];approve(h.club,q.id);assert.equal(h.store.data.cars[0].technical.motor,'25k');assert.equal(new Store(h.store.file).data.club.proposals[0].status,'accepted');assert.throws(()=>approve(h.club,q.id),/already/);});
 
 test('research approvals persist and replicate classification and uncertainty without resending photos',async t=>{
  const {h,make}=await host(t),id=h.store.data.cars[0].id;
@@ -41,23 +42,23 @@ test('research approvals persist and replicate classification and uncertainty wi
  h.store.mutate('car.save',{id,revision:1,data:{realHistory:{photos:[photo]}}});
  const a=make('Research laptop');await join(h,a);const c=a.club.cache.data.cars[0],research=require('../renderer/history-research-model.js');
  const history=research.textHistory(c.realHistory);Object.assign(history,{classification:'Real Racing Car',team:'Team',sources:[{title:'Race',url:'https://example.org'}],evidence:[{field:'team',method:'external-file',sourceUrls:['https://example.org'],uncertainty:'Check spelling'}]});
- await a.club.mutate('car.save',{id,revision:c.revision,data:{realHistory:history}});const q=h.store.data.club.proposals[0];assert.equal(q.payload.data.realHistory.photos,undefined);assert.ok(h.club.preview(q.id).changes.some(r=>r.field.endsWith('classification')&&r.after==='Real Racing Car'));approve(h.club,q.id);
+ await a.club.propose('car.save',{id,revision:c.revision,data:{realHistory:history}});const q=h.store.data.club.proposals[0];assert.equal(q.payload.data.realHistory.photos,undefined);assert.ok(h.club.preview(q.id).changes.some(r=>r.field.endsWith('classification')&&r.after==='Real Racing Car'));approve(h.club,q.id);
  await until(()=>a.club.cache.data.cars[0].realHistory.classification==='Real Racing Car');const saved=new Store(h.store.file).data.cars[0].realHistory;assert.deepEqual(saved.photos,[photo]);assert.equal(saved.evidence[0].uncertainty,'Check spelling');assert.deepEqual(a.club.cache.data.cars[0].realHistory,saved);
 });
-test('simultaneous edits need a new current comparison and explicit conflict confirmation',async t=>{const {h}=await host(t),id=h.store.data.cars[0].id;await h.club.mutate('car.save',{id,revision:1,data:{technical:{motor:'25k'}}});const a=h.store.data.club.proposals[0].id;await h.club.mutate('car.save',{id,revision:1,data:{technical:{motor:'30k'}}});const b=h.store.data.club.proposals[0].id,old=h.club.preview(b);approve(h.club,a);assert.throws(()=>h.club.review({id:b,token:old.token,decision:'accept',confirmConflict:true}),/changed again/);const p=h.club.preview(b);assert.equal(p.conflict,true);assert.ok(p.changes.some(r=>r.before==='25k'&&r.after==='30k'));assert.throws(()=>approve(h.club,b),/confirm/);approve(h.club,b,true);assert.equal(h.store.data.cars[0].technical.motor,'30k');});
-test('approval revalidates stock and never partially installs unavailable inventory',async t=>{const {h}=await host(t);h.store.mutate('part.save',{data:{name:'Only motor',quantity:1,tracking:'quantity'}});h.store.mutate('car.save',{data:{name:'Second'}});const partId=h.store.data.parts[0].id;for(const c of h.store.data.cars)await h.club.mutate('part.install',{carId:c.id,partId,quantity:1,field:'motor'});const [a,b]=h.store.data.club.proposals;approve(h.club,a.id);const before=h.store.snapshot(),p=h.club.preview(b.id);assert.match(p.error,/stock|quantity/i);assert.throws(()=>approve(h.club,b.id,true),/stock|quantity/i);assert.deepEqual(h.store.data,before);});
-test('save failure leaves proposal pending and car unchanged',async t=>{const {h}=await host(t);await h.club.mutate('car.save',{id:h.store.data.cars[0].id,revision:1,data:{name:'Changed'}});const before=h.store.snapshot(),save=h.store.persist;h.store.persist=()=>{throw Error('disk full');};assert.throws(()=>approve(h.club,h.store.data.club.proposals[0].id),/disk full/);assert.deepEqual(h.store.data,before);h.store.persist=save;});
-test('three computers share approved changes by push; personal collections remain separate',async t=>{const {h,make}=await host(t),a=make('Personal'),b=make('Laptop');const personal=a.store.snapshot();await join(h,a);await join(h,b);assert.equal(a.club.state,'connected');assert.equal(a.club.cache.data.club.replica,true);assert.equal(a.club.cache.data.timing.key,null);const n=h.store.data.catalogueRevision;assert.equal(a.club.cache.data.catalogueRevision,n);const id=a.club.cache.data.cars[0].id;await a.club.mutate('car.save',{id,revision:1,data:{name:'Shared Lexus'}});await until(()=>b.club.cache.data.club.proposals.length===1);assert.equal(b.club.cache.data.catalogueRevision,n);assert.equal(b.club.cache.data.cars[0].name,'Club car');approve(h.club,h.store.data.club.proposals[0].id);await until(()=>b.club.cache.data.cars[0].name==='Shared Lexus');await until(()=>a.club.cache.data.cars[0].name==='Shared Lexus');assert.equal(h.store.data.catalogueRevision,n+1);assert.equal(a.club.cache.data.catalogueRevision,n+1);assert.equal(b.club.cache.data.catalogueRevision,n+1);assert.deepEqual(a.store.data,personal);assert.throws(()=>a.club.assertHost(),/cannot host/);assert.throws(()=>a.club.preview(h.store.data.club.proposals[0].id),/dealership computer/);});
-test('outdated reconnect requires confirmed replacement with a recoverable backup',async t=>{const {h,make}=await host(t),a=make('Personal');await join(h,a);a.club.disconnect();const old=a.club.cache.snapshot();h.store.mutate('car.save',{id:h.store.data.cars[0].id,revision:1,data:{name:'Latest'}});h.store.replace(h.store.snapshot());await join(h,a);assert.equal(a.club.state,'outdated');assert.deepEqual(a.club.cache.data,old);await assert.rejects(a.club.mutate('car.save',{data:{name:'Offline'}}),/out of date/);await assert.rejects(a.club.update(old.revision),/changed/);await a.club.update(h.store.data.revision);assert.equal(a.club.cache.data.cars[0].name,'Latest');const stage=path.join(a.dir,'verify-backup.sqlite');require('../src/portable-backup.cjs').stageBackup(a.club.backupPath,stage);assert.deepEqual(new Store(stage).data,old);assert.equal(a.store.data.cars[0].name,'Personal car');});
+test('simultaneous edits need a new current comparison and explicit conflict confirmation',async t=>{const {h}=await host(t),id=h.store.data.cars[0].id;await h.club.propose('car.save',{id,revision:1,data:{technical:{motor:'25k'}}});const a=h.store.data.club.proposals[0].id;await h.club.propose('car.save',{id,revision:1,data:{technical:{motor:'30k'}}});const b=h.store.data.club.proposals[0].id,old=h.club.preview(b);approve(h.club,a);assert.throws(()=>h.club.review({id:b,token:old.token,decision:'accept',confirmConflict:true}),/changed again/);const p=h.club.preview(b);assert.equal(p.conflict,true);assert.ok(p.changes.some(r=>r.before==='25k'&&r.after==='30k'));assert.throws(()=>approve(h.club,b),/confirm/);approve(h.club,b,true);assert.equal(h.store.data.cars[0].technical.motor,'30k');});
+test('approval revalidates stock and never partially installs unavailable inventory',async t=>{const {h}=await host(t);h.store.mutate('part.save',{data:{name:'Only motor',quantity:1,tracking:'quantity'}});h.store.mutate('car.save',{data:{name:'Second'}});const partId=h.store.data.parts[0].id;for(const c of h.store.data.cars)await h.club.propose('part.install',{carId:c.id,partId,quantity:1,field:'motor'});const [a,b]=h.store.data.club.proposals;approve(h.club,a.id);const before=h.store.snapshot(),p=h.club.preview(b.id);assert.match(p.error,/stock|quantity/i);assert.throws(()=>approve(h.club,b.id,true),/stock|quantity/i);assert.deepEqual(h.store.data,before);});
+test('save failure leaves proposal pending and car unchanged',async t=>{const {h}=await host(t);await h.club.propose('car.save',{id:h.store.data.cars[0].id,revision:1,data:{name:'Changed'}});const before=h.store.snapshot(),save=h.store.persist;h.store.persist=()=>{throw Error('disk full');};assert.throws(()=>approve(h.club,h.store.data.club.proposals[0].id),/disk full/);assert.deepEqual(h.store.data,before);h.store.persist=save;});
+test('three computers share approved changes by push; personal collections remain separate',async t=>{const {h,make}=await host(t),a=make('Personal'),b=make('Laptop');const personal=a.store.snapshot();await join(h,a);await join(h,b);assert.equal(a.club.state,'connected');assert.equal(a.club.cache.data.club.replica,true);assert.equal(a.club.cache.data.timing.key,null);const n=h.store.data.catalogueRevision;assert.equal(a.club.cache.data.catalogueRevision,n);const id=a.club.cache.data.cars[0].id;await a.club.propose('car.save',{id,revision:1,data:{name:'Shared Lexus'}});await until(()=>b.club.cache.data.club.proposals.length===1);assert.equal(b.club.cache.data.catalogueRevision,n);assert.equal(b.club.cache.data.cars[0].name,'Club car');approve(h.club,h.store.data.club.proposals[0].id);await until(()=>b.club.cache.data.cars[0].name==='Shared Lexus');await until(()=>a.club.cache.data.cars[0].name==='Shared Lexus');assert.equal(h.store.data.catalogueRevision,n+1);assert.equal(a.club.cache.data.catalogueRevision,n+1);assert.equal(b.club.cache.data.catalogueRevision,n+1);assert.deepEqual(a.store.data,personal);assert.throws(()=>a.club.assertHost(),/cannot host/);assert.throws(()=>a.club.preview(h.store.data.club.proposals[0].id),/dealership computer/);});
+test('outdated reconnect requires confirmed replacement with a recoverable backup',async t=>{const {h,make}=await host(t),a=make('Personal');await join(h,a);a.club.disconnect();const old=a.club.cache.snapshot();h.store.mutate('car.save',{id:h.store.data.cars[0].id,revision:1,data:{name:'Latest'}});h.store.replace(h.store.snapshot());await join(h,a);assert.equal(a.club.state,'outdated');assert.deepEqual(a.club.cache.data,old);await assert.rejects(a.club.propose('car.save',{data:{name:'Offline'}}),/out of date/);await assert.rejects(a.club.update(old.revision),/changed/);await a.club.update(h.store.data.revision);assert.equal(a.club.cache.data.cars[0].name,'Latest');const stage=path.join(a.dir,'verify-backup.sqlite');require('../src/portable-backup.cjs').stageBackup(a.club.backupPath,stage);assert.deepEqual(new Store(stage).data,old);assert.equal(a.store.data.cars[0].name,'Personal car');});
 test('Dealership password, database identity and Origin checks protect private snapshots',async t=>{const {h}=await host(t);async function get(code,headers={}){return fetch('http://'+h.address+'/v1/club/snapshot',{headers:{Authorization:'Bearer '+code,'X-SlotForge-Database':h.store.data.id,...headers}});}assert.equal((await get(h.net.code)).status,401);assert.equal((await get(h.net.browseCode)).status,401);assert.equal((await get(h.net.timingCode)).status,401);assert.equal((await get(h.net.clubCode,{'X-SlotForge-Database':'wrong'})).status,409);assert.equal((await get(h.net.clubCode,{Origin:'http://example.test'})).status,403);const data=await (await get(h.net.clubCode)).json();assert.equal(data.id,h.store.data.id);assert.equal(data.timing.key,null);});
-test('uncertain delivery retries the same durable proposal without duplicates across restart',async t=>{const {h,make}=await host(t),a=make('Personal');await join(h,a);const request=a.club.request.bind(a.club);a.club.request=async(route,body)=>{const r=await request(route,body);if(route.endsWith('/proposals'))throw Error('lost acknowledgement');return r;};await a.club.mutate('car.save',{id:a.club.cache.data.cars[0].id,revision:1,data:{name:'Once'}});assert.equal(a.club.device.outbox.length,1);assert.equal(h.store.data.club.proposals.length,1);const saved=readOutbox(a);assert.equal(saved.length,1);a.club.request=request;await a.club.sendOutbox();assert.equal(a.club.device.outbox.length,0);assert.equal(h.store.data.club.proposals.length,1);const input=saved[0];const original=h.club.receive(input);assert.equal(original.duplicate,true);assert.throws(()=>h.club.receive({...input,device:'Other'}),/different content/);approve(h.club,input.id);assert.equal(h.club.receive(input).status,'accepted');assert.equal(new Store(h.store.file).data.club.proposals[0].status,'accepted');});
+test('uncertain delivery retries the same durable proposal without duplicates across restart',async t=>{const {h,make}=await host(t),a=make('Personal');await join(h,a);const request=a.club.request.bind(a.club);a.club.request=async(route,body)=>{const r=await request(route,body);if(route.endsWith('/proposals'))throw Error('lost acknowledgement');return r;};await a.club.propose('car.save',{id:a.club.cache.data.cars[0].id,revision:1,data:{name:'Once'}});assert.equal(a.club.device.outbox.length,1);assert.equal(h.store.data.club.proposals.length,1);const saved=readOutbox(a);assert.equal(saved.length,1);a.club.request=request;await a.club.sendOutbox();assert.equal(a.club.device.outbox.length,0);assert.equal(h.store.data.club.proposals.length,1);const input=saved[0];const original=h.club.receive(input);assert.equal(original.duplicate,true);assert.throws(()=>h.club.receive({...input,device:'Other'}),/different content/);approve(h.club,input.id);assert.equal(h.club.receive(input).status,'accepted');assert.equal(new Store(h.store.file).data.club.proposals[0].status,'accepted');});
 function readOutbox(a){return JSON.parse(fs.readFileSync(a.club.file)).outbox;}
 
 test('approving an already received car package still advances and replicates the review decision',async t=>{
  const {h,make}=await host(t),a=make('Personal');await join(h,a);
  const donor=new Store(),id=donor.mutate('car.save',{data:{name:'Imported once'}}).result;
  const pack=require('../src/store.cjs').makePackage(donor.data,[id]);
- await h.club.mutate('submission.add',{package:pack});await h.club.mutate('submission.add',{package:pack});
+ await h.club.propose('submission.add',{package:pack});await h.club.propose('submission.add',{package:pack});
  const [first,second]=h.store.data.club.proposals;approve(h.club,first.id);
  const revision=h.store.data.revision;approve(h.club,second.id,true);
  assert.equal(h.store.data.revision,revision+1);assert.equal(h.store.data.submissions.length,1);
@@ -68,10 +69,10 @@ test('approving an already received car package still advances and replicates th
 test('failed outbox saves cannot enqueue an unpersisted proposal or forget an acknowledged one',async t=>{
  const {h,make}=await host(t),a=make('Personal');await join(h,a);
  const save=a.club.saveDevice.bind(a.club);a.club.saveDevice=()=>{throw Error('disk full');};
- await assert.rejects(a.club.mutate('car.save',{data:{name:'Not durable'}}),/disk full/);
+ await assert.rejects(a.club.propose('car.save',{data:{name:'Not durable'}}),/disk full/);
  assert.equal(a.club.device.outbox.length,0);assert.equal(h.store.data.club.proposals.length,0);
  a.club.saveDevice=save;const request=a.club.request.bind(a.club);
- a.club.request=async()=>{throw Error('offline');};await a.club.mutate('car.save',{data:{name:'Keep retry'}});
+ a.club.request=async()=>{throw Error('offline');};await a.club.propose('car.save',{data:{name:'Keep retry'}});
  assert.equal(readOutbox(a).length,1);a.club.request=request;a.club.saveDevice=()=>{throw Error('disk full');};
  await a.club.sendOutbox();assert.equal(h.store.data.club.proposals.length,1);
  assert.equal(a.club.device.outbox.length,1);assert.equal(readOutbox(a).length,1);
@@ -80,7 +81,7 @@ test('failed outbox saves cannot enqueue an unpersisted proposal or forget an ac
 
 test('an unrelated or malformed successful response cannot acknowledge an outbox proposal',async t=>{
  const {h,make}=await host(t),a=make('Personal');await join(h,a);const request=a.club.request.bind(a.club);
- a.club.request=async()=>({});await a.club.mutate('car.save',{data:{name:'Needs receipt'}});
+ a.club.request=async()=>({});await a.club.propose('car.save',{data:{name:'Needs receipt'}});
  assert.equal(a.club.device.outbox.length,1);
  for(const reply of [{id:'wrong',status:'pending'},{id:a.club.device.outbox[0].id,status:'unknown'}]){
   a.club.request=async()=>reply;await a.club.sendOutbox();assert.equal(a.club.device.outbox.length,1);
@@ -106,7 +107,7 @@ test('a failed initial snapshot does not strand the computer paired with an unus
 
 test('a failed explicit outbox discard keeps the retry list in memory and on disk',async t=>{
  const {h,make}=await host(t),a=make('Personal');await join(h,a);
- a.club.request=async()=>{throw Error('offline');};await a.club.mutate('car.save',{data:{name:'Retain on failure'}});
+ a.club.request=async()=>{throw Error('offline');};await a.club.propose('car.save',{data:{name:'Retain on failure'}});
  a.club.saveDevice=()=>{throw Error('disk full');};assert.throws(()=>a.club.discardOutbox(),/disk full/);
  assert.equal(a.club.device.outbox.length,1);assert.equal(readOutbox(a).length,1);
  assert.equal(JSON.parse(fs.readFileSync(a.club.backupPath)).proposals.length,1);
@@ -160,7 +161,7 @@ test('outdated copies cannot re-host even if restored as a local database',async
 test('complete car forms keep only changed fields and omit unchanged photographs',async t=>{
  const {h}=await host(t),car=h.store.data.cars[0];car.picture='data:image/png;base64,iVBORw0KGgo=';
  const full={name:car.name,picture:car.picture,technical:{...car.technical,gear:'27'}};
- await h.club.mutate('car.save',{id:car.id,revision:car.revision,data:full});
+ await h.club.propose('car.save',{id:car.id,revision:car.revision,data:full});
  const proposal=h.store.data.club.proposals[0];assert.deepEqual(proposal.payload.data,{technical:{gear:'27'}});
  h.store.mutate('car.save',{id:car.id,revision:car.revision,data:{name:'Latest name'}});approve(h.club,proposal.id,true);
  assert.equal(h.store.data.cars[0].name,'Latest name');assert.equal(h.store.data.cars[0].technical.gear,'27');
@@ -194,7 +195,7 @@ test('full refresh invalidates an in-flight delta before replacing the cache',as
 test('club copy and unsent outbox survive an app restart with the remembered password',async t=>{
  const {h,make}=await host(t),a=make('Personal');await join(h,a);
  const request=a.club.request.bind(a.club);a.club.request=async(route,body)=>{const value=await request(route,body);if(route.endsWith('/proposals'))throw Error('lost response');return value;};
- await a.club.mutate('car.save',{id:a.club.cache.data.cars[0].id,revision:1,data:{name:'Retry after restart'}});
+ await a.club.propose('car.save',{id:a.club.cache.data.cars[0].id,revision:1,data:{name:'Retry after restart'}});
  a.club.close();a.club=new Club(a.store,a.net,a.dir);assert.equal(a.club.device.outbox.length,1);assert.equal(a.club.code,h.net.clubCode);
  assert.equal(a.club.device.pair.password,h.net.clubCode);assert.equal(a.club.active,false);
  a.club.switch(true);assert.equal(a.club.state,'offline');await a.club.connect({address:h.address,name:'Laptop'});await a.club.sendOutbox();assert.equal(h.store.data.club.proposals.length,1);
@@ -204,7 +205,7 @@ test('club copy and unsent outbox survive an app restart with the remembered pas
 test('discarding unsent proposals saves a recovery copy without withdrawing a received proposal',async t=>{
  const {h,make}=await host(t),a=make('Personal');await join(h,a);const request=a.club.request.bind(a.club);
  a.club.request=async(route,body)=>{const r=await request(route,body);if(route.endsWith('/proposals'))throw Error('lost response');return r;};
- await a.club.mutate('car.save',{data:{name:'Possibly received'}});assert.throws(()=>a.club.leave(),/Retry/);
+ await a.club.propose('car.save',{data:{name:'Possibly received'}});assert.throws(()=>a.club.leave(),/Retry/);
  a.club.discardOutbox();assert.equal(JSON.parse(fs.readFileSync(a.club.backupPath)).proposals.length,1);assert.equal(h.store.data.club.proposals[0].status,'pending');
  a.club.leave();assert.equal(a.club.active,false);assert.equal(a.store.data.cars[0].name,'Personal car');
 });
@@ -241,8 +242,49 @@ test('password rotation closes existing push streams and reconnect remembers the
 
 test('metadata review baselines negotiate explicitly and legacy pending reviews remain overridable',async t=>{
  const {h,make}=await host(t),a=make('Baseline laptop');await join(h,a);assert.equal(a.club.device.pair.reviewBaseline,1);
- await a.club.mutate('work.add',{carId:a.club.cache.data.cars[0].id,type:'maintenance',title:'Negotiated baseline'},{snapshot:false});const proposal=h.store.data.club.proposals[0];assert.equal(proposal.baselineVersion,1);assert.equal(h.club.preview(proposal.id).conflict,false);approve(h.club,proposal.id);
+ await a.club.propose('work.add',{carId:a.club.cache.data.cars[0].id,type:'maintenance',title:'Negotiated baseline'},{snapshot:false});const proposal=h.store.data.club.proposals[0];assert.equal(proposal.baselineVersion,1);assert.equal(h.club.preview(proposal.id).conflict,false);approve(h.club,proposal.id);
  const input={id:'legacy-pending',databaseId:h.store.data.id,clubId:h.store.data.club.id,sourceId:'old-laptop',device:'Old laptop',action:'work.add',payload:{carId:h.store.data.cars[0].id,type:'maintenance',title:'Legacy work'},base:M.digest(h.store.data),original:[]};h.club.receive(input);assert.equal(h.club.preview(input.id).conflict,false);
  const encoding=require('../src/json-encoding.cjs'),size=encoding.byteLength;encoding.byteLength=(value,...rest)=>value===h.store.data?221*1024*1024:size(value,...rest);try{const preview=h.club.preview(input.id);assert.equal(preview.conflict,true);assert.equal(preview.error,'');assert.throws(()=>h.club.review({id:input.id,token:preview.token,decision:'accept'}),/confirm/);h.club.review({id:input.id,token:preview.token,decision:'accept',confirmConflict:true});assert.equal(h.store.data.club.proposals.find(p=>p.id===input.id).status,'accepted');}finally{encoding.byteLength=size;}
  assert.throws(()=>M.command({...input,baselineVersion:2}),/baseline/i);
+});
+
+test('workshop category edits are reviewed, persisted and pushed without changing configuration',async t=>{
+ const {h,make}=await host(t),carId=h.store.data.cars[0].id;
+ const id=h.store.mutate('job.start',{revision:h.store.data.revision,kind:'general',carId,name:'Service',notes:'Plan',category:'maintenance'}).result;
+ const a=make('Workshop laptop');await join(h,a);const before=h.store.snapshot().cars;
+ await a.club.propose('job.edit',{id,revision:a.club.cache.data.revision,name:'Service',notes:'Plan',category:'motor'});
+ assert.equal(h.store.data.jobs[0].category,'maintenance');const proposal=h.store.data.club.proposals[0];assert.ok(h.club.preview(proposal.id).changes.some(r=>r.after==='motor'));approve(h.club,proposal.id);
+ await until(()=>a.club.cache.data.jobs[0].category==='motor');assert.equal(new Store(h.store.file).data.jobs[0].category,'motor');assert.deepEqual(h.store.snapshot().cars,before);
+});
+
+test('guide uploads, metadata edits and removal are reviewed and replicated without changing personal libraries',async t=>{
+ const {h,make}=await host(t),a=make('Guide laptop');await join(h,a);const personal=a.store.snapshot(),bytes=Buffer.from('%PDF-1.4\nManual\n%%EOF'),document={name:'manual.pdf',mime:'application/pdf',size:bytes.length,data:bytes.toString('base64')};
+ await a.club.propose('guide.add',{revision:a.club.cache.data.revision,title:'Motor manual',carId:null,document});assert.equal(h.store.data.documents.length,0);approve(h.club,h.store.data.club.proposals[0].id);await until(()=>a.club.cache.data.documents.length===1);const id=h.store.data.documents[0].id;assert.equal(a.club.cache.data.documents[0].data,document.data);
+ await a.club.propose('guide.edit',{id,revision:a.club.cache.data.revision,title:'Updated manual',carId:h.store.data.cars[0].id});approve(h.club,h.store.data.club.proposals[0].id);await until(()=>a.club.cache.data.documents[0].title==='Updated manual');assert.equal(h.store.data.documents[0].data,document.data);
+ await a.club.propose('guide.remove',{id,revision:a.club.cache.data.revision});approve(h.club,h.store.data.club.proposals[0].id);await until(()=>a.club.cache.data.documents.length===0);assert.deepEqual(a.store.data,personal);
+});
+
+test('catalogue bulk deletion replicates through review and rejects stock acquired before approval',async t=>{
+ const {h,make}=await host(t),partId=h.store.mutate('part.save',{data:{name:'Unused catalogue item',quantity:0,tracking:'quantity'}}).result,a=make('Catalogue laptop');await join(h,a);
+ await a.club.propose('part.deleteMany',{ids:[partId],revision:a.club.cache.data.revision,confirmed:true});const first=h.store.data.club.proposals[0].id;h.store.mutate('part.save',{id:partId,revision:h.store.data.revision,data:{...h.store.data.parts[0],quantity:1}});assert.throws(()=>approve(h.club,first,true),/stock|linked/);assert.equal(h.store.data.parts[0].quantity,1);
+ h.store.mutate('part.save',{id:partId,revision:h.store.data.revision,data:{...h.store.data.parts[0],quantity:0}});approve(h.club,first,true);await until(()=>a.club.cache.data.parts.length===0);assert.equal(new Store(h.store.file).data.parts.length,0);
+});
+
+test('permanent deletion requires review, returns stock and replicates the removed car',async t=>{
+ const {h,make}=await host(t),id=h.store.data.cars[0].id,partId=h.store.mutate('part.save',{data:{name:'Motor',quantity:2,tracking:'quantity'}}).result;h.store.mutate('part.install',{carId:id,partId,quantity:1,field:'motor'});const a=make('Deletion laptop');await join(h,a);
+ await a.club.propose('car.delete',{id,revision:a.club.cache.data.revision,confirmName:h.store.data.cars[0].name,confirmed:true});assert.equal(h.store.data.cars.length,1);const q=h.store.data.club.proposals[0];approve(h.club,q.id);await until(()=>a.club.cache.data.cars.length===0);assert.equal(h.store.data.installations.length,0);assert.equal(h.store.data.parts.reduce((n,p)=>n+p.quantity,0),2);assert.equal(new Store(h.store.file).data.cars.length,0);assert.equal(a.store.data.cars.length,1);
+});
+
+
+test('reset stops a live dealership and retains a recoverable original identity',async t=>{
+ const {h,make}=await host(t),a=make('Reset laptop');await join(h,a);const id=h.store.data.id,password=h.net.clubCode;
+ const result=await require('../src/collection-reset.cjs').reset({store:h.store,club:h.club,network:h.net,backupJobs:{run:async(_action,source,dest,options)=>require('../src/portable-backup.cjs').exportBackup(source,dest,options)}},{databaseId:id,revision:h.store.data.revision,confirmation:'RESET'});
+ assert.notEqual(h.store.data.id,id);assert.equal(h.store.data.club,null);assert.equal(h.net.server,null);assert.equal(h.net.access(password),null);assert.equal(h.club.coordinator,false);assert.equal(a.club.cache.data.id,id);assert.equal(a.club.cache.data.cars.length,1);assert.equal(require('../src/portable-backup.cjs').verify(result.recovery).identity[0],id);
+});
+
+
+test('slotcar product research follows Dealership review and preserves current modifications',async t=>{
+ const {h,make}=await host(t),id=h.store.data.cars[0].id;h.store.mutate('car.save',{id,revision:h.store.data.cars[0].revision,data:{maker:'Example Maker',reference:'SKU-1',scale:'1:32',technical:{motor:'Modified motor'}}});const a=make('Research laptop');await join(h,a);
+ const model=require('../renderer/slotcar-research-model.js'),c=a.club.cache.data.cars[0],kit=model.kit(a.club.cache.data,c),url='https://example.org/SKU-1';kit.sources=[{title:'Product',url}];kit.identification={status:'exact',maker:c.maker,reference:c.reference,scale:c.scale,sourceUrls:[url],uncertainty:''};kit.research['factory.motor']={value:'Factory motor',sourceUrls:[url],uncertainty:'Original specification'};
+ const preview=model.preview(kit,kit.target,c),data=model.patch(c,preview,[0]);await a.club.propose('car.save',{id,revision:c.revision,data});assert.equal(h.store.data.cars[0].factory.motor,undefined);approve(h.club,h.store.data.club.proposals[0].id);await until(()=>a.club.cache.data.cars[0].factory.motor==='Factory motor');assert.equal(h.store.data.cars[0].technical.motor,'Modified motor');assert.ok(new Store(h.store.file).data.cars[0].factory.technicalNotes.includes('https://example.org'));
 });

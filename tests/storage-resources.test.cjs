@@ -32,8 +32,8 @@ test('query-view save acknowledgements skip whole snapshots while legacy callers
  const {s,dir}=fixture(t),{Network}=require('../src/network.cjs'),{Club}=require('../src/club.cjs'),network=new Network(s),club=new Club(s,network,path.join(dir,'club'));t.after(()=>{club.close();network.close();});
  const snapshot=t.mock.method(s,'snapshot',()=>{throw Error('Whole snapshot requested');});const payload=name=>({id:s.data.cars[0].id,revision:s.data.cars[0].revision,data:{name}});
  assert.equal((await club.mutate('car.save',payload('Personal'),{snapshot:false})).data,undefined);assert.equal(view(s,{page:'Cars'}).cars[0].name,'Personal');
- snapshot.mock.restore();club.enable('Dealership','1234');const again=t.mock.method(s,'snapshot',()=>{throw Error('Whole snapshot requested');});const result=await club.mutate('car.save',payload('Proposal'),{snapshot:false});assert.equal(result.queued,true);assert.equal(result.data,undefined);assert.equal(s.data.cars[0].name,'Personal');
- await club.mutate('car.save',payload('Personal'),{snapshot:false});again.mock.restore();assert.ok((await club.mutate('car.save',payload('Personal'))).data.cars.length);
+ snapshot.mock.restore();club.enable('Dealership','1234');const again=t.mock.method(s,'snapshot',()=>{throw Error('Whole snapshot requested');});const result=await club.propose('car.save',payload('Proposal'),{snapshot:false});assert.equal(result.queued,true);assert.equal(result.data,undefined);assert.equal(s.data.cars[0].name,'Personal');
+ await club.propose('car.save',payload('Personal'),{snapshot:false});again.mock.restore();assert.ok((await club.propose('car.save',payload('Personal'))).data.cars.length);
 });
 test('maintenance indexes are added to existing format-3 files without changing data or replay',t=>{
  const {s}=fixture(t),{DatabaseSync}=require('node:sqlite'),before=JSON.stringify(s.data),cursor=S.syncState(s.file),db=new DatabaseSync(s.file);db.exec('DROP INDEX field_versions_revision; DROP INDEX change_log_sizes;');db.close();

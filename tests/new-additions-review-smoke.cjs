@@ -22,7 +22,7 @@ module.exports=async({win,store,js,wait,click,fill,submit,qa})=>{
     await click('[data-action="catalogue-refresh"]');assert.equal(await js('catalogueReview.preview.rows[0].status'),'new');assert.equal(await js('catalogueSelected.size'),0);
   });
   await run('changing a diagram position keeps the current zoomed viewport',async()=>{
-    await js(`(async()=>{page='Parts';partsTab='Build from Scratch';buildContext='';buildZoom=3;await loadView();const scroller=document.querySelector('.build-diagram-scroll');scroller.scrollTop=180;scroller.scrollLeft=130;})()`);
+    await js(`(async()=>{page='Build from Scratch';buildContext='';buildZoom=3;await loadView();const scroller=document.querySelector('.build-diagram-scroll');scroller.scrollTop=180;scroller.scrollLeft=130;})()`);
     const before=await js(`[document.querySelector('.build-diagram-scroll').scrollTop,document.querySelector('.build-diagram-scroll').scrollLeft]`);assert.ok(before.every(n=>n>0));
     await click('.build-hotspot[data-id="pod"]');await wait('!viewPendingKey');assert.deepEqual(await js(`[document.querySelector('.build-diagram-scroll').scrollTop,document.querySelector('.build-diagram-scroll').scrollLeft]`),before);
   });

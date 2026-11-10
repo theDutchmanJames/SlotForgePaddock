@@ -11,21 +11,38 @@ function update(db,key,bucket,value){
 }
 function identity(db){return JSON.stringify(['identity','change_epoch','change_sequence'].map(key=>db.prepare('SELECT value FROM state WHERE key=?').get(key)?.value??null));}
 function stamp(db){db.prepare("INSERT INTO state(key,value) VALUES('query_index_identity',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").run(identity(db));}
+function structure(db){
+ const objects=new Map(db.prepare("SELECT name,type FROM sqlite_master WHERE name LIKE 'query_%'").all().map(row=>[row.name,row.type]));
+ const has=(type,names)=>names.every(name=>objects.get(name)===type);
+ return {
+  records:has('table',['query_records','query_sessions','query_laps','query_car_results']),
+  totals:has('table',['query_totals'])&&has('trigger',['query_totals_insert','query_totals_update','query_totals_delete']),
+  performance:has('table',['query_performance','query_performance_dirty'])&&has('trigger',['query_performance_insert','query_performance_update','query_performance_delete'])
+ };
+}
+function objectsReady(db){return Object.values(structure(db)).every(Boolean);}
 function ensure(db){
  // These maintenance queries run on every commit. In particular, bytes is
  // stored after the potentially large log JSON; a covering index avoids
  // traversing its overflow pages just to enforce the replay budget.
  db.exec('CREATE INDEX IF NOT EXISTS field_versions_revision ON field_versions(revision); CREATE INDEX IF NOT EXISTS change_log_sizes ON change_log(sequence,bytes);');
  const version=db.prepare("SELECT value FROM state WHERE key='query_index_version'").get()?.value,current=db.prepare("SELECT value FROM state WHERE key='query_index_identity'").get()?.value===identity(db);
- const tables=db.prepare("SELECT count(*) n FROM sqlite_master WHERE type='table' AND name IN ('query_records','query_sessions','query_laps','query_car_results')").get().n;
- if(current&&tables===4){
-  const totals=db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='query_totals'").get();
-  if(version==='7'&&totals)return;
-  // Version 6 already has the same record/lap projections. Adding counters
-  // needs only their small metadata rows, not every car and measured lap.
-  if(version==='6'){require('./query-totals.cjs').rebuild(db);db.prepare("UPDATE state SET value='7' WHERE key='query_index_version'").run();return;}
+ const ready=structure(db);
+ if(current&&ready.records){
+  if(version==='8'&&ready.totals&&ready.performance){require('./query-indexes.cjs').ensure(db);return;}
+  // Versions 6 and 7 have the same record/lap projections. Build totals from
+  // their small metadata rows without decoding any cars or measured laps.
+  if(['6','7','8'].includes(version)){
+   // Missing maintenance triggers can have left their summaries stale. Rebuild
+   // the affected family, but preserve the independent healthy family.
+   if(version==='6'||!ready.totals)require('./query-totals.cjs').rebuild(db);
+   if(version!=='8'||!ready.performance)require('./query-performance.cjs').rebuild(db);
+   require('./query-indexes.cjs').ensure(db);if(version!=='8')db.prepare("UPDATE state SET value='8' WHERE key='query_index_version'").run();return;
+  }
  }
  require('./query-timing.cjs').schema(db);
+ require('./query-performance.cjs').schema(db);
+ db.exec('DELETE FROM query_laps; DELETE FROM query_car_results; DELETE FROM query_sessions; DELETE FROM query_performance;');
  db.exec(`DROP TABLE IF EXISTS query_records;
  CREATE TABLE query_records(key TEXT PRIMARY KEY REFERENCES records(key) ON DELETE CASCADE,bucket TEXT NOT NULL,car_id TEXT,name TEXT NOT NULL,maker TEXT NOT NULL,updated TEXT NOT NULL,date TEXT NOT NULL,archived INTEGER NOT NULL,status TEXT NOT NULL,usage TEXT NOT NULL,search TEXT NOT NULL,type TEXT NOT NULL,task TEXT NOT NULL,rank TEXT NOT NULL,due TEXT NOT NULL,aux TEXT NOT NULL) STRICT;
  CREATE INDEX query_names ON query_records(bucket,archived,name,key);
@@ -37,6 +54,8 @@ function ensure(db){
  require('./query-totals.cjs').schema(db);
  const get=db.prepare('SELECT path,json FROM record_fields WHERE record=?');
  for(const row of db.prepare('SELECT key,bucket,json FROM records').iterate()){const envelope=fields.decode(row.json,get.all(row.key).map(f=>[f.path,f.json]));update(db,row.key,row.bucket,envelope.value);}
- db.prepare("INSERT INTO state(key,value) VALUES('query_index_version','7') ON CONFLICT(key) DO UPDATE SET value='7'").run();stamp(db);
+ require('./query-performance.cjs').flush(db);
+ require('./query-indexes.cjs').ensure(db);
+ db.prepare("INSERT INTO state(key,value) VALUES('query_index_version','8') ON CONFLICT(key) DO UPDATE SET value='8'").run();stamp(db);
 }
-module.exports={ensure,update,stamp,identity};
+module.exports={ensure,update,stamp,identity,objectsReady,structure};

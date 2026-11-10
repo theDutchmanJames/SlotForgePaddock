@@ -13,10 +13,12 @@ async function execute(store,task,guard){
  while(store.pendingWrite)await store.whenIdle();
  let release;store.pendingWrite=new Promise(resolve=>{release=resolve;});
  try{
-  guard();if(store.writeUncertain)throw Object.assign(Error('Reopen this database before retrying the uncertain save.'),{code:'WRITE_UNCERTAIN'});const expected=store.expectedIdentity;
+  guard();if(store.writeUncertain)throw Object.assign(Error('Reopen this database before retrying the uncertain save.'),{code:'WRITE_UNCERTAIN'});
   const packed=require('./domain-transfer.cjs').pack({...task,pins:require('./lazy-assets.cjs').pins(store.file)});
-  const value=await writer.write(store.file,packed,expected);
-  if(JSON.stringify([value.token.id,value.token.revision])!==expected){adopt(store,value);store.emit();}return value.result;
+  let value;
+  for(let attempt=0;;attempt++)try{value=await writer.write(store.file,packed,store.expectedIdentity);break;}
+  catch(e){if(e.code!=='QUERY_CHANGED'||attempt>=5)throw e;const fresh=await writer.write(store.file,require('./domain-transfer.cjs').pack({kind:'refresh',databaseId:store.data.id}),null);adopt(store,fresh);store.emit();guard();}
+  if(JSON.stringify([value.token.id,value.token.revision])!==store.expectedIdentity||value.token.epoch!==store.deferredState?.token.epoch){adopt(store,value);store.emit();}return value.result;
   }catch(error){
   if(error.code==='WRITE_UNCERTAIN'){
    // A commit can be durable even when its acknowledgement is lost. Reload the

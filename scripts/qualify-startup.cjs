@@ -5,15 +5,16 @@ const started=performance.now(),fs=require('node:fs'),path=require('node:path'),
 const root=path.resolve(__dirname,'..','.qa'),source=path.resolve(process.argv[2]||'');
 if(!source.startsWith(root+path.sep)||path.extname(source)!=='.sqlite')throw Error('Use a synthetic SQLite fixture beneath .qa.');
 fs.mkdirSync(root,{recursive:true});const profile=fs.mkdtempSync(path.join(root,'desktop-startup-'));fs.copyFileSync(source,path.join(profile,'database.sqlite'));
-app.setPath('userData',profile);BrowserWindow.prototype.show=function(){};
-const stages={};let done=false,openedStore;
-const model=require('../src/store.cjs'),BaseStore=model.Store;model.Store=class extends BaseStore{constructor(...args){const t=performance.now();super(...args);stages.storeOpenMs=+(performance.now()-t).toFixed(1);openedStore=this;}};
+process.env.LOCALAPPDATA=profile;process.env.XDG_RUNTIME_DIR=profile;app.setPath('userData',profile);BrowserWindow.prototype.show=function(){};
+const stages={};let done=false,openedStore,localService;
+const Local=require('../src/local-library.cjs').LocalLibrary,localStart=Local.prototype.start;Local.prototype.start=function(){localService=this;return localStart.call(this);};
+const model=require('../src/store.cjs'),BaseStore=model.Store;model.Store=class extends BaseStore{static async open(...args){const t=performance.now(),store=await BaseStore.open(...args);stages.storeOpenMs=+(performance.now()-t).toFixed(1);openedStore=store;return store;}constructor(...args){const t=performance.now();super(...args);stages.storeOpenMs=+(performance.now()-t).toFixed(1);openedStore=this;}};
 const deadline=setTimeout(()=>finish(Error('Desktop startup benchmark timed out')),120000);
-function finish(error,result){if(done)return;done=true;clearTimeout(deadline);console.log(JSON.stringify(error?{error:error.stack}:result));app.exit(error?1:0);}
+async function finish(error,result){if(done)return;done=true;clearTimeout(deadline);await localService?.close();console.log(JSON.stringify(error?{error:error.stack}:result));app.exit(error?1:0);}
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
 app.on('browser-window-created',(_event,win)=>{
  stages.windowCreatedMs=+(performance.now()-started).toFixed(1);win.webContents.setBackgroundThrottling(false);
- win.webContents.once('did-finish-load',async()=>{try{
+ win.webContents.on('did-finish-load',async()=>{if(!win.webContents.getURL().endsWith('/index.html'))return;try{
   stages.domLoadedMs=+(performance.now()-started).toFixed(1);const js=code=>win.webContents.executeJavaScript(code,true);
   for(let n=0;n<400;n++){if(await js("typeof db!=='undefined'&&!!db?._view&&document.querySelector('#main').innerText.includes('On the workbench')"))break;if(n===399)throw Error('Overview not usable');await wait(25);}
   const usableMs=+(performance.now()-started).toFixed(1),startupLoading=openedStore?.deferredState?structuredClone(openedStore.deferredState.stats):null,memory=()=>app.getAppMetrics().map(p=>({type:p.type,workingSetMiB:+(p.memory.workingSetSize/1024).toFixed(1),peakMiB:+(p.memory.peakWorkingSetSize/1024).toFixed(1)})),initial=memory(),ipc=await js("JSON.stringify(db).length"),samples=[];

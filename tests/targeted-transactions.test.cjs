@@ -63,8 +63,8 @@ test('targeted edits keep stock guards, combined custom limits and photo focus c
 });
 test('Dealership no-op creates no proposal and failed approval cannot mutate shared committed state',async t=>{
  const {store:s,id}=fixture(t),{Network}=require('../src/network.cjs'),{Club}=require('../src/club.cjs'),network=new Network(s),club=new Club(s,network,path.dirname(s.file));t.after(()=>{club.close();network.close();});club.enable('QA dealership','Test password');
- const revision=s.data.revision;assert.equal((await club.mutate('car.save',{id,revision:1,data:{name:'Target'}})).queued,false);assert.equal(s.data.revision,revision);assert.equal(s.data.club.proposals.length,0);
- await club.mutate('car.save',{id,revision:1,data:{livery:'Pending'}});const proposal=s.data.club.proposals[0],before=s.snapshot(),view=club.preview(proposal.id),persist=s.persist;
+ const revision=s.data.revision;assert.equal((await club.propose('car.save',{id,revision:1,data:{name:'Target'}})).queued,false);assert.equal(s.data.revision,revision);assert.equal(s.data.club.proposals.length,0);
+ await club.propose('car.save',{id,revision:1,data:{livery:'Pending'}});const proposal=s.data.club.proposals[0],before=s.snapshot(),view=club.preview(proposal.id),persist=s.persist;
  s.persist=()=>{throw Error('Review disk failure');};assert.throws(()=>club.review({id:proposal.id,token:view.token,decision:'accept'}),/disk failure/);s.persist=persist;
  assert.deepEqual(s.data,before);assert.deepEqual(new Store(s.file).data,before);assert.equal(s.data.club.proposals[0].status,'pending');
  club.review({id:proposal.id,token:view.token,decision:'accept'});assert.equal(s.data.cars[0].livery,'Pending');assert.equal(s.data.club.proposals[0].status,'accepted');

@@ -1,0 +1,14 @@
+{
+  "linkLeavesCarUnchanged": {
+    "id": "existing-car",
+    "name": "Existing GT3",
+    "maker": "Original maker",
+    "revision": 1
+  },
+  "expiredCursor": {
+    "action": "Use scalable-v1 resetRequired handling; never advance the saved cursor from an event alone."
+  },
+  "rollback": {
+    "action": "An established receipt or mapping that disappears after restore requires reconciliation, not automatic recreation."
+  }
+}

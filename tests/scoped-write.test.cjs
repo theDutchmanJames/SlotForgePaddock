@@ -53,7 +53,7 @@ test('Dealership proposals and approvals remain scoped and commit car and receip
  const {s,dir}=fixture(t),{Club}=require('../src/club.cjs'),{Network}=require('../src/network.cjs');
  let net=new Network(s),club=new Club(s,net,dir);club.enable('Host','race',false);club.close();net.close();
  const d=new Store(s.file,{deferred:true});net=new Network(d);club=new Club(d,net,dir);t.after(()=>{club.close();net.close();});const state=d.deferredState;
- const queued=await club.mutate('car.save',{id:'car-a',revision:s.data.cars[0].revision,data:{name:'Reviewed name',livery:'Club colours'}},{snapshot:false});assert.equal(queued.queued,true);
+ const queued=await club.propose('car.save',{id:'car-a',revision:s.data.cars[0].revision,data:{name:'Reviewed name',livery:'Club colours'}},{snapshot:false});assert.equal(queued.queued,true);
  assert.ok(d.deferredState);assert.ok(!state.stats.loadedSections.includes('timing.sessions'));assert.ok(!state.stats.loadedSections.includes('cars'));assert.notEqual(saved(d).cars[0].name,'Reviewed name');
  const q=d.data.club.proposals[0],preview=club.preview(q.id);assert.equal(preview.error,'');
  await club.reviewAsync({id:q.id,token:preview.token,decision:'accept',fields:['name']});

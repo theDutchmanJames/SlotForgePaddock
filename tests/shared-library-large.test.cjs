@@ -1,0 +1,23 @@
+'use strict';
+const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),{Store}=require('../src/store.cjs'),{open}=require('../packages/shared-library/index.cjs');
+test('500-car existing library stays paged and a simple canonical edit does not read photo bytes',async t=>{
+ const root=require('./support/temp-dir.cjs')('library-large-'),file=path.join(root,'existing.sqlite'),sharedRoot=path.join(root,'shared'),store=new Store(file);let handle;t.after(async()=>{await handle?.close();fs.rmSync(root,{recursive:true,force:true});});
+ const picture='data:image/png;base64,'+fs.readFileSync(path.join(__dirname,'../assets/icon.png')).toString('base64');store.mutate('car.save',{data:{name:'Template',picture}});const data=structuredClone(store.data),template=data.cars[0];data.cars=Array.from({length:500},(_,i)=>({...template,id:'car-'+i,name:'Car '+String(i).padStart(4,'0')}));data.events=[];store.replace(data);
+ handle=await open({application:'SlotForge Timing',installationId:'Timing',sharedRoot,legacyPaddockPath:file});const s=await handle.status(),ids=[];let offset=0,token;
+ do{const page=await handle.catalogue({offset,limit:100,token});assert.equal(page.total,500);assert.ok(page.cars.every(c=>c.hasPicture&&!Object.hasOwn(c,'picture')));ids.push(...page.cars.map(c=>c.id));token=page.token;offset=page.nextOffset;}while(offset!==null);assert.equal(new Set(ids).size,500);
+ const lazy=require('../src/lazy-assets.cjs'),E=require('../src/shared-library-engine.cjs'),fresh=new Store(file,{deferred:true});lazy.clearCache();await E.call(fresh,{application:'SlotForge Timing',installationId:'Timing'},'carWrite',{databaseId:s.databaseId,recoveryId:s.recoveryId,operationId:'one-field',action:'patch',carId:'car-250',expectedRevision:1,set:{raceClass:'Club GT'}});assert.equal(lazy.stats().reads,0);assert.equal((await handle.car('car-250')).fields.raceClass,'Club GT');
+});
+test('OS-backed registration lock is released after a process dies during bootstrap',async t=>{
+ const root=require('./support/temp-dir.cjs')('library-lock-');let handle;t.after(async()=>{await handle?.close();fs.rmSync(root,{recursive:true,force:true});});
+ const modulePath=path.resolve(__dirname,'../src/shared-library-location.cjs');const code='require('+JSON.stringify(modulePath)+').lock('+JSON.stringify(root)+',async()=>process.exit(0)).catch(()=>process.exit(1))';const result=require('node:child_process').spawnSync(process.execPath,['-e',code],{windowsHide:true});assert.equal(result.status,0);
+ handle=await open({application:'SlotForge Paddock',installationId:'Paddock',sharedRoot:root});assert.equal((await handle.catalogue()).total,0);
+});
+
+test('Timing-first collection with 100 cars and 10000 old laps remains complete and reopens without reimport',async t=>{
+ const root=require('./support/temp-dir.cjs')('adoption-large-'),profiles=path.join(root,'profiles'),profile=path.join(profiles,'slotforge-timing'),sharedRoot=path.join(root,'shared');fs.mkdirSync(profile,{recursive:true});let h;t.after(async()=>{await h?.close();fs.rmSync(root,{recursive:true,force:true});});
+ const raw={paddock:{sourceId:'large-timing'},slotcars:[],sessions:[],laps:[],tracks:[],drivers:[],teams:[],raceclasses:[]};
+ for(let c=0;c<100;c++){const carId='car-'+c,sessionId='session-'+c;raw.slotcars.push({id:carId,name:'Old car '+c,lapsDriven:100,lapsSinceService:100});raw.sessions.push({id:sessionId,sessionType:'race',date:'2025-01-01T00:00:00.000Z',setupName:'Old race '+c});for(let n=1;n<=100;n++)raw.laps.push({id:sessionId+'-lap-'+n,sessionId,carId,lapNumber:n,lane:1,time:8000+n});}
+ const source=path.join(profile,'slotforge-timing.json'),bytes=JSON.stringify(raw);fs.writeFileSync(source,bytes);const started=performance.now();h=await open({application:'SlotForge Paddock',installationId:'Paddock',sharedRoot,appData:profiles});t.diagnostic('Automatic adoption milliseconds: '+Math.round(performance.now()-started));
+ const status=await h.status(),page=await h.catalogue({limit:100}),home=await h.timingRead({kind:'home'});assert.equal(page.total,100);assert.equal(home.summary.recordedLaps,10000);assert.equal(home.summary.acceptedSessions,100);assert.equal(home.recentSessions.length,20);
+ assert.equal((await h.serviceRead({carId:page.cars[0].id})).service.lapsDriven,100);assert.equal(fs.readFileSync(source,'utf8'),bytes);await h.close();const reopen=performance.now();h=await open({application:'SlotForge Timing',installationId:'Timing',sharedRoot,appData:profiles});t.diagnostic('Reopen milliseconds: '+Math.round(performance.now()-reopen));assert.equal((await h.status()).revision,status.revision);assert.equal((await h.catalogue()).total,100);
+});

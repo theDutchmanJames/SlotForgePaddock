@@ -20,8 +20,8 @@ async function findHosts(){
 }
 function installNetworkUpdates(){let pendingRender=false;
   const busy=()=>$('#dialog').open||actionBusy||modalSaving||['INPUT','SELECT','TEXTAREA'].includes(document.activeElement?.tagName);
-  const visible=()=>page!=='Review'&&(source==='remote'||page==='Connections');
-  const relevant=status=>JSON.stringify({remote:status?.remote?{id:status.remote.id,state:status.remote.state,permissions:status.remote.permissions,autoRefresh:status.remote.autoRefresh,lastError:status.remote.lastError}:null,pending:status?.pending});
+  const visible=()=>page!=='Review'&&(source==='remote'||page==='Connections'||page==='Settings');
+  const relevant=status=>JSON.stringify({remote:status?.remote?{id:status.remote.id,state:status.remote.state,permissions:status.remote.permissions,autoRefresh:status.remote.autoRefresh,lastError:status.remote.lastError}:null,pending:status?.pending,localLibrary:status?.localLibrary,background:status?.background});
   const flush=()=>setTimeout(()=>{if(pendingRender&&!busy()&&visible()){pendingRender=false;render();}},0);
   document.addEventListener('focusout',flush);
   $('#dialog').addEventListener('close',flush);
@@ -42,4 +42,9 @@ function hostPasswordDialog(access){
   },'Set password');
 }
 
-function renderConnections(){return heading('Connections','Connect your home or club collection across trusted computers.')+renderClubConnections()+(clubState?.active||clubState?.role==='coordinator'?'':renderBasicConnections());}
+function renderConnections(){return heading('Connections','Connect your home or club collection across trusted computers.')+renderClubConnections()+renderDealershipExit()+renderLocalLibraryConnection()+(clubState?.active||clubState?.role==='coordinator'?'':renderBasicConnections());}
+
+function renderLocalLibraryConnection(){
+  const c=net.localLibrary;if(!c)return '';
+  return panel('Paddock on this computer',`<p>${badge(c.available?'Local connection ready':c.state==='starting'?'Starting local connection':c.state==='sleeping'?'Computer sleeping':c.enabled?'Local connection unavailable':'Local connection disabled',c.available?'good':'')} <strong>${esc(c.name)}</strong></p><p class="muted">Compatible Timing clients can discover this library on the same computer and user account, without an address or password. Local access allows compatible apps to read, create and edit the same cars directly. Existing separate collections can still be reconciled through Review. Finalised race results use the existing Timing integration.</p><p class="tiny muted">Enabled local access also registers Paddock for automatic background startup by compatible apps. Disabling it removes that registration. This connection serves this computer’s own library, independently of LAN sharing. A downloaded Dealership copy stays linked to its original host. Timing’s local connection support is required.</p>${c.reason?`<p class="note">${esc(c.reason)}</p>`:''}${c.error?`<p class="note">${esc(c.error)}</p>`:''}<div class="actions">${btn(c.enabled?'Disable local access':'Enable local access','local-library-access')}${c.enabled?btn('Retry local connection','local-library-retry'):''}</div>`);
+}

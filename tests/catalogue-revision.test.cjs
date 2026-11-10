@@ -78,7 +78,7 @@ test('safe-integer exhaustion rejects a public edit atomically but permits priva
 test('review queue and rejections are quiet; approving public changes advances exactly once',async t=>{
  const dir=disk(t),s=new Store(path.join(dir,'database.json')),id=car(s),net=new Network(s),club=new Club(s,net,dir);t.after(()=>{club.close();net.close();});
  const n=s.data.catalogueRevision;club.enable('Club','Club test password');assert.equal(s.data.catalogueRevision,n);
- async function propose(data,decision){await club.mutate('car.save',{id,revision:s.data.cars[0].revision,data});assert.equal(s.data.catalogueRevision,expected);const q=s.data.club.proposals[0],p=club.preview(q.id);club.review({id:q.id,token:p.token,decision});}
+ async function propose(data,decision){await club.propose('car.save',{id,revision:s.data.cars[0].revision,data});assert.equal(s.data.catalogueRevision,expected);const q=s.data.club.proposals[0],p=club.preview(q.id);club.review({id:q.id,token:p.token,decision});}
  let expected=n;await propose({name:'Rejected'},'reject');assert.equal(s.data.catalogueRevision,expected);
  await propose({privateNotes:'Approved private note'},'accept');assert.equal(s.data.catalogueRevision,expected);
  await propose({name:'Approved public name'},'accept');assert.equal(s.data.catalogueRevision,++expected);
@@ -103,7 +103,7 @@ test('response schemas allow old responses and all current public fields without
  assert.deepEqual(Object.keys(c.properties).sort(),['id',...PUBLIC_FIELDS,'technical','picture','usage'].sort());
  assert.deepEqual(Object.keys(c.properties.technical.properties).sort(),[...TECH_FIELDS].sort());
  const f=fixtures();contract.validate(publicCar(f.store.data.cars[0]),c);
- const root=path.join(__dirname,'..','integration-handoff','timing-v1','fixtures');
+ const root=path.join(__dirname,'fixtures','contracts','timing-v1','fixtures');
  const read=n=>JSON.parse(fs.readFileSync(path.join(root,n+'.json')));
  const status=read('status-response');contract.validate(status,contract.schema.$defs.status);
  for(const n of [1,2]){const page=read('collection-page-'+n);contract.validate(page,contract.schema.$defs.collection);assert.equal(page.catalogueRevision,status.catalogueRevision);assert.equal(page.revision,status.revision);delete page.catalogueRevision;contract.validate(page,contract.schema.$defs.collection);}

@@ -1,0 +1,232 @@
+{
+  "recordedAt": "2026-11-10T13:05:01.886Z",
+  "scope": "Read-only source dependency audit; no personal database inspection",
+  "projects": {
+    "Paddock": [
+      {
+        "file": "src/car-removal.cjs",
+        "sha256": "50150f7ed64f0c21848bce3c3e66a5ed5b0b955986a8ad872250489adf37f2e7"
+      },
+      {
+        "file": "src/store.cjs",
+        "sha256": "8c4f14aeb3f331e6d71e1f54524bc7eb3a8c6c8c5a5ef5c1706dc4a319231867"
+      },
+      {
+        "file": "src/shared-car-library.cjs",
+        "sha256": "adb92c8c2a2bbe2ce2c2bac75c51935204cd62d382969c91020a88a392a589fc"
+      },
+      {
+        "file": "src/shared-library-custom.cjs",
+        "sha256": "7cd9ef77e0f449411657a43bf975db8b6a5a36b0dd38edec7f79dff32bb76627"
+      },
+      {
+        "file": "src/planning.cjs",
+        "sha256": "5aabf3a4f3dcbfaf900412f04c66961269c4f3abe19ecd1bf9d1d23b6f2328a1"
+      },
+      {
+        "file": "src/lazy-assets.cjs",
+        "sha256": "ba562e32d4a64dd209df597a5dcdb525812439860e33b83dee3b2fbb3a1e4703"
+      },
+      {
+        "file": "src/guides.cjs",
+        "sha256": "c23c28ddc8c621bb4da25b891095f30aba843a094f8534094bbb9ca0cd374205"
+      },
+      {
+        "file": "src/workshop.cjs",
+        "sha256": "352eb69e5f720a4834271675db049bced4aa509d1818ffaad62c7ff1dcffb891"
+      },
+      {
+        "file": "src/inventory.cjs",
+        "sha256": "fb4a23aea6004ff89ea7c33fe069e6601cc03b33953c11ccdea427fd07548783"
+      },
+      {
+        "file": "src/build.cjs",
+        "sha256": "b285286ba2e2635433998a5d5e205e4b586476c434ca5f7fc763004eaf537e2b"
+      },
+      {
+        "file": "src/rebuild.cjs",
+        "sha256": "36909945f93ff4a2f7ff834801db57b2a7e0f0f525234667e73a3611d2a6a4de"
+      },
+      {
+        "file": "renderer/review.js",
+        "sha256": "cbfbdfbffb9cf125b4646b0bdad54e7ee8c8c81467e1b29699ad57206262c993"
+      },
+      {
+        "file": "src/club.cjs",
+        "sha256": "a4fdd88e64204b10c9d1a65ccd2628df247121e564788e268bda8bd713a63461"
+      },
+      {
+        "file": "src/local-library-api.cjs",
+        "sha256": "a5874fd0eccfeccea9d2478b2787f31462112cb7b18eb12ef71893c4be7e8ce4"
+      },
+      {
+        "file": "src/shared-library-engine.cjs",
+        "sha256": "2dcd65554491e12a5681d4502238dce440c0b365ac19709cde843142d2032e47"
+      },
+      {
+        "file": "src/shared-library-service.cjs",
+        "sha256": "21089e039cd83f7fc476c9cfb55e1fa911256d5c59743c72a7365e79fb1ee50d"
+      },
+      {
+        "file": "src/shared-library-lap-counts.cjs",
+        "sha256": "53c8b8615919a764ac510f2a6068346b597ac7f843615dc666aa6620f64128b9"
+      },
+      {
+        "file": "src/timing-integration.cjs",
+        "sha256": "34a052b374eb6839a6553b88f44fb110efe81844771c9d27c3726d192e8d892f"
+      },
+      {
+        "file": "src/shared-history-read.cjs",
+        "sha256": "6a1de9b37ffd747121d74b2909e436330477143feb93314eba20187cf684aba6"
+      },
+      {
+        "file": "src/query-rich-history.cjs",
+        "sha256": "dfbf66f59f2eede21a1d3aaa297419335119ef7fc4d62eaa6bd5e2ed52ab71fd"
+      },
+      {
+        "file": "src/shared-library-raw-history.cjs",
+        "sha256": "a03afcd1196c6c0d75914d317f7409d7e304c1a91f418a186e4bedc9a0fa0afc"
+      },
+      {
+        "file": "src/shared-library-timing-read.cjs",
+        "sha256": "4316130a5d35f8cfec2d8133f5f74289fdd9bdff33082f96ecdc9f197da69aee"
+      },
+      {
+        "file": "src/history-view.cjs",
+        "sha256": "94d4920bfb2c521bb0edaa32a6fcf5b3a38b2dcbbbf198f2f29063429a423870"
+      },
+      {
+        "file": "src/history-pace.cjs",
+        "sha256": "6a48f3f75a9ef7921a4a1dc1da22a35b27108c658039f25adf6c1348481e9c8f"
+      },
+      {
+        "file": "src/rich-history-statistics.cjs",
+        "sha256": "e831ccc629abfee78ff296fb66f4c4bd38d17a737dd417696723b0e8607f997a"
+      },
+      {
+        "file": "src/scalable-api.cjs",
+        "sha256": "1c78cef64b6ea281903a85adfaf9717f5b447001115bdfec49b1c3cfefe995fb"
+      },
+      {
+        "file": "src/shared-library-observer.cjs",
+        "sha256": "9dc249db72e649d0dbd3a5a1c4bdd8f1640ed6573162dd49083f906e59d315cf"
+      },
+      {
+        "file": "src/telemetry-export.cjs",
+        "sha256": "655731fee325509b629df4c311de5bc396dc1218d0e5143903c5bf9c62656f29"
+      },
+      {
+        "file": "src/sqlite-storage.cjs",
+        "sha256": "db615e6ffc18dbc69368fe4895098c45cce2a57ea747decc242075f2ea57aba4"
+      },
+      {
+        "file": "src/portable-backup.cjs",
+        "sha256": "ba2814275a4a5d80b86505367aed90d215f6a4a17969cd954423fc096ab50475"
+      },
+      {
+        "file": "src/sqlite-records.cjs",
+        "sha256": "b518eefc2cb3d5a6796c32c0dd7755adc4f76bd76be0f1b424ac585775929048"
+      },
+      {
+        "file": "src/shared-library-restore.cjs",
+        "sha256": "2185b325a757620ec63000b96cfd6d757ecc2a92920b20d70f8cda3e45729dcb"
+      },
+      {
+        "file": "src/collection-reset.cjs",
+        "sha256": "1bf4196ba441a5736e809cd8ccbd4f4112e78914f93afb5a1d7644a2466e7f57"
+      },
+      {
+        "file": "src/command-receipts.cjs",
+        "sha256": "8908cc20e1c7f773b0cee0136e204b6ff645ab551ad534bf0d9e5c2c286b68a3"
+      },
+      {
+        "file": "src/shared-library-worker.cjs",
+        "sha256": "46d8e926f0dd5250b2d25cf6e034c55eeda4de64cb40a13648263495a0a0df2b"
+      },
+      {
+        "file": "src/shared-library-location.cjs",
+        "sha256": "f461c9fc516516d5ec083c95b35b5d3f59dd2df3862d2490cb0c479e9c6dab26"
+      },
+      {
+        "file": "packages/shared-library/index.cjs",
+        "sha256": "0dc67f3e67a304e54a9a1e8986eebedd92d8ad0ea612dc37c02a8f2ec8481123"
+      },
+      {
+        "file": "src/local-library.cjs",
+        "sha256": "55c03f3ad379a0823d6645eaaaa8bd53c0cfd7d4a4962494302c452991619a3a"
+      },
+      {
+        "file": "src/main.cjs",
+        "sha256": "eb557a429c94eeca17bb33d55faa9cc91333deefaf9e660c8c8279c3976bef2a"
+      },
+      {
+        "file": "src/club-sync.cjs",
+        "sha256": "3229972f34ba1bd856008199027b502c5337408a9f1261cd68e353b6e2217f39"
+      },
+      {
+        "file": "renderer/club.js",
+        "sha256": "f67f35dc18bd394565d6efbbf4561b3507cb672592a9954ad091e02113c70a5c"
+      },
+      {
+        "file": "renderer/connections.js",
+        "sha256": "dfa3481b26b489c432552e5134384c6bfc1a6daf7b46ec062bbd985fa27ab98b"
+      },
+      {
+        "file": "renderer/app.js",
+        "sha256": "672f3523f9e13f742786d43add92ec19b53b86729f78af7af89940eac252c21b"
+      },
+      {
+        "file": "src/network.cjs",
+        "sha256": "8a206154609d1c0e5fe4c9c7ae3ad7123d49dd4af74fa2792849d428451980e7"
+      },
+      {
+        "file": "src/dealership-policy.cjs",
+        "sha256": "b043e2bbe3eb1d26277304d3f59148a3e0c453bfb73c0016607d6e97c64a82a6"
+      }
+    ],
+    "Timing": [
+      {
+        "file": "shared-library-client.js",
+        "sha256": "44bcf0858d6b219a3456952b91476950a399e96f3e31f17b3805b3e30201eb75"
+      },
+      {
+        "file": "shared-library-delivery.js",
+        "sha256": "19ca837e2e8afdd31aee98c3fda58a3ae02854bd2e5bfadc976734dff045273b"
+      },
+      {
+        "file": "shared-library-reads.js",
+        "sha256": "cc4cc65d83263d12bcc7c097c19ab58a3710882079ba27fbd08a6bae5e5e8da8"
+      },
+      {
+        "file": "shared-library-history.js",
+        "sha256": "c54735a9af671fe957c1e9cc6f57289c62475c038a31d6de93e19c466a54a87b"
+      },
+      {
+        "file": "paddock-local.js",
+        "sha256": "c9e4ff135ba2ae77a9b18d30074223a9212c9789f62712d0a21bb6daefb51d70"
+      },
+      {
+        "file": "paddock.js",
+        "sha256": "f921a9af34935cafe403b6dc0ca6039ef75eeea9c5adf81a7d21e80434822563"
+      }
+    ],
+    "Telemetry": [
+      {
+        "file": "src/paddock-client.cjs",
+        "sha256": "a20a18e04a9b8c6769fdd56966fe903a06c3bd94fbdaa96cea6bd34604f421c3"
+      },
+      {
+        "file": "src/paddock-schema.cjs",
+        "sha256": "993ad60fde250f0aec692c5f1a9741023ea2444dee5a63ba49d561ba97b47a7f"
+      },
+      {
+        "file": "src/paddock-validation.cjs",
+        "sha256": "31bc075c4aeea481d8b37314c7da974778dec2661a9ca850b7e499187b74defa"
+      },
+      {
+        "file": "src/paddock-statistics.cjs",
+        "sha256": "0df5bfe5072fbe0c090227d2dc3d2e03e064d828c465bc141b1a74fa260a8503"
+      }
+    ]
+  }
+}

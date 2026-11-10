@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "databaseId": "paddock-local-demo",
+  "submissionId": "647ef3ff-5dc4-4448-83b2-2484425bf690",
+  "sourceId": "timing-home",
+  "transferId": "transfer-link",
+  "hash": "e8e399b89ebb2f61175a8bd88c5b96e6eefcbbde6ab660b0c57968233a1a4209",
+  "status": "reviewed",
+  "cars": [
+    {
+      "index": 0,
+      "itemId": "item-7ed28ec3f4d219919f9d4153a935892757dd8d256470541c5eb9c6e7befe3744",
+      "timingCarId": "timing-existing",
+      "action": "link",
+      "paddockCarId": "existing-car",
+      "decision": "accept",
+      "status": "approved",
+      "reviewedAt": "2026-11-09T12:55:37.984Z",
+      "carRevision": 1,
+      "present": true,
+      "archived": false
+    }
+  ]
+}

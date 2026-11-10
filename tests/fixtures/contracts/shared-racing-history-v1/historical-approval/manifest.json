@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "activationEnabled": false,
+  "fixtures": [
+    {
+      "file": "request.json",
+      "definition": "importRequest"
+    },
+    {
+      "file": "pending.json",
+      "definition": "importReceipt"
+    },
+    {
+      "file": "mixed-decisions.json",
+      "definition": "importReceipt"
+    },
+    {
+      "file": "after-cancellation.json",
+      "definition": "importReceipt"
+    },
+    {
+      "file": "withdrawal-operation.json",
+      "definition": "operation"
+    }
+  ],
+  "requestHash": "a0568666bd28de1c5d6e1c8f4d80b35ba4fd28b97540394fb87c1602ec6e681d",
+  "approvedBundleHash": "8b7734bfb721234299b2ecb8d0eb219c6f6310d642d65ce9174619830eb08a96"
+}

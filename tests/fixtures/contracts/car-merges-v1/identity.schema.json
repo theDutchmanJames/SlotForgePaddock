@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Private car merge identity response v1 (activation disabled)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "databaseId",
+    "recoveryId",
+    "mergeRevision",
+    "requestedCarId",
+    "canonicalCarId",
+    "state",
+    "mergeIds"
+  ],
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "databaseId": {
+      "$ref": "#/$defs/id"
+    },
+    "recoveryId": {
+      "$ref": "#/$defs/id"
+    },
+    "mergeRevision": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "requestedCarId": {
+      "$ref": "#/$defs/id"
+    },
+    "canonicalCarId": {
+      "$ref": "#/$defs/id"
+    },
+    "state": {
+      "enum": [
+        "current",
+        "merged"
+      ]
+    },
+    "mergeIds": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/id"
+      }
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "pattern": "^[a-zA-Z0-9_-]+$"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "const": "current"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "mergeIds": {
+            "maxItems": 0,
+            "type": "array"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "mergeIds": {
+            "minItems": 1,
+            "type": "array"
+          }
+        }
+      }
+    }
+  ],
+  "$comment": "Semantic rules: current IDs equal; merged IDs differ; canonical target exists; merge chain is acyclic. These require state validation beyond JSON Schema."
+}

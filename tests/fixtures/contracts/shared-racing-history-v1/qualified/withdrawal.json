@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "databaseId": "paddock-demo",
+  "recoveryId": "recovery-example-1",
+  "operationId": "qualified-withdrawal",
+  "editor": {
+    "installationId": "timing-editor-a",
+    "application": "SlotForge Timing",
+    "name": "Example race director"
+  },
+  "sourceId": "timing-demo",
+  "sessionId": "session-class-race",
+  "expected": {
+    "revision": 1,
+    "contentHash": "6da3ec880ea079aedd2da66f8c20f6e4d13ced768585f4f74732f1b1cc869bb1",
+    "state": "active"
+  },
+  "reason": "Finalised by race director",
+  "action": "withdraw",
+  "withdrawalReason": "Reviewed withdrawal"
+}

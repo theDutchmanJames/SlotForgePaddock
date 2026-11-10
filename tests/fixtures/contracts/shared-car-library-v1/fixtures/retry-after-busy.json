@@ -1,0 +1,4 @@
+{
+  "error": "Paddock is busy processing earlier requests. Keep this request queued and retry shortly.",
+  "code": "STORAGE_FAILED"
+}

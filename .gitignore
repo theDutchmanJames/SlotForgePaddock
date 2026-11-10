@@ -10,3 +10,23 @@ Start Test Collection.cmd
 *.key
 .DS_Store
 Thumbs.db
+
+# Local design, coordination, review and one-off qualification artifacts
+/integration-handoff/
+/concept/
+/docs/reviews/
+/docs/releases/
+/docs/REVIEW-*.md
+/docs/*-PLAN.md
+/docs/SHARED-LIBRARY-LAPTOP-TEST.md
+/scripts/export-*-handoff.cjs
+/scripts/export-merge-settings-contract.cjs
+/scripts/apply-installed-timing-candidate.cjs
+/scripts/attach-merge-timing-candidate.cjs
+/scripts/build-activation-candidate.cjs
+/scripts/build-installed-history.cjs
+/scripts/build-merge-candidate.cjs
+/scripts/prepare-*.cjs
+/scripts/package-shared-source.cjs
+/scripts/qualify-installed-*.cjs
+/scripts/qualify-merge-installed.cjs

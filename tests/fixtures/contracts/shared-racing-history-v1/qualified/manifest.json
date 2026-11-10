@@ -1,0 +1,31 @@
+{
+  "status": "internal-qualified-not-enabled-for-client-writes",
+  "notes": "Synthetic examples; scoringSnapshot null only. Public formats and historical approval remain gated. Tokens are illustrative; use host-issued tokens.",
+  "fixtures": [
+    {
+      "file": "create.json",
+      "definition": "operation"
+    },
+    {
+      "file": "head.json",
+      "definition": "head"
+    },
+    {
+      "file": "laps.json",
+      "definition": "laps"
+    },
+    {
+      "file": "statistics.json",
+      "definition": "statistics"
+    },
+    {
+      "file": "correction.json",
+      "definition": "operation"
+    },
+    {
+      "file": "withdrawal.json",
+      "definition": "operation"
+    }
+  ],
+  "schema": "schema.json"
+}

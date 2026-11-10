@@ -1,0 +1,10 @@
+[
+  {
+    "request": "create-request.json",
+    "sha256": "8ee29bce16c7338520fd2e9a3a60aea79b56172ee6aeb0d4e67c42ce97b11c2a"
+  },
+  {
+    "request": "patch-request.json",
+    "sha256": "5460cedf3732aa5f94bf974c9daf41f068fb82ad856e44b632bff07c340b537c"
+  }
+]

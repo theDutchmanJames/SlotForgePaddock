@@ -121,9 +121,19 @@ recorded conditions remain visible, but individual-lap validity cannot be checke
 Records span different conditions; inspect voltage, direction and magnet status
 when comparing them. Unknown conditions stay unknown.
 
-### Similar pace
+### Shared-history pace comparison
 
-Open **Cars → Compare pace**, or use the button in a car's **Performance** section.
+Open **Cars → Compare pace**, or use the button in a car’s **Performance** section. Select two recorded sessions, either for the same car or different cars. Search the paged car list and filter sessions by track name, then choose lane and driver filters independently. Click **Compare recorded pace**.
+
+The comparison reads both accepted history formats in one SQLite snapshot, using the configurations recorded for those sessions. It compares average and median valid pace, population standard deviation, separate personal/track-eligible best laps and uninterrupted 5/10-lap averages. Invalid/pit laps cannot set records, and missing clocks cannot establish an uninterrupted run. Results include sample sizes and warnings for small samples, unknown evidence, mixed lanes/drivers, different source-scoped tracks and changed lane lengths. No setup improvement is inferred automatically.
+
+Changed captured specifications are highlighted; current car settings never fill gaps in old evidence. Archived cars remain inspectable. Withdrawn, virtual, unlinked and quarantined contributions are excluded. Corrections invalidate old selections; change notifications clear an open comparison and ask for a refresh. Database restores require the new recovery generation. All reads run in the background, and only the two selected participants’ lap values are processed.
+
+Historical evidence is comparable only after acceptance. This feature does not enable historical approval or richer incoming writes.
+
+### Similar pace for manual and earlier Timing records
+
+Choose **Manual & earlier Timing runs** inside Compare pace.
 Choose a reference car, a particular session/stint, a metric and a tolerance in
 seconds. Same lane and same driver name are enabled by default and can be relaxed.
 Track, recorded direction, voltage and magnet status must match. Unknown matches

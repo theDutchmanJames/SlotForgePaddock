@@ -1,0 +1,4 @@
+{
+  "error": "This Timing car already has a pending or accepted transfer. Look up its origin before proceeding.",
+  "code": "ORIGIN_CONFLICT"
+}

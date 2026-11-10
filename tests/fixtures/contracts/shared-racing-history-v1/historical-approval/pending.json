@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "databaseId": "paddock-demo",
+  "recoveryId": "approval-fixture-generation",
+  "operationId": "historical-review-batch",
+  "requestHash": "a0568666bd28de1c5d6e1c8f4d80b35ba4fd28b97540394fb87c1602ec6e681d",
+  "items": [
+    {
+      "itemId": "item-1",
+      "sourceId": "timing-original-installation",
+      "sessionId": "historical-session-1",
+      "status": "pending",
+      "accepted": null,
+      "message": "Awaiting review in Paddock. No racing statistics have changed."
+    },
+    {
+      "itemId": "item-2",
+      "sourceId": "timing-original-installation",
+      "sessionId": "historical-session-2",
+      "status": "pending",
+      "accepted": null,
+      "message": "Awaiting review in Paddock. No racing statistics have changed."
+    },
+    {
+      "itemId": "item-3",
+      "sourceId": "timing-original-installation",
+      "sessionId": "historical-session-3",
+      "status": "pending",
+      "accepted": null,
+      "message": "Awaiting review in Paddock. No racing statistics have changed."
+    }
+  ]
+}

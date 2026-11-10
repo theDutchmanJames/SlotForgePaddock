@@ -1,0 +1,271 @@
+{
+  "version": 1,
+  "schemaVersion": 1,
+  "schema": "/v1/local-library/car-schema",
+  "operations": "/v1/local-library/car-operations",
+  "actions": [
+    "create",
+    "patch",
+    "archive",
+    "restore"
+  ],
+  "maxRequestBytes": 131072,
+  "reviewRequired": false,
+  "recoveryHeader": "X-SlotForge-Recovery",
+  "media": {
+    "write": false,
+    "read": "scalable-v1"
+  },
+  "databaseId": "79ad63e6-055f-43fc-94db-d1a1a2d3ab87",
+  "recoveryId": "6f47d6e7-9135-46b0-8f75-5a3bc3d028a9",
+  "fields": {
+    "name": {
+      "type": "string",
+      "path": [
+        "name"
+      ],
+      "maxLength": 200,
+      "clearable": false
+    },
+    "maker": {
+      "type": "string",
+      "path": [
+        "maker"
+      ],
+      "maxLength": 1000,
+      "clearable": true
+    },
+    "marque": {
+      "type": "string",
+      "path": [
+        "marque"
+      ],
+      "maxLength": 1000,
+      "clearable": true
+    },
+    "model": {
+      "type": "string",
+      "path": [
+        "model"
+      ],
+      "maxLength": 1000,
+      "clearable": true
+    },
+    "reference": {
+      "type": "string",
+      "path": [
+        "reference"
+      ],
+      "maxLength": 1000,
+      "clearable": true
+    },
+    "scale": {
+      "type": "string",
+      "path": [
+        "scale"
+      ],
+      "maxLength": 100,
+      "clearable": true
+    },
+    "number": {
+      "type": "string",
+      "path": [
+        "number"
+      ],
+      "maxLength": 100,
+      "clearable": true
+    },
+    "livery": {
+      "type": "string",
+      "path": [
+        "livery"
+      ],
+      "maxLength": 1000,
+      "clearable": true
+    },
+    "raceClass": {
+      "type": "string",
+      "path": [
+        "raceClass"
+      ],
+      "maxLength": 1000,
+      "clearable": true
+    },
+    "availability": {
+      "type": "string",
+      "path": [
+        "availability"
+      ],
+      "maxLength": 200,
+      "clearable": true
+    },
+    "motor": {
+      "type": "string",
+      "path": [
+        "technical",
+        "motor"
+      ],
+      "maxLength": 1000,
+      "clearable": true
+    },
+    "motorLayout": {
+      "type": "string",
+      "path": [
+        "technical",
+        "motorLayout"
+      ],
+      "maxLength": 100,
+      "clearable": true
+    },
+    "rearTyres": {
+      "type": "string",
+      "path": [
+        "technical",
+        "rearTyres"
+      ],
+      "maxLength": 1000,
+      "clearable": true
+    },
+    "frontTyres": {
+      "type": "string",
+      "path": [
+        "technical",
+        "frontTyres"
+      ],
+      "maxLength": 1000,
+      "clearable": true
+    },
+    "guide": {
+      "type": "string",
+      "path": [
+        "technical",
+        "guide"
+      ],
+      "maxLength": 1000,
+      "clearable": true
+    },
+    "braids": {
+      "type": "string",
+      "path": [
+        "technical",
+        "braids"
+      ],
+      "maxLength": 1000,
+      "clearable": true
+    },
+    "chassis": {
+      "type": "string",
+      "path": [
+        "technical",
+        "chassis"
+      ],
+      "maxLength": 1000,
+      "clearable": true
+    },
+    "body": {
+      "type": "string",
+      "path": [
+        "technical",
+        "body"
+      ],
+      "maxLength": 1000,
+      "clearable": true
+    },
+    "pod": {
+      "type": "string",
+      "path": [
+        "technical",
+        "pod"
+      ],
+      "maxLength": 1000,
+      "clearable": true
+    },
+    "pinion": {
+      "type": "integer",
+      "path": [
+        "technical",
+        "pinion"
+      ],
+      "unit": "teeth",
+      "minimum": 1,
+      "maximum": 1000,
+      "clearable": true
+    },
+    "gear": {
+      "type": "integer",
+      "path": [
+        "technical",
+        "gear"
+      ],
+      "unit": "teeth",
+      "minimum": 1,
+      "maximum": 1000,
+      "clearable": true
+    },
+    "weight": {
+      "type": "number",
+      "path": [
+        "technical",
+        "weight"
+      ],
+      "unit": "g",
+      "minimum": 0,
+      "maximum": 100000,
+      "clearable": true
+    },
+    "rearDiameter": {
+      "type": "number",
+      "path": [
+        "technical",
+        "rearDiameter"
+      ],
+      "unit": "mm",
+      "minimum": 0.001,
+      "maximum": 1000,
+      "clearable": true
+    },
+    "frontDiameter": {
+      "type": "number",
+      "path": [
+        "technical",
+        "frontDiameter"
+      ],
+      "unit": "mm",
+      "minimum": 0.001,
+      "maximum": 1000,
+      "clearable": true
+    },
+    "ratedRpm": {
+      "type": "integer",
+      "path": [
+        "technical",
+        "ratedRpm"
+      ],
+      "unit": "rpm",
+      "minimum": 0,
+      "maximum": 1000000,
+      "clearable": true
+    },
+    "ratedVoltage": {
+      "type": "number",
+      "path": [
+        "technical",
+        "ratedVoltage"
+      ],
+      "unit": "V",
+      "minimum": 0.001,
+      "maximum": 1000,
+      "clearable": true
+    }
+  },
+  "clearSemantics": "Use clear array: empty text, unknown numeric value (null in projection).",
+  "omitted": "unchanged",
+  "receiptRetention": {
+    "maxCount": 100000,
+    "maxBytes": 33554432,
+    "sharedWithDesktopCommands": true,
+    "eviction": false,
+    "backup": "Restoration changes recoveryId; old operations require reconciliation."
+  },
+  "car": "/v1/local-library/cars/{carId}"
+}

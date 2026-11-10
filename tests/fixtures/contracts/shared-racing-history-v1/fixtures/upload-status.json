@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "databaseId": "paddock-demo",
+  "recoveryId": "recovery-example-1",
+  "uploadId": "upload-example-1",
+  "state": "staging",
+  "byteLength": 2358,
+  "sha256": "5a7232dddee0e5207c13a18113f2fb32c2cb9c92753c8f3184dd7afd85b511b3",
+  "chunkBytes": 262144,
+  "received": [
+    0
+  ],
+  "expiresAt": "2026-11-10T12:00:00.000Z",
+  "receipt": null
+}

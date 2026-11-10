@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "databaseId": "paddock-demo",
+  "recoveryId": "recovery-example-1",
+  "operationId": "correct-normal",
+  "sourceId": "timing-demo",
+  "sessionId": "session-normal",
+  "requestHash": "bff76a65970081d31eb81c2170ae680fdb45f301d37e03410bb6a52d0792c6e0",
+  "status": "committed",
+  "accepted": {
+    "revision": 2,
+    "contentHash": "12d2a64020341e4252a39be4c1d92be65d0c947eb3f285864aaaadca6a21315a",
+    "state": "active"
+  },
+  "duplicate": false,
+  "committedAt": "2026-11-09T12:00:00.000Z",
+  "current": {
+    "revision": 2,
+    "contentHash": "12d2a64020341e4252a39be4c1d92be65d0c947eb3f285864aaaadca6a21315a",
+    "state": "active"
+  }
+}

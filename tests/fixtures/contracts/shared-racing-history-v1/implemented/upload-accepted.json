@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "databaseId": "paddock-demo",
+  "recoveryId": "recovery-example-1",
+  "uploadId": "upload-example-1",
+  "state": "committed",
+  "byteLength": 2358,
+  "sha256": "5a7232dddee0e5207c13a18113f2fb32c2cb9c92753c8f3184dd7afd85b511b3",
+  "chunkBytes": 262144,
+  "received": [
+    0
+  ],
+  "expiresAt": "2026-11-10T12:00:00.000Z",
+  "receipt": {
+    "version": 1,
+    "databaseId": "paddock-demo",
+    "recoveryId": "recovery-example-1",
+    "operationId": "create-normal",
+    "sourceId": "timing-demo",
+    "sessionId": "session-normal",
+    "requestHash": "3c71765a8bd0a8063eabf974833d505145de05b2d3d34c4bd06715200aff0336",
+    "status": "committed",
+    "accepted": {
+      "revision": 1,
+      "contentHash": "d164c062e20bd0aa1ce43dba37b024a78e3a93fe2cdf99142f6c79a53d0230b6",
+      "state": "active"
+    },
+    "duplicate": false,
+    "committedAt": "2026-11-09T12:00:00.000Z",
+    "current": {
+      "revision": 1,
+      "contentHash": "d164c062e20bd0aa1ce43dba37b024a78e3a93fe2cdf99142f6c79a53d0230b6",
+      "state": "active"
+    }
+  }
+}

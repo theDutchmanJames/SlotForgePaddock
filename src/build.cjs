@@ -8,6 +8,7 @@ const text=(v,max)=>typeof v==='string'&&v.length<=max;
 const id=v=>typeof v==='string'&&/^[a-zA-Z0-9_-]{1,100}$/.test(v)&&!Object.hasOwn(Object.prototype,v)&&v!=='prototype';
 function validateData(d){
   check(object(d),'Invalid build.');
+  require('./rebuild.cjs').validatePlan(d.rebuild);
   for(const [k,max] of [['name',200],['maker',200],['scale',200],['notes',20000]])check(text(d[k],max),'Invalid build '+k+'.');
   check(typeof d.saveSetup==='boolean','Invalid setup preference.');
   Performance.clean(d.performance);Performance.baseline(d.performanceBaseline);
@@ -28,7 +29,7 @@ function validateData(d){
 }
 function cleanData(input){
   validateData(input);
-  return {name:input.name.trim(),maker:input.maker.trim(),scale:input.scale.trim(),notes:input.notes,usage:[...new Set(input.usage.map(v=>v.trim()).filter(Boolean))],saveSetup:input.saveSetup,
+  return {name:input.name.trim(),maker:input.maker.trim(),scale:input.scale.trim(),notes:input.notes,usage:[...new Set(input.usage.map(v=>v.trim()).filter(Boolean))],saveSetup:input.saveSetup,...(input.rebuild?{rebuild:require('./json-data.cjs').cloneJSON(input.rebuild)}:{}),
     gearing:{pinion:input.gearing?.pinion.trim()||'',gear:input.gearing?.gear.trim()||''},
     performance:Performance.clean(input.performance),performanceBaseline:Performance.baseline(input.performanceBaseline),
     parts:input.parts.map(r=>Object.fromEntries(['key','partId','quantity','slot','position','name'].map(k=>[k,r[k]]))),
@@ -41,10 +42,12 @@ function validateDrafts(db){
 }
 function plan(db,p){
   const data=cleanData(p.data);check(data.name,'Enter a name for your new car.');
-  check(data.parts.length||data.assemblies.length,'Choose at least one inventory part or assembly.');
-  if(p.draftId)check(db.buildDrafts.some(d=>d.id===p.draftId),'This draft no longer exists. Start a new build or reload a saved draft.');
+  if(p.draftId){const draft=db.buildDrafts.find(d=>d.id===p.draftId);check(draft,'This draft no longer exists. Start a new build or reload a saved draft.');check((draft.data.rebuild?.jobId||null)===(data.rebuild?.jobId||null)&&(draft.data.rebuild?.carId||null)===(data.rebuild?.carId||null),'This draft belongs to a different build or rebuild job. Reopen the correct draft.');}
+  const rebuild=require('./rebuild.cjs').plan(db,data);
+  check(data.parts.length||data.assemblies.length||rebuild?.rows.length,'Choose at least one inventory part, reused part or assembly.');
   const rows=[],claimed=new Set(),totals=new Map();
   const claim=field=>{if(field){check(!claimed.has(field),'More than one selection occupies '+(Model.slots.find(s=>s.field===field)?.label||field)+'. Remove the overlapping assignment or assembly.');claimed.add(field);}};
+  for(const row of rebuild?.rows||[]){claim(row.field);rows.push(row);}
   for(const selected of data.assemblies){
     const a=db.assemblies.find(a=>a.id===selected.id&&!a.dismantled);check(a,'An assembly is missing or dismantled. Remove it from the build.');
     check(!a.carId,a.name+' is already installed on a car. Only stored assemblies can be used.');
@@ -62,23 +65,28 @@ function plan(db,p){
     check(totals.get(part.id)<=w.available(db,part),part.name+' has insufficient available stock for this build.');
     rows.push({partId:part.id,name:part.name,quantity:selected.quantity,field,position:slot?.label||selected.position||'Additional part'});
   }
-  const gearing=Model.gearing(data,db);
-  return {revision:db.revision,data,rows,gearing:{pinion:gearing.pinion.value,gear:gearing.gear.value},pieces:rows.reduce((n,r)=>n+r.quantity,0)};
+  const gearing=Model.gearing({...data,parts:[...data.parts,...(rebuild?.rows||[]).filter(r=>['pinionPart','gearPart'].includes(r.field)).map(r=>({partId:r.partId,slot:r.field}))]},db);
+  return {revision:db.revision,data,rows,...(rebuild?{rebuild:{name:rebuild.car.name,returnedPieces:w.active(db).filter(i=>i.carId===rebuild.car.id&&!data.rebuild.reuse.includes(i.id)&&!data.rebuild.assemblies.includes(i.assemblyId)).reduce((n,i)=>n+i.quantity,0)}}:{}),gearing:{pinion:gearing.pinion.value,gear:gearing.gear.value},pieces:rows.reduce((n,r)=>n+r.quantity,0)};
 }
 function mutate(db,action,p,remember){
   check(p.revision===db.revision,'The database changed. Refresh stock and review this build again; your selections are kept.');
-  if(action==='build.draft.delete'){check(db.buildDrafts.some(d=>d.id===p.id),'Draft not found.');db.buildDrafts=db.buildDrafts.filter(d=>d.id!==p.id);return p.id;}
+  if(action==='build.draft.delete'){check(db.buildDrafts.some(d=>d.id===p.id),'Draft not found.');check(!db.buildDrafts.find(d=>d.id===p.id).data.rebuild,'Cancel this rebuild from its Workshop job.');db.buildDrafts=db.buildDrafts.filter(d=>d.id!==p.id);for(const line of db.planning.shopping.filter(s=>s.buildId===p.id))line.quantity=line.received;db.planning.shopping=db.planning.shopping.filter(s=>s.buildId!==p.id||s.received>0);return p.id;}
   if(action==='build.draft.save'){
     const data=cleanData(p.data),stamp=new Date().toISOString();
     const draft=p.id?db.buildDrafts.find(d=>d.id===p.id):{id:randomUUID(),created:stamp};check(draft,'Draft not found.');
-    Object.assign(draft,{data,updated:stamp});if(!p.id)db.buildDrafts.unshift(draft);return draft.id;
+    check(!data.rebuild||db.jobs.some(j=>j.id===data.rebuild.jobId&&j.carId===data.rebuild.carId&&j.status==='active'&&j.kind==='general'&&j.category==='rebuild'),'This rebuild job is closed or missing.');
+    check(!draft.data||(draft.data.rebuild?.jobId||null)===(data.rebuild?.jobId||null)&&(draft.data.rebuild?.carId||null)===(data.rebuild?.carId||null),'A saved draft cannot become an unrelated build or rebuild.');
+    check(!data.rebuild||!db.buildDrafts.some(d=>d.id!==draft.id&&d.data.rebuild?.jobId===data.rebuild.jobId),'This rebuild already has a draft. Open that draft before saving.');
+    Object.assign(draft,{data,updated:stamp});if(!p.id)db.buildDrafts.unshift(draft);
+    syncShopping(db,draft,stamp);return draft.id;
   }
   check(action==='build.create','Unknown build action.');check(p.confirmed===true,'Review and confirm the parts to fit before saving.');
   const preview=plan(db,p),d=preview.data,stamp=new Date().toISOString();
   const car={id:randomUUID(),revision:1,created:stamp,updated:stamp,name:d.name,maker:d.maker,scale:d.scale,privateNotes:d.notes,usage:d.usage,tags:[],technical:{},factory:{},photos:[],custom:{},ownership:'Owned',availability:'Available'};
   db.cars.push(car);
+  require('./rebuild.cjs').complete(db,preview,car);
   for(const a of d.assemblies)w.installAssembly(db,db.assemblies.find(item=>item.id===a.id),car.id);
-  for(const r of preview.rows.filter(r=>!r.assemblyId))w.addInstallation(db,car.id,r.partId,r.quantity,r.field,r.position);
+  for(const r of preview.rows.filter(r=>!r.assemblyId&&!r.reuse))w.addInstallation(db,car.id,r.partId,r.quantity,r.field,r.position);
   for(const key of ['pinion','gear'])if(preview.gearing[key])car.technical[key]=preview.gearing[key];
   if(Performance.keys.some(key=>d.performance[key]&&d.performance[key]!=='Unknown'))for(const key of Performance.keys)if(d.performance[key])car.technical[key]=d.performance[key];
   const installations=w.active(db).filter(i=>i.carId===car.id).map(i=>({partId:i.partId,name:db.parts.find(p=>p.id===i.partId).name,quantity:i.quantity,field:i.field,position:i.position,...(i.assemblyId?{assemblyId:i.assemblyId,assemblyName:db.assemblies.find(a=>a.id===i.assemblyId).name}:{})}));
@@ -86,7 +94,24 @@ function mutate(db,action,p,remember){
   event('created','Built from scratch');
   if(d.saveSetup){db.setups.unshift({id:randomUUID(),carId:car.id,name:'As built',date:stamp,track:'',notes:'',technical:require('./json-data.cjs').cloneJSON(car.technical),installations:require('./json-data.cjs').cloneJSON(installations)});event('setup','Saved As built');}
   remember(car);
+  for(const line of db.planning.shopping.filter(s=>s.buildId===p.draftId||d.rebuild&&s.buildId&&s.jobId===d.rebuild.jobId)){line.buildCarId=car.id;line.buildName=car.name;}
   if(p.draftId)db.buildDrafts=db.buildDrafts.filter(d=>d.id!==p.draftId);
+  if(d.rebuild)db.buildDrafts=db.buildDrafts.filter(draft=>draft.data.rebuild?.jobId!==d.rebuild.jobId);
   return car.id;
+}
+function syncShopping(db,draft,stamp){
+ const totals=new Map();for(const row of draft.data.parts)totals.set(row.partId,(totals.get(row.partId)||0)+row.quantity);
+ const lines=db.planning.shopping;
+ for(const [partId,quantity] of totals){
+  const part=db.parts.find(p=>p.id===partId);check(part,'A planned catalogue part was deleted. Remove it from the build before saving.');
+  check(!w.assemblyForPart(db,partId),'Choose the complete assembly instead of one of its stock records.');
+  const needed=Math.max(0,quantity-w.available(db,part)),line=lines.find(s=>s.buildId===draft.id&&s.partId===partId);
+  const others=lines.filter(s=>s.partId===partId&&s.buildId!==draft.id).reduce((n,s)=>n+s.quantity-s.received,0);
+  check(part.tracking!=='individual'||part.quantity+others+needed<=1,'This individually tracked part cannot be ordered again. Choose a separate catalogue record.');
+  if(line){line.quantity=line.received+needed;line.buildName=draft.data.name||'Untitled build';line.updated=stamp;}
+  else if(needed)lines.push({id:randomUUID(),partId,jobId:draft.data.rebuild?.jobId||'',buildId:draft.id,buildName:draft.data.name||'Untitled build',quantity:needed,received:0,notes:'',supplier:'',date:'',created:stamp,updated:stamp});
+ }
+ for(const line of lines.filter(s=>s.buildId===draft.id&&!totals.has(s.partId))){line.quantity=line.received;line.updated=stamp;}
+ db.planning.shopping=lines.filter(s=>s.buildId!==draft.id||s.quantity>0);
 }
 module.exports={validateDrafts,plan,mutate};

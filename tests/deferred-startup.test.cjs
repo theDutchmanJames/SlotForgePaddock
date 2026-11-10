@@ -40,7 +40,7 @@ test('concurrent first saves serialize while deferred loading yields to the even
 });
 
 test('deferred pending review counts do not load proposal bodies',async t=>{
- const {s,dir}=fixture(t),{Club}=require('../src/club.cjs'),{Network}=require('../src/network.cjs'),net=new Network(s),club=new Club(s,net,dir);t.after(()=>{club.close();net.close();});club.enable('Host','1234',false);await club.mutate('car.save',{id:'car-a',revision:s.data.cars[0].revision,data:{name:'Proposed'}},{snapshot:false});
+ const {s,dir}=fixture(t),{Club}=require('../src/club.cjs'),{Network}=require('../src/network.cjs'),net=new Network(s),club=new Club(s,net,dir);t.after(()=>{club.close();net.close();});club.enable('Host','1234',false);await club.propose('car.save',{id:'car-a',revision:s.data.cars[0].revision,data:{name:'Proposed'}},{snapshot:false});
  const opened=new Store(s.file,{deferred:true});assert.equal(opened.pendingClubReviews(),1);assert.equal(view(opened,{page:'Overview'})._view.review.club,1);assert.equal(opened.deferredState.stats.loadedSections.includes('club.proposals'),false);
 });
 
@@ -63,7 +63,7 @@ test('a deferred host serves Telemetry and accepts Timing corrections over local
 
 test('an interrupted SQLite writer uses the writable recovery path before deferred opening',t=>{
  const {s}=fixture(t),before=s.snapshot(),child=require('node:child_process').spawnSync(process.execPath,['-e',"const {DatabaseSync}=require('node:sqlite');const db=new DatabaseSync(process.argv[1]);db.exec(\"PRAGMA cache_size=1; BEGIN IMMEDIATE; UPDATE records SET json='interrupted';\");process.exit(0);",s.file],{encoding:'utf8'});assert.equal(child.status,0,child.stderr);assert.ok(fs.statSync(s.file+'-journal').size>0);
- const opened=new Store(s.file,{deferred:true});assert.equal(opened.deferredState,undefined);assert.deepEqual(opened.snapshot(),before);assert.ok(new Store(s.file,{deferred:true}).deferredState);
+ const opened=new Store(s.file,{deferred:true});assert.ok(opened.deferredState);assert.equal(opened.deferredState.stats.loadedSections.includes('cars'),false);assert.deepEqual(opened.snapshot(),before);assert.ok(new Store(s.file,{deferred:true}).deferredState);
 });
 
 test('Settings sizes are exact without materializing deferred records or originals',t=>{

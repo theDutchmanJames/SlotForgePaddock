@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "databaseId": "paddock-demo",
+  "recoveryId": "recovery-example-1",
+  "capability": {
+    "version": 1,
+    "operations": "/v1/shared-history/operations",
+    "receipt": "/v1/shared-history/operations/{installationId}/{operationId}",
+    "sessions": "/v1/shared-history/sessions",
+    "session": "/v1/shared-history/sessions/{sourceId}/{sessionId}",
+    "laps": "/v1/shared-history/sessions/{sourceId}/{sessionId}/laps/{participantId}",
+    "statistics": "/v1/shared-history/cars/{carId}/statistics",
+    "imports": "/v1/shared-history/imports",
+    "uploads": "/v1/shared-history/uploads",
+    "events": "/v1/scalable/events",
+    "changes": "/v1/scalable/changes?kind=results",
+    "recovery": "/v1/shared-history/status",
+    "formats": [
+      "timing-v1"
+    ],
+    "writeScope": "trusted-local",
+    "correctionPolicy": "trusted-local-editors-with-cas",
+    "immutableAudit": true,
+    "maxInlineBytes": 8388608,
+    "maxUploadBytes": 8388608,
+    "maxChunkBytes": 262144,
+    "maxLaps": 1000000,
+    "sessionPageSize": 50,
+    "lapPageSize": 250,
+    "features": {
+      "guardedWrites": true,
+      "historyReads": true,
+      "statistics": true,
+      "historicalImports": false,
+      "historicalReview": true,
+      "resumableUploads": true,
+      "resumableHistoricalImports": true
+    }
+  },
+  "cursor": "opaque-results-cursor-example"
+}

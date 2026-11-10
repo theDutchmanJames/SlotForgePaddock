@@ -1,0 +1,41 @@
+{
+  "error": "This car changed. Compare the current values before applying a new operation.",
+  "code": "REVISION_CONFLICT",
+  "details": {
+    "current": {
+      "id": "6ee82263-f4ba-43f6-b302-5955aad8f26a",
+      "revision": 2,
+      "archived": false,
+      "fields": {
+        "name": "Club GT3",
+        "maker": "NSR",
+        "marque": "Aston Martin",
+        "model": "",
+        "reference": "",
+        "scale": "",
+        "number": "",
+        "livery": "",
+        "raceClass": "",
+        "availability": "Available",
+        "motor": "",
+        "motorLayout": "",
+        "rearTyres": "",
+        "frontTyres": "",
+        "guide": "",
+        "braids": "",
+        "chassis": "",
+        "body": "",
+        "pod": "",
+        "pinion": 9,
+        "gear": 27,
+        "weight": 81,
+        "rearDiameter": null,
+        "frontDiameter": null,
+        "ratedRpm": null,
+        "ratedVoltage": null
+      },
+      "unparsed": {},
+      "truncated": []
+    }
+  }
+}

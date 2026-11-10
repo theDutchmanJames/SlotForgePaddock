@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "databaseId": "paddock-demo",
+  "recoveryId": "recovery-example-1",
+  "operationId": "withdraw-normal",
+  "sourceId": "timing-demo",
+  "sessionId": "session-normal",
+  "requestHash": "bb17eb1344c663e812c4fe9bedb2c9ed86b62a84623114456a0a5d4efbe53ec7",
+  "status": "committed",
+  "accepted": {
+    "revision": 3,
+    "contentHash": "9f0649008c66f31ecc76634dee3e024d35fa73110c60fdb1f3e195b86109d992",
+    "state": "withdrawn"
+  },
+  "duplicate": false,
+  "committedAt": "2026-11-09T12:00:00.000Z",
+  "current": {
+    "revision": 3,
+    "contentHash": "9f0649008c66f31ecc76634dee3e024d35fa73110c60fdb1f3e195b86109d992",
+    "state": "withdrawn"
+  }
+}

@@ -25,11 +25,12 @@ module.exports=async({win,store,network,js,wait,click,fill,submit,qa})=>{
  await submit();assert.ok(store.data.cars.some(c=>c.name==='Club review UI car'));
  checks.push('car creation queues and approval commits from Review UI');
  const car=store.data.cars.find(c=>c.name==='Club review UI car');
- await club.mutate('car.save',{id:car.id,revision:car.revision,data:{name:'Rejected name'}});
+ // Existing queued proposals from older clients still support selective review.
+ await club.propose('car.save',{id:car.id,revision:car.revision,data:{name:'Rejected name'}});
  await click('[data-action="club-review"]');await click('[data-action="club-compare"]');await click('[data-action="club-reject"]');await wait(`!document.querySelector('#dialog').open`);
  assert.equal(store.data.cars.find(c=>c.id===car.id).name,'Club review UI car');checks.push('dealership computer rejects a proposed edit without changing the car');
- await club.mutate('car.save',{id:car.id,revision:store.data.cars.find(c=>c.id===car.id).revision,data:{name:'Selective UI name',livery:'Do not apply'}});
- await click('[data-action="club-review"]');await click('[data-action="club-compare"]');await wait(`!!document.querySelector('[data-club-accept-field="livery"]')`);await js(`document.querySelector('[data-club-accept-field="livery"]').checked=false`);await submit();assert.equal(store.data.cars.find(c=>c.id===car.id).name,'Selective UI name');assert.notEqual(store.data.cars.find(c=>c.id===car.id).livery,'Do not apply');checks.push('Dealership review applies only selected independent text fields');
+ await club.propose('car.save',{id:car.id,revision:store.data.cars.find(c=>c.id===car.id).revision,data:{name:'Selective UI name',livery:'Do not apply'}});
+ await click('[data-action="club-review"]');await click('[data-action="club-compare"]');await wait(`!!document.querySelector('[data-club-accept-field="livery"]')`);await click('[data-review-bulk="none"]');assert.equal(await js("document.querySelectorAll('[data-club-accept-field]:checked').length"),0);await click('[data-review-bulk="all"]');assert.equal(await js("document.querySelectorAll('[data-club-accept-field]:checked').length"),2);await js(`document.querySelector('[data-club-accept-field="livery"]').checked=false`);await submit();assert.equal(store.data.cars.find(c=>c.id===car.id).name,'Selective UI name');assert.notEqual(store.data.cars.find(c=>c.id===car.id).livery,'Do not apply');checks.push('Dealership review applies only selected independent text fields');
  const folder=fs.mkdtempSync(path.join(require('node:os').tmpdir(),'paddock-club-ui-'));
  const remoteStore=new Store(path.join(folder,'database.json'));remoteStore.mutate('car.save',{data:{name:'Remote club Lexus'}});
  const remoteNet=new Network(remoteStore),remoteClub=new Club(remoteStore,remoteNet,folder);

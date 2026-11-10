@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "databaseId": "79ad63e6-055f-43fc-94db-d1a1a2d3ab87",
+  "recoveryId": "6f47d6e7-9135-46b0-8f75-5a3bc3d028a9",
+  "sourceId": "timing-demo",
+  "operationId": "archive-001",
+  "action": "archive",
+  "carId": "6ee82263-f4ba-43f6-b302-5955aad8f26a",
+  "expectedRevision": 2
+}

@@ -1,0 +1,10 @@
+{
+  "format": "slotforge-local-library",
+  "version": 1,
+  "instanceId": "example-listener-instance",
+  "pid": 12345,
+  "address": "http://127.0.0.1:51234",
+  "token": "BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc",
+  "databaseId": "paddock-local-demo",
+  "name": "Example home library"
+}

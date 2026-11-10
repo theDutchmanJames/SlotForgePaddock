@@ -1,0 +1,169 @@
+{
+  "status": "Draft examples only; no runtime requests",
+  "identityExamples": [
+    {
+      "version": 1,
+      "databaseId": "example-library",
+      "recoveryId": "example-generation",
+      "mergeRevision": 1,
+      "requestedCarId": "car-main",
+      "canonicalCarId": "car-main",
+      "state": "current",
+      "mergeIds": []
+    },
+    {
+      "version": 1,
+      "databaseId": "example-library",
+      "recoveryId": "example-generation",
+      "mergeRevision": 1,
+      "requestedCarId": "car-duplicate",
+      "canonicalCarId": "car-main",
+      "state": "merged",
+      "mergeIds": [
+        "merge-1"
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "selective-merge",
+      "main": "car-main",
+      "duplicate": "car-duplicate",
+      "incomingChoices": {
+        "fields": {
+          "maker": "take-duplicate",
+          "raceClass": "keep-main"
+        },
+        "photos": {
+          "duplicate-photo-1": "include",
+          "duplicate-photo-2": "archive-only"
+        },
+        "history": [
+          {
+            "sourceId": "timing-a",
+            "sessionId": "race-1",
+            "participantId": "p-1",
+            "decision": "include"
+          },
+          {
+            "sourceId": "timing-a",
+            "sessionId": "race-2",
+            "participantId": "p-1",
+            "decision": "archive-only"
+          }
+        ]
+      },
+      "expected": {
+        "beforeApproval": "both cars unchanged",
+        "afterApproval": "main receives only selected information",
+        "archive": "all original duplicate fields/media/history preserved",
+        "statistics": "race-1 included; race-2 excluded"
+      }
+    },
+    {
+      "id": "same-physical-part",
+      "partId": "motor-1",
+      "before": {
+        "owned": 2,
+        "available": 0,
+        "installations": [
+          {
+            "id": "i-main",
+            "carId": "car-main",
+            "quantity": 1
+          },
+          {
+            "id": "i-duplicate",
+            "carId": "car-duplicate",
+            "quantity": 1
+          }
+        ]
+      },
+      "choice": "same-physical-part",
+      "expected": {
+        "owned": 1,
+        "available": 0,
+        "fitted": 1,
+        "archive": "original owned and installation states preserved",
+        "audit": "explicit correction of duplicated ownership, not a returned spare"
+      }
+    },
+    {
+      "id": "actual-spare-return",
+      "before": {
+        "owned": 2,
+        "available": 0,
+        "fitted": 2
+      },
+      "choice": "return duplicate physical motor",
+      "expected": {
+        "owned": 2,
+        "available": 1,
+        "fitted": 1
+      }
+    },
+    {
+      "id": "selected-history-correction",
+      "key": {
+        "sourceId": "timing-a",
+        "sessionId": "race-1",
+        "participantId": "p-1"
+      },
+      "revision": 2,
+      "expected": "replace existing live contribution once; archive approval snapshot unchanged"
+    },
+    {
+      "id": "excluded-history-correction",
+      "key": {
+        "sourceId": "timing-a",
+        "sessionId": "race-2",
+        "participantId": "p-1"
+      },
+      "revision": 2,
+      "expected": "retain updated live evidence with archive-only inclusion; do not add to main statistics"
+    },
+    {
+      "id": "withdraw-and-retry",
+      "key": {
+        "sourceId": "timing-a",
+        "sessionId": "race-1"
+      },
+      "withdrawalRevision": 3,
+      "retryRevision": 1,
+      "expected": "withdrawal retained; old retry cannot restore contribution"
+    },
+    {
+      "id": "late-unseen-old-car-history",
+      "carId": "car-duplicate",
+      "sessionId": "race-late",
+      "expected": "Preserve original evidence; create one pending inclusion review across retries; exclude from main-car statistics until approved. Rejection preserves evidence. New main-car races appear normally."
+    },
+    {
+      "id": "stale-edit",
+      "request": {
+        "carId": "car-duplicate",
+        "operationId": "edit-old",
+        "expectedRevision": 7
+      },
+      "expectedCode": "CAR_MERGED",
+      "expected": "request bytes and journal retained; explicit reconciliation against main required"
+    },
+    {
+      "id": "lost-success-receipt",
+      "operationId": "merge-approval-1",
+      "expected": "same request returns same merge/archive result; changed content conflicts"
+    },
+    {
+      "id": "restore-after-merge",
+      "previousRecoveryId": "example-generation",
+      "currentRecoveryId": "example-restored-generation",
+      "expectedCode": "RECOVERY_CHANGED",
+      "expected": "no automatic replay of stale approval"
+    },
+    {
+      "id": "legacy-reconnect",
+      "oldCredential": "EXAMPLE-ONLY-not-a-real-password",
+      "expected": "no conversion to Dealership authority; client reconnects explicitly and retains original result queue"
+    }
+  ]
+}

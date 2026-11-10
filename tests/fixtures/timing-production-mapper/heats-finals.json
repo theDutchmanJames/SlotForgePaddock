@@ -1,0 +1,672 @@
+{
+  "name": "heats-finals",
+  "evidence": {
+    "session": {
+      "id": "real-session",
+      "setupName": "Saved race",
+      "sessionType": "heats",
+      "trackId": "track",
+      "trackName": "Club",
+      "date": "2026-11-09T10:00:00.000Z",
+      "paddockJournal": {
+        "captures": {
+          "local": {
+            "name": "Captured car",
+            "configuration": {
+              "databaseId": "paddock-demo",
+              "carId": "car-a",
+              "kind": "current",
+              "configurationId": "b45e252a52522a0b267ac5b440533e42efb74f64796f06ca2e4b1578ca0ef13a",
+              "revision": "b45e252a52522a0b267ac5b440533e42efb74f64796f06ca2e4b1578ca0ef13a",
+              "carRevision": 1,
+              "capturedAt": "2026-10-31T10:00:00.000Z",
+              "technical": {
+                "motor": "21.5k",
+                "pinion": "9",
+                "gear": "27"
+              },
+              "components": [],
+              "signature": "a366a131cf225af3270996c907d8901c09b070435d11ee413e4f4325ed4a7e3a"
+            }
+          }
+        },
+        "lanes": [
+          20
+        ],
+        "heats": [
+          {
+            "id": "1",
+            "name": "Heat 1",
+            "startedAt": 100000,
+            "endedAt": 121000,
+            "entries": [
+              {
+                "carId": "local",
+                "driverId": "driver",
+                "driverName": "Driver",
+                "lane": 1,
+                "resultEffects": {
+                  "reviewMs": 0,
+                  "penaltyMs": 0,
+                  "pluginMs": 0
+                },
+                "changes": [],
+                "laps": [
+                  {
+                    "number": 1,
+                    "time": 10000,
+                    "at": 110000,
+                    "driverId": "driver",
+                    "driverName": "Driver",
+                    "removed": false,
+                    "valid": true,
+                    "pit": false
+                  },
+                  {
+                    "number": 2,
+                    "time": 11000,
+                    "at": 121000,
+                    "driverId": "driver",
+                    "driverName": "Driver",
+                    "removed": false,
+                    "valid": true,
+                    "pit": false
+                  }
+                ]
+              }
+            ],
+            "crossings": {
+              "0": [
+                {
+                  "at": 110000,
+                  "driverId": "driver",
+                  "driverName": "Driver"
+                },
+                {
+                  "at": 121000,
+                  "driverId": "driver",
+                  "driverName": "Driver"
+                }
+              ]
+            },
+            "endedBy": "Stopped",
+            "weatherNote": ""
+          },
+          {
+            "id": "2",
+            "name": "Heat 1",
+            "startedAt": 140000,
+            "endedAt": 161000,
+            "entries": [
+              {
+                "carId": "local",
+                "driverId": "driver",
+                "driverName": "Driver",
+                "lane": 1,
+                "resultEffects": {
+                  "reviewMs": 0,
+                  "penaltyMs": 0,
+                  "pluginMs": 0
+                },
+                "changes": [],
+                "laps": [
+                  {
+                    "number": 1,
+                    "time": 10000,
+                    "at": 150000,
+                    "driverId": "driver",
+                    "driverName": "Driver",
+                    "removed": false,
+                    "valid": true,
+                    "pit": false
+                  },
+                  {
+                    "number": 2,
+                    "time": 11000,
+                    "at": 161000,
+                    "driverId": "driver",
+                    "driverName": "Driver",
+                    "removed": false,
+                    "valid": true,
+                    "pit": false
+                  }
+                ]
+              }
+            ],
+            "crossings": {
+              "0": [
+                {
+                  "at": 110000,
+                  "driverId": "driver",
+                  "driverName": "Driver"
+                },
+                {
+                  "at": 121000,
+                  "driverId": "driver",
+                  "driverName": "Driver"
+                }
+              ]
+            },
+            "endedBy": "Stopped",
+            "weatherNote": ""
+          },
+          {
+            "id": "3",
+            "name": "Heat 1",
+            "startedAt": 180000,
+            "endedAt": 201000,
+            "entries": [
+              {
+                "carId": "local",
+                "driverId": "driver",
+                "driverName": "Driver",
+                "lane": 1,
+                "resultEffects": {
+                  "reviewMs": 0,
+                  "penaltyMs": 0,
+                  "pluginMs": 0
+                },
+                "changes": [],
+                "laps": [
+                  {
+                    "number": 1,
+                    "time": 10000,
+                    "at": 190000,
+                    "driverId": "driver",
+                    "driverName": "Driver",
+                    "removed": false,
+                    "valid": true,
+                    "pit": false
+                  },
+                  {
+                    "number": 2,
+                    "time": 11000,
+                    "at": 201000,
+                    "driverId": "driver",
+                    "driverName": "Driver",
+                    "removed": false,
+                    "valid": true,
+                    "pit": false
+                  }
+                ]
+              }
+            ],
+            "crossings": {
+              "0": [
+                {
+                  "at": 110000,
+                  "driverId": "driver",
+                  "driverName": "Driver"
+                },
+                {
+                  "at": 121000,
+                  "driverId": "driver",
+                  "driverName": "Driver"
+                }
+              ]
+            },
+            "endedBy": "Stopped",
+            "weatherNote": ""
+          }
+        ],
+        "classifiedTimes": {
+          "local": 63000
+        }
+      },
+      "standings": [
+        {
+          "carId": "local",
+          "driverId": "driver",
+          "driverName": "Driver",
+          "pos": 1,
+          "laps": 6,
+          "total": 21000,
+          "best": 10000,
+          "participant": 0,
+          "points": 30,
+          "score": 20,
+          "counted": 1,
+          "dropped": [
+            1
+          ],
+          "heats": 2,
+          "finalName": "A"
+        }
+      ],
+      "resultBy": "points",
+      "heatResults": [
+        {
+          "heat": 1,
+          "rows": [
+            {
+              "participant": 0,
+              "pos": 1,
+              "laps": 2,
+              "points": 10,
+              "total": 21000,
+              "spentPen": 21000
+            }
+          ]
+        },
+        {
+          "heat": 2,
+          "rows": [
+            {
+              "participant": 0,
+              "pos": 1,
+              "laps": 2,
+              "points": 10,
+              "total": 21000,
+              "spentPen": 21000
+            }
+          ]
+        },
+        {
+          "heat": 3,
+          "final": "A",
+          "rows": [
+            {
+              "participant": 0,
+              "pos": 1,
+              "laps": 2,
+              "points": 10,
+              "total": 21000,
+              "spentPen": 21000
+            }
+          ]
+        }
+      ]
+    },
+    "laps": [
+      {
+        "id": "saved-0-1",
+        "sessionId": "real-session",
+        "carId": "local",
+        "driverId": "driver",
+        "driverName": "Driver",
+        "lane": 1,
+        "lapNumber": 1,
+        "time": 10000,
+        "valid": true,
+        "pit": false,
+        "heat": 1
+      },
+      {
+        "id": "saved-1-1",
+        "sessionId": "real-session",
+        "carId": "local",
+        "driverId": "driver",
+        "driverName": "Driver",
+        "lane": 1,
+        "lapNumber": 2,
+        "time": 11000,
+        "valid": true,
+        "pit": false,
+        "heat": 1
+      },
+      {
+        "id": "saved-0-2",
+        "sessionId": "real-session",
+        "carId": "local",
+        "driverId": "driver",
+        "driverName": "Driver",
+        "lane": 1,
+        "lapNumber": 1,
+        "time": 10000,
+        "valid": true,
+        "pit": false,
+        "heat": 2
+      },
+      {
+        "id": "saved-1-2",
+        "sessionId": "real-session",
+        "carId": "local",
+        "driverId": "driver",
+        "driverName": "Driver",
+        "lane": 1,
+        "lapNumber": 2,
+        "time": 11000,
+        "valid": true,
+        "pit": false,
+        "heat": 2
+      },
+      {
+        "id": "saved-0-3",
+        "sessionId": "real-session",
+        "carId": "local",
+        "driverId": "driver",
+        "driverName": "Driver",
+        "lane": 1,
+        "lapNumber": 1,
+        "time": 10000,
+        "valid": true,
+        "pit": false,
+        "heat": 3
+      },
+      {
+        "id": "saved-1-3",
+        "sessionId": "real-session",
+        "carId": "local",
+        "driverId": "driver",
+        "driverName": "Driver",
+        "lane": 1,
+        "lapNumber": 2,
+        "time": 11000,
+        "valid": true,
+        "pit": false,
+        "heat": 3
+      }
+    ]
+  },
+  "historical": false,
+  "bundle": {
+    "format": "history-v1",
+    "provenance": {
+      "kind": "measured",
+      "evidence": "Original Timing crossing journal, captured configurations and saved reviewed classification.",
+      "missing": []
+    },
+    "race": {
+      "name": "Saved race",
+      "type": "race",
+      "startedAt": "1970-01-01T00:01:40.000Z",
+      "endedAt": "1970-01-01T00:03:21.000Z",
+      "track": {
+        "id": "track",
+        "name": "Club",
+        "lanes": [
+          {
+            "lane": 1,
+            "lengthM": 20
+          }
+        ]
+      },
+      "heats": [
+        {
+          "id": "heat-391552c099c101b131feaf24c5795a6a15bc8ec82015424e",
+          "name": "Heat 1",
+          "startedAtMs": 0,
+          "endedAtMs": 21000
+        },
+        {
+          "id": "heat-cc11310c456c3690d5a74c23aa31cc25b4e74cdae146c71e",
+          "name": "Heat 1",
+          "startedAtMs": 40000,
+          "endedAtMs": 61000
+        },
+        {
+          "id": "heat-a4aab3f1f08004e907d2357fafe74cab56359bcb32e23f52",
+          "name": "Heat 1",
+          "startedAtMs": 80000,
+          "endedAtMs": 101000
+        }
+      ],
+      "participants": [
+        {
+          "id": "car-ea17e25c6c7aa6ef9407f976a670e87e37bc7e2a86b7bd4a",
+          "kind": "physical",
+          "carId": "car-a",
+          "configuration": {
+            "databaseId": "paddock-demo",
+            "carId": "car-a",
+            "kind": "current",
+            "configurationId": "b45e252a52522a0b267ac5b440533e42efb74f64796f06ca2e4b1578ca0ef13a",
+            "revision": "b45e252a52522a0b267ac5b440533e42efb74f64796f06ca2e4b1578ca0ef13a",
+            "carRevision": 1,
+            "capturedAt": "2026-10-31T10:00:00.000Z",
+            "technical": {
+              "motor": "21.5k",
+              "pinion": "9",
+              "gear": "27"
+            },
+            "components": [],
+            "signature": "a366a131cf225af3270996c907d8901c09b070435d11ee413e4f4325ed4a7e3a"
+          },
+          "displayName": "Captured car",
+          "teamId": null,
+          "drivers": [
+            {
+              "id": "driver",
+              "name": "Driver"
+            }
+          ],
+          "stints": [
+            {
+              "id": "stint-f3e3bb4f8c4ff257b37344f8a2e266133901b0bd5914ced9",
+              "heatId": "heat-391552c099c101b131feaf24c5795a6a15bc8ec82015424e",
+              "driverId": "driver",
+              "lane": 1,
+              "startedAtMs": 0,
+              "endedAtMs": 21000
+            },
+            {
+              "id": "stint-55728b8f922687f010031b3c5576ff75657e936a923bbe4e",
+              "heatId": "heat-cc11310c456c3690d5a74c23aa31cc25b4e74cdae146c71e",
+              "driverId": "driver",
+              "lane": 1,
+              "startedAtMs": 40000,
+              "endedAtMs": 61000
+            },
+            {
+              "id": "stint-0568f24c00c3e7f796587c7d2951a8f8d96d6df55fbf4bd5",
+              "heatId": "heat-a4aab3f1f08004e907d2357fafe74cab56359bcb32e23f52",
+              "driverId": "driver",
+              "lane": 1,
+              "startedAtMs": 80000,
+              "endedAtMs": 101000
+            }
+          ],
+          "laps": [
+            {
+              "id": "lap-948f3ab0dcb7164f7c02b63dc5dfc6425d3cbc5295f0e527",
+              "originLapId": "saved-0-1",
+              "stintId": "stint-f3e3bb4f8c4ff257b37344f8a2e266133901b0bd5914ced9",
+              "heatId": "heat-391552c099c101b131feaf24c5795a6a15bc8ec82015424e",
+              "driverId": "driver",
+              "lane": 1,
+              "number": 1,
+              "durationMs": 10000,
+              "endedAtMs": 10000,
+              "valid": true,
+              "pit": false,
+              "personalRecordEligible": true,
+              "trackRecordEligible": true,
+              "countsForDistance": true,
+              "distanceM": 20,
+              "flags": [],
+              "reason": ""
+            },
+            {
+              "id": "lap-89d11a6f04b4bc818b932e91f5f0abfd7a9fd70b7f456bbb",
+              "originLapId": "saved-1-1",
+              "stintId": "stint-f3e3bb4f8c4ff257b37344f8a2e266133901b0bd5914ced9",
+              "heatId": "heat-391552c099c101b131feaf24c5795a6a15bc8ec82015424e",
+              "driverId": "driver",
+              "lane": 1,
+              "number": 2,
+              "durationMs": 11000,
+              "endedAtMs": 21000,
+              "valid": true,
+              "pit": false,
+              "personalRecordEligible": true,
+              "trackRecordEligible": true,
+              "countsForDistance": true,
+              "distanceM": 20,
+              "flags": [],
+              "reason": ""
+            },
+            {
+              "id": "lap-bae2d0e925b22c6c5885ef63d8cd5f2f9057616bb6d63e58",
+              "originLapId": "saved-0-2",
+              "stintId": "stint-55728b8f922687f010031b3c5576ff75657e936a923bbe4e",
+              "heatId": "heat-cc11310c456c3690d5a74c23aa31cc25b4e74cdae146c71e",
+              "driverId": "driver",
+              "lane": 1,
+              "number": 1,
+              "durationMs": 10000,
+              "endedAtMs": 50000,
+              "valid": true,
+              "pit": false,
+              "personalRecordEligible": true,
+              "trackRecordEligible": true,
+              "countsForDistance": true,
+              "distanceM": 20,
+              "flags": [],
+              "reason": ""
+            },
+            {
+              "id": "lap-75fce765d53bfe01f8becc3a69881bcb67bffc6fc548ac2b",
+              "originLapId": "saved-1-2",
+              "stintId": "stint-55728b8f922687f010031b3c5576ff75657e936a923bbe4e",
+              "heatId": "heat-cc11310c456c3690d5a74c23aa31cc25b4e74cdae146c71e",
+              "driverId": "driver",
+              "lane": 1,
+              "number": 2,
+              "durationMs": 11000,
+              "endedAtMs": 61000,
+              "valid": true,
+              "pit": false,
+              "personalRecordEligible": true,
+              "trackRecordEligible": true,
+              "countsForDistance": true,
+              "distanceM": 20,
+              "flags": [],
+              "reason": ""
+            },
+            {
+              "id": "lap-9ec4ced270455196a7a11f457efe74b927ee423d59ab24e4",
+              "originLapId": "saved-0-3",
+              "stintId": "stint-0568f24c00c3e7f796587c7d2951a8f8d96d6df55fbf4bd5",
+              "heatId": "heat-a4aab3f1f08004e907d2357fafe74cab56359bcb32e23f52",
+              "driverId": "driver",
+              "lane": 1,
+              "number": 1,
+              "durationMs": 10000,
+              "endedAtMs": 90000,
+              "valid": true,
+              "pit": false,
+              "personalRecordEligible": true,
+              "trackRecordEligible": true,
+              "countsForDistance": true,
+              "distanceM": 20,
+              "flags": [],
+              "reason": ""
+            },
+            {
+              "id": "lap-0ce642dca2ce4dfcbb2c4b389eb4ce742316136f3e3ccef7",
+              "originLapId": "saved-1-3",
+              "stintId": "stint-0568f24c00c3e7f796587c7d2951a8f8d96d6df55fbf4bd5",
+              "heatId": "heat-a4aab3f1f08004e907d2357fafe74cab56359bcb32e23f52",
+              "driverId": "driver",
+              "lane": 1,
+              "number": 2,
+              "durationMs": 11000,
+              "endedAtMs": 101000,
+              "valid": true,
+              "pit": false,
+              "personalRecordEligible": true,
+              "trackRecordEligible": true,
+              "countsForDistance": true,
+              "distanceM": 20,
+              "flags": [],
+              "reason": ""
+            }
+          ]
+        }
+      ]
+    },
+    "context": {
+      "savedAt": "2026-11-09T10:00:00.000Z",
+      "endedBy": null,
+      "resumed": null,
+      "weather": null,
+      "teams": [],
+      "classes": [],
+      "classification": [
+        {
+          "participantId": "car-ea17e25c6c7aa6ef9407f976a670e87e37bc7e2a86b7bd4a",
+          "scope": "overall",
+          "scopeId": null,
+          "classId": null,
+          "position": 1,
+          "status": "finished",
+          "laps": 6,
+          "elapsedMs": 63000,
+          "points": 30,
+          "score": 20,
+          "scoreUnit": "points",
+          "gap": null,
+          "countedHeatIds": [
+            "heat-cc11310c456c3690d5a74c23aa31cc25b4e74cdae146c71e"
+          ],
+          "droppedHeatIds": [
+            "heat-391552c099c101b131feaf24c5795a6a15bc8ec82015424e"
+          ],
+          "incomplete": null,
+          "estimated": null,
+          "effects": []
+        },
+        {
+          "participantId": "car-ea17e25c6c7aa6ef9407f976a670e87e37bc7e2a86b7bd4a",
+          "scope": "heat",
+          "scopeId": "heat-391552c099c101b131feaf24c5795a6a15bc8ec82015424e",
+          "classId": null,
+          "position": 1,
+          "status": "finished",
+          "laps": 2,
+          "elapsedMs": 21000,
+          "points": 10,
+          "score": null,
+          "scoreUnit": null,
+          "gap": null,
+          "countedHeatIds": [],
+          "droppedHeatIds": [],
+          "incomplete": null,
+          "estimated": null,
+          "effects": []
+        },
+        {
+          "participantId": "car-ea17e25c6c7aa6ef9407f976a670e87e37bc7e2a86b7bd4a",
+          "scope": "heat",
+          "scopeId": "heat-cc11310c456c3690d5a74c23aa31cc25b4e74cdae146c71e",
+          "classId": null,
+          "position": 1,
+          "status": "finished",
+          "laps": 2,
+          "elapsedMs": 21000,
+          "points": 10,
+          "score": null,
+          "scoreUnit": null,
+          "gap": null,
+          "countedHeatIds": [],
+          "droppedHeatIds": [],
+          "incomplete": null,
+          "estimated": null,
+          "effects": []
+        },
+        {
+          "participantId": "car-ea17e25c6c7aa6ef9407f976a670e87e37bc7e2a86b7bd4a",
+          "scope": "final",
+          "scopeId": "final-e432ceba4ead058fb372214e7badbd830b31d52ccb3c3325",
+          "classId": null,
+          "position": 1,
+          "status": "finished",
+          "laps": 2,
+          "elapsedMs": 21000,
+          "points": 10,
+          "score": null,
+          "scoreUnit": null,
+          "gap": null,
+          "countedHeatIds": [],
+          "droppedHeatIds": [],
+          "incomplete": null,
+          "estimated": null,
+          "effects": []
+        }
+      ],
+      "systemChanges": [],
+      "scoringSnapshot": null,
+      "notes": "Saved reviewed classification. Adjustments are explanatory and must not be applied again. Unknown values stay unknown. "
+    }
+  }
+}

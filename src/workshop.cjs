@@ -15,7 +15,7 @@ function touch(db,id){const c=db.cars.find(c=>c.id===id);check(c,'Car not found.
 function event(db,carId,title,notes='',extra={}){db.events.unshift({id:randomUUID(),carId,type:'modification',title,notes,date:now(),...extra});}
 function addInstallation(db,carId,partId,quantity,field,position,assemblyId){
   const c=db.cars.find(c=>c.id===carId),part=db.parts.find(p=>p.id===partId);
-  check(c&&part,'Car or component no longer exists.');
+  check(c&&part,'Car or component no longer exists.');check(!c.rebuild?.to,'This original was rebuilt. Fit parts to its successor car.');
   check(!field||!active(db).some(i=>i.carId===carId&&i.field===field),'The '+field+' position is already occupied.');
   const i={id:randomUUID(),carId,partId,name:part.name,quantity,field:field||'',position:position||part.category,installed:now(),removed:null};
   if(assemblyId)i.assemblyId=assemblyId;
@@ -123,6 +123,7 @@ function applySetup(db,p,preview=false){
   check(p.revision===db.revision,'The database changed. Reopen Apply setup to review fresh stock.');
   const setup=db.setups.find(s=>s.id===p.id);check(setup,'Setup not found.');
   const car=db.cars.find(c=>c.id===setup.carId),before=clone(car.technical);
+  check(!car.rebuild?.to,'This original was rebuilt. Apply new configurations to its successor car.');
   const reqs=requirements(setup),usedSources=new Set(),picked=[];
   const changes=[],transfers=[];
   for(const r of reqs){

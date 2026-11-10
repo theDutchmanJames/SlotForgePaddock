@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "scope": "Projection of preserved native Timing companions only; new writes remain strict",
+  "cases": [
+    {"original": {"damageFactor": ""}, "fields": {"damageFactor": null}, "effective": {"tyreCompound": "M", "damageFactor": 1, "failureFactor": 1, "serviceInterval": null}},
+    {"original": {"failureFactor": ""}, "fields": {"failureFactor": null}, "effective": {"tyreCompound": "M", "damageFactor": 1, "failureFactor": 1, "serviceInterval": null}},
+    {"original": {"serviceInterval": ""}, "fields": {"serviceInterval": null}, "effective": {"tyreCompound": "M", "damageFactor": 1, "failureFactor": 1, "serviceInterval": null}},
+    {"original": {"damageFactor": "", "failureFactor": "", "serviceInterval": ""}, "fields": {"damageFactor": null, "failureFactor": null, "serviceInterval": null}, "effective": {"tyreCompound": "M", "damageFactor": 1, "failureFactor": 1, "serviceInterval": null}},
+    {"original": {"damageFactor": 0, "failureFactor": null, "tyreCompound": "custom-opaque"}, "fields": {"damageFactor": 0, "failureFactor": null, "tyreCompound": "custom-opaque"}, "effective": {"tyreCompound": "custom-opaque", "damageFactor": 0, "failureFactor": 1, "serviceInterval": null}},
+    {"original": {}, "fields": {}, "effective": {"tyreCompound": "M", "damageFactor": 1, "failureFactor": 1, "serviceInterval": null}}
+  ],
+  "rejectedOriginalRepresentations": [{"damageFactor": "garbage"}, {"damageFactor": " "}, {"serviceInterval": 0}, {"tyreCompound": ""}],
+  "preservation": "Source identity, original compressed evidence and provenance references remain unchanged. Only the editable/effective projection normalizes these known blanks."
+}

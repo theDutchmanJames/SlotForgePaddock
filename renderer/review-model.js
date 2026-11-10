@@ -38,13 +38,13 @@
     const p=proposal.payload||{},action=proposal.action||'',record=action==='job.start'&&p.setupId?(db.setups||[]).find(r=>r.id===p.setupId)
       :action.startsWith('job.')||action.startsWith('planning.job.')?(db.jobs||[]).find(r=>r.id===(action.startsWith('planning.job.')?p.jobId:p.id))
       :action.startsWith('setup.')?(db.setups||[]).find(r=>r.id===p.id)
-      :action.startsWith('document.')?(db.documents||[]).find(r=>r.id===p.id)
+      :(action.startsWith('document.')||action.startsWith('guide.'))?(db.documents||[]).find(r=>r.id===p.id)
       :action==='part.remove'?(db.installations||[]).find(r=>r.id===p.id)
       :action.startsWith('assembly.')?(db.assemblies||[]).find(r=>r.id===p.id):null;
     const carId=p.carId||(action.startsWith('car.')?p.id:record?.carId),car=(db.cars||[]).find(c=>c.id===carId);
     const name=car?.name||(action==='car.save'?p.data?.name:action==='build.create'?p.name:'')||'';
     const part=action.startsWith('part.')?(db.parts||[]).find(r=>r.id===(action==='part.remove'?record?.partId:p.partId||p.id)):null;
-    return {carId:car?.id||'',name:name||(carId?'Car no longer in collection':part?.name||record?.name||p.data?.name||''),picture:car?.picture||'',detail:p.title||p.name||record?.name||part?.name||'',renamedTo:action==='car.save'&&car&&p.data?.name&&p.data.name!==car.name?p.data.name:''};
+    return {carId:car?.id||'',name:name||(carId?'Car no longer in collection':part?.name||record?.title||record?.name||p.title||(action==='part.deleteMany'?((p.ids||[]).length+' catalogue entries'):'')||p.data?.name||''),picture:car?.picture||'',detail:p.title||p.name||record?.title||record?.name||part?.name||'',renamedTo:action==='car.save'&&car&&p.data?.name&&p.data.name!==car.name?p.data.name:''};
   }
   const api={summary,incomingFields,selection,stockConflicts,proposalContext};if(typeof module==='object'&&module.exports)module.exports=api;else root.ReviewModel=api;
 })(globalThis);

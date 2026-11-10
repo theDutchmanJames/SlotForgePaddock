@@ -1,0 +1,23 @@
+{
+  "session": {
+    "id": "historical-session-1",
+    "setupName": "Synthetic original saved race"
+  },
+  "laps": [
+    {
+      "id": "entry-0-lap-1",
+      "sessionId": "historical-session-1",
+      "time": 10000
+    },
+    {
+      "id": "entry-0-lap-2",
+      "sessionId": "historical-session-1",
+      "time": 11000
+    },
+    {
+      "id": "entry-0-lap-3",
+      "sessionId": "historical-session-1",
+      "time": 10000
+    }
+  ]
+}

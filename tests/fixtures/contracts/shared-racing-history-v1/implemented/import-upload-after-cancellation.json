@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "databaseId": "paddock-demo",
+  "recoveryId": "recovery-example-1",
+  "uploadId": "historical-upload-example",
+  "state": "committed",
+  "byteLength": 2567,
+  "sha256": "7418b7ac890786b2e3b27cfa4f3c0bee8230b108346448670df3d38b94ce86bc",
+  "chunkBytes": 262144,
+  "received": [
+    0
+  ],
+  "expiresAt": "2026-11-10T12:00:00.000Z",
+  "receipt": {
+    "version": 1,
+    "databaseId": "paddock-demo",
+    "recoveryId": "recovery-example-1",
+    "operationId": "import-batch-1",
+    "requestHash": "bc0eaa1f6298fd976eed5935c3d021ec120ca50f742ca9fb5355a95df43e4469",
+    "items": [
+      {
+        "itemId": "item-1",
+        "sourceId": "timing-original-installation",
+        "sessionId": "historical-session-1",
+        "status": "cancelled",
+        "accepted": null,
+        "message": "Cancelled by the submitting application. No accepted history was removed."
+      }
+    ]
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "databaseId": "paddock-demo",
+  "recoveryId": "recovery-example-1",
+  "operationId": "import-two-items",
+  "requestHash": "ccad52c7f91418edbbd381a38ee5d942bcba31ae04bc9912493247f91f1faaa3",
+  "items": [
+    {
+      "itemId": "item-1",
+      "sourceId": "timing-original-installation",
+      "sessionId": "historical-session-1",
+      "status": "approved",
+      "accepted": {
+        "revision": 1,
+        "contentHash": "8b7734bfb721234299b2ecb8d0eb219c6f6310d642d65ce9174619830eb08a96",
+        "state": "active"
+      },
+      "message": "Already approved; cancellation leaves it intact"
+    },
+    {
+      "itemId": "item-2",
+      "sourceId": "timing-original-installation",
+      "sessionId": "historical-session-2",
+      "status": "cancelled",
+      "accepted": null,
+      "message": "Pending item cancelled"
+    }
+  ]
+}

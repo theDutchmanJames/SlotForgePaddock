@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "databaseId": "paddock-demo",
+  "recoveryId": "recovery-example-1",
+  "snapshot": "eyJkYXRhYmFzZUlkIjoicGFkZG9jay1kZW1vIiwiZXBvY2giOiJyZWNvdmVyeS1leGFtcGxlLTEiLCJhZnRlciI6MX0",
+  "cursor": "eyJkYXRhYmFzZUlkIjoicGFkZG9jay1kZW1vIiwiZXBvY2giOiJyZWNvdmVyeS1leGFtcGxlLTEiLCJhZnRlciI6MX0",
+  "entries": [
+    {
+      "sourceId": "timing-demo",
+      "sessionId": "session-normal",
+      "accepted": {
+        "revision": 1,
+        "contentHash": "d164c062e20bd0aa1ce43dba37b024a78e3a93fe2cdf99142f6c79a53d0230b6",
+        "state": "active"
+      },
+      "name": "Club race",
+      "startedAt": "2026-10-31T10:01:00.000Z",
+      "trackId": "track-1",
+      "trackName": "Club circuit",
+      "carIds": [
+        "car-a"
+      ],
+      "resultToken": "6e8c6052c82e453b244ca8dc60caaef47189853f025c5eb288e314b8619d3376",
+      "format": "timing-v1",
+      "provenance": "measured"
+    }
+  ],
+  "nextPage": null
+}

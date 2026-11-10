@@ -1,10 +1,15 @@
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, webFrame } = require('electron');
 contextBridge.exposeInMainWorld('slotforge',{
+  setZoom:factor=>{if(![0.8,0.9,1,1.1,1.25,1.5,1.75,2].includes(factor))throw Error('Invalid interface size.');webFrame.setZoomFactor(factor);},
   mediaLease:active=>ipcRenderer.send('sf:media-lease',active),
   thumbnailResult:(id,result)=>ipcRenderer.send('sf:thumbnail-result',id,result),
   onThumbnail:callback=>ipcRenderer.on('sf:thumbnail',(_event,job)=>callback(job)),
   read:known=>ipcRenderer.invoke('sf:read',known),
   query:(operation,payload)=>ipcRenderer.invoke('sf:query',operation,payload),
+  carMerge:payload=>ipcRenderer.invoke('sf:car-merge',payload),
+  historyImport:payload=>ipcRenderer.invoke('sf:history-import',payload),
+  timingCollectionReview:payload=>ipcRenderer.invoke('sf:timing-collection-review',payload),
+  historyView:payload=>ipcRenderer.invoke('sf:history-view',payload),
   mutate:(action,payload,known)=>ipcRenderer.invoke('sf:mutate',action,payload,known),
   club:(action,payload)=>ipcRenderer.invoke('sf:club',action,payload),
   plan:(action,payload)=>ipcRenderer.invoke('sf:plan',action,payload),

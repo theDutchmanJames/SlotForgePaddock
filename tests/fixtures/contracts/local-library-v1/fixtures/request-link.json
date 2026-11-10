@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "databaseId": "paddock-local-demo",
+  "sourceId": "timing-home",
+  "transferId": "transfer-link",
+  "export": {
+    "format": "slotforge-timing-export",
+    "fileVersion": 1,
+    "items": {
+      "slotcars": [
+        {
+          "id": "timing-existing",
+          "name": "Timing local name"
+        }
+      ]
+    }
+  },
+  "targets": [
+    {
+      "timingCarId": "timing-existing",
+      "paddockCarId": "existing-car",
+      "expectedRevision": 1
+    }
+  ]
+}

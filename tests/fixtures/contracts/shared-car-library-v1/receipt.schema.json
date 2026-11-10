@@ -1,0 +1,340 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Shared-car committed receipt v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "databaseId",
+    "recoveryId",
+    "sourceId",
+    "operationId",
+    "requestHash",
+    "action",
+    "committedAt",
+    "car",
+    "duplicate",
+    "current"
+  ],
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "databaseId": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9_-]{1,100}$"
+    },
+    "recoveryId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "sourceId": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9_-]{1,100}$"
+    },
+    "operationId": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9_-]{1,100}$"
+    },
+    "requestHash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "action": {
+      "enum": [
+        "create",
+        "patch",
+        "archive",
+        "restore"
+      ]
+    },
+    "committedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "car": {
+      "$ref": "#/$defs/car"
+    },
+    "duplicate": {
+      "type": "boolean"
+    },
+    "current": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "present",
+        "archived",
+        "revision"
+      ],
+      "properties": {
+        "present": {
+          "type": "boolean"
+        },
+        "archived": {
+          "type": "boolean"
+        },
+        "revision": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        }
+      }
+    }
+  },
+  "$defs": {
+    "car": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "revision",
+        "archived",
+        "fields",
+        "unparsed",
+        "truncated"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_-]{1,100}$"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "archived": {
+          "type": "boolean"
+        },
+        "fields": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "maker",
+            "marque",
+            "model",
+            "reference",
+            "scale",
+            "number",
+            "livery",
+            "raceClass",
+            "availability",
+            "motor",
+            "motorLayout",
+            "rearTyres",
+            "frontTyres",
+            "guide",
+            "braids",
+            "chassis",
+            "body",
+            "pod",
+            "pinion",
+            "gear",
+            "weight",
+            "rearDiameter",
+            "frontDiameter",
+            "ratedRpm",
+            "ratedVoltage"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "maxLength": 200,
+              "minLength": 0
+            },
+            "maker": {
+              "type": "string",
+              "maxLength": 1000,
+              "minLength": 0
+            },
+            "marque": {
+              "type": "string",
+              "maxLength": 1000,
+              "minLength": 0
+            },
+            "model": {
+              "type": "string",
+              "maxLength": 1000,
+              "minLength": 0
+            },
+            "reference": {
+              "type": "string",
+              "maxLength": 1000,
+              "minLength": 0
+            },
+            "scale": {
+              "type": "string",
+              "maxLength": 100,
+              "minLength": 0
+            },
+            "number": {
+              "type": "string",
+              "maxLength": 100,
+              "minLength": 0
+            },
+            "livery": {
+              "type": "string",
+              "maxLength": 1000,
+              "minLength": 0
+            },
+            "raceClass": {
+              "type": "string",
+              "maxLength": 1000,
+              "minLength": 0
+            },
+            "availability": {
+              "type": "string",
+              "maxLength": 200,
+              "minLength": 0
+            },
+            "motor": {
+              "type": "string",
+              "maxLength": 1000,
+              "minLength": 0
+            },
+            "motorLayout": {
+              "type": "string",
+              "maxLength": 100,
+              "minLength": 0
+            },
+            "rearTyres": {
+              "type": "string",
+              "maxLength": 1000,
+              "minLength": 0
+            },
+            "frontTyres": {
+              "type": "string",
+              "maxLength": 1000,
+              "minLength": 0
+            },
+            "guide": {
+              "type": "string",
+              "maxLength": 1000,
+              "minLength": 0
+            },
+            "braids": {
+              "type": "string",
+              "maxLength": 1000,
+              "minLength": 0
+            },
+            "chassis": {
+              "type": "string",
+              "maxLength": 1000,
+              "minLength": 0
+            },
+            "body": {
+              "type": "string",
+              "maxLength": 1000,
+              "minLength": 0
+            },
+            "pod": {
+              "type": "string",
+              "maxLength": 1000,
+              "minLength": 0
+            },
+            "pinion": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 1,
+              "maximum": 1000
+            },
+            "gear": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 1,
+              "maximum": 1000
+            },
+            "weight": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 100000
+            },
+            "rearDiameter": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0.001,
+              "maximum": 1000
+            },
+            "frontDiameter": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0.001,
+              "maximum": 1000
+            },
+            "ratedRpm": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 1000000
+            },
+            "ratedVoltage": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0.001,
+              "maximum": 1000
+            }
+          }
+        },
+        "unparsed": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        },
+        "truncated": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "name",
+              "maker",
+              "marque",
+              "model",
+              "reference",
+              "scale",
+              "number",
+              "livery",
+              "raceClass",
+              "availability",
+              "motor",
+              "motorLayout",
+              "rearTyres",
+              "frontTyres",
+              "guide",
+              "braids",
+              "chassis",
+              "body",
+              "pod",
+              "pinion",
+              "gear",
+              "weight",
+              "rearDiameter",
+              "frontDiameter",
+              "ratedRpm",
+              "ratedVoltage"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

@@ -119,7 +119,18 @@ jobs:
 
   publish:
     needs: [source, build]
-    if: github.event_name == 'release' || inputs.publish_assets
+    if: always() && !cancelled() && needs.source.result == 'success' && (github.event_name == 'release' || inputs.publish_assets)
+    name: Publish ${{ matrix.platform }} ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux
+            arch: x64
+          - platform: linux
+            arch: arm64
+          - platform: mac
+            arch: universal
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
@@ -127,9 +138,8 @@ jobs:
     steps:
       - uses: actions/download-artifact@v6
         with:
-          pattern: native-*
+          name: native-${{ matrix.platform }}-${{ matrix.arch }}
           path: installers
-          merge-multiple: true
       - name: Verify and attach downloads without overwriting existing assets
         env:
           GH_TOKEN: ${{ github.token }}
@@ -137,6 +147,8 @@ jobs:
           RELEASE_TAG: ${{ needs.source.outputs.tag }}
           RELEASE_VERSION: ${{ needs.source.outputs.version }}
           SOURCE_SHA: ${{ needs.source.outputs.sha }}
+          PLATFORM: ${{ matrix.platform }}
+          ARCH: ${{ matrix.arch }}
         working-directory: installers
         run: |
           node <<'NODE'
@@ -149,7 +161,9 @@ jobs:
           assert.equal(release.draft,false,'Publish the release first');
           const files=[];
           const hash=file=>crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
-          for(const [platform,arch,extensions] of [['linux','x64',['AppImage','deb']],['linux','arm64',['AppImage','deb']],['mac','universal',['dmg','zip']]]){
+          const {PLATFORM:platform,ARCH:arch}=process.env;
+          const extensions=platform==='mac'?['dmg','zip']:['AppImage','deb'];
+          {
             const names=extensions.map(ext=>`SlotForgePaddock-${version}-${platform}-${platform==='linux'&&arch==='x64'?(ext==='deb'?'amd64':'x86_64'):arch}.${ext}`);
             const sums=`SHA256SUMS-${platform}-${arch}.txt`;
             const expected=names.map(name=>`${hash(name)}  ${name}`).join('\n')+'\n';

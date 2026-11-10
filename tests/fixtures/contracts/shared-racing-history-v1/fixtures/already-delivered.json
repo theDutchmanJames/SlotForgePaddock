@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "databaseId": "paddock-demo",
+  "recoveryId": "recovery-example-1",
+  "operationId": "import-already-delivered",
+  "requestHash": "70c11746aed2f678005b3ee676613ee8e31c951815c8e7323a79511f312bfce9",
+  "items": [
+    {
+      "itemId": "item-1",
+      "sourceId": "timing-demo",
+      "sessionId": "session-normal",
+      "status": "already-present",
+      "accepted": {
+        "revision": 1,
+        "contentHash": "d164c062e20bd0aa1ce43dba37b024a78e3a93fe2cdf99142f6c79a53d0230b6",
+        "state": "active"
+      },
+      "message": "Identity and retained delivery evidence reconciled; no second contribution"
+    }
+  ]
+}

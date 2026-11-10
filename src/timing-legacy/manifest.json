@@ -1,0 +1,41 @@
+{
+  "format": "slotforge-timing-legacy-reader",
+  "version": 1,
+  "files": [
+    {
+      "file": "index.cjs",
+      "source": "integration/timing-legacy/index.cjs",
+      "sha256": "ec8f74153aa1db483497ae22d0cd45e8e61eb43a58e7804bf8fcf56c254545b7"
+    },
+    {
+      "file": "project.cjs",
+      "source": "integration/timing-legacy/project.cjs",
+      "sha256": "24464f395f8f244fbfc1e78bbf988c36981cafd05ecc761105cda83395e76c0a"
+    },
+    {
+      "file": "projection/paddock-historical-evidence.js",
+      "source": "paddock-historical-evidence.js",
+      "sha256": "eedf25a84bb91b3abf1f144d13df118be92083d11bf05a6f371b30b3e65d80dd"
+    },
+    {
+      "file": "projection/paddock-rich-mapper.js",
+      "source": "paddock-rich-mapper.js",
+      "sha256": "4cf0cd86e4577e9d3a022dc4e2cee612f2fa6dd61cdebf62e008a969c97ec0b1"
+    },
+    {
+      "file": "projection/paddock-rich-read.js",
+      "source": "paddock-rich-read.js",
+      "sha256": "ab6c35b4e5ae00dde045e049ca13c4bbdaa3df2ba8799cf2bd7a12f70f19d416"
+    },
+    {
+      "file": "projection/paddock-rich-schema.js",
+      "source": "paddock-rich-schema.js",
+      "sha256": "e252a77591e8d11375a8336ec34f69c8ec85a874c287f2d2851312abc4f7c2bb"
+    },
+    {
+      "file": "projection/paddock-value-hash.js",
+      "source": "paddock-value-hash.js",
+      "sha256": "d76df3e855e9e0820a78c3da0031e370c9f6a48be38ec7a05ac712244f6a2d23"
+    }
+  ]
+}

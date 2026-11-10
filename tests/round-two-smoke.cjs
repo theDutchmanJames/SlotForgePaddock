@@ -1,0 +1,30 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),{initial}=require('../src/store.cjs'),{dialog,shell}=require('electron');
+module.exports=async({win,store,js,wait,click,fill,submit,qa})=>{
+ const saved=store.snapshot(),checks=[],size=win.getSize(),pick=dialog.showOpenDialog,open=shell.openPath,opened=[];
+ const idle=()=>wait('!viewPendingKey&&!actionBusy&&!modalSaving');
+ const select=async(id,value)=>{await js(`(()=>{const e=document.getElementById(${JSON.stringify(id)});e.value=${JSON.stringify(value)};e.dispatchEvent(new Event('change',{bubbles:true}));})()`);await idle();};
+ try{
+  store.replace(initial());const carId=store.mutate('car.save',{data:{name:'Guide car'}}).result;
+  for(const [name,quantity]of [['Unused motor',0],['Owned motor',2]])store.mutate('part.save',{data:{name,quantity,maker:'NSR',tracking:'quantity'}});
+  const pdf=path.join(qa,'round2-manual.pdf'),png=path.join(qa,'round2-image.png');fs.writeFileSync(pdf,'%PDF-1.4\nManual fixture\n%%EOF');
+  fs.copyFileSync(path.join(__dirname,'../docs/images/slotforge-brand.png'),png);
+  let file=pdf;dialog.showOpenDialog=async()=>({canceled:false,filePaths:[file]});shell.openPath=async p=>{opened.push(fs.readFileSync(p));return '';};
+  await js("(async()=>{page='Workshop';toolboxTab='Manuals and Part Guides';workshopJob=null;guideQuery='';guideCar='';await loadView();})()");await idle();
+  await click('[data-action="guide-add"]');await wait("document.querySelector('#dialog').open");await fill({title:'Exploded view',carId});await submit();await idle();assert.equal(store.data.documents.length,1);assert.equal(await js('db.documents[0].data'),undefined);
+  await click('[data-action="guide-open"]');await idle();assert.deepEqual(opened[0],fs.readFileSync(pdf));checks.push('upload named PDF linked to car; gallery excludes original; poster opens exact original');
+  await click('[data-action="guide-edit"]');await fill({title:'Motor reference',carId:''});await submit();await idle();assert.equal(store.data.documents[0].carId,null);assert.equal(store.data.documents[0].title,'Motor reference');
+  await select('guide-car-filter',carId);assert.equal(await js("document.querySelectorAll('.guide-card').length"),0);await select('guide-car-filter','general');assert.equal(await js("document.querySelectorAll('.guide-card').length"),1);
+  file=png;await click('[data-action="guide-add"]');await wait("document.querySelector('#dialog').open");await fill({title:'Parts poster',carId});await submit();await idle();await select('guide-car-filter','');assert.equal(await js("document.querySelectorAll('.guide-card').length"),2);assert.ok(store.data.documents.find(d=>d.title==='Parts poster').picture);assert.equal(store.data.documents.find(d=>d.title==='Parts poster').data,fs.readFileSync(png).toString('base64'));checks.push('rename and reassign without replacing original; car/general filters; image thumbnail and original retained');
+  win.setSize(1440,1000);await js("db.settings.theme='dark';applyTheme();window.scrollTo(0,0);Promise.race([new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))),new Promise(r=>setTimeout(r,500))])");fs.writeFileSync(path.join(qa,'round2-guides-dark.png'),(await win.webContents.capturePage()).toPNG());
+  win.setSize(960,900);await js("db.settings.theme='light';applyTheme();Promise.race([new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))),new Promise(r=>setTimeout(r,500))])");assert.equal(await js('document.documentElement.scrollWidth<=innerWidth+1'),true);fs.writeFileSync(path.join(qa,'round2-guides-light.png'),(await win.webContents.capturePage()).toPNG());
+  await click('[data-action="guide-remove"]');await submit();await idle();assert.equal(store.data.documents.length,1);checks.push('guide removal and responsive dark/light gallery');
+  await click('[data-action="nav"][data-id="Library"]');await idle();await click('[data-action="library-tab"][data-id="parts"]');await idle();assert.equal(await js("document.querySelectorAll('.catalogue-manager-table tbody tr').length"),2);
+  await select('catalogue-manager-scope','unowned');assert.equal(await js('db.parts.length'),1);await select('catalogue-manager-scope','all');await select('catalogue-manager-maker','NSR');assert.equal(await js('db.parts.length'),2);
+  await click('[data-action="edit-part"]');await fill({name:'Edited catalogue motor'});await submit();await idle();assert.equal(await js('page'),'Library');
+  await click('[data-action="catalogue-manager-add"]');assert.equal(await js("document.querySelector('#dialog [name=quantity]').value"),'0');await fill({name:'New reference',maker:'NSR'});await submit();await idle();assert.equal(store.data.parts.find(p=>p.name==='New reference').quantity,0);checks.push('catalogue filters; editing stays in Library; new catalogue entries start at zero stock');
+  await click('[data-action="catalogue-manager-select-page"]');await idle();await click('[data-action="catalogue-manager-delete-selected"]');await wait("document.querySelector('#dialog').open");assert.ok((await js("document.querySelector('#dialog').innerText")).includes('must be kept'));await js("document.querySelector('#dialog [name=confirmed]').checked=true");await submit();await idle();assert.equal(store.data.parts.length,1);assert.equal(store.data.parts[0].quantity,2);checks.push('bulk deletion preview retains owned stock and deletes only eligible entries');
+  win.setSize(1440,1000);await js("db.settings.theme='dark';applyTheme();window.scrollTo(0,0);Promise.race([new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))),new Promise(r=>setTimeout(r,500))])");fs.writeFileSync(path.join(qa,'round2-catalogue.png'),(await win.webContents.capturePage()).toPNG());
+  return checks;
+ }finally{dialog.showOpenDialog=pick;shell.openPath=open;win.setSize(...size);store.replace(saved);await js("document.querySelector('#dialog').close();libraryTab='choices';guideCar='';guideQuery='';catalogueManagerSelected.clear();catalogueManagerMaker='';catalogueManagerScope='all';toolboxTab='Jobs';page='Overview';carId=null;loadView()");}
+};

@@ -33,8 +33,10 @@ function open(file,existingOnly=false){
     CREATE TABLE asset_refs (record TEXT NOT NULL REFERENCES records(key) ON DELETE CASCADE, hash TEXT NOT NULL REFERENCES assets(hash), PRIMARY KEY(record,hash)) STRICT;
     CREATE TABLE undo_records (key TEXT PRIMARY KEY, bucket TEXT, identity TEXT, json TEXT) STRICT;
     CREATE TABLE undo_assets (hash TEXT PRIMARY KEY REFERENCES assets(hash)) STRICT;
-    PRAGMA application_id=${APPLICATION_ID}; PRAGMA user_version=${FORMAT}; COMMIT;`);
+    PRAGMA application_id=${APPLICATION_ID}; PRAGMA user_version=${FORMAT};`);
+   require('./storage-structure.cjs').initializeReceipts(db);db.exec('COMMIT');
   }
+  require('./storage-structure.cjs').check(db,version||FORMAT);
   return db;
  }catch(e){db.close();throw e;}
 }
@@ -149,16 +151,19 @@ function write(file,packed,expected){
  fs.mkdirSync(path.dirname(file),{recursive:true});const db=open(file);
  try{
   db.exec('BEGIN IMMEDIATE');
+  const releaseMergePermit=require('./car-merge-fence.cjs').begin(db,{install:packed.records.some(r=>r.bucket==='["mergeMappings"]')});
+  require('./storage-structure.cjs').initializeReceipts(db);
   require('./storage-resources.cjs').prepareWrite(file,db,packed);
   require('./query-index.cjs').ensure(db);
   if(db.prepare('PRAGMA user_version').get().user_version!==FORMAT)throw Error('SQLite storage migration is required before saving. Reopen Paddock.');
-  if(state(db,'identity')!==expected)throw Error('The database changed in another process. Reopen Paddock before saving.');
+  if(state(db,'identity')!==expected)throw Object.assign(Error('The database changed in another process. Refresh and retry the unchanged operation.'),{code:'QUERY_CHANGED'});
   const invalidations=require('./public-invalidations.cjs').begin(db,packed);
   const previous=state(db,'manifest');if(packed.partial&&!previous)throw Error('A partial write needs an existing collection.');
   const sizes=previous&&!packed.resetEpoch&&!packed.refreshAssets?require('./sqlite-sizes.cjs').tracker(db,expected,previous,packed.manifest):null;
   const getRecord=db.prepare('SELECT * FROM records WHERE key=?'),old=new Map((packed.partial?[...new Set([...packed.records.map(r=>r.key),...(packed.removed||[])])].map(key=>getRecord.get(key)).filter(Boolean):db.prepare('SELECT * FROM records').all()).map(r=>[r.key,r]));
   const putState=db.prepare('INSERT INTO state(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value');
   let epoch=state(db,'change_epoch');const from=expected?JSON.parse(expected):null,to=JSON.parse(packed.identity);
+  const mergeGuard=!packed.resetEpoch&&from?.[0]===to[0];
   if(!epoch||!from||from[0]!==to[0]||to[1]<=from[1]||packed.resetEpoch){epoch=crypto.randomUUID();db.exec('DELETE FROM change_log; DELETE FROM field_versions;');if(db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='command_receipts'").get())db.exec('DELETE FROM command_receipts');putState.run('change_epoch',epoch);putState.run('field_floor',String(to[1]));}
   const stamp=db.prepare('INSERT INTO field_versions(record,path,revision) VALUES(?,?,?) ON CONFLICT(record,path) DO UPDATE SET revision=excluded.revision');
   db.exec('DELETE FROM undo_records; DELETE FROM undo_assets;');
@@ -180,6 +185,7 @@ function write(file,packed,expected){
    const before=old.get(row.key);old.delete(row.key);if(before&&JSON.parse(before.json).digest===fieldRecords.hash(row.json))continue;
    const split=fieldRecords.split(row.json),fields=new Map(getFields.all(row.key).map(r=>[r.path,r.json])),changedFields=[];
    const beforeJson=before?recordEnvelope(db,before.key,before.json):null;
+   if(mergeGuard&&beforeJson)require('./car-merge-write-guard.cjs').check(before.bucket,JSON.parse(beforeJson).value,JSON.parse(row.json).value,db);
    sizes?.change(beforeJson,-1);sizes?.change(row.json,1);
    putUndo.run(row.key,before?.bucket??null,before?.identity??null,beforeJson);keepUndoAssets.run(row.key);deleteRefs.run(row.key);
    putRecord.run(row.key,row.bucket,row.identity,split.header);
@@ -196,7 +202,8 @@ function write(file,packed,expected){
    require('./query-index.cjs').update(db,row.key,row.bucket,JSON.parse(row.json).value);recordWrites++;
   }
   const remove=db.prepare('DELETE FROM records WHERE key=?');
-  for(const row of old.values()){const beforeJson=recordEnvelope(db,row.key,row.json);sizes?.change(beforeJson,-1);putUndo.run(row.key,row.bucket,row.identity,beforeJson);keepUndoAssets.run(row.key);remove.run(row.key);stamp.run(row.key,'*',to[1]);changes.push({key:row.key,before:JSON.parse(row.json).digest,remove:true});recordWrites++;}
+  for(const row of old.values()){const beforeJson=recordEnvelope(db,row.key,row.json);if(mergeGuard)require('./car-merge-write-guard.cjs').check(row.bucket,JSON.parse(beforeJson).value,null,db);sizes?.change(beforeJson,-1);putUndo.run(row.key,row.bucket,row.identity,beforeJson);keepUndoAssets.run(row.key);remove.run(row.key);stamp.run(row.key,'*',to[1]);changes.push({key:row.key,before:JSON.parse(row.json).digest,remove:true});recordWrites++;}
+  require('./query-performance.cjs').flush(db);
   putState.run('manifest',packed.manifest);putState.run('identity',packed.identity);
   if(packed.replicaState)putState.run('replica_sync',JSON.stringify(packed.replicaState));else db.prepare("DELETE FROM state WHERE key='replica_sync'").run();
   // Retain deletion versions for a bounded revision window. Older proposals
@@ -218,7 +225,7 @@ function write(file,packed,expected){
   const metadata=db.prepare('SELECT meta FROM assets WHERE hash=?'),assetMetadata=[...new Set(packed.records.flatMap(r=>r.refs))].map(hash=>JSON.parse(metadata.get(hash).meta));
   require('./sqlite-sizes.cjs').save(db,packed.identity,packed.manifest,sizes);
   if(packed.commandReceipt){if(packed.commandReceipt.epoch!==epoch)throw Error('Save receipt generation changed.');require('./command-receipts.cjs').insert(db,packed.commandReceipt);}
-  db.exec('COMMIT');return {recordWrites,assetWrites,fieldWrites,assetMetadata};
+  releaseMergePermit();db.exec('COMMIT');return {recordWrites,assetWrites,fieldWrites,assetMetadata};
  }catch(e){try{db.exec('ROLLBACK');}catch{}throw e;}finally{db.close();}
 }
 function read(file,previous=false,lazy=false,baseline=null){const db=open(file,true);try{db.exec('BEGIN');if(db.prepare('PRAGMA quick_check').get().quick_check!=='ok')throw Error('SQLite integrity check failed.');const data=unpack(db,previous,lazy&&db.prepare('PRAGMA user_version').get().user_version===FORMAT?file:null,baseline);if(!previous&&state(db,'identity')!==JSON.stringify([data.id,data.revision]))throw Error('SQLite collection identity integrity check failed.');db.exec('COMMIT');return data;}finally{db.close();}}
@@ -227,7 +234,7 @@ function writeAsync(file,packed,expected){return require('./sqlite-writer.cjs').
 function upgrade(file,expected){
  const db=open(file,true);let backup;
  try{
-  const version=db.prepare('PRAGMA user_version').get().user_version;if(version===FORMAT){db.exec('BEGIN IMMEDIATE');require('./query-index.cjs').ensure(db);db.exec('COMMIT');return null;}
+  const version=db.prepare('PRAGMA user_version').get().user_version;if(version===FORMAT){db.exec('BEGIN IMMEDIATE');const release=require('./car-merge-fence.cjs').begin(db);if(state(db,'identity')!==expected)throw Error('The database changed before index preparation. Reopen Paddock.');require('./storage-structure.cjs').initializeReceipts(db);require('./query-index.cjs').ensure(db);release();db.exec('COMMIT');return null;}
   if(state(db,'identity')!==expected)throw Error('The database changed before storage migration. Reopen Paddock.');
   const before=unpack(db),previous=unpack(db,true);
   backup=file+'.format'+version+'-'+crypto.randomUUID()+'.backup';
@@ -246,7 +253,7 @@ function upgrade(file,expected){
   if(!db.prepare('PRAGMA table_info(assets)').all().some(c=>c.name==='meta'))db.exec('ALTER TABLE assets ADD COLUMN meta TEXT; ALTER TABLE assets ADD COLUMN meta_digest TEXT;');
   const putMeta=db.prepare('UPDATE assets SET meta=?,meta_digest=? WHERE hash=?'),lazy=require('./lazy-assets.cjs');for(const row of db.prepare('SELECT hash,value FROM assets').all()){const value=Buffer.from(row.value).toString('utf8'),meta=lazy.metadata(value);if(meta.hash!==row.hash)throw Error('SQLite attachment integrity check failed.');const json=JSON.stringify(meta);putMeta.run(json,lazy.digest(json),row.hash);}
   if(JSON.stringify(unpack(db))!==JSON.stringify(before)||JSON.stringify(unpack(db,true))!==JSON.stringify(previous))throw Error('SQLite field migration did not preserve the collection and recovery revision.');
-  require('./query-index.cjs').ensure(db);db.exec('PRAGMA user_version=3; COMMIT');return backup;
+  require('./storage-structure.cjs').initializeReceipts(db);require('./query-index.cjs').ensure(db);db.exec('PRAGMA user_version=3; COMMIT');return backup;
  }catch(error){try{db.exec('ROLLBACK');}catch{}throw error;}finally{db.close();}
 }
 function changesSince(file,{epoch,after=0,limit=64,maxBytes=4*1024*1024}={}){
@@ -271,7 +278,7 @@ function fieldState(file,expected,record,paths=[]){
 function syncState(file){const db=open(file,true);try{return {epoch:state(db,'change_epoch'),after:Number(state(db,'change_sequence')||0),identity:JSON.parse(state(db,'identity')),replica:JSON.parse(state(db,'replica_sync')||'null')};}finally{db.close();}}
 function assetMetadata(file,hashes){const db=open(file,true);try{const query=db.prepare('SELECT meta FROM assets WHERE hash=?');return hashes.map(hash=>{const row=query.get(hash);if(!row)throw Error('Attachment unavailable.');return JSON.parse(row.meta);});}finally{db.close();}}
 function assetChunk(file,hash,offset=0){if(!/^[a-f0-9]{64}$/.test(hash)||!Number.isSafeInteger(offset)||offset<0)throw Error('Invalid asset cursor.');const db=open(file,true);try{const r=db.prepare('SELECT length(value) size,substr(value,?,1048576) bytes,meta FROM assets WHERE hash=?').get(offset+1,hash);if(!r||offset>=r.size)throw Error('Attachment unavailable.');return {hash,offset,size:r.size,data:Buffer.from(r.bytes).toString('base64'),meta:JSON.parse(r.meta)};}finally{db.close();}}
-function stageAsset(file,hash,value){const db=open(file,true);try{const meta=require('./lazy-assets.cjs').metadata(value);if(meta.hash!==hash)throw Error('Attachment verification failed.');const json=JSON.stringify(meta);db.prepare('INSERT OR IGNORE INTO assets(hash,value,meta,meta_digest) VALUES(?,?,?,?)').run(hash,Buffer.from(value),json,fieldRecords.hash(json));return meta;}finally{db.close();}}
+function stageAsset(file,hash,value){const db=open(file,true);try{const meta=require('./lazy-assets.cjs').metadata(value);if(meta.hash!==hash)throw Error('Attachment verification failed.');db.exec('BEGIN IMMEDIATE');const release=require('./car-merge-fence.cjs').begin(db);const json=JSON.stringify(meta);db.prepare('INSERT OR IGNORE INTO assets(hash,value,meta,meta_digest) VALUES(?,?,?,?)').run(hash,Buffer.from(value),json,fieldRecords.hash(json));release();db.exec('COMMIT');return meta;}catch(e){try{db.exec('ROLLBACK');}catch{}throw e;}finally{db.close();}}
 // Lightweight connection-status hint, never a substitute for opening/validating a Store.
 function collectionHint(file){
  const db=open(file,true);try{
@@ -290,4 +297,5 @@ function sharedSnapshot(store,file,limit){
  }write(']}');fs.fsyncSync(fd);complete=true;return {size,digest:hash.digest('hex'),hashes,cursor};
  }finally{db.close();if(fd!==undefined){fs.closeSync(fd);if(!complete)try{fs.unlinkSync(file);}catch{}}}
 }
-module.exports={sharedSnapshot,recordValues,envelopes,availableAssetMetadata,packChanges,protectedFiles,collectionHint,syncState,assetMetadata,assetChunk,stageAsset,FORMAT,sqlitePath,legacyPath,pack,read,readAsset,write,writeAsync,upgrade,changesSince,fieldState};
+function recoverForRead(file){const db=open(file,true);try{db.prepare('SELECT count(*) FROM sqlite_master').get();}finally{db.close();}}
+module.exports={recoverForRead,sharedSnapshot,recordValues,envelopes,availableAssetMetadata,packChanges,protectedFiles,collectionHint,syncState,assetMetadata,assetChunk,stageAsset,FORMAT,sqlitePath,legacyPath,pack,read,readAsset,write,writeAsync,upgrade,changesSince,fieldState};

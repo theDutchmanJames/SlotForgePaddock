@@ -1,0 +1,4 @@
+{
+  "error": "The save acknowledgement was interrupted. Check its receipt or retry the same request; do not create a new transfer.",
+  "code": "STORAGE_FAILED"
+}

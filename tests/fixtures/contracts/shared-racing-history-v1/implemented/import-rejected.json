@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "databaseId": "paddock-demo",
+  "recoveryId": "recovery-example-1",
+  "operationId": "import-batch-1",
+  "requestHash": "bc0eaa1f6298fd976eed5935c3d021ec120ca50f742ca9fb5355a95df43e4469",
+  "items": [
+    {
+      "itemId": "item-1",
+      "sourceId": "timing-original-installation",
+      "sessionId": "historical-session-1",
+      "status": "rejected",
+      "accepted": null,
+      "message": "Rejected in Paddock Review. No accepted history was changed."
+    }
+  ]
+}

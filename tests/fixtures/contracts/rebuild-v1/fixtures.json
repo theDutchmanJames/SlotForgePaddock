@@ -1,0 +1,31 @@
+{
+  "original": {
+    "version": 1,
+    "databaseId": "example-library",
+    "carId": "original-gt",
+    "archived": true,
+    "predecessor": null,
+    "successor": {"id": "rebuilt-gt", "name": "GT — club rebuild", "date": "2026-11-09T12:00:00.000Z"}
+  },
+  "successor": {
+    "version": 1,
+    "databaseId": "example-library",
+    "carId": "rebuilt-gt",
+    "archived": false,
+    "predecessor": {"id": "original-gt", "name": "GT — original", "date": "2026-11-09T12:00:00.000Z"},
+    "successor": null
+  },
+  "ordinaryCar": {
+    "version": 1,
+    "databaseId": "example-library",
+    "carId": "another-gt",
+    "archived": false,
+    "predecessor": null,
+    "successor": null
+  },
+  "captureConflict": {
+    "code": "CAR_REBUILT",
+    "error": "This car has been rebuilt. Select its successor for future races.",
+    "details": {"successor": {"id": "rebuilt-gt", "name": "GT — club rebuild", "date": "2026-11-09T12:00:00.000Z"}}
+  }
+}

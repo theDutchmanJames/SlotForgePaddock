@@ -6,9 +6,9 @@ The API preserves original laps, drivers, lanes, heats, validity/pit flags, clas
 
 The original minimal Telemetry endpoints remain supported, with additive snapshot tokens and metadata. Paddock owns the host implementation; do not reapply the older Telemetry host installer over it.
 
-- [Integration handoff](../integration-handoff/telemetry-v1/README.md)
-- [Exact contract and client synchronisation rules](../integration-handoff/telemetry-v1/CONTRACT.md)
-- [JSON Schema](../integration-handoff/telemetry-v1/telemetry-v1.schema.json)
-- [Fixtures](../integration-handoff/telemetry-v1/fixtures/index.json)
+- Integration handoff (internal development reference)
+- Exact contract and client synchronisation rules (internal development reference)
+- JSON Schema (internal development reference)
+- Fixtures (internal development reference)
 
 Available from Paddock v1.0.1; v1.0.0 binaries do not contain it. No database migration is required. Automated tests use local HTTP and artificial databases; physical two-computer Telemetry acceptance is separate.

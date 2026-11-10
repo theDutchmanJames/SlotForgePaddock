@@ -81,9 +81,9 @@ test('one history field produces a sparse proposal and approvals preserve other 
  const {s,dir}=fixture(t),photo={id:'reference',name:'Reference',data:'data:image/png;base64,AAAA',caption:'',sourceUrl:''};
  s.mutate('car.save',{data:{name:'Car',realHistory:{team:'Original',classification:'Unverified',photos:[photo]}}});
  const club=new Club(s,{},dir);t.after(()=>club.close());club.enable('Test','password');const c=s.data.cars[0];let simulations=0;const simulate=club.simulation.bind(club);club.simulation=(...args)=>{simulations++;return simulate(...args);};
- await club.mutate('car.save',{id:c.id,revision:c.revision,data:{realHistory:{...c.realHistory,team:'New team'}}});assert.equal(simulations,1);
+ await club.propose('car.save',{id:c.id,revision:c.revision,data:{realHistory:{...c.realHistory,team:'New team'}}});assert.equal(simulations,1);
  const first=s.data.club.proposals[0];assert.deepEqual(first.payload.data.realHistory,{team:'New team'});assert.ok(JSON.stringify(first).length<2000);
- await club.mutate('car.save',{id:c.id,revision:c.revision,data:{realHistory:{...c.realHistory,classification:'Fantasy Livery'}}});const second=s.data.club.proposals[0];
+ await club.propose('car.save',{id:c.id,revision:c.revision,data:{realHistory:{...c.realHistory,classification:'Fantasy Livery'}}});const second=s.data.club.proposals[0];
  for(const proposal of [first,second]){const view=club.preview(proposal.id);club.review({id:proposal.id,token:view.token,decision:'accept',confirmConflict:true});}
  const saved=new Store(s.file).data.cars[0].realHistory;assert.equal(saved.team,'New team');assert.equal(saved.classification,'Fantasy Livery');assert.deepEqual(saved.photos,[photo]);
 });

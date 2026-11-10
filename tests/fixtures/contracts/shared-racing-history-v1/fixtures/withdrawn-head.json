@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "databaseId": "paddock-demo",
+  "recoveryId": "recovery-example-1",
+  "sourceId": "timing-demo",
+  "sessionId": "session-normal",
+  "accepted": {
+    "revision": 3,
+    "contentHash": "9f0649008c66f31ecc76634dee3e024d35fa73110c60fdb1f3e195b86109d992",
+    "state": "withdrawn"
+  },
+  "resultToken": "opaque-session-token-3",
+  "body": null,
+  "lapCounts": []
+}

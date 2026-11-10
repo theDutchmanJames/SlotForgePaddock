@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "databaseId": "paddock-demo",
+  "recoveryId": "recovery-example-1",
+  "uploadId": "historical-upload-example",
+  "sha256": "7418b7ac890786b2e3b27cfa4f3c0bee8230b108346448670df3d38b94ce86bc"
+}

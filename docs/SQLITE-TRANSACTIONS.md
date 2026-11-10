@@ -61,7 +61,7 @@ Deletion markers, operation receipts and change history have independently docum
 
 No public route/version is assigned by this specification. Publish exact schemas, paths and fixtures together when the feed is implemented; do not ask Timing to implement against these illustrative shapes alone.
 
-Implemented separately: [Dealership field review extension 1](../integration-handoff/dealership-field-review-v1/CONTRACT.md) negotiates exact preconditions for ordinary textual car edits. It does not expose the internal SQLite journal or replace the replication feed.
+Implemented separately: Dealership field review extension 1 (internal development reference) negotiates exact preconditions for ordinary textual car edits. It does not expose the internal SQLite journal or replace the replication feed.
 
 ## Compatibility matrix
 

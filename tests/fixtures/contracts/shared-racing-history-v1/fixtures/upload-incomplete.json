@@ -1,0 +1,7 @@
+{
+  "code": "UPLOAD_INCOMPLETE",
+  "error": "Missing chunks; current accepted result is unchanged.",
+  "databaseId": "paddock-demo",
+  "recoveryId": "recovery-example-1",
+  "current": null
+}

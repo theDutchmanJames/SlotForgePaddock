@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "databaseId": "paddock-local-demo",
+  "sourceId": "timing-home",
+  "transferId": "transfer-create",
+  "export": {
+    "format": "slotforge-timing-export",
+    "fileVersion": 1,
+    "exported": "2026-11-09T12:00:00.000Z",
+    "items": {
+      "slotcars": [
+        {
+          "id": "timing-car-1",
+          "name": "Example GT3",
+          "brand": "Example slotcar maker",
+          "manufacturer": "Example marque",
+          "model": "GT3",
+          "reference": "GT-01",
+          "scale": "1:32",
+          "motor": "21.5k motor",
+          "gearing": "9/27",
+          "weight": "85",
+          "tyres": "Rear racing tyres"
+        },
+        {
+          "id": "timing-car-2",
+          "name": "Second physical car"
+        }
+      ]
+    }
+  }
+}

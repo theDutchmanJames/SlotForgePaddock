@@ -1,0 +1,4 @@
+{
+  "error": "This transfer ID was used for different data. Keep retries unchanged.",
+  "code": "IMPORT_CONFLICT"
+}

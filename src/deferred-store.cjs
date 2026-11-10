@@ -28,16 +28,25 @@ function measure(connection,tree){
  };
  return {logicalBytes:total(tree,'logical'),metadataBytes:total(tree,'metadata')};
 }
-function open(file){
+function open(file,allowUpgrade=true){
  // A hot rollback journal needs a writable SQLite open to recover. Keep that
  // exceptional case on the established recovery/validation path.
- const journal=file+'-journal';if(require('node:fs').existsSync(journal)&&require('node:fs').statSync(journal).size>0)return null;
- const connection=new DatabaseSync(file,{readOnly:true,timeout:5000});let manifest,tree,token;
+ const journal=file+'-journal';if(require('node:fs').existsSync(journal)&&require('node:fs').statSync(journal).size>0)require('./sqlite-storage.cjs').recoverForRead(file);
+ const connection=new DatabaseSync(file,{readOnly:true,timeout:5000});let manifest,tree,token,upgrade;
  try{
   connection.exec('BEGIN; PRAGMA trusted_schema=OFF;');
   if(connection.prepare('PRAGMA application_id').get().application_id!==0x53465044||connection.prepare('PRAGMA user_version').get().user_version!==3)return null;
+  const structure=require('./storage-structure.cjs').check(connection,3);
   const values=Object.fromEntries(connection.prepare('SELECT key,value FROM state').all().map(r=>[r.key,r.value]));
-  if(values.query_index_version!=='7'||values.query_index_identity!==JSON.stringify(['identity','change_epoch','change_sequence'].map(k=>values[k]??null)))return null;
+  if(values.query_index_identity!==JSON.stringify(['identity','change_epoch','change_sequence'].map(k=>values[k]??null)))return null;
+  if(values.query_index_version==='7'&&allowUpgrade)upgrade=values.identity;
+  else if(values.query_index_version!=='8')return null;
+  else if(!require('./query-index.cjs').objectsReady(connection)){
+   if(!allowUpgrade||!require('./query-index.cjs').structure(connection).records)return null;
+   upgrade=values.identity;
+  }
+  else if(!require('./query-indexes.cjs').ready(connection)){if(!allowUpgrade)return null;upgrade=values.identity;}
+  if(!structure.initialized){if(!allowUpgrade)return null;upgrade=values.identity;}
   const [id,revision]=JSON.parse(values.identity);token={id,revision,epoch:values.change_epoch};manifest=values.manifest;tree=JSON.parse(manifest);
   const keys=new Set(connection.prepare('SELECT key FROM records').all().map(r=>r.key)),seen=new Set();
   function directory(node,depth=0){
@@ -49,6 +58,9 @@ function open(file){
   }
   directory(tree);if(seen.size!==keys.size)throw Error('Unreferenced collection records.');
  }finally{connection.close();}
+ // Summary upgrades and repairs use the current record/session projections.
+ // Release the read transaction first; never hydrate all car/lap data here.
+ if(upgrade){require('./sqlite-storage.cjs').upgrade(file,upgrade);return open(file,false);}
  return create(file,manifest,token);
 }
 // Build the next revision before committing it. Seed only its identity; all

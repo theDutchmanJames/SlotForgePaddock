@@ -1,7 +1,7 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),os=require('node:os');
 const {Store}=require('../src/store.cjs'),{Network}=require('../src/network.cjs'),{Club}=require('../src/club.cjs'),M=require('../src/club-model.cjs'),F=require('../src/field-review.cjs');
 function fixture(t){const folder=fs.mkdtempSync(path.join(os.tmpdir(),'paddock-field-review-')),s=new Store(path.join(folder,'db.json'));s.mutate('car.save',{data:{name:'Car',livery:'Original'}});const n=new Network(s),c=new Club(s,n,folder);c.enable('Host','Test password');t.after(async()=>{c.close();await n.stop();n.close();fs.rmSync(folder,{recursive:true,force:true});});return {s,n,c,folder,id:s.data.cars[0].id};}
-async function propose(x,data){await x.c.mutate('car.save',{id:x.id,revision:x.s.data.cars[0].revision,data});return x.s.data.club.proposals[0];}
+async function propose(x,data){await x.c.propose('car.save',{id:x.id,revision:x.s.data.cars[0].revision,data});return x.s.data.club.proposals[0];}
 function edit(x,data){return x.s.mutate('car.save',{id:x.id,revision:x.s.data.cars[0].revision,data});}
 test('unrelated edits coexist and a reviewed comparison remains usable after another field changes',async t=>{
  const x=fixture(t),p=await propose(x,{livery:'Proposed'});assert.ok(p.conditions);const preview=x.c.preview(p.id);assert.equal(preview.conflict,false);
@@ -46,5 +46,5 @@ test('old pending proposals retain their original whole-state comparison behavio
 test('host advertises the additive contract and paired clients use it without changing Timing permissions',async t=>{
  const x=fixture(t);await x.n.start();const address='127.0.0.1:'+x.n.port,status=await x.n.request(address,x.n.clubCode,'/v1/status');assert.equal(status.capabilities.clubFieldReview,1);assert.equal(status.clubFieldReview.version,1);assert.equal(status.permissions.timingResults,true);
  const folder=path.join(x.folder,'client'),s=new Store(path.join(folder,'db.json')),n=new Network(s),c=new Club(s,n,folder);t.after(async()=>{c.close();await n.stop();n.close();});
- await c.connect({address,code:x.n.clubCode,name:'Client'});assert.equal(c.device.pair.fieldReview.epoch,status.clubFieldReview.epoch);await c.mutate('car.save',{id:x.id,revision:c.store.data.cars[0].revision,data:{livery:'Remote'}});assert.ok(x.s.data.club.proposals[0].conditions);assert.equal(x.c.preview(x.s.data.club.proposals[0].id).conflict,false);
+ await c.connect({address,code:x.n.clubCode,name:'Client'});assert.equal(c.device.pair.fieldReview.epoch,status.clubFieldReview.epoch);await c.propose('car.save',{id:x.id,revision:c.store.data.cars[0].revision,data:{livery:'Remote'}});assert.ok(x.s.data.club.proposals[0].conditions);assert.equal(x.c.preview(x.s.data.club.proposals[0].id).conflict,false);
 });

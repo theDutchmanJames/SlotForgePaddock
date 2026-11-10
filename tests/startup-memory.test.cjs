@@ -45,5 +45,5 @@ test('counter upgrade preserves existing lap and car indexes instead of rebuildi
  const {store}=fixture(t),db=new DatabaseSync(store.file);
  db.exec("UPDATE state SET value='6' WHERE key='query_index_version'; CREATE TRIGGER forbid_rebuild BEFORE INSERT ON query_records BEGIN SELECT RAISE(ABORT,'Rebuilt record projection'); END");db.close();
  const reopened=new Store(store.file);assert.equal(query.read(reopened,null,r=>r.summary()).value.cars,1);
- const check=new DatabaseSync(store.file);assert.equal(check.prepare("SELECT value FROM state WHERE key='query_index_version'").get().value,'7');assert.ok(check.prepare("SELECT 1 FROM sqlite_master WHERE name='forbid_rebuild'").get());check.close();
+ const check=new DatabaseSync(store.file);assert.equal(check.prepare("SELECT value FROM state WHERE key='query_index_version'").get().value,'8');assert.ok(check.prepare("SELECT 1 FROM sqlite_master WHERE name='forbid_rebuild'").get());check.close();
 });

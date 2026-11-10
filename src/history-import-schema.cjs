@@ -1,0 +1,31 @@
+'use strict';
+// Runtime intake schema. Review storage is separate from accepted race history.
+const {schema:timing}=require('./timing-schema.cjs');
+const clone=structuredClone,ref=name=>({$ref:'#/$defs/'+name});
+const text=(maxLength=2000)=>({type:'string',maxLength}),id={type:'string',minLength:1,maxLength:100,pattern:'^[a-zA-Z0-9_-]+$'},hash={type:'string',pattern:'^[a-f0-9]{64}$'},bool={type:'boolean'};
+const integer=(maximum=Number.MAX_SAFE_INTEGER,minimum=0)=>({type:'integer',minimum,maximum}),num=(minimum=0,maximum=1e15)=>({type:'number',minimum,maximum});
+const nullable=s=>({anyOf:[s,{type:'null'}]}),array=(items,maxItems=1000)=>({type:'array',items,maxItems}),object=properties=>({type:'object',properties,required:Object.keys(properties),additionalProperties:false});
+const date={type:'string',format:'date-time',pattern:'^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$'};
+const defs=clone(timing.$defs);
+const base={version:{const:1},databaseId:id,recoveryId:id},sessionKey={sourceId:id,sessionId:id};
+const accepted=object({revision:integer(1000000,1),contentHash:hash,state:{enum:['active','withdrawn']}});
+const editor=object({installationId:id,application:{enum:['SlotForge Timing','SlotForge Paddock']},name:text(200)});
+const identity=object({id,name:text(200)});
+const classification=object({participantId:id,scope:{enum:['overall','class','heat','final','championship-award']},scopeId:nullable(id),classId:nullable(id),position:nullable(integer(1000,1)),status:{enum:['finished','dnf','dns','disqualified','unknown']},laps:nullable(num(0,1000000)),elapsedMs:nullable(num(0,604800000)),points:nullable(num(-1000000,1000000)),score:nullable(num(-1e12,1e12)),scoreUnit:nullable({enum:['ms','laps','points','m']}),gap:nullable(object({value:num(0,1e12),unit:{enum:['ms','laps','points','m']}})),countedHeatIds:array(id),droppedHeatIds:array(id),incomplete:nullable(bool),estimated:nullable(bool),effects:array(object({kind:{enum:['time','laps','points','other']},amount:num(-1e9,1e9),reason:text(2000)}),2000)});
+const lap=object({id,originLapId:nullable(id),stintId:nullable(id),heatId:nullable(id),driverId:nullable(id),lane:nullable(integer(64,1)),number:integer(1000000,1),durationMs:nullable(num(0.001,86400000)),endedAtMs:nullable(num(0,604800000)),valid:nullable(bool),pit:nullable(bool),personalRecordEligible:nullable(bool),trackRecordEligible:nullable(bool),countsForDistance:bool,distanceM:nullable(num(0,100000)),flags:array({enum:['invalid','tooSlow','late','redFlag']},4),reason:text(500)});
+const historicalConfiguration=object({kind:{const:'historical'},technical:clone(timing.$defs.configuration.properties.technical),recordedAt:nullable(date),evidence:text(2000)});
+const heat=object({id,name:text(200),startedAtMs:nullable(num(0,604800000)),endedAtMs:nullable(num(0,604800000))});
+const stint=object({id,heatId:id,driverId:id,lane:integer(64,1),startedAtMs:nullable(num(0,604800000)),endedAtMs:nullable(num(0,604800000))});
+defs.historyRace=object({name:text(200),type:{enum:['practice','qualifying','race','endurance']},startedAt:nullable(date),endedAt:nullable(date),track:object({id:nullable(id),name:text(200),lanes:array(object({lane:integer(64,1),lengthM:nullable(num(0,100000))}),64)}),heats:array(heat,1000),participants:array(object({id,kind:{enum:['physical','virtual']},carId:nullable(id),configuration:{anyOf:[ref('configuration'),historicalConfiguration,{type:'null'}]},displayName:text(200),teamId:nullable(id),drivers:array(identity,100),stints:array(stint,2000),laps:array(lap,50000)}),256)});
+defs.context=object({savedAt:nullable(date),endedBy:nullable(text(200)),resumed:nullable(integer(100000)),weather:nullable(text(2000)),teams:array(identity,256),classes:array(identity,256),classification:array(classification,10000),systemChanges:array(object({system:text(100),enabled:bool,atMs:nullable(num(0,604800000))}),2000),scoringSnapshot:{type:'null'},notes:text(4000)});
+defs.bundle={anyOf:[object({format:{const:'timing-v1'},payload:ref('active')}),object({format:{const:'history-v1'},provenance:object({kind:{enum:['measured','historical']},evidence:text(2000),missing:array({enum:['configuration','crossing-times','driver-boundaries','lane-lengths','classification','record-eligibility','race-date']},7)}),race:ref('historyRace'),context:ref('context')})]};
+defs.importRequest=object({...base,operationId:id,editor,items:array(object({itemId:id,...sessionKey,originHash:hash,bundle:ref('bundle')}),25)});
+defs.importRequest.properties.items.minItems=1;
+const historicalBundle=clone(defs.bundle.anyOf[1]);historicalBundle.properties.provenance.properties.kind={const:'historical'};
+defs.importRequest.properties.items.items.properties.bundle=historicalBundle;
+defs.importReceipt=object({...base,operationId:id,requestHash:hash,items:array(object({itemId:id,...sessionKey,status:{enum:['pending','approved','rejected','cancelled','already-present','conflict']},accepted:nullable(accepted),message:text(2000)}),25)});
+
+const expand=s=>s&&typeof s==='object'?s.$ref?expand(defs[s.$ref.split('/').pop()]):Array.isArray(s)?s.map(expand):Object.fromEntries(Object.entries(s).map(([k,v])=>[k,expand(v)])):s;
+const request=expand(defs.importRequest),receipt=expand(defs.importReceipt);
+const cancel=object({...base,operationId:id,itemIds:{...array(id,25),minItems:1}});
+module.exports={request,receipt,cancel,historyBundle:expand(defs.bundle.anyOf[1]),validate:require('./timing-schema.cjs').validate};

@@ -1,0 +1,35 @@
+{
+  "source": "SlotForgeTiming/tests/fixtures/paddock-rich-mapper",
+  "date": "2026-11-09",
+  "purpose": "Unchanged synthetic production mapper inputs and outputs; internal qualification only.",
+  "files": [
+    {
+      "file": "classes.json",
+      "sha256": "7017e7fd77151f1b73c9f5c5887a441fb75539dc57251710e65c05489718bfff"
+    },
+    {
+      "file": "endurance.json",
+      "sha256": "ccbba17a71a5e2f6a9d50409f61ba5f742555f425b8253ab9df59be913a946d6"
+    },
+    {
+      "file": "heats-finals.json",
+      "sha256": "382b4666da57d52d8ef8439f3df02a88bd4788747db440357f54a9174e69c647"
+    },
+    {
+      "file": "historical-unknowns.json",
+      "sha256": "444f42b171c193dcd1e62ef09d9212ecbb973ecc4d23d1e92e75817a9bfb3815"
+    },
+    {
+      "file": "penalties.json",
+      "sha256": "2da72bcd4b8e6b0919880143c1a5573fbdc26f44850f5b7e56a377e3cb9f81a9"
+    },
+    {
+      "file": "qualifying.json",
+      "sha256": "f692a332a24961ef081efd879fdd8d55908a75385f18c067e97f7cd2a77a907b"
+    },
+    {
+      "file": "race.json",
+      "sha256": "976f0732b9e1b0c9adebc551c35e4521e61f2ecfc4e440fe0fe982da6d342e8d"
+    }
+  ]
+}

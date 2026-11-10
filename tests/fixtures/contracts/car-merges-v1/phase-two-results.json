@@ -1,0 +1,26 @@
+{
+  "phase": 2,
+  "date": "2026-11-10",
+  "activationEnabled": false,
+  "personalDatabaseAccessed": false,
+  "publicApiChanged": false,
+  "qualification": {
+    "newMergeTests": {"tests": 45, "passed": 45, "failed": 0},
+    "existingRegressionTests": {"tests": 1091, "passed": 1091, "failed": 0},
+    "expandedFullRun": {"tests": 1136, "passed": 1135, "failed": 1},
+    "fullRunFailureResolution": "New setup-job fixture incorrectly assumed setup.save returned its ID. Corrected fixture; focused rerun and all 45 merge tests passed. Full suite not repeated solely for that fixture correction.",
+    "syntaxChecks": "passed",
+    "collectionFixtureCars": 500,
+    "separateProcessLostAcknowledgement": "passed",
+    "installedClientMergeQualification": "not performed",
+    "twoComputerMergeQualification": "not performed"
+  },
+  "remaining": [
+    "Review and archive user interface",
+    "Production serialized/background command wiring",
+    "Merge-aware Timing and Telemetry readers and writers",
+    "Real migration and already-open older writer fencing",
+    "Dealership replication and installed-app qualification",
+    "Legacy sharing retirement"
+  ]
+}

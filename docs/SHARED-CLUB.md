@@ -13,6 +13,14 @@ Run the same Paddock app on your home or club computers. Enable **Dealership Mod
 
 Trusted club access includes private club ownership records, documents, stock, jobs, proposals and results. Give this password only to computers authorised to hold that complete collection. The password grants all application permissions, including public car browsing, submissions for review, private replication and Timing results. Legacy sharing credentials and controls are not used while hosting a Dealership.
 
+## Turn Dealership Mode off
+
+On the original collection, choose **Connections → Turn off Dealership Mode… → Back up & turn off**. This works even when hosting is offline or no password is configured. It stops Dealership hosting and removes the dealership banner and review routing. Cars, stock, setups, racing history and the same-computer shared library remain available.
+
+A full recovery backup is saved first. Pending dealership proposals are not applied; they and previous dealership decisions remain in that backup. Other computers retain their saved copies but cannot submit to the old dealership. Enabling the mode again creates a new dealership connection.
+
+**Stop Dealership** only pauses network hosting; it leaves the mode enabled. For a downloaded collection copy, use **Open personal collection** or **Disconnect from dealership…** instead.
+
 ## Join from another computer
 
 1. Open **Connections → Dealership Mode → Connect to a dealership…**.
@@ -23,9 +31,11 @@ Joining does not merge existing personal databases. To contribute personal cars,
 
 The host remembers its password across hosting and app restarts. Joined Paddock copies remember their connection password too; reconnecting pre-fills it. Hosting can select a different port after restart, so use the current address. A deliberate password change invalidates the old password and connected copies must reconnect with the new one.
 
-## Propose, compare and approve
+## Save everyday changes; review important changes
 
-- Edits on a club copy **and on the dealership computer itself** become proposals. The official car or stock record stays unchanged until approved.
+- Routine changes save directly on both the dealership computer and connected copies: existing car fields, themes and preferences, inventory, Workshop jobs, shopping, documents and build drafts. Revision and stock checks still apply.
+- New cars, duplicates, completed builds/rebuilds, saved setup changes, catalogue imports, bulk car/catalogue operations and permanent car deletion require approval. Their official records stay unchanged until approved.
+- Update both Paddock instances and reconnect to enable direct member saves. Older pending proposals are retained for explicit review; they are not silently approved.
 - **REVIEW → Dealership changes** lists pending changes and recent decisions. Only the dealership computer offers the approval controls.
 - Review cards and comparison headings identify the affected car by name, with the operation and work/job title beneath it. Car references use stable identities; cars with identical names are not matched together.
 - The comparison shows the original, current and proposed values. Blank initial fields and bookkeeping timestamps are omitted. Up to 200 changed fields are listed; **Full submitted change** exposes the complete command, replacing inline image/document bytes with a size description. Use smaller batches for large catalogue imports.
@@ -33,7 +43,9 @@ The host remembers its password across hosting and app restarts. Joined Paddock 
 - Approval revalidates the command against the current database, including available stock. A failed validation does not partly apply a change.
 - If approved content changed after the proposal was created, the dealership computer must explicitly confirm the fresh comparison. If it changes again while that comparison is open, the reviewer must reopen it.
 - Conflict detection is deliberately conservative: a change anywhere in the approved collection can require confirmation. Queuing another proposal alone does not create a content conflict.
-- Existing car edits submit only the changed fields, so approving a name change does not reset an unrelated configuration field. Other operations show their full effects for review.
+- Direct existing-car edits send changed fields and reject stale revisions. Lost acknowledgements retry the same durable command. Review remains available for proposals queued by older versions.
+
+Routine saves do not grant permission to bypass important-change approval. The private `/v1/club/commands` route requires the existing Dealership credential, correct database identity and current recovery epoch; `/v1/club/status` advertises `routineWrites: 1`. Timing and Telemetry do not use this private route.
 
 Incoming public car packages keep their existing **Incoming cars** review workflow on the dealership computer. Finalised Timing sessions use the same Dealership password and the existing Timing API: results reviewed in Timing are stored directly by the dealership computer and then distributed to connected club copies. They do not require a second Dealership changes approval.
 

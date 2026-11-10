@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "databaseId": "79ad63e6-055f-43fc-94db-d1a1a2d3ab87",
+  "recoveryId": "6f47d6e7-9135-46b0-8f75-5a3bc3d028a9",
+  "sourceId": "timing-demo",
+  "operationId": "patch-001",
+  "requestHash": "5460cedf3732aa5f94bf974c9daf41f068fb82ad856e44b632bff07c340b537c",
+  "action": "patch",
+  "committedAt": "2026-11-09T14:25:18.289Z",
+  "car": {
+    "id": "6ee82263-f4ba-43f6-b302-5955aad8f26a",
+    "revision": 2,
+    "archived": false,
+    "fields": {
+      "name": "Club GT3",
+      "maker": "NSR",
+      "marque": "Aston Martin",
+      "model": "",
+      "reference": "",
+      "scale": "",
+      "number": "",
+      "livery": "",
+      "raceClass": "",
+      "availability": "Available",
+      "motor": "",
+      "motorLayout": "",
+      "rearTyres": "",
+      "frontTyres": "",
+      "guide": "",
+      "braids": "",
+      "chassis": "",
+      "body": "",
+      "pod": "",
+      "pinion": 9,
+      "gear": 27,
+      "weight": 81,
+      "rearDiameter": null,
+      "frontDiameter": null,
+      "ratedRpm": null,
+      "ratedVoltage": null
+    },
+    "unparsed": {},
+    "truncated": []
+  },
+  "duplicate": false,
+  "current": {
+    "present": true,
+    "archived": false,
+    "revision": 2
+  }
+}

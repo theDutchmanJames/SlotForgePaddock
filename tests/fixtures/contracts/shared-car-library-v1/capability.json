@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "schemaVersion": 1,
+  "schema": "/v1/local-library/car-schema",
+  "car": "/v1/local-library/cars/{carId}",
+  "operations": "/v1/local-library/car-operations",
+  "actions": [
+    "create",
+    "patch",
+    "archive",
+    "restore"
+  ],
+  "maxRequestBytes": 131072,
+  "reviewRequired": false,
+  "recoveryHeader": "X-SlotForge-Recovery",
+  "media": {
+    "write": false,
+    "read": "scalable-v1"
+  }
+}

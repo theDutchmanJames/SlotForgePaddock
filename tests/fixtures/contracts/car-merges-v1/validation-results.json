@@ -1,0 +1,8 @@
+{
+  "validIdentityExamples": 2,
+  "rejectedMalformedExamples": 8,
+  "scenarios": 11,
+  "sourceFingerprintsVerified": 55,
+  "relativeDocumentLinks": "passed",
+  "runtimeMergeTests": "not run; implementation does not exist"
+}

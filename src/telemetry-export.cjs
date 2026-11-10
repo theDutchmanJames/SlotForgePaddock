@@ -5,7 +5,7 @@ const capability={version:1,index:'/v1/telemetry/results',permission:'timingResu
 const manifests=new WeakMap();
 function manifest(db){
   let value=manifests.get(db);if(value)return value;
-  const entries=db.timing.sessions.map(record=>{
+  const entries=db.timing.sessions.filter(record=>record.format!=='history-v1').map(record=>{
     const p=record.payload,active=p.state==='active';
     const carIds=active?p.participants.filter(p=>p.kind==='physical'&&p.carId).map(p=>p.carId):record.carIds;
     return {sourceId:p.source.id,sessionId:p.sessionId,revision:p.revision,state:p.state,contentHash:record.contentHash,
@@ -65,6 +65,7 @@ function handle(db,method,url,access,expected){
   }
   if(revision===null&&snapshot===null)throw timing.fault('REVISION_REQUIRED','Read the result index before downloading a session.');
   const record=db.timing.sessions.find(r=>r.payload.source.id===match[1]&&r.payload.sessionId===match[2]);
+  if(record?.format==='history-v1')throw timing.fault('RESULT_REQUIRES_SHARED_HISTORY','Read this session through the shared-history API.',409);
   if(!record)throw timing.fault('SESSION_NOT_FOUND','This session no longer exists.',404);
   return {...base,payload:record.payload,receipt:timing.receipt(db,record)};
 }

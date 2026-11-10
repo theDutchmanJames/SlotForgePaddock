@@ -67,7 +67,7 @@ The active 2.1 GiB synthetic collection passed editing, stock installation, main
 
 Run `npm run qualify:large` for the active 2.1 GiB qualification (272 unique 8 MiB encoded originals); `npm run qualify:large -- 26` exercises a smaller collection above the previous cap. Fixtures are disposable and require substantial free disk space. Reports are written beneath `.qa`.
 
-Run `npm run qualify:storage` for disposable 100, 500, 1,000 and 5,000-car fixtures with twice as many parts, custom values, original-photo sharing/deduplication, 10,250 measured laps, history and review proposals. Results go to `.qa/phase8-qualification.json`. The benchmark uses separate measurement processes and a warm OS cache. It measures host-local proposals, not LAN round trips. See the [review record](reviews/2026-11-03-sqlite-scalability.md) for measured evidence and remaining failures.
+Run `npm run qualify:storage` for disposable 100, 500, 1,000 and 5,000-car fixtures with twice as many parts, custom values, original-photo sharing/deduplication, 10,250 measured laps, history and review proposals. Results go to `.qa/phase8-qualification.json`. The benchmark uses separate measurement processes and a warm OS cache. It measures host-local proposals, not LAN round trips. See the review record (internal development reference) for measured evidence and remaining failures.
 
 ### Startup follow-up measurements (3 November 2026)
 
@@ -87,4 +87,4 @@ Final regression evidence: 615 Node tests, 210 desktop workflows, syntax checks 
 
 ### Deferred startup and scoped writes
 
-The subsequent startup and first-write improvements supersede the earlier full-load measurements above. See [deferred startup](reviews/2026-11-03-deferred-startup.md) and [scoped first writes](reviews/2026-11-03-scoped-first-writes.md). The final pre-release suite passed 651 automated tests and 210 desktop checks. Full-model compatibility operations remain explicit exceptions.
+The subsequent startup and first-write improvements supersede the earlier full-load measurements above. See deferred startup (internal development reference) and scoped first writes (internal development reference). The final pre-release suite passed 651 automated tests and 210 desktop checks. Full-model compatibility operations remain explicit exceptions.

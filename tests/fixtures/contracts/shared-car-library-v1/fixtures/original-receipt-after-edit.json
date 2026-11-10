@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "databaseId": "79ad63e6-055f-43fc-94db-d1a1a2d3ab87",
+  "recoveryId": "6f47d6e7-9135-46b0-8f75-5a3bc3d028a9",
+  "sourceId": "timing-demo",
+  "operationId": "create-001",
+  "requestHash": "8ee29bce16c7338520fd2e9a3a60aea79b56172ee6aeb0d4e67c42ce97b11c2a",
+  "action": "create",
+  "committedAt": "2026-11-09T14:25:18.233Z",
+  "car": {
+    "id": "6ee82263-f4ba-43f6-b302-5955aad8f26a",
+    "revision": 1,
+    "archived": false,
+    "fields": {
+      "name": "Example shared GT3",
+      "maker": "NSR",
+      "marque": "Aston Martin",
+      "model": "",
+      "reference": "DEMO-001",
+      "scale": "",
+      "number": "",
+      "livery": "",
+      "raceClass": "",
+      "availability": "Available",
+      "motor": "",
+      "motorLayout": "",
+      "rearTyres": "",
+      "frontTyres": "",
+      "guide": "",
+      "braids": "",
+      "chassis": "",
+      "body": "",
+      "pod": "",
+      "pinion": 9,
+      "gear": 27,
+      "weight": 82.5,
+      "rearDiameter": null,
+      "frontDiameter": null,
+      "ratedRpm": null,
+      "ratedVoltage": null
+    },
+    "unparsed": {},
+    "truncated": []
+  },
+  "duplicate": true,
+  "current": {
+    "present": true,
+    "archived": false,
+    "revision": 2
+  }
+}
