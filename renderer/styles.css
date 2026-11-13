@@ -23,3 +23,5 @@
 /* Align labelled and unlabelled toolbar controls on the same baseline. */
 .toolbar{align-items:flex-end}.toolbar>.search input,.toolbar>.field select,.toolbar>.field input,.toolbar>select{height:42px}.toolbar>.search input{display:block}.toolbar>.check-row{min-height:42px;margin:0}.toolbar>.btn,.toolbar>.segment .btn{min-height:42px}
 .workshop-panels{align-items:start}.recent-work-footer{margin-top:16px}.recent-work-footer p{margin-bottom:8px}
+
+.portal-panel{border-top:3px solid var(--accent,#ee444e);margin-bottom:20px}.portal-heading{display:flex;align-items:center;justify-content:space-between;gap:16px}.portal-heading h2{display:flex;align-items:center;gap:10px;margin:0}.portal-heading h2 svg{width:22px;height:22px}.portal-addresses{display:flex;flex-wrap:wrap;gap:18px;margin:18px 0}.portal-address{display:flex;align-items:center;gap:18px;min-width:0}.portal-qr{width:132px;flex:0 0 132px;background:white;padding:5px;border-radius:8px}.portal-qr svg{width:100%;display:block}.portal-code{font-size:22px;letter-spacing:.15em;font-variant-numeric:tabular-nums}.portal-address .code{overflow-wrap:anywhere}

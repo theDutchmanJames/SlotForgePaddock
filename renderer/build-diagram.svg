@@ -1,18 +1,39 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1360" viewBox="0 0 1600 1360" color="#243442"><title>Slot car chassis — labeled exploded color illustration</title><desc>Flat color exploded slot car chassis. The revised layout and all its components are retained, using the original illustration's teal, orange, pale metal and navy palette. Schematic component views, not a dimensioned assembly guide.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1360" viewBox="0 0 1600 1360" color="#243442"><title>Slot car chassis — labeled exploded color illustration</title><desc>Flat color exploded slot car chassis with the revised molded chassis and motor pod from the v7 illustration. Schematic component views, not a dimensioned assembly guide.</desc>
  <g id="assembly-guides" fill="none" stroke="#B5C4CC" stroke-width="3" stroke-linecap="round" stroke-dasharray="6 13">
   <path d="M800 234V242M800 280V290M800 330V385M540 310H552M1048 310H1060M276 310H335M405 310H468M1132 310H1195M1265 310H1324"/>
-  <path d="M800 345L645 392V493M800 345L955 392V493"/>
+  <path d="M800 345L620 390V550H680M800 345L980 390V550H920"/>
   <path d="M485 746H616M982 746H1148M1240 865V874"/>
   <path d="M800 1046V1050M800 1092V1116M295 1150H326M414 1150H468M1132 1150H1186M1274 1150H1305M540 1150H552M1048 1150H1060"/>
  </g>
- <g id="chassis" fill="none" stroke="currentColor" stroke-width="7" stroke-linejoin="round">
-  <path fill="#49ABA5" stroke="#243442" fill-rule="evenodd" d="M754 400H846Q864 400 869 420L884 465H930Q957 465 957 492V553L931 579V864L957 891V1004Q957 1031 930 1031H670Q643 1031 643 1004V891L669 864V579L643 553V492Q643 465 670 465H716L731 420Q736 400 754 400Z
-   M781 436a19 19 0 1 0 38 0a19 19 0 1 0 -38 0Z
-   M742 493H858Q872 493 872 507V621Q872 635 858 635H742Q728 635 728 621V507Q728 493 742 493Z
-   M717 681H883Q905 681 905 703V965Q905 987 883 987H717Q695 987 695 965V703Q695 681 717 681Z
-   M671 500a8 8 0 1 0 16 0a8 8 0 1 0 -16 0Z M913 500a8 8 0 1 0 16 0a8 8 0 1 0 -16 0Z M675 553a7 7 0 1 0 14 0a7 7 0 1 0 -14 0Z M911 553a7 7 0 1 0 14 0a7 7 0 1 0 -14 0Z M694 654a8 8 0 1 0 16 0a8 8 0 1 0 -16 0Z M890 654a8 8 0 1 0 16 0a8 8 0 1 0 -16 0Z M662 924a7 7 0 1 0 14 0a7 7 0 1 0 -14 0Z M924 924a7 7 0 1 0 14 0a7 7 0 1 0 -14 0Z M666 1006a8 8 0 1 0 16 0a8 8 0 1 0 -16 0Z M918 1006a8 8 0 1 0 16 0a8 8 0 1 0 -16 0Z"/>
-  <path d="M655 521H701M899 521H945" stroke="#243442" stroke-width="16" stroke-linecap="round"/><path d="M655 521H701M899 521H945" stroke="#A1D7CF" stroke-width="7" stroke-linecap="round"/><path d="M682 718V836M918 718V836" stroke="#A1D7CF" stroke-width="7" stroke-linecap="round"/>
+ <g id="chassis" fill="none" stroke="#243442" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+ <path id="molded-chassis-frame" fill="#49ABA5" fill-rule="evenodd" d="
+  M800 400C875 400 936 418 966 450L950 491H916V586L944 615V900L921 934V977H966V1030H634V977H679V934L656 900V615L684 586V491H650L634 450C664 418 725 400 800 400Z
+  M756 459a44 44 0 1 0 88 0a44 44 0 1 0 -88 0Z
+  M730 650H870V667H897Q909 667 909 680V892L891 919V944H910V975H690V944H709V919L691 892V680Q691 667 703 667H730Z
+  M693 471a9 9 0 1 0 18 0a9 9 0 1 0 -18 0Z M889 471a9 9 0 1 0 18 0a9 9 0 1 0 -18 0Z
+  M712 645a8 8 0 1 0 16 0a8 8 0 1 0 -16 0Z M872 645a8 8 0 1 0 16 0a8 8 0 1 0 -16 0Z
+  M673 924a8 8 0 1 0 16 0a8 8 0 1 0 -16 0Z M911 924a8 8 0 1 0 16 0a8 8 0 1 0 -16 0Z
+  M652 1005a8 8 0 1 0 16 0a8 8 0 1 0 -16 0Z M932 1005a8 8 0 1 0 16 0a8 8 0 1 0 -16 0Z
+  M788 1003a12 12 0 1 0 24 0a12 12 0 1 0 -24 0Z"/>
+ <g id="guide-support">
+  <path d="M770 530L779 476Q777 450 800 441Q823 450 821 476L830 530Z M787 463a13 13 0 1 0 26 0a13 13 0 1 0 -26 0Z" fill="#49ABA5" fill-rule="evenodd"/>
+  <path d="M786 504H814" stroke="#A1D7CF" stroke-width="5"/>
  </g>
+ <g id="front-axle-supports" fill="#A1D7CF" stroke-width="5">
+  <path d="M686 526H714V575H686Z M886 526H914V575H886Z"/>
+  <path d="M700 534V564M900 534V564" fill="none" stroke-width="8"/>
+ </g>
+ <g id="front-deck-detail" stroke-width="4">
+  <path d="M721 527L735 604H865L879 527"/>
+  <path d="M746 573H767M833 573H854" stroke="#A1D7CF" stroke-width="6"/>
+  <circle cx="773" cy="621" r="6"/><circle cx="827" cy="621" r="6"/>
+ </g>
+ <g id="side-rail-ribs" stroke-width="5">
+  <path d="M674 650V879L694 908M926 650V879L906 908" stroke="#A1D7CF"/>
+  <path d="M657 688H686M657 780H686M914 688H943M914 780H943" stroke-width="4"/>
+ </g>
+ <path id="rear-crossmember" d="M704 1003H769M831 1003H896" stroke="#A1D7CF" stroke-width="6"/>
+</g>
  <g id="front-wheel-assembly" fill="none" stroke="currentColor" stroke-linecap="round">
   <g transform="translate(220 310)"><path fill="#243442" stroke="#8C9DA7" stroke-width="3" fill-rule="evenodd" d="M-28 -75H28Q47 -75 47 -56V56Q47 75 28 75H-28Q-47 75 -47 56V-56Q-47 -75 -28 -75Z"/></g><g transform="translate(370 310)"><rect x="-27" y="-59" width="54" height="118" rx="8" fill="#D6E0E4" stroke-width="7"/><path d="M-15 -57V57M15 -57V57" stroke="#8C9DA7" stroke-width="5"/><path d="M-14 0H14" stroke-width="9"/></g><path fill="#BC8A52" stroke="#243442" stroke-width="4" fill-rule="evenodd" d="M475 310a25 25 0 1 0 50 0a25 25 0 1 0 -50 0M489 310a11 11 0 1 0 22 0a11 11 0 1 0 -22 0"/>
   <path d="M560 310H1040" stroke-width="15"/><path d="M560 310H1040" stroke="#8C9DA7" stroke-width="7"/>
@@ -36,11 +57,30 @@
  <g id="mounting-screws" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
   <g transform="translate(324 464)"><path d="M-8 16V64L0 75 8 64V16" fill="#D6E0E4" stroke-width="6"/><circle r="20" fill="#D6E0E4" stroke-width="6"/><path d="M-8 0H8M0-8V8M-10 37H10M-10 49H10M-10 61H10" stroke-width="5"/></g><g transform="translate(386 464)"><path d="M-8 16V64L0 75 8 64V16" fill="#D6E0E4" stroke-width="6"/><circle r="20" fill="#D6E0E4" stroke-width="6"/><path d="M-8 0H8M0-8V8M-10 37H10M-10 49H10M-10 61H10" stroke-width="5"/></g>
  </g>
- <g id="motor-pod" fill="none" stroke="currentColor" stroke-width="6" stroke-linejoin="round">
-  <path fill="#E8BF6A" stroke="#243442" fill-rule="evenodd" d="M295 597H415V620H447V667H425V824H462V888H248V824H285V667H263V620H295Z
-  M319 648H391V793H319Z M309 837H401V866H309Z M277 643a8 8 0 1 0 16 0a8 8 0 1 0 -16 0Z M417 643a8 8 0 1 0 16 0a8 8 0 1 0 -16 0Z M263 859a9 9 0 1 0 18 0a9 9 0 1 0 -18 0Z M429 859a9 9 0 1 0 18 0a9 9 0 1 0 -18 0Z M348 615a7 7 0 1 0 14 0a7 7 0 1 0 -14 0Z"/>
-  <path d="M319 710H334M376 710H391" stroke-width="8"/>
- <path d="M300 687V790M410 687V790" stroke="#F5DCA6" stroke-width="5" stroke-linecap="round"/></g>
+ <g id="motor-pod" fill="none" stroke="#243442" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+ <path id="anglewinder-pod-frame" fill="#E8BF6A" fill-rule="evenodd" d="M290 610H416V748L464 769L437 845V870H454V892H247V870H265V792L236 781L267 697L290 705Z
+ M283 716.6L439 773.4L417 833.4L261 776.6Z
+ M338 634H368V645H338Z M329 665H377V675H329Z M329 688H377V698H329Z
+ M315 855H383V871H315Z"/>
+ <g id="pod-mounting-lugs" fill="#E8BF6A" fill-rule="evenodd" stroke-width="4">
+  <path d="M277 610a13 13 0 1 0 26 0a13 13 0 1 0 -26 0ZM285.2 610a4.8 4.8 0 1 0 9.6 0a4.8 4.8 0 1 0 -9.6 0Z"/><path d="M403 610a13 13 0 1 0 26 0a13 13 0 1 0 -26 0ZM411.2 610a4.8 4.8 0 1 0 9.6 0a4.8 4.8 0 1 0 -9.6 0Z"/><path d="M244 707a13 13 0 1 0 26 0a13 13 0 1 0 -26 0ZM252.2 707a4.8 4.8 0 1 0 9.6 0a4.8 4.8 0 1 0 -9.6 0Z"/><path d="M446 771a13 13 0 1 0 26 0a13 13 0 1 0 -26 0ZM454.2 771a4.8 4.8 0 1 0 9.6 0a4.8 4.8 0 1 0 -9.6 0Z"/><path d="M242 884a13 13 0 1 0 26 0a13 13 0 1 0 -26 0ZM250.2 884a4.8 4.8 0 1 0 9.6 0a4.8 4.8 0 1 0 -9.6 0Z"/><path d="M434 884a13 13 0 1 0 26 0a13 13 0 1 0 -26 0ZM442.2 884a4.8 4.8 0 1 0 9.6 0a4.8 4.8 0 1 0 -9.6 0Z"/>
+ </g>
+ <g id="front-tray-ribs" stroke="#F5DCA6" stroke-width="5">
+  <path d="M307 630V700M399 630V725M321 714L406 745"/>
+ </g>
+ <g id="diagonal-motor-cradle" transform="translate(350 775) rotate(20)" fill="#F5DCA6" stroke-width="4">
+
+  <path d="M-98 -11V11M98 -11V11" fill="none" stroke-width="6"/>
+ </g>
+ <g id="rear-bearing-carriers" fill="#F5DCA6" stroke-width="4">
+
+  <path d="M273 858V877M421 858V877" fill="none" stroke-width="7"/>
+ </g>
+ <g id="rear-gussets" stroke-width="4">
+
+  <path d="M292 881H405" stroke="#F5DCA6"/>
+ </g>
+</g>
  <g id="motor-and-leads" fill="none" stroke="currentColor" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
   <path d="M1218 629V551C1218 514 1171 530 1171 483" stroke="#E37B55" stroke-width="6"/><path class="build-diagram-wire" d="M1262 629V552C1262 509 1309 529 1309 483" stroke-width="6"/>
   <path fill="#243442" stroke="#8C9DA7" stroke-width="3" fill-rule="evenodd" d="M1159 470a12 12 0 1 0 24 0a12 12 0 1 0 -24 0M1166 470a5 5 0 1 0 10 0a5 5 0 1 0 -10 0"/><path fill="#243442" stroke="#8C9DA7" stroke-width="3" fill-rule="evenodd" d="M1297 470a12 12 0 1 0 24 0a12 12 0 1 0 -24 0M1304 470a5 5 0 1 0 10 0a5 5 0 1 0 -10 0"/>

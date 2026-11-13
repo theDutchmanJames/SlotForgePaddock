@@ -12,7 +12,7 @@ let db,net,remote=null,source='local',page='Overview',carId=null,section='Overvi
 const current=()=>source==='remote'&&remote?remote:db;
 const local=()=>source==='local';
 function acceptSnapshot(next){if(db&&db.id===next.id&&db.revision>next.revision)return;db=next;}
-function switchCollection(next){workshopJob=null;recentWorkLimit=3;source=next;carId=null;section='Overview';selected.clear();usage=[];query='';archived=false;matchAll=false;}
+function switchCollection(next){if(next!==source&&net?.portal?.enabled)void api('portal','stop').then(value=>{net=value;}).catch(e=>toast(e.message,true));workshopJob=null;recentWorkLimit=3;source=next;carId=null;section='Overview';selected.clear();usage=[];query='';archived=false;matchAll=false;}
 const car=()=>current().cars.find(c=>c.id===carId);
 // Retry storage holds request hashes and IDs only, never entered values.
 const saveRetries=SaveRetry.create({storage:{get length(){return localStorage.length;},key:i=>localStorage.key(i),getItem:k=>localStorage.getItem(k),setItem:(k,v)=>localStorage.setItem(k,v),removeItem:k=>localStorage.removeItem(k)},crypto});
@@ -220,6 +220,7 @@ document.addEventListener('click',async event=>{
       case 'custom-add':simpleForm('Add a custom car field',field('label','Field name','')+field('type','Field type','text','select',['text','choice','number','date','yesno','notes']),async values=>change('custom.add',values));return;
 
       case 'refresh-inbox':{const r=await readScreen();db=r.data;net=r.network;break;}
+      case 'portal-toggle':if(!local())throw Error('Open your local collection to use Paddock Portal.');net=await api('portal',net.portal?.enabled?'stop':'start',{databaseId:db.id});break;
       case 'local-library-retry':net=await api('network','local-retry');break;
     case 'local-library-access':net=await api('network','local-access',{enabled:!net.localLibrary?.enabled});break;
       case 'start-sharing':net=await api('network','start');toast('Sharing started. Give the address and code to trusted club members.');break;

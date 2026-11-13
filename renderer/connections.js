@@ -1,4 +1,8 @@
 let discoveredHosts=[];
+function renderPaddockPortal(){
+ const p=net.portal;if(!p)return '';
+ return `<section class="panel portal-panel"><div class="portal-heading"><h2>${icon('car')} Paddock Portal</h2><button type="button" class="btn ${p.enabled?'':'primary'}" data-action="portal-toggle" role="switch" aria-checked="${!!p.enabled}" ${!local()||!p.available?'disabled':''}>${p.enabled?'Turn off':'Turn on'}</button></div><p class="muted">Quickly add cars and their main photographs, or add up to five gallery photos to an existing car, from your phone or tablet. Complete their details afterwards in Paddock.</p>${p.enabled?`<p>${badge('Portal on','good')} <strong>${esc(p.collectionName)}</strong></p><p>Connect your phone or tablet to the same local network. Scan a QR code, or type the address into its browser and enter the access code.</p><p>Access code: <strong class="portal-code">${esc(p.code)}</strong></p>${p.addresses.length?`<div class="portal-addresses">${p.addresses.map(a=>`<div class="portal-address"><div class="portal-qr">${a.qr}</div><div><div class="code">${esc(a.url)}</div><small class="muted">Scan to connect automatically</small></div></div>`).join('')}</div>`:'<p class="note">No local network address was found. Turn the Portal off, connect this computer to your Wi-Fi or LAN, then turn it on again.</p>'}<p class="tiny muted">Keep Paddock running and this computer awake. Guest Wi-Fi or a firewall may prevent a connection. The Portal adds cars directly to this collection; turn it off when finished.</p>`:`${p.reason?`<p class="note">${esc(p.reason)}</p>`:''}${!local()||!p.available?'<p class="tiny muted">Open the original local collection to use the Portal.</p>':''}`}</section>`;
+}
 const canSubmit=()=>!clubState?.active&&!!net.remote&&net.remote.state==='connected'&&net.remote.permissions?.submit&&!net.pending;
 const connectionTime=value=>value?new Date(value).toLocaleString():'Never';
 function remoteNotice(){const r=net.remote;if(local()||!r)return '';return `<div class="note ${r.state==='connected'?'info':''} connection-notice"><strong>${r.state==='connected'?'Shared read-only view':r.state==='access-required'?'Access needs renewing · saved view':'Offline · saved view'}</strong> · Last checked <time data-sync-time>${esc(connectionTime(r.lastSync))}</time>. ${r.state==='connected'?(r.autoRefresh?'Changes refresh automatically.':'Automatic refresh is paused.'):'These cars may be out of date. Open Connections to reconnect.'}</div>`;}
@@ -21,7 +25,7 @@ async function findHosts(){
 function installNetworkUpdates(){let pendingRender=false;
   const busy=()=>$('#dialog').open||actionBusy||modalSaving||['INPUT','SELECT','TEXTAREA'].includes(document.activeElement?.tagName);
   const visible=()=>page!=='Review'&&(source==='remote'||page==='Connections'||page==='Settings');
-  const relevant=status=>JSON.stringify({remote:status?.remote?{id:status.remote.id,state:status.remote.state,permissions:status.remote.permissions,autoRefresh:status.remote.autoRefresh,lastError:status.remote.lastError}:null,pending:status?.pending,localLibrary:status?.localLibrary,background:status?.background});
+  const relevant=status=>JSON.stringify({remote:status?.remote?{id:status.remote.id,state:status.remote.state,permissions:status.remote.permissions,autoRefresh:status.remote.autoRefresh,lastError:status.remote.lastError}:null,pending:status?.pending,localLibrary:status?.localLibrary,background:status?.background,portal:status?.portal});
   const flush=()=>setTimeout(()=>{if(pendingRender&&!busy()&&visible()){pendingRender=false;render();}},0);
   document.addEventListener('focusout',flush);
   $('#dialog').addEventListener('close',flush);
@@ -42,7 +46,7 @@ function hostPasswordDialog(access){
   },'Set password');
 }
 
-function renderConnections(){return heading('Connections','Connect your home or club collection across trusted computers.')+renderClubConnections()+renderDealershipExit()+renderLocalLibraryConnection()+(clubState?.active||clubState?.role==='coordinator'?'':renderBasicConnections());}
+function renderConnections(){return heading('Connections','Connect your home or club collection across trusted computers.')+renderPaddockPortal()+renderClubConnections()+renderDealershipExit()+renderLocalLibraryConnection()+(clubState?.active||clubState?.role==='coordinator'?'':renderBasicConnections());}
 
 function renderLocalLibraryConnection(){
   const c=net.localLibrary;if(!c)return '';

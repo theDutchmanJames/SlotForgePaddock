@@ -217,6 +217,14 @@ Download the **English catalogue import kit**, which includes supported part and
 
 Review the file and select the categories or products you want. New references start at **zero owned stock**; a manufacturer's pack size is not a quantity you own. Paddock validates the file and helps identify duplicates, but you still check product facts and compatibility. It does not scrape a manufacturer's entire website automatically. [Catalogue import guide](docs/CATALOGUE-IMPORT.md).
 
+### Paddock Portal: add cars from your phone or tablet
+
+Turn on **Connections → Paddock Portal**, then scan its QR code on your phone or tablet while connected to the same network. Enter the manufacturer and model, optionally add a product reference, and choose a photograph from your gallery or take one with the camera. **Send to Paddock** saves the car directly with that main photo, confirms success and prepares the next entry. Complete the remaining details later in Paddock.
+
+Already have the car? Choose **Existing Car**, find it by name, manufacturer, model or reference, and upload up to **five additional photos** at a time. Preview and remove photos before sending. They are added to its gallery without changing the main photo; after confirmation, you return to the Portal main page.
+
+Supported original photographs are preserved without resizing; oversized photos offer an explicit smaller-copy option. You can also type the displayed address and short access code. Turn the Portal off when finished. [Photo formats, limits and connection guide](docs/PADDOCK-PORTAL.md).
+
 ### Dealership Mode: one collection across your computers
 
 Use the same Paddock app on a main computer, laptop and other trusted home or club computers. **One dealership computer holds the official collection**; connected copies keep a separate saved copy, leaving their personal collections separate.

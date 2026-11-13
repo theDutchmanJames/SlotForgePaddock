@@ -61,11 +61,15 @@ parentPort.on('message',job=>{
    }else if(task.kind==='timing-receipt'){
    result=store.deferredState.read(r=>require('./query-timing.cjs').receipt(r,task.sourceId,task.sessionId));
   }else if(task.kind==='receipt')result=require('./command-receipts.cjs').lookupFile(store.file,task.command);
+  else if(task.kind==='portal-read')result=require('./portal-store.cjs').read(store,task.input,task.expected);
+  else if(task.kind==='portal-photos')result=require('./portal-store.cjs').append(store,task.input,task.expected);
+  else if(task.kind==='portal-create')result=require('./portal-store.cjs').create(store,task.input,task.expected);
+  else if(task.kind==='portal-receipt')result=require('./portal-store.cjs').receipt(store,task.id,task.expected);
   else if(task.kind==='command')result=require('./command-receipts.cjs').execute(store,task.command);
   else if(task.kind!=='refresh')throw Error('Unknown background database operation.');
   completed=true;parentPort.postMessage({id:job.id,value:{result,...describe(store)}});
  }catch(e){
-  if(completed&&['command','shared-car-write','shared-history-write','history-upload','history-import','timing-collection-review','dealership-disable','car-merge'].includes(task?.kind))e.code='WRITE_UNCERTAIN';
+  if(completed&&['portal-photos','portal-create','command','shared-car-write','shared-history-write','history-upload','history-import','timing-collection-review','dealership-disable','car-merge'].includes(task?.kind))e.code='WRITE_UNCERTAIN';
   parentPort.postMessage({id:job.id,error:e.message,code:e.code,apiCode:e.apiCode,httpStatus:e.httpStatus,details:e.details});
  }
 });

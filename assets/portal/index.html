@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark light"><title>Paddock Portal</title><link rel="stylesheet" href="/portal.css"><script src="/portal.js" defer></script><script src="/existing.js" defer></script></head>
+<body><main>
+ <header><img class="mark" src="/icon.png" alt="" width="50" height="50"><div><p class="eyebrow">SLOTFORGE</p><h1>Paddock Portal</h1></div></header>
+ <p id="collection" class="muted">Your phone. Your cars. Your Paddock.</p>
+ <p id="message" role="status" aria-live="polite" hidden></p>
+ <section id="access" class="card" hidden><h2>Connect to Paddock</h2><p>Enter the six-digit access code shown under Connections → Paddock Portal on your computer.</p><form id="access-form"><label>Access code<input id="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required></label><button class="primary" type="submit">Connect</button></form></section>
+ <section id="welcome" class="card" hidden><h2>A photo. A few details. A new car.</h2><p>Add cars quickly, then complete their details in Paddock.</p><button id="add-car" class="primary large">＋ Add Car</button><button id="existing-car" class="large secondary">Existing Car</button></section>
+ <section id="editor" hidden><form id="car-form" class="card">
+  <button type="button" class="back" id="add-home">← Main page</button><h2>Add Car</h2><p class="muted">Manufacturer, model and a main photo are required.</p>
+  <fieldset id="fields"><label>Manufacturer<input id="manufacturer" maxlength="200" placeholder="e.g. Fly, Slot.it, NSR" required></label>
+  <label>Model<input id="model" maxlength="200" placeholder="e.g. R8, Corvette, Alfa 155" required></label>
+  <label>Product reference <span class="muted">· optional</span><input id="reference" maxlength="200" placeholder="Manufacturer’s reference number"><small>Recommended: helps identify the exact model for product research later.</small></label>
+  <div class="photo-field"><h3>Main photograph</h3><div class="photo-actions"><button type="button" id="gallery-button">Choose from gallery</button><button type="button" id="camera-button">Take photo</button></div>
+   <input id="gallery" type="file" accept="image/*" hidden><input id="camera" type="file" accept="image/*" capture="environment" hidden>
+   <img id="preview" alt="Selected main photograph" hidden><p id="photo-info" class="muted">Your original JPEG, PNG or WebP photograph is preserved.</p>
+   <div id="resize-choice" hidden><p>This photo exceeds the upload size or image-dimension limit. Keep your original and choose another photo, or send a smaller JPEG copy. The file on your phone will not be changed.</p><button type="button" id="resize">Use a smaller copy</button></div>
+  </div></fieldset>
+  <progress id="progress" max="100" value="0" hidden aria-label="Photo upload progress"></progress><p id="progress-text" role="status"></p>
+  <button type="submit" id="send" class="primary large" disabled>Send to Paddock</button>
+  <button type="button" id="check-save" hidden>Check whether it was saved</button>
+  <button type="button" id="new-car" hidden>Start another car</button>
+ </form></section>
+ <section id="car-picker" class="card" hidden>
+  <button type="button" class="back" id="picker-home">← Main page</button><h2>Existing Car</h2><p class="muted">Choose a car to add gallery photos.</p>
+  <form id="car-search"><label>Find a car<input id="car-query" maxlength="200" type="search" placeholder="Name, manufacturer, model or reference"></label><button type="submit">Search</button></form>
+  <p id="car-list-status" role="status"></p><div id="car-list"></div><button type="button" id="car-more" hidden>Show more cars</button>
+ </section>
+ <section id="photo-editor" class="card" hidden>
+  <button type="button" class="back" id="photos-back">← Choose another car</button><h2>Add photos</h2><div id="selected-car"></div>
+  <p class="muted">Add up to 5 photos. These go into Photos &amp; documents; the main photo stays unchanged.</p>
+  <p id="photo-count" role="status"></p><div class="photo-actions"><button type="button" id="extra-gallery-button">Choose from gallery</button><button type="button" id="extra-camera-button">Take photo</button></div>
+  <input id="extra-gallery" type="file" accept="image/*" multiple hidden><input id="extra-camera" type="file" accept="image/*" capture="environment" hidden>
+  <div id="extra-previews"></div><progress id="extra-progress" max="100" value="0" hidden aria-label="Photos upload progress"></progress><p id="extra-progress-text" role="status"></p>
+  <button type="button" id="extra-send" class="primary large" disabled>Send to Paddock</button><button type="button" id="extra-check" class="secondary large" hidden>Check whether it was saved</button>
+ </section>
+ <footer>Use the same local network as your Paddock computer. Keep Paddock running while uploading.</footer>
+</main></body></html>

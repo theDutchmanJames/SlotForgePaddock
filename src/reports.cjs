@@ -26,4 +26,4 @@ function render(db,p={}){
   const footerTemplate=`<div style="font:9px Arial,sans-serif;width:100%;padding:0 12mm;color:#485969">${footer}</div>`;
   return {title,body,css,footerTemplate,html:`<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"><title>${esc(title)}</title><style>${css}</style></head><body>${printBody}</body></html>`};
 }
-module.exports={render,parseLink,link};
+module.exports={render,parseLink,link,qr};

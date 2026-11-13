@@ -16,6 +16,7 @@ contextBridge.exposeInMainWorld('slotforge',{
   cancelFile:id=>ipcRenderer.invoke('sf:file-cancel',id),
   onFileProgress:callback=>ipcRenderer.on('sf:file-progress',(_event,value)=>callback(value)),
   file:(action,payload,known)=>ipcRenderer.invoke('sf:file',action,payload,known),
+  portal:(action,payload)=>ipcRenderer.invoke('sf:portal',action,payload),
   network:(action,payload)=>ipcRenderer.invoke('sf:network',action,payload),
   onOpenCar:callback=>{const handler=(_event,value)=>callback(value);ipcRenderer.on('sf:open-car',handler);return()=>ipcRenderer.removeListener('sf:open-car',handler);},
   onNetwork:callback=>{const handler=(_event,value)=>callback(value);ipcRenderer.on('sf:network-state',handler);return()=>ipcRenderer.removeListener('sf:network-state',handler);},
