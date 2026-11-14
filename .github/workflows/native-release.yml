@@ -156,7 +156,7 @@ jobs:
           const {execFileSync}=require('child_process');
           const gh=args=>execFileSync('gh',args,{encoding:'utf8'});
           const {GH_REPO:repo,RELEASE_TAG:tag,RELEASE_VERSION:version,SOURCE_SHA:sha}=process.env;
-          assert.equal(JSON.parse(gh(['api',`repos/${repo}/commits/${tag}`])).sha,sha,'Tag moved during build');
+          assert.equal(gh(['api',`repos/${repo}/commits/${tag}`,'--jq','.sha']).trim(),sha,'Tag moved during build');
           const release=JSON.parse(gh(['api',`repos/${repo}/releases/tags/${tag}`]));
           assert.equal(release.draft,false,'Publish the release first');
           const files=[];
