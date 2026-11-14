@@ -100,7 +100,7 @@ function defaultChoices(db,mainId,retiredId){
 }
 function checkPair(db,mainId,retiredId){
  check(validId(mainId)&&validId(retiredId)&&mainId!==retiredId,'Choose two different cars.');assertWritable(db,mainId);assertWritable(db,retiredId);
- const a=car(db,mainId),b=car(db,retiredId);check(!a.archived,'The main car must be active.');
+ const a=car(db,mainId),b=car(db,retiredId);check(require('./car-membership.cjs').status(a)===require('./car-membership.cjs').status(b),'Wishlist and collection cars cannot be merged across purchase status.');check(!a.archived,'The main car must be active.');
  check(!a.rebuild&&!b.rebuild&&!db.buildDrafts.some(d=>[mainId,retiredId].includes(d.data.rebuild?.carId)), 'Resolve rebuild ancestry or its draft before merging.','MERGE_LINEAGE_CONFLICT');
 }
 function preview(db,p){return {proposal:clone(p),needsRefresh:p.dependencyToken!==token(db,p.mainCarId,p.retiredCarId),defaults:defaultChoices(db,p.mainCarId,p.retiredCarId)};}

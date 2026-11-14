@@ -37,8 +37,22 @@ class Reader {
   if(options.guideQuery){if(typeof options.guideQuery!=='string'||options.guideQuery.length>500)throw fault('INVALID_QUERY','Invalid guide search.');where.push("EXISTS (SELECT 1 FROM record_fields f WHERE f.record=r.key AND f.path IN ('[\"title\"]','[\"name\"]') AND instr(sf_sort_text(json_extract(f.json,'$')),?)>0)");params.push(options.guideQuery.toLowerCase());}
   if(options.maker!==undefined){if(typeof options.maker!=='string')throw fault('INVALID_QUERY','Invalid manufacturer.');where.push('q.maker=?');params.push(options.maker.toLowerCase());}
   if(options.unowned)where.push("json_extract(q.aux,'$.quantity')=0");
+  if(options.collectionStatus!==undefined){if(bucket!=='cars'||!['collection','wishlist'].includes(options.collectionStatus))throw fault('INVALID_QUERY','Invalid collection status filter.');const wish="EXISTS (SELECT 1 FROM record_fields f WHERE f.record=r.key AND f.path='[\"collectionStatus\"]' AND f.json='\"wishlist\"')";where.push(options.collectionStatus==='wishlist'?wish:'NOT '+wish);}
   if(archived!==undefined){where.push('q.archived=?');params.push(archived?1:0);}
   if(status!==undefined){where.push('q.status=?');params.push(status);}
+  if(options.notStatus!==undefined){where.push('q.status<>?');params.push(options.notStatus);}
+  if(options.dismantled!==undefined){where.push("json_extract(q.aux,'$.dismantled')=?");params.push(Number(options.dismantled));}
+  if(options.jobCategory){where.push("COALESCE(NULLIF(json_extract(q.aux,'$.category'),''),'general')=?");params.push(options.jobCategory);}
+  if(options.partTypes?.length){where.push("json_extract(q.aux,'$.partType') IN (SELECT value FROM json_each(?))");params.push(JSON.stringify(options.partTypes));}
+  if(options.lowSupply)where.push(`EXISTS(SELECT 1 FROM record_fields k JOIN record_fields a ON a.record=k.record AND a.path='["remaining"]' JOIN record_fields b ON b.record=k.record AND b.path='["minimum"]' WHERE k.record=r.key AND k.path='["kind"]' AND k.json='"Consumable"' AND json_extract(a.json,'$')<=json_extract(b.json,'$'))`);
+  if(options.excludeAssembled)where.push(`substr(r.identity,4) NOT IN(SELECT json_extract(c.value,'$.partId') FROM query_records a JOIN record_fields f ON f.record=a.key AND f.path='["components"]',json_each(f.json) c WHERE a.bucket='["assemblies"]' AND json_extract(a.aux,'$.dismantled')=0 AND json_extract(c.value,'$.partId') IS NOT NULL)`);
+  if(options.searchFields){
+   const allowed=new Set(['name','maker','reference','partType','location']);
+   if(!Array.isArray(options.searchFields)||options.searchFields.some(k=>!allowed.has(k))||!Array.isArray(options.searchTerms)||options.searchTerms.some(t=>typeof t!=='string'||t.length>500))throw fault('INVALID_QUERY','Invalid field search.');
+   // The fixed field order preserves substring matching across field boundaries.
+   const text=options.searchFields.map(k=>`COALESCE((SELECT json_extract(f.json,'$') FROM record_fields f WHERE f.record=r.key AND f.path='["${k}"]'),'')`).join("||' '||");
+   for(const term of options.searchTerms.filter(Boolean)){where.push(`instr(sf_sort_text(${text}),?)>0`);params.push(term.toLowerCase());}
+  }
   if(ids){if(!ids.length)return {rows:[],total:0,nextOffset:null,token:this.token};where.push(`r.identity IN (${ids.map(()=>'?').join(',')})`);params.push(...ids.map(id=>'id:'+id));}
   if(query){where.push('instr(q.search,?)>0');params.push(query.toLowerCase());}
   if(usage.length){const checks=usage.map(()=>"EXISTS (SELECT 1 FROM json_each(q.usage) u WHERE u.value=?)");where.push('('+checks.join(matchAll?' AND ':' OR ')+')');params.push(...usage);}
@@ -60,17 +74,18 @@ class Reader {
     const scalar=['marque','model','scale','reference','created'].includes(sort);
     const expression=scalar?`COALESCE((SELECT sf_sort_text(json_extract(f.json,'$')) FROM record_fields f WHERE f.record=r.key AND f.path='["${sort}"]'),'')`:`q.${sort}`;
     const direction=options.direction?.toUpperCase()||(['date','updated','created'].includes(sort)?'DESC':'ASC');
-    keys=this.db.prepare('SELECT r.key'+from+` ORDER BY (${expression}='') ASC,${expression} ${direction},r.identity ASC LIMIT ? OFFSET ?`).all(...params,limit,offset);
+    const ranking=options.rankReference?`(COALESCE((SELECT sf_sort_text(json_extract(f.json,'$')) FROM record_fields f WHERE f.record=r.key AND f.path='["reference"]'),'')=?) DESC,`:'';
+    keys=this.db.prepare('SELECT r.key'+from+` ORDER BY ${ranking}(${expression}='') ASC,${expression} ${direction},r.identity ASC LIMIT ? OFFSET ?`).all(...params,...(ranking?[options.rankReference]:[]),limit,offset);
    }
   }
   return {rows:keys.map(r=>options.idsOnly?JSON.parse(r.key)[1].slice(3):this.record(r.key)),total,nextOffset:offset+keys.length<total?offset+keys.length:null,token:this.token};
  }
  count(bucket,options={}){return this.list(bucket,{...options,countOnly:true}).total;}
- reminders(){return this.db.prepare(`WITH ordinals AS MATERIALIZED (SELECT json_extract(a.value,'$.record') key,CAST(a.key AS INTEGER) ordinal FROM json_each((SELECT m.value FROM json_each((SELECT value FROM state WHERE key='manifest'),'$.object') m WHERE json_extract(m.value,'$[0]')='events'),'$[1].array') a), ranked AS (SELECT q.key,q.car_id,q.due,row_number() OVER(PARTITION BY q.car_id,q.task ORDER BY q.rank DESC,o.ordinal) n FROM query_records q JOIN ordinals o ON o.key=q.key WHERE q.bucket='["events"]' AND q.type='maintenance') SELECT ranked.key,ranked.due FROM ranked JOIN query_records c ON c.key=json_array('cars','id:'||ranked.car_id) WHERE n=1 AND ranked.due<>'' AND c.archived=0 ORDER BY ranked.due,ranked.key`).all();}
+ reminders(){return this.db.prepare(`WITH ordinals AS MATERIALIZED (SELECT json_extract(a.value,'$.record') key,CAST(a.key AS INTEGER) ordinal FROM json_each((SELECT m.value FROM json_each((SELECT value FROM state WHERE key='manifest'),'$.object') m WHERE json_extract(m.value,'$[0]')='events'),'$[1].array') a), ranked AS (SELECT q.key,q.car_id,q.due,row_number() OVER(PARTITION BY q.car_id,q.task ORDER BY q.rank DESC,o.ordinal) n FROM query_records q JOIN ordinals o ON o.key=q.key WHERE q.bucket='["events"]' AND q.type='maintenance') SELECT ranked.key,ranked.due FROM ranked JOIN query_records c ON c.key=json_array('cars','id:'||ranked.car_id) WHERE n=1 AND ranked.due<>'' AND c.archived=0 AND NOT EXISTS(SELECT 1 FROM record_fields f WHERE f.record=c.key AND f.path='["collectionStatus"]' AND f.json='"wishlist"') ORDER BY ranked.due,ranked.key`).all();}
  summary(){
   const rows=this.db.prepare('SELECT * FROM query_totals').all();
   const sum=(bucket,field,filter=()=>true)=>rows.filter(r=>r.bucket===JSON.stringify([bucket])&&filter(r)).reduce((n,r)=>n+(r[field]||0),0),reminders=this.reminders(),fitted=sum('installations','fitted');
-  return {cars:sum('cars','n',r=>!r.archived),parts:sum('parts','owned'),catalogue:sum('parts','n'),available:sum('parts','quantity')-fitted-sum('assemblies','reserved'),jobs:sum('jobs','n',r=>r.status==='active'),incoming:sum('submissions','incoming'),maintenance:reminders.length,due:reminders.filter(r=>r.due<=require('../renderer/domain.js').today()).length};
+  return {cars:sum('cars','n',r=>!r.archived)-this.db.prepare("SELECT count(*) n FROM record_fields f JOIN query_records q ON q.key=f.record WHERE f.path='[\"collectionStatus\"]' AND f.json='\"wishlist\"' AND length(f.json)<=512 AND q.bucket='[\"cars\"]' AND q.archived=0").get().n,parts:sum('parts','owned'),catalogue:sum('parts','n'),available:sum('parts','quantity')-fitted-sum('assemblies','reserved'),jobs:sum('jobs','n',r=>r.status==='active'),incoming:sum('submissions','incoming'),maintenance:reminders.length,due:reminders.filter(r=>r.due<=require('../renderer/domain.js').today()).length};
  }
 }
 function read(store,expected,fn){if(!store.file||store.expectedIdentity===null)throw fault('QUERY_UNAVAILABLE','Save this collection before querying it.');const reader=new Reader(store.file,expected);try{if(reader.id!==store.data.id||reader.revision!==store.data.revision)throw fault('QUERY_CHANGED','The collection is being saved. Refresh this page.');const value=fn(reader);return {value,token:reader.token,recordReads:reader.reads};}finally{reader.close();}}

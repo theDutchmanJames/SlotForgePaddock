@@ -1,0 +1,13 @@
+{
+  "databaseId": "example-library",
+  "recoveryId": "example-recovery-1",
+  "version": 1,
+  "operationId": "picture-operation-1",
+  "requestHash": "ca6d07345ae80ea7b6ae6b1cf699be3a2ea0f5c25e898da5d11cfdc097165765",
+  "kind": "part",
+  "recordId": "record-0",
+  "status": "applied",
+  "pictureHash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "revision": 13,
+  "duplicate": false
+}

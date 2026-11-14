@@ -6,7 +6,7 @@ const {Store}=require('./store.cjs');
 function describe(store){
  const state=require('./deferred-store.cjs').open(store.file);
  if(!state)throw Error('The committed database needs reopening.');
- return {manifest:state.manifest,token:state.token,catalogueRevision:state.data.catalogueRevision,stats:store.lastWrite};
+ return {manifest:state.manifest,token:state.token,catalogueRevision:state.data.catalogueRevision,stats:store.lastWrite,photoPreviewWrites:store.photoPreviewWrites};
 }
 parentPort.on('message',job=>{
  let task,completed=false;

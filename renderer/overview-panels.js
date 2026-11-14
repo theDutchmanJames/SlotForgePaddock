@@ -12,7 +12,7 @@ function overviewFieldValue(c,key){
 function renderOverviewPanel(c,section){
   // Shared cars use the standard public presentation; local layout choices stay private.
   const keys=OverviewLayout.read(local()?db.settings:null)[section],title=overviewPanelTitles[section];
-  return `<section class="panel section-panel overview-details-panel" data-overview-panel="${section}"><div class="panel-heading"><h2>${icon(uiPanelIcon(title))}${title}</h2>${local()?btn(icon('edit')+' Choose fields','overview-fields','small ghost',section):''}</div><div class="panel-content">${keys.length?dl(keys.map(k=>[overviewFieldLabel(k),overviewFieldValue(c,k)])):'<p class="muted">No fields selected. Choose fields to personalise this panel.</p>'}${section==='configuration'?btn('View technical details '+icon('next'),'section','small ghost','Technical & parts'):''}</div></section>`;
+  return `<section class="panel section-panel overview-details-panel" data-overview-panel="${section}"><div class="panel-heading"><h2>${icon(uiPanelIcon(title))}${title}</h2>${local()?btn(icon('edit')+' Choose fields','overview-fields','small ghost',section):''}</div><div class="panel-content">${keys.length?dl(keys.map(k=>[k==='price'&&slotforgeDomain.isWishlist(c)?'Price':overviewFieldLabel(k),overviewFieldValue(c,k)])):'<p class="muted">No fields selected. Choose fields to personalise this panel.</p>'}${section==='configuration'?btn('View technical details '+icon('next'),'section','small ghost','Technical & parts'):''}</div></section>`;
 }
 function overviewEditorBody(){
   const {section,layout}=overviewDraft,keys=layout[section],available=OverviewLayout.fields(collectionMeta.columns,section).filter(f=>!keys.includes(f.key));

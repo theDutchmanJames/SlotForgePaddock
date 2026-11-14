@@ -35,4 +35,4 @@ function prepare(store,options,input){
  const result={...value,revision:row.revision,fields,effective:M.effective(fields),provenance,bindingToken:A.digest({bindingId:row.id,localCarId:row.localCarId,revision:row.revision,fields,provenance})};
  return S.prepare(store,before,after,result);
 }
-module.exports={read,prepare};
+module.exports={read,prepare,load};

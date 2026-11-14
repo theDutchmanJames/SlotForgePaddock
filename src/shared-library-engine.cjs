@@ -47,8 +47,8 @@ function adoption(store,options,entity,input){
  return execute(store,options,'adopt-'+entity,input,()=>{
   let prepared,result;
   if(entity==='car'){
-   if(input.existingCarId){const car=Q.read(store,null,r=>{require('./car-merge-query.cjs').assertWritable(r,input.existingCarId);return r.one('cars',input.existingCarId);}).value;if(!car)fail('CAR_NOT_FOUND','Established car link no longer exists.');result={carId:car.id};prepared=emptyChange(store,result);}
-   else {prepared=S.command(store,'car.save',{data:input.data});result={carId:prepared.result};prepared.result=result;}
+   if(input.existingCarId){const car=Q.read(store,null,r=>{require('./car-merge-query.cjs').assertWritable(r,input.existingCarId);return r.one('cars',input.existingCarId);}).value;if(!car||require('./car-membership.cjs').isWishlist(car))fail('CAR_NOT_FOUND','Established car link no longer exists.');result={carId:car.id};prepared=emptyChange(store,result);}
+   else {require('./car-membership.cjs').physical(input.data);prepared=S.command(store,'car.save',{data:input.data});result={carId:prepared.result};prepared.result=result;}
   }else{
    const existing=Q.read(store,null,r=>r.record(JSON.stringify(['timing','sessions','session:'+JSON.stringify([input.sourceId,input.sessionId])]))).value;
    if(existing){result={sourceId:input.sourceId,sessionId:input.sessionId,accepted:{revision:existing.payload.revision,contentHash:existing.contentHash,state:existing.payload.state},existing:true};prepared=emptyChange(store,result);}
@@ -96,7 +96,7 @@ async function call(store,options,method,input={}){
   const saved=require('./portable-backup.cjs').exportBackup(store.file,input.destination,{expectedIdentity:JSON.stringify([state.databaseId,state.revision]),expectedEpoch:state.recoveryId,exclusive:true});
   return {...saved,databaseId:state.databaseId,recoveryId:state.recoveryId,revision:state.revision};
  }
- if(method==='status')return Q.read(store,null,r=>({engineVersion:'1.0.0',databaseId:r.id,recoveryId:r.epoch,revision:r.revision,file:store.file,changeCursor:Buffer.from(JSON.stringify({databaseId:r.id,epoch:r.epoch,after:Number(r.db.prepare("SELECT value FROM state WHERE key='change_sequence'").get().value)})).toString('base64url'),capabilities:{sharedLocal:true,cars:true,history:true,automaticAdoption:true}})).value;
+ if(method==='status')return Q.read(store,null,r=>({engineVersion:'1.0.0',databaseId:r.id,recoveryId:r.epoch,revision:r.revision,file:store.file,changeCursor:Buffer.from(JSON.stringify({databaseId:r.id,epoch:r.epoch,after:Number(r.db.prepare("SELECT value FROM state WHERE key='change_sequence'").get().value)})).toString('base64url'),capabilities:{sharedLocal:true,cars:true,history:true,automaticAdoption:true,wishlistFiltering:1}})).value;
  if(method==='carSchema')return C.schema(store);
  if(method==='carIdentity')return Q.read(store,null,r=>r.merges.identity(input.carId)).value;
  if(method==='mergeMappings')return Q.read(store,null,r=>r.merges.mappings(input)).value;
@@ -108,8 +108,11 @@ async function call(store,options,method,input={}){
  if(method==='customDefinitionWrite')return execute(store,options,method,input,()=>require('./shared-library-custom.cjs').definition(store,input));
  if(method==='serviceRead')return require('./shared-library-service.cjs').read(store,input);
  if(method==='serviceWrite')return execute(store,options,method,input,()=>require('./shared-library-service.cjs').prepare(store,options,input));
- if(method==='catalogue')return Q.read(store,input.token,r=>{if(input.offset&&!input.token)fail('SNAPSHOT_REQUIRED','Continue with the listing token.');const p=r.list('cars',{offset:input.offset||0,limit:input.limit||50,query:input.search||'',sort:input.sort||'name',archived:input.archived??false});return {...p,cars:p.rows.map(car=>({...C.project(car),hasPicture:!!(require('./lazy-assets.cjs').property(car,'picture')||car.picture),galleryCount:car.photos?.length||0})),rows:undefined};}).value;
- if(method==='car')return Q.read(store,null,r=>{const car=r.one('cars',input.id);if(!car)fail('CAR_NOT_FOUND','Car no longer exists.');return {databaseId:r.id,recoveryId:r.epoch,...C.project(car),...(input.includeMedia?{picture:car.picture||'',photos:car.photos||[]}:{})};}).value;
+ if(method==='thumbnailRead')return require('./shared-thumbnails.cjs').read(store,options.thumbnailRoot,input);
+ if(method==='thumbnailStore')return require('./shared-thumbnails.cjs').storeResult(options.thumbnailRoot,input);
+ if(method==='catalogueOverview')return require('./shared-catalogue.cjs').read(store,options,input);
+ if(method==='catalogue')return Q.read(store,input.token,r=>{if(input.offset&&!input.token)fail('SNAPSHOT_REQUIRED','Continue with the listing token.');const p=r.list('cars',{collectionStatus:'collection',offset:input.offset||0,limit:input.limit||50,query:input.search||'',sort:input.sort||'name',archived:input.archived??false});return {...p,cars:p.rows.map(car=>({...C.project(car),hasPicture:!!(require('./lazy-assets.cjs').property(car,'picture')||car.picture),galleryCount:car.photos?.length||0})),rows:undefined};}).value;
+ if(method==='car')return Q.read(store,null,r=>{const car=r.one('cars',input.id);if(!car||require('./car-membership.cjs').isWishlist(car))fail('CAR_NOT_FOUND','Car no longer exists.');return {databaseId:r.id,recoveryId:r.epoch,...C.project(car),...(input.includeMedia?{picture:car.picture||'',photos:car.photos||[]}:{})};}).value;
  if(method==='profile'){Q.read(store,null,r=>require('./car-merge-query.cjs').assertWritable(r,input.carId));return T.profile(store,input.carId,{includePicture:!!input.includePicture});}
  if(method==='carWrite')return execute(store,options,method,input,()=>{
   const {timingExtras,timingSettings,customValues,...operation}=input;

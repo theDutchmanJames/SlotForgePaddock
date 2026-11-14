@@ -37,9 +37,15 @@ test('slotcar ratings use existing calculator enum values and no guessed units',
 test('selective slotcar import changes factory reference, preserves current setup, and records evidence',()=>{
  const result=M.preview(filled(),target,car),index=result.proposals.findIndex(p=>p.field==='factory.motor'),before=JSON.stringify(car),data=M.patch(car,result,[index]);assert.equal(data.factory.motor,'Original motor');assert.equal(data.technical,undefined);assert.equal(data.model,undefined);assert.match(data.factory.technicalNotes,/My own notes/);assert.match(data.factory.technicalNotes,/As supplied/);assert.match(data.factory.technicalNotes,/Check production batch/);assert.match(data.factory.technicalNotes,/https:\/\/example.org/);assert.equal(JSON.stringify(car),before);assert.equal(M.patch({...car,factory:data.factory},result,[index]).factory.technicalNotes,data.factory.technicalNotes);assert.throws(()=>M.patch(car,result,[]),/Select/);assert.throws(()=>M.patch(car,result,[999]),/Invalid/);
 });
-test('current initialization requires an empty configuration and caps appended evidence',()=>{
- const result=M.preview(filled(),target,car),ids=result.proposals.map((_,i)=>i),data=M.patch({...car,technical:{}},result,ids,true);assert.throws(()=>M.patch(car,result,ids,true),/no current/);assert.throws(()=>M.patch({...car,technical:{},hasInstalledParts:true},result,ids,true),/no current/);assert.equal(data.model,'GT model');assert.equal(data.technical.motor,'Original motor');assert.equal(data.technical.ratedRpm,'21500');assert.equal(data.factory.motor,'Original motor');assert.throws(()=>M.patch({...car,factory:{technicalNotes:'x'.repeat(20000)}},result,ids),/20,000/);
+test('current imports selectively override filled fields independently of factory choices',()=>{
+ const result=M.preview(filled(),target,car),motor=result.proposals.findIndex(p=>p.field==='factory.motor'),rpm=result.proposals.findIndex(p=>p.field==='factory.ratedRpm');
+ const data=M.patch(car,result,[],[motor]);assert.equal(data.technical.motor,'Original motor');assert.equal(data.technical.ratedRpm,undefined);assert.equal(data.factory.motor,undefined);assert.match(data.factory.technicalNotes,/My own notes/);
+ const both=M.patch({...car,hasInstalledParts:true},result,[motor],[rpm]);assert.equal(both.factory.motor,'Original motor');assert.deepEqual(both.technical,{ratedRpm:'21500'});
+ for(const ids of [[999],[-1],[1.5],[result.proposals.findIndex(p=>p.field==='model')]])assert.throws(()=>M.patch(car,result,[],ids),/technical field/);
+ assert.throws(()=>M.patch(car,result,[],true),/Invalid research/);
+ assert.throws(()=>M.patch({...car,factory:{technicalNotes:'x'.repeat(20000)}},result,[motor]),/20,000/);
 });
+
 test('research changes persist through deferred SQLite saves without touching installed stock or historical setups',async t=>{
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'paddock-slotcar-research-'));t.after(()=>fs.rmSync(dir,{recursive:true,force:true}));let s=new Store(path.join(dir,'db.sqlite'));
  const id=s.mutate('car.save',{data:{name:'Product',maker:car.maker,reference:car.reference,scale:car.scale,technical:{pinion:'8'},factory:{technicalNotes:'Keep notes'}}}).result,part=s.mutate('part.save',{data:{name:'Upgraded motor',quantity:1,tracking:'individual'}}).result;

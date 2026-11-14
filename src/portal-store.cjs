@@ -39,7 +39,7 @@ function batch(input){
  return input;
 }
 function carIdentity(input){if(typeof input?.carId!=='string'||!/^[a-zA-Z0-9_-]{1,100}$/.test(input.carId)||!Number.isSafeInteger(input.revision)||input.revision<1)throw fault('INVALID_CAR','Select a car again.');}
-function selected(reader,input){carIdentity(input);const c=reader.one('cars',input.carId);if(!c)throw fault('CAR_NOT_FOUND','This car was deleted. Select a car again.',409);if(reader.merges.identity(c.id).state!=='current')throw fault('CAR_MERGED','This car was merged. Select a car again.',409);if(c.archived||c.rebuild?.to)throw fault('CAR_ARCHIVED','This car was archived or rebuilt. Select a car again.',409);if(c.revision!==input.revision)throw fault('CAR_CHANGED','This car changed. Select it again before uploading.',409);return c;}
+function selected(reader,input){carIdentity(input);const c=reader.one('cars',input.carId);if(!c)throw fault('CAR_NOT_FOUND','This car was deleted. Select a car again.',409);if(reader.merges.identity(c.id).state!=='current')throw fault('CAR_MERGED','This car was merged. Select a car again.',409);if(require('./car-membership.cjs').isWishlist(c))throw fault('CAR_WISHLIST','This car is on the Wishlist. Mark it as purchased in Paddock before using Portal.',409);if(c.archived||c.rebuild?.to)throw fault('CAR_ARCHIVED','This car was archived or rebuilt. Select a car again.',409);if(c.revision!==input.revision)throw fault('CAR_CHANGED','This car changed. Select it again before uploading.',409);return c;}
 function append(store,input,expected){
  identity(store,expected);batch(input);const C=require('./command-receipts.cjs'),S=require('./scoped-write.cjs');
  const command={id:operation(input.operationId),action:'portal.photos',payload:input,databaseId:expected.databaseId,epoch:expected.recoveryId};
@@ -59,7 +59,7 @@ function read(store,input,expected){
   const offset=input.offset??0,query=input.query??'';
   if(!Number.isSafeInteger(offset)||offset<0||offset>10000||typeof query!=='string'||query.length>200)throw fault('INVALID_QUERY','Use a shorter search.');
   if(offset&&input.revision!==r.revision)throw fault('LIST_CHANGED','The collection changed. Search again to refresh the list.',409);
-  const where=`q.bucket='["cars"]' AND q.archived=0 AND (?='' OR EXISTS(SELECT 1 FROM record_fields f WHERE f.record=q.key AND f.path IN ('["name"]','["maker"]','["model"]','["reference"]') AND instr(sf_sort_text(json_extract(f.json,'$')),?)>0))`;
+  const where=`q.bucket='["cars"]' AND q.archived=0 AND NOT EXISTS(SELECT 1 FROM record_fields membership WHERE membership.record=q.key AND membership.path='["collectionStatus"]' AND membership.json='"wishlist"') AND (?='' OR EXISTS(SELECT 1 FROM record_fields f WHERE f.record=q.key AND f.path IN ('["name"]','["maker"]','["model"]','["reference"]') AND instr(sf_sort_text(json_extract(f.json,'$')),?)>0))`;
   const params=[query.toLowerCase(),query.toLowerCase()],total=r.db.prepare('SELECT count(*) n FROM query_records q WHERE '+where).get(...params).n;
   const keys=r.db.prepare('SELECT q.key FROM query_records q WHERE '+where+' ORDER BY q.name,q.key LIMIT 20 OFFSET ?').all(...params,offset);
   const cars=keys.map(row=>r.record(row.key)).filter(c=>!c.rebuild?.to&&r.merges.identity(c.id).state==='current').map(c=>({id:c.id,revision:c.revision,name:c.name,maker:c.maker||'',model:c.model||'',reference:c.reference||'',hasPicture:!!(require('./lazy-assets.cjs').property(c,'picture')||c.picture),remaining:Math.max(0,40-c.photos.length)}));

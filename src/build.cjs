@@ -2,6 +2,7 @@ const {randomUUID}=require('node:crypto');
 const w=require('./workshop.cjs');
 const Model=require('../renderer/build-model.js');
 const Performance=require('../renderer/performance-model.js');
+const purchasing=require('./purchasing.cjs');
 const check=(ok,message)=>{if(!ok)throw Error(message);};
 const object=v=>v&&typeof v==='object'&&!Array.isArray(v);
 const text=(v,max)=>typeof v==='string'&&v.length<=max;
@@ -70,7 +71,7 @@ function plan(db,p){
 }
 function mutate(db,action,p,remember){
   check(p.revision===db.revision,'The database changed. Refresh stock and review this build again; your selections are kept.');
-  if(action==='build.draft.delete'){check(db.buildDrafts.some(d=>d.id===p.id),'Draft not found.');check(!db.buildDrafts.find(d=>d.id===p.id).data.rebuild,'Cancel this rebuild from its Workshop job.');db.buildDrafts=db.buildDrafts.filter(d=>d.id!==p.id);for(const line of db.planning.shopping.filter(s=>s.buildId===p.id))line.quantity=line.received;db.planning.shopping=db.planning.shopping.filter(s=>s.buildId!==p.id||s.received>0);return p.id;}
+  if(action==='build.draft.delete'){check(db.buildDrafts.some(d=>d.id===p.id),'Draft not found.');check(!db.buildDrafts.find(d=>d.id===p.id).data.rebuild,'Cancel this rebuild from its Workshop job.');purchasing.cancelBuild(db,p.id,new Date().toISOString());db.buildDrafts=db.buildDrafts.filter(d=>d.id!==p.id);return p.id;}
   if(action==='build.draft.save'){
     const data=cleanData(p.data),stamp=new Date().toISOString();
     const draft=p.id?db.buildDrafts.find(d=>d.id===p.id):{id:randomUUID(),created:stamp};check(draft,'Draft not found.');
@@ -95,23 +96,13 @@ function mutate(db,action,p,remember){
   if(d.saveSetup){db.setups.unshift({id:randomUUID(),carId:car.id,name:'As built',date:stamp,track:'',notes:'',technical:require('./json-data.cjs').cloneJSON(car.technical),installations:require('./json-data.cjs').cloneJSON(installations)});event('setup','Saved As built');}
   remember(car);
   for(const line of db.planning.shopping.filter(s=>s.buildId===p.draftId||d.rebuild&&s.buildId&&s.jobId===d.rebuild.jobId)){line.buildCarId=car.id;line.buildName=car.name;}
+  for(const draft of db.buildDrafts.filter(draft=>draft.id===p.draftId||d.rebuild&&draft.data.rebuild?.jobId===d.rebuild.jobId))require('./shopping-requirements.cjs').build(db,draft,stamp,'completed');
   if(p.draftId)db.buildDrafts=db.buildDrafts.filter(d=>d.id!==p.draftId);
   if(d.rebuild)db.buildDrafts=db.buildDrafts.filter(draft=>draft.data.rebuild?.jobId!==d.rebuild.jobId);
   return car.id;
 }
 function syncShopping(db,draft,stamp){
- const totals=new Map();for(const row of draft.data.parts)totals.set(row.partId,(totals.get(row.partId)||0)+row.quantity);
- const lines=db.planning.shopping;
- for(const [partId,quantity] of totals){
-  const part=db.parts.find(p=>p.id===partId);check(part,'A planned catalogue part was deleted. Remove it from the build before saving.');
-  check(!w.assemblyForPart(db,partId),'Choose the complete assembly instead of one of its stock records.');
-  const needed=Math.max(0,quantity-w.available(db,part)),line=lines.find(s=>s.buildId===draft.id&&s.partId===partId);
-  const others=lines.filter(s=>s.partId===partId&&s.buildId!==draft.id).reduce((n,s)=>n+s.quantity-s.received,0);
-  check(part.tracking!=='individual'||part.quantity+others+needed<=1,'This individually tracked part cannot be ordered again. Choose a separate catalogue record.');
-  if(line){line.quantity=line.received+needed;line.buildName=draft.data.name||'Untitled build';line.updated=stamp;}
-  else if(needed)lines.push({id:randomUUID(),partId,jobId:draft.data.rebuild?.jobId||'',buildId:draft.id,buildName:draft.data.name||'Untitled build',quantity:needed,received:0,notes:'',supplier:'',date:'',created:stamp,updated:stamp});
- }
- for(const line of lines.filter(s=>s.buildId===draft.id&&!totals.has(s.partId))){line.quantity=line.received;line.updated=stamp;}
- db.planning.shopping=lines.filter(s=>s.buildId!==draft.id||s.quantity>0);
+ for(const row of draft.data.parts){const part=db.parts.find(p=>p.id===row.partId);check(part,'A selected part no longer exists. Remove it from the plan.');check(!w.assemblyForPart(db,part.id),'Choose the complete assembly rather than its component stock.');}
+ require('./shopping-requirements.cjs').build(db,draft,stamp);
 }
 module.exports={validateDrafts,plan,mutate};

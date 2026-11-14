@@ -1,0 +1,142 @@
+[
+  {
+    "name": "unrelated stock revision",
+    "actual": {
+      "databaseId": "example-library",
+      "recoveryId": "example-recovery-1",
+      "kind": "part",
+      "recordId": "record-0",
+      "revision": 12,
+      "fieldFloor": 0,
+      "pictureVersion": 0,
+      "productHash": "30081a719bbd835b6827c0a767d4c90f235cee438366664d413af2929ab0dd7b",
+      "pictureHash": null
+    },
+    "expected": "READY"
+  },
+  {
+    "name": "another photo now exists",
+    "actual": {
+      "databaseId": "example-library",
+      "recoveryId": "example-recovery-1",
+      "kind": "part",
+      "recordId": "record-0",
+      "revision": 12,
+      "fieldFloor": 0,
+      "pictureVersion": 11,
+      "productHash": "30081a719bbd835b6827c0a767d4c90f235cee438366664d413af2929ab0dd7b",
+      "pictureHash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+    },
+    "expected": "PICTURE_CHANGED"
+  },
+  {
+    "name": "photo added then removed (ABA)",
+    "actual": {
+      "databaseId": "example-library",
+      "recoveryId": "example-recovery-1",
+      "kind": "part",
+      "recordId": "record-0",
+      "revision": 12,
+      "fieldFloor": 0,
+      "pictureVersion": 12,
+      "productHash": "30081a719bbd835b6827c0a767d4c90f235cee438366664d413af2929ab0dd7b",
+      "pictureHash": null
+    },
+    "expected": "PICTURE_CHANGED"
+  },
+  {
+    "name": "product reference changed",
+    "actual": {
+      "databaseId": "example-library",
+      "recoveryId": "example-recovery-1",
+      "kind": "part",
+      "recordId": "record-0",
+      "revision": 12,
+      "fieldFloor": 0,
+      "pictureVersion": 0,
+      "productHash": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "pictureHash": null
+    },
+    "expected": "PRODUCT_CHANGED"
+  },
+  {
+    "name": "history floor advanced",
+    "actual": {
+      "databaseId": "example-library",
+      "recoveryId": "example-recovery-1",
+      "kind": "part",
+      "recordId": "record-0",
+      "revision": 12,
+      "fieldFloor": 11,
+      "pictureVersion": 0,
+      "productHash": "30081a719bbd835b6827c0a767d4c90f235cee438366664d413af2929ab0dd7b",
+      "pictureHash": null
+    },
+    "expected": "BASELINE_EXPIRED"
+  },
+  {
+    "name": "same identity but older state",
+    "actual": {
+      "databaseId": "example-library",
+      "recoveryId": "example-recovery-1",
+      "kind": "part",
+      "recordId": "record-0",
+      "revision": 9,
+      "fieldFloor": 0,
+      "pictureVersion": 0,
+      "productHash": "30081a719bbd835b6827c0a767d4c90f235cee438366664d413af2929ab0dd7b",
+      "pictureHash": null
+    },
+    "expected": "BASELINE_EXPIRED"
+  },
+  {
+    "name": "database restored",
+    "actual": {
+      "databaseId": "example-library",
+      "recoveryId": "example-recovery-2",
+      "kind": "part",
+      "recordId": "record-0",
+      "revision": 12,
+      "fieldFloor": 0,
+      "pictureVersion": 0,
+      "productHash": "30081a719bbd835b6827c0a767d4c90f235cee438366664d413af2929ab0dd7b",
+      "pictureHash": null
+    },
+    "expected": "RECOVERY_CHANGED"
+  },
+  {
+    "name": "different library",
+    "actual": {
+      "databaseId": "another-library",
+      "recoveryId": "example-recovery-1",
+      "kind": "part",
+      "recordId": "record-0",
+      "revision": 12,
+      "fieldFloor": 0,
+      "pictureVersion": 0,
+      "productHash": "30081a719bbd835b6827c0a767d4c90f235cee438366664d413af2929ab0dd7b",
+      "pictureHash": null
+    },
+    "expected": "DATABASE_MISMATCH"
+  },
+  {
+    "name": "duplicate lot is not the target",
+    "actual": {
+      "databaseId": "example-library",
+      "recoveryId": "example-recovery-1",
+      "kind": "part",
+      "recordId": "record-1",
+      "revision": 12,
+      "fieldFloor": 0,
+      "pictureVersion": 0,
+      "productHash": "30081a719bbd835b6827c0a767d4c90f235cee438366664d413af2929ab0dd7b",
+      "pictureHash": null
+    },
+    "expected": "TARGET_MISMATCH"
+  },
+  {
+    "name": "target removed",
+    "actual": null,
+    "expected": "TARGET_MISSING"
+  }
+]

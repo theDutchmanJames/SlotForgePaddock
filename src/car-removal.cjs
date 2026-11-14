@@ -12,7 +12,9 @@ function remove(db,p){
  for(const a of db.assemblies.filter(a=>a.carId===p.id&&!a.dismantled))workshop.detachAssembly(db,a,'Used assemblies');
  for(const i of db.installations.filter(i=>i.carId===p.id&&!i.removed))workshop.returnPart(db,i,'Used spares');
  const jobs=new Set(db.jobs.filter(j=>j.carId===p.id).map(j=>j.id));
-  db.buildDrafts=db.buildDrafts.filter(d=>d.data.rebuild?.carId!==p.id);
+ for(const d of db.buildDrafts.filter(d=>d.data.rebuild?.carId===p.id))require('./purchasing.cjs').cancelBuild(db,d.id,new Date().toISOString());
+ for(const j of db.jobs.filter(j=>jobs.has(j.id)&&j.shoppingRequirements)){j.status='cancelled';require('./shopping-requirements.cjs').job(db,j,new Date().toISOString());}
+ db.buildDrafts=db.buildDrafts.filter(d=>d.data.rebuild?.carId!==p.id);
  for(const key of ['cars','setups','tests','jobs','events','documents','installations'])db[key]=db[key].filter(x=>key==='cars'?x.id!==p.id:x.carId!==p.id);
  for(const a of db.assemblies)if(a.carId===p.id)a.carId=null;
  db.planning.jobs=db.planning.jobs.filter(j=>!jobs.has(j.jobId));

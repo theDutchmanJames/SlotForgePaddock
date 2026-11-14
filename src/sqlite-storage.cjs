@@ -269,10 +269,11 @@ function changesSince(file,{epoch,after=0,limit=64,maxBytes=4*1024*1024}={}){
  }finally{db.close();}
 }
 // Targeted version reads never hydrate photographs or unrelated records.
-function fieldState(file,expected,record,paths=[]){
+function fieldState(file,expected,record,paths=[],options={}){
  const db=open(file,true);try{db.exec('BEGIN');if(state(db,'identity')!==expected)throw Error('The database changed in another process. Reopen Paddock before reviewing.');
+  if(options.epoch&&options.epoch!==state(db,'change_epoch'))throw Error('The collection was restored. Reopen the editor.');
   const get=db.prepare('SELECT revision FROM field_versions WHERE record=? AND path=?');
-  return {epoch:state(db,'change_epoch'),floor:Number(state(db,'field_floor')||0),identity:JSON.parse(expected),versions:Object.fromEntries(['*',...paths].map(key=>[key,get.get(record,key)?.revision||0]))};
+  return {...(options.replica?{replica:JSON.parse(state(db,'replica_sync')||'null')}:{}),epoch:state(db,'change_epoch'),floor:Number(state(db,'field_floor')||0),identity:JSON.parse(expected),versions:Object.fromEntries(['*',...paths].map(key=>[key,get.get(record,key)?.revision||0]))};
  }finally{db.close();}
 }
 function syncState(file){const db=open(file,true);try{return {epoch:state(db,'change_epoch'),after:Number(state(db,'change_sequence')||0),identity:JSON.parse(state(db,'identity')),replica:JSON.parse(state(db,'replica_sync')||'null')};}finally{db.close();}}

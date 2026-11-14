@@ -19,6 +19,10 @@ class RendererMedia {
  project(value,key,literal=false){
   if(photoContext(key,literal)&&typeof value==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(value))return this.register(value);
   if(Array.isArray(value))return value.map(v=>this.project(v,key,literal));
+  if(key==='cars'&&!literal&&value&&typeof value.id==='string'){
+   const asset=lazy.property(value,'picture');
+   if(asset?.meta.photo){const url=this.register(asset),entry=this.byUrl.get(url);entry.mainPhotos??=new Map();if(!entry.mainPhotos.has(asset.file))entry.mainPhotos.set(asset.file,new Set());entry.mainPhotos.get(asset.file).add(value.id);}
+  }
   if(value&&typeof value==='object')return Object.fromEntries(Object.keys(value).map(k=>{const context=childContext(value,k,literal),a=lazy.property(value,k);return [k,a?.meta.photo&&photoContext(...context)?this.register(a):this.project(value[k],...context)];}));
   return value;
  }

@@ -19,7 +19,7 @@ function states(db,carId,sourceId){
  if(overlay)return [{key:'overlay:'+overlay.id,carId,sourceId,revision:overlay.revision,fields:overlay.fields,provenance:overlay.provenance,localCarId:overlay.localCarId}];
  return (db.libraryOrigins||[]).filter(o=>o.entity==='car'&&o.carId===carId&&o.sourceId===sourceId).sort((a,b)=>a.originalId.localeCompare(b.originalId)).map(o=>{
   const e=(db.libraryExtras||[]).find(e=>e.namespace==='timing.carExtras'&&e.sourceId===sourceId&&e.originalId===o.originalId);
-  return {key:'origin:'+o.originalId,carId,sourceId,originalId:o.originalId,revision:e?.revision||0,fields:e?pick(E.decode(e)):{},localCarId:o.originalId};
+  return {key:'origin:'+o.originalId,carId,sourceId,originalId:o.originalId,revision:e?.revision||0,fields:e?pick(E.summary(e)):{},localCarId:o.originalId};
  });
 }
 function baseline(values,key){

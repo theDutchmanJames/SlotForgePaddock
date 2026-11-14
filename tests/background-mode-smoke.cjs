@@ -31,7 +31,7 @@ async function run(win){
  await js("page='Settings';settingsSection='Appearance';await loadView();true");assert.match(await js("document.querySelector('#main').innerText"),/Keep Paddock available/);
  await js("document.querySelector('[data-action=background-mode]').click()");for(let i=0;i<100&&!(await js("net.background.enabled"));i++)await wait(20);assert.equal(await js("net.background.enabled"),true);
  await js("document.querySelector('[data-action=background-mode]').scrollIntoView({block:'center'})");win.setSize(1440,980);await wait(150);await win.webContents.capturePage();await wait(50);fs.writeFileSync(path.join(__dirname,'..','.qa','phase-two-settings.png'),(await win.webContents.capturePage()).toPNG());
- await js("page='Connections';await loadView();true");assert.match(await js("document.querySelector('#main').innerText"),/Local connection ready/);assert.match(await js("document.querySelector('#main').innerText"),/Retry local connection/);
+ await js("page='Settings';settingsSection='Database';connectionPanels.advanced=true;await loadView();true");assert.match(await js("document.querySelector('#main').innerText"),/Local service ready/);assert.match(await js("document.querySelector('#main').innerText"),/Retry local service/);
  assert.equal(errors.length,0);success=true;trayMenu.at(-1).click();
 }
 const deadline=setTimeout(()=>{console.error('Background smoke timed out');app.exit(1);},30000);

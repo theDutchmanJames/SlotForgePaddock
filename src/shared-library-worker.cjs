@@ -13,7 +13,7 @@ parentPort.on('message',message=>{queue=queue.then(async()=>{
    for(let attempt=0;;attempt++)try{
     if(require('./shared-library-location.cjs').identity(file)!==databaseId)throw Object.assign(Error('The shared library was replaced. Reopen it explicitly before continuing.'),{code:'DATABASE_MISMATCH'});
     const store=new (require('./store.cjs').Store)(file,{deferred:true});
-    value=await require('./shared-library-engine.cjs').call(store,workerData,message.method,message.input);break;
+    value=await require('./shared-library-engine.cjs').call(store,{...workerData,thumbnailRoot:root},message.method,message.input);break;
    }catch(e){if(attempt>=5||!['QUERY_CHANGED','SQLITE_BUSY'].includes(e.code)&&!/database changed in another process|database is locked/.test(e.message))throw e;await new Promise(r=>setTimeout(r,20*(attempt+1)));}
   }
   parentPort.postMessage({id:message.id,value});

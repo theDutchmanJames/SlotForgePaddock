@@ -7,7 +7,7 @@ function check(command){
  if(!command||typeof command.id!=='string'||! /^[a-zA-Z0-9_-]{1,100}$/.test(command.id)||typeof command.action!=='string'||!command.action||command.action.length>100)throw fault('INVALID_COMMAND','Invalid save identity or action.');
  if(typeof command.databaseId!=='string'||typeof command.epoch!=='string')throw fault('INVALID_COMMAND','A save must identify its database and generation.');
 }
-function receipt(command,result){check(command);let json=JSON.stringify(result??null);const size=Buffer.byteLength(json);if(size>MAX_RESULT)throw fault('COMMAND_RECEIPT_LIMIT','Save receipt exceeds the collection metadata working limit.');if(size>16384)json='z1:'+zlib.deflateRawSync(json).toString('base64');return {id:command.id,epoch:command.epoch,fingerprint:crypto.createHash('sha256').update(require('./timing-integration.cjs').canonical(command)).digest('hex'),result:json};}
+function receipt(command,result){check(command);let json=JSON.stringify(result??null);const size=Buffer.byteLength(json);if(size>MAX_RESULT)throw fault('COMMAND_RECEIPT_LIMIT','Save receipt exceeds the collection metadata working limit.');if(size>16384)json='z1:'+zlib.deflateRawSync(json).toString('base64');return {id:command.id,epoch:command.epoch,fingerprint:crypto.createHash('sha256').update(require('./timing-integration.cjs').canonical(command.action==='catalogue.picture'?{...command,payload:{intent:command.payload.intent}}:command)).digest('hex'),result:json};}
 function find(db,wanted){
  if(!require('./storage-structure.cjs').receipts(db).exists)return null;
  const row=db.prepare('SELECT * FROM command_receipts WHERE id=?').get(wanted.id);if(!row)return null;
@@ -22,7 +22,7 @@ function insert(db,value){
  if(size.n>=100000||size.bytes+Buffer.byteLength(value.result)>32*1024*1024)throw fault('COMMAND_RECEIPT_LIMIT','This database has reached its durable save-receipt limit.');
  db.prepare('INSERT INTO command_receipts VALUES(?,?,?,?)').run(value.id,value.epoch,value.fingerprint,value.result);
 }
-function lookupFile(file,command){const wanted=receipt(command,null),db=new DatabaseSync(file,{readOnly:true,timeout:5000});try{
+function lookupFile(file,command){if(command.action==='catalogue.picture'&&Object.hasOwn(command.payload||{},'picture'))require('./catalogue-picture-apply.cjs').validate(command.payload);const wanted=receipt(command,null),db=new DatabaseSync(file,{readOnly:true,timeout:5000});try{
  db.exec('BEGIN');const state=Object.fromEntries(db.prepare("SELECT key,value FROM state WHERE key IN ('identity','change_epoch')").all().map(r=>[r.key,r.value]));
  if(JSON.parse(state.identity)[0]!==command.databaseId||state.change_epoch!==command.epoch)throw fault('COMMAND_EPOCH_CHANGED','The collection was replaced. Review the current data before saving again.');
  return find(db,wanted);

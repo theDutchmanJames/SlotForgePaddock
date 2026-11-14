@@ -1,0 +1,12 @@
+'use strict';
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+module.exports=async(win,store,root,{sharedPreviews,sharedEncoder,media})=>{
+ const config=JSON.parse(fs.readFileSync(path.join(root,'thumbnail-joint.json'))),js=code=>win.webContents.executeJavaScript(code,true),wait=async expression=>{for(let i=0;i<250;i++){if(await js(expression))return;await new Promise(r=>setTimeout(r,40));}throw Error('Joint Paddock timeout: '+expression);};
+ win.webContents.setBackgroundThrottling(false);await wait('typeof db!=="undefined"&&!!db');let encodes=0;const encode=sharedEncoder.encode.bind(sharedEncoder);sharedEncoder.encode=source=>{encodes++;return encode(source);};
+ await js('document.querySelector(\'[data-action="nav"][data-id="Cars"]\').click()');await wait('!!document.querySelector(".car-grid img,.gallery img,[data-focus-car] img,img[data-focus-car]")?.naturalWidth');
+ const width=await js('document.querySelector("img[data-focus-car]").naturalWidth');assert.equal(width,512);assert.equal(encodes,0);assert.equal(store.data.cars.find(c=>c.id===config.carId).picture,config.original);
+ const car=store.data.cars.find(c=>c.id===config.carId);await js(`change('car.save',{id:${JSON.stringify(car.id)},revision:${car.revision},data:{picture:${JSON.stringify(config.replacement)}}})`);
+ const preview=await (await sharedPreviews.library()).thumbnail({carId:car.id});assert.equal(encodes,1);const timing=JSON.parse(fs.readFileSync(path.join(root,'timing-cold.json')));assert.notEqual(preview,timing.thumbnail);
+ await js(`document.querySelector('[data-action="open-car"][data-id="${car.id}"]').click()`);await wait('!actionBusy&&!viewPendingKey&&document.querySelector(".hero-photo img")?.naturalWidth===1600');await js('document.querySelector(".hero-photo img").decode()');assert.equal(media.lookup(await js('document.querySelector(".hero-photo img").src')).entry.meta.hash,require('../src/lazy-assets.cjs').digest(config.replacement));await js('new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))');await new Promise(r=>setTimeout(r,150));fs.writeFileSync(path.join(root,'paddock-joint.png'),(await win.webContents.capturePage({}, {stayHidden:true,stayAwake:true})).toPNG());assert.equal(store.data.cars.find(c=>c.id===car.id).picture,config.replacement);
+ await sharedPreviews.close();fs.writeFileSync(path.join(root,'paddock-joint.json'),JSON.stringify({passed:true,encodes,thumbnail:preview,cacheHitFromTiming:true,fullSize:1600}));
+};

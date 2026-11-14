@@ -1,0 +1,24 @@
+{
+  "databaseId": "example-library",
+  "recoveryId": "example-recovery-1",
+  "version": 1,
+  "operationId": "picture-operation-1",
+  "kind": "part",
+  "recordId": "record-0",
+  "expected": {
+    "revision": 10,
+    "productHash": "30081a719bbd835b6827c0a767d4c90f235cee438366664d413af2929ab0dd7b",
+    "pictureHash": null
+  },
+  "action": "set",
+  "assetHash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "replaceExisting": false,
+  "provenance": {
+    "requestId": "picture-request-example-1",
+    "itemId": "item-motor",
+    "imageUrl": "https://images.example.invalid/M-01.png",
+    "imagePageUrl": "https://example.invalid/products/M-01",
+    "downloadedAt": "2026-11-13T12:05:00.000Z",
+    "sourceBytesHash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+  }
+}

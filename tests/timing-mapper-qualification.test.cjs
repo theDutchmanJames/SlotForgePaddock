@@ -106,7 +106,15 @@ test('rich production fixtures cannot escape public gates or corrupt existing Ti
 
 if(process.env.SLOTFORGE_TIMING_SOURCE)test('current Timing production mapper reproduces pinned fixtures and corrections',t=>{
  const timing=path.resolve(process.env.SLOTFORGE_TIMING_SOURCE),generator=require(path.join(timing,'tools/qa/rich-mapper-fixtures.cjs')),mapper=require(path.join(timing,'paddock-rich-mapper.js'));
- for(const f of generator.generated())assert.deepEqual(f,fixture(f.name),'Production fixture drift: '+f.name);
+ for(const f of generator.generated()){
+  const expected=fixture(f.name);
+  // Timing corrected this editorial label: historical provenance does not mean
+  // a session is still pending after approval. Keep the frozen bytes and require
+  // every evidence/statistics field to match; permit only this exact known edit.
+  const old='Pending historical evidence, not accepted.',updated='Historical Timing evidence.';
+  if(f.historical&&expected.bundle.context.notes.startsWith(old)&&f.bundle.context.notes===updated+expected.bundle.context.notes.slice(old.length))expected.bundle.context.notes=f.bundle.context.notes;
+  assert.deepEqual(f,expected,'Production fixture drift: '+f.name);
+ }
  for(const name of ['race','qualifying','endurance','classes','heats-finals','penalties']){
   const {store,op,f}=setup(t,name),e=structuredClone(f.evidence),saved=R.receiveQualified(store,op);e.session.standings[0].dq=true;
   const mapped=mapper.measured(e.session,e.laps,op.databaseId);assert.equal(mapped.sourceSessionId,op.sessionId);assert.deepEqual(mapped.bundle.race,op.bundle.race);

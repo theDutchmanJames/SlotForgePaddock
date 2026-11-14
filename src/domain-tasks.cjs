@@ -7,7 +7,7 @@ function adopt(store,value){
  const state=require('./deferred-store.cjs').create(store.file,value.manifest,value.token,seed);
  store.deferredState=state;store.data=state.data;store.persistedData=state.data;store.persistedFile=store.file;
  store.expectedIdentity=JSON.stringify([value.token.id,value.token.revision]);store.persistedManifest=value.manifest;
- store.persistedReferences=new Map();store.persistedAssets=new Set();store.assetHashes.clear();store.lastWrite=value.stats;store.writeUncertain=false;
+ store.persistedReferences=new Map();store.persistedAssets=new Set();store.assetHashes.clear();store.lastWrite=value.stats;store.photoPreviewWrites=value.photoPreviewWrites||null;store.writeUncertain=false;
 }
 async function execute(store,task,guard){
  while(store.pendingWrite)await store.whenIdle();

@@ -1,4 +1,4 @@
-# Stock planning, setups, reports and showroom shelves
+# Stock planning, setups, reports and showroom groups
 
 These features are included in v0.18.0.
 
@@ -102,25 +102,17 @@ may require reopening it to refresh its registered location.
 
 ## Curate the Showroom
 
-Use **New shelf** to select cars, name the shelf and order it with the arrows.
-Select a shelf to browse and present just those cars. The normal showroom search,
-usage and favourite filters still apply. Shelf ordering takes precedence over
-the sort selector. Archived cars stay in the saved shelf but are hidden until
-restored. Deleting a shelf never deletes its cars.
+Use **New group** to select cars, name the group and arrange its order with the arrows. Selecting a Group filters the gallery; search, usage and favourite filters still apply. Archived cars remain in the saved group but are hidden until restored. Deleting a Group never deletes its cars. Existing shelves are now called Groups; their saved membership and order are unchanged.
 
-Use **Car → More → Photo framing**, or **Frame photo** in the photo viewer, to
-adjust the focal point of a photograph. Save each photograph's framing separately.
-The Showroom and car images use it in Fill mode; Fit mode continues to display the
-complete photograph. Original image data is unchanged. Replacing a photograph
-resets its old framing.
+**Cover options** chooses a fixed car, a new car per app startup, a new car per Showroom visit, or timed rotation (5–3,600 seconds). Automatic choices can use all cars, selected usage labels (match any), a Group or favourites, optionally restricted to main photographs. Gallery filters do not change the cover. Rotation pauses while the cover is hovered or focused, while a dialog or photo viewer is open, and when the app is hidden. A visible Pause cover button also stops it.
 
-**Presentation** opens a clean slideshow of the current selection. Move to the
-top or bottom edge, or tab to controls, to reveal them. Arrow keys change cars,
-P pauses/plays, and Escape closes. This works in the app window; use Full screen
-when you want it to occupy the display.
+The cover shows the saved **Real Racing History** description and team/event/year, with a full-history reader. Missing history is shown as an invitation to add it, never generated text. Long stories are clipped in the cover so they cannot stretch the photograph.
 
-Shelves and framing are private preferences stored with the collection and
-included in complete backups. They are not part of shared car exports.
+Use **Car → More → Photo framing**, or **Frame photo** in the photo viewer, to adjust a photograph's focal point. Showroom photographs always fill their frames proportionally, so edges may be cropped. The car detail page retains its own Fit/Fill controls. Original photographs are unchanged.
+
+**Presentation** replaces the separate slideshow controls. Choose its source independently of the gallery, set the interval and optional shuffle, and select photo-only or photo-with-history layout. Group order is preserved unless shuffled; other ordered sources use names A–Z. Each eligible car appears once per cycle. Start enters fullscreen when available. Controls remain visible: Previous, Next, Pause/Play, Exit full screen and Close. Arrow keys navigate, P pauses/plays, and Escape closes. Reading full history pauses playback.
+
+Groups and focal points remain stored with the collection and included in backups. Cover/presentation choices are personal preferences on this computer, scoped to each collection, and do not create reviews. A previously saved spotlight car is used as the initial fixed cover. The gallery still uses 48-car pages and thumbnails; cover and viewer load their selected full records separately. Timing and Telemetry contracts are unchanged.
 
 ## Scope
 

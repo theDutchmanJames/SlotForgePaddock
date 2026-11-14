@@ -1,6 +1,9 @@
 'use strict';
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
-module.exports=async(win,store,root)=>{
+module.exports=async(win,store,root,context)=>{
+ if(fs.existsSync(path.join(root,'connection-settings.json')))return require('./connection-settings-smoke.cjs')(win,store,root,context);
+ if(fs.existsSync(path.join(root,'thumbnail-joint.json')))return require('./shared-thumbnails-joint-smoke.cjs')(win,store,root,context);
+ if(fs.existsSync(path.join(root,'thumbnails.json')))return require('./shared-thumbnails-smoke.cjs')(win,store,root,context);
  if(fs.existsSync(path.join(root,'native-history.json')))return require('./native-history-smoke.cjs')(win,store,root);
  if(fs.existsSync(path.join(root,'disable-dealership.json')))return require('./dealership-disable-smoke.cjs')(win,store,root);
  if(fs.existsSync(path.join(root,'joint.json')))return require('./shared-library-joint-smoke.cjs')(win,store,root);

@@ -6,11 +6,11 @@ const now=()=>new Date().toISOString();
 function check(ok,message){if(!ok)throw Error(message);}
 const signature=rows=>JSON.stringify(rows.map(i=>[i.partId,i.quantity,i.field||'',i.position||'',i.assemblyId||'']).sort((a,b)=>JSON.stringify(a).localeCompare(JSON.stringify(b))));
 const snapshot=(db,carId)=>({technical:clone(db.cars.find(c=>c.id===carId).technical),installations:clone(w.active(db).filter(i=>i.carId===carId).map(i=>({...i,name:db.parts.find(p=>p.id===i.partId).name})))});
-function model(db,id,techFields){
+function model(db,id,techFields,{choices=true,requirementsOnly=false}={}){
   const job=db.jobs.find(j=>j.id===id);check(job,'Workshop job not found.');
   if(job.kind==='general'){const car=db.cars.find(c=>c.id===job.carId);return {revision:db.revision,job:clone(job),carName:car.name,remaining:0,actual:snapshot(db,car.id)};}
   const car=db.cars.find(c=>c.id===job.carId),installed=w.active(db).filter(i=>i.carId===car.id),claimed=new Set();
-  const options=w.setupOptions({...db,setups:[job.target]},job.target.id);
+  const options=choices?w.setupOptions({cars:db.cars,parts:db.parts,assemblies:db.assemblies,installations:db.installations,setups:[job.target]},job.target.id):{rows:w.requirements(job.target)};
   // Honour explicit step confirmations before matching remaining original stock.
   // Otherwise an indistinguishable earlier row can steal a later row's fitted part.
   const matchesByKey=new Map();
@@ -28,6 +28,7 @@ function model(db,id,techFields){
     if(matches.length){matchesByKey.set(r.key,matches);matches.forEach(i=>claimed.add(i.id));}
   }
   const rows=options.rows.map(r=>{const matches=matchesByKey.get(r.key)||[];return {...r,done:matches.length>0,actual:matches.map(i=>db.parts.find(p=>p.id===i.partId).name).join(' / '),installationIds:matches.map(i=>i.id)};});
+  if(requirementsOnly)return {rows};
   // Tracked component names are derived from stock, including explicit substitutes.
   const tracked=new Set(job.target.installations.map(i=>i.field).filter(Boolean));
   const settings=techFields.filter(key=>!tracked.has(key)&&((job.target.technical[key]||'')||(car.technical[key]||''))).map(key=>({key,target:job.target.technical[key]||'',actual:car.technical[key]||'',done:(job.target.technical[key]||'')===(car.technical[key]||'')}));
@@ -41,7 +42,7 @@ function mutate(db,action,p,techFields){
     check(p.category===undefined||jobTypes.valid(p.category),'Choose a valid job category.');
     check(p.kind===undefined||['general','setup'].includes(p.kind),'Choose a job type.');
     if(p.kind==='general'){
-      const car=db.cars.find(c=>c.id===p.carId);check(car,'Choose a car.');check(!car.archived,'Restore this car from the archive first.');
+      const car=db.cars.find(c=>c.id===p.carId);check(car,'Choose a car.');require('./car-membership.cjs').physical(car);check(!car.archived,'Restore this car from the archive first.');
       check(!db.jobs.some(j=>j.carId===car.id&&j.status==='active'),'This car already has an active workshop job.');
       check(typeof p.name==='string'&&p.name.trim()&&p.name.length<=200,'Enter a job name (maximum 200 characters).');
       check(p.notes===undefined||typeof p.notes==='string'&&p.notes.length<=20000,'Job notes are too long.');
@@ -50,13 +51,16 @@ function mutate(db,action,p,techFields){
     }
     const setup=db.setups.find(s=>s.id===p.setupId);check(setup,'Setup not found.');
     check(p.carId===undefined||p.carId===setup.carId,'Setup does not belong to the selected car.');
-    check(!db.cars.find(c=>c.id===setup.carId).archived,'Restore this car from the archive first.');
+    require('./car-membership.cjs').physical(db.cars.find(c=>c.id===setup.carId));check(!db.cars.find(c=>c.id===setup.carId).archived,'Restore this car from the archive first.');
     check(!db.jobs.some(j=>j.carId===setup.carId&&j.status==='active'),'This car already has an active workshop job.');
     const job={id:randomUUID(),category:p.category||'general',carId:setup.carId,setupId:setup.id,name:setup.name,target:clone(setup),status:'active',accepted:{},created:now(),updated:now(),log:[]};
     db.jobs.unshift(job);w.event(db,job.carId,'Started workshop job: '+job.name,'Target saved; no physical changes recorded.',{jobId:job.id});return job.id;
   }
   const job=db.jobs.find(j=>j.id===p.id);check(job&&job.status==='active','This job is already closed or missing.');
   const car=db.cars.find(c=>c.id===job.carId);let note='',change;
+  if(action==='job.shopping'){
+    check(job.kind!=='general','Use the rebuild editor or add purchases manually for general work.');job.shoppingRequirements=true;require('./shopping-requirements.cjs').job(db,job,now());return job.id;
+  }
   if(action==='job.edit'){
     check(Object.keys(p).every(k=>['id','revision','name','notes','category'].includes(k)),'Only the job name, category and planned work can be edited.');
     check(typeof p.name==='string'&&p.name.trim()&&p.name.length<=200,'Enter a job name (maximum 200 characters).');
@@ -73,7 +77,7 @@ function mutate(db,action,p,techFields){
     check(job.kind==='general','Progress notes belong to general workshop jobs.');check(typeof p.note==='string'&&p.note.trim()&&p.note.length<=20000,'Enter a progress note (maximum 20,000 characters).');note=p.note.trim();
   }else
   if(action==='job.cancel'){
-    check(p.confirmed===true,'Confirm cancellation. Completed physical work will remain.');const drafts=new Set(db.buildDrafts.filter(d=>d.data.rebuild?.jobId===job.id).map(d=>d.id));for(const line of db.planning.shopping.filter(s=>drafts.has(s.buildId)))line.quantity=line.received;db.planning.shopping=db.planning.shopping.filter(s=>!drafts.has(s.buildId)||s.received>0);db.buildDrafts=db.buildDrafts.filter(d=>!drafts.has(d.id));job.status='cancelled';job.finished=now();job.actual=snapshot(db,car.id);note='Cancelled; recorded physical changes retained.';
+    check(p.confirmed===true,'Confirm cancellation. Completed physical work will remain.');const drafts=new Set(db.buildDrafts.filter(d=>d.data.rebuild?.jobId===job.id).map(d=>d.id));for(const draftId of drafts)require('./purchasing.cjs').cancelBuild(db,draftId,now());db.buildDrafts=db.buildDrafts.filter(d=>!drafts.has(d.id));job.status='cancelled';job.finished=now();job.actual=snapshot(db,car.id);note='Cancelled; recorded physical changes retained.';
   }else if(action==='job.complete'){
     check(!db.buildDrafts.some(d=>d.data.rebuild?.jobId===job.id),'Complete this rebuild through Build from Scratch to create its linked successor.');
     check(p.confirmed===true,'Confirm the completed physical configuration.');const plan=db.planning?.jobs.find(x=>x.jobId===job.id);check(!plan?.waiting,'Clear Waiting for parts before completing this job.');check(!plan?.checklist.some(s=>!s.done),'Finish the checklist before completing this job.');check(model(db,job.id,techFields).remaining===0,'There are still outstanding parts, settings or removals.');job.status='completed';job.finished=now();job.actual=snapshot(db,car.id);note='Completed with actual fitted configuration saved.';
@@ -115,6 +119,7 @@ function mutate(db,action,p,techFields){
     }else throw Error('Unknown job operation.');
     w.touch(db,car.id);
   }
+  require('./shopping-requirements.cjs').job(db,job,now());
   job.updated=now();job.log.push({date:now(),action,note,...(change?{change}:{}),actual:snapshot(db,car.id)});
   w.event(db,car.id,'Workshop: '+job.name,note,{jobId:job.id,...(change?{change}: {})});return job.id;
 }
@@ -122,7 +127,7 @@ function validate(db,techFields){
   check(Array.isArray(db.jobs)&&db.jobs.length<=10000,'Invalid workshop jobs.');const ids=new Set(),activeCars=new Set();
   for(const j of db.jobs){
     check(j&&typeof j.id==='string'&&/^[a-zA-Z0-9_-]{1,100}$/.test(j.id)&&!Object.hasOwn(Object.prototype,j.id)&&j.id!=='prototype'&&!ids.has(j.id),'Invalid job identity.');ids.add(j.id);
-    check(db.cars.some(c=>c.id===j.carId),'Orphan workshop job.');
+    check(db.cars.some(c=>c.id===j.carId),'Orphan workshop job.');check(j.shoppingRequirements===undefined||typeof j.shoppingRequirements==='boolean','Invalid job shopping preference.');
     check(j.kind===undefined||['general','setup'].includes(j.kind),'Invalid job type.');
     check(j.category===undefined||jobTypes.valid(j.category),'Invalid job category.');
     check(j.notes===undefined||typeof j.notes==='string'&&j.notes.length<=20000,'Invalid job notes.');

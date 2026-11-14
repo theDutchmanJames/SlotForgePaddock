@@ -1,8 +1,9 @@
+let assemblyPhotoDecoder,picturePreviews,picturePreviewError;
 const {app,BrowserWindow,ipcMain,dialog,nativeImage,shell,protocol,Tray,Menu,powerMonitor}=require('electron');
 const fs=require('node:fs');
 const path=require('node:path');
 const {pathToFileURL}=require('node:url');
-const {Store,makePackage,migrate}=require('./store.cjs');
+const {Store,migrate}=require('./store.cjs');
 const {Network}=require('./network.cjs');
 const {Club}=require('./club.cjs');
 const transfer=new (require('./snapshot-transfer.cjs').SnapshotTransfer)();
@@ -36,19 +37,23 @@ const launcherModule=require('./local-library-launcher.cjs');
 const launchCommand=launcherModule.command({packaged:app.isPackaged,appPath:path.join(__dirname,'..')});
 let libraryStartup=null,libraryStartupError=null;try{libraryStartup=launcherModule.readStart(process.argv,{folder:require('./local-library.cjs').directory(),command:launchCommand});if(libraryStartup)app.setPath('userData',libraryStartup.profile);}catch(e){libraryStartupError=e;}
 const ownsInstance=!libraryStartupError&&app.requestSingleInstanceLock();
+const quickLinks=new (require('./quick-links.cjs').QuickLinks)(app.getPath('userData'),{openExternal:url=>shell.openExternal(url)});
 if(libraryStartupError){console.error('The registered local library could not be started. Open Paddock normally to check its registration.');app.exit(1);}else if(!ownsInstance)app.quit();
 let sharedObserver,sharedRoot;
 let win,store,network,club,portal,localLibrary,backgroundMode,resultInbox,networkTimer,rendererReady=false,startupFeedback,startupClosing=false;
 const ipcWork=new (require('./work-gate.cjs').WorkGate)();
 const backupJobs=new (require('./backup-jobs.cjs').BackupJobs)(value=>{if(win&&!win.isDestroyed())win.webContents.send('sf:file-progress',value);});
 const entry=path.join(__dirname,'..','renderer','index.html');
+const sharedEncoder=new (require('./shared-thumbnail-encoder.cjs').SharedThumbnailEncoder)({getWindow:()=>win,url:pathToFileURL(entry).href});
+const sharedPreviews=new (require('./paddock-thumbnails.cjs').PaddockThumbnails)({getStore:()=>store,available:()=>!!sharedRoot&&!!store&&club?.store===store&&!restoring&&!startupClosing,encoder:sharedEncoder,open:()=>require('../packages/shared-library/index.cjs').open({application:'SlotForge Paddock',installationId:'paddock-desktop',sharedRoot,legacyProfiles:[],thumbnailEncoder:source=>sharedEncoder.encode(source)})});
 const thumbnails=new (require('./thumbnail-cache.cjs').ThumbnailCache)(job=>{if(win&&!win.isDestroyed())win.webContents.send('sf:thumbnail',job);},url=>media.responseAsync(url));
 function mediaSweep(){media.retain([store?.data,club?.loadedCache?.data,network?.cached,...transfer.history.map(x=>x.data)]);}
 function trustedFrame(event){return win&&!win.isDestroyed()&&!event.sender.isDestroyed()&&event.sender===win.webContents&&event.senderFrame?.url===pathToFileURL(entry).href;}
 function reply(fn){return async(event,...args)=>{let value;try{return await ipcWork.run(async()=>{if(!win||win.isDestroyed()||event.sender.isDestroyed()||event.sender!==win.webContents||event.senderFrame?.url!==pathToFileURL(entry).href)return {error:'Unauthorised application frame.'};if(sharedObserver&&!restoring)await sharedObserver.refresh();value=await fn(...media.expand(args));return {ok:true,value:media.project(value)};});}catch(e){return {error:e.message,code:value?.commandId?'WRITE_UNCERTAIN':e.code,definiteRejection:e.definiteRejection===true};}};}
 async function files(action,p={}){
   const store=club.store;
-  const protectedFiles=[...(sharedRoot?['library.json','replacement.json','coordination.sqlite','coordination.sqlite-journal','coordination.sqlite-wal','coordination.sqlite-shm'].map(name=>path.join(sharedRoot,name)):[]),...(backgroundMode?[backgroundMode.file]:[]),...(resultInbox?[resultInbox.file,resultInbox.file+'-journal',resultInbox.file+'-wal',resultInbox.file+'-shm']:[]),...(localLibrary?[...(localLibrary.launcher?[localLibrary.launcher.file]:[]),localLibrary.file,localLibrary.settingsFile,localLibrary.settingsFile+'.tmp']:[]),...club.main.protectedFiles(),...club.protectedFiles(),club.file,club.file+'.previous',club.file+'.tmp',...Array.from(media.byUrl.values(),e=>e.staged).filter(Boolean)];
+  const pictureJournalPath=path.join(app.getPath('userData'),'catalogue-picture-requests.sqlite');
+  const protectedFiles=[quickLinks.file,quickLinks.file+'.tmp',...(picturePreviews?.protectedFiles()||[]),pictureJournalPath,pictureJournalPath+'-journal',pictureJournalPath+'-wal',pictureJournalPath+'-shm',...(sharedRoot?['library.json','replacement.json','coordination.sqlite','coordination.sqlite-journal','coordination.sqlite-wal','coordination.sqlite-shm'].map(name=>path.join(sharedRoot,name)):[]),...(backgroundMode?[backgroundMode.file]:[]),...(resultInbox?[resultInbox.file,resultInbox.file+'-journal',resultInbox.file+'-wal',resultInbox.file+'-shm']:[]),...(localLibrary?[...(localLibrary.launcher?[localLibrary.launcher.file]:[]),localLibrary.file,localLibrary.settingsFile,localLibrary.settingsFile+'.tmp']:[]),...club.main.protectedFiles(),...club.protectedFiles(),club.file,club.file+'.previous',club.file+'.tmp',...Array.from(media.byUrl.values(),e=>e.staged).filter(Boolean)];
   if(action==='database.reset')return require('./collection-reset.cjs').reset({store,club,network,backupJobs,protectedFiles},p);
   if(action==='restore'&&store.data.club)throw Error('Shared club copies cannot restore or replace the official database. Use Connections to update the club copy.');
   if(['slotcar.kit','slotcar.pick'].includes(action)){
@@ -58,7 +63,7 @@ async function files(action,p={}){
       const content=model.kit(store.data,car),r=await dialog.showSaveDialog(win,{title:'Save slotcar product research template',defaultPath:'SlotForge-slotcar-research.json',filters:[{name:'Slotcar research JSON',extensions:['json']}]});if(r.canceled)return null;unchanged();return exportBytes(r.filePath,JSON.stringify(content,null,2),protectedFiles);
     }
     const r=await dialog.showOpenDialog(win,{title:'Review completed slotcar research',properties:['openFile'],filters:[{name:'Slotcar research JSON',extensions:['json']}]});if(r.canceled)return null;unchanged();
-    return {...model.preview(readJSON(r.filePaths[0],1024*1024),p,car),hasInstalledParts:store.data.installations.some(i=>i.carId===p.carId&&!i.removed)};
+    return {...model.preview(readJSON(r.filePaths[0],1024*1024),p,car),installedParts:store.data.installations.filter(i=>i.carId===p.carId&&!i.removed).map(i=>({field:i.field,name:store.data.parts.find(p=>p.id===i.partId)?.name||i.name,quantity:i.quantity,assembly:!!i.assemblyId}))};
   }
   if(action==='history.source'){const url=require('./real-history.cjs').url(p.url);if(!url)throw Error('Missing source link.');await shell.openExternal(url);return {opened:true};}
   if(['history.kit','history.pick','history.web'].includes(action)){
@@ -86,9 +91,48 @@ async function files(action,p={}){
     try{await printWindow.loadURL('data:text/html;charset=utf-8,'+encodeURIComponent(report.html));const bytes=await printWindow.webContents.printToPDF({printBackground:true,pageSize:'A4',preferCSSPageSize:true,displayHeaderFooter:true,headerTemplate:'<span></span>',footerTemplate:report.footerTemplate});return exportBytes(result.filePath,bytes,protectedFiles);}finally{printWindow.destroy();}
   }
 
-  if(action==='catalogue.kit'){const r=await dialog.showSaveDialog(win,{title:'Save manufacturer catalogue import kit',defaultPath:'SlotForge-catalogue-kit.json',filters:[{name:'Catalogue JSON kit',extensions:['json']}]});return r.canceled?null:exportJSON(r.filePath,catalogueImport.kit(),protectedFiles);}
+  if(action.startsWith('pictures.')){
+    const pictures=require('./catalogue-picture-requests.cjs'),journal=new pictures.Journal(app.getPath('userData'));
+    if(action==='pictures.browse')return pictures.run(store.file,'browse',p);
+    if(action==='pictures.select')return pictures.run(store.file,'select',p);
+    const active=()=>pictures.withReader(store,(_r,a)=>{if(club.store!==store)throw Error('The collection changed. Reopen Illustrated Catalogue.');pictures.identity(a,p.expected);return a;});
+    if(action==='pictures.requests'){const a=active();return {...a,requests:journal.list()};}
+    if((action==='pictures.discard'||action==='pictures.response.pick'||action.startsWith('pictures.preview.'))&&!picturePreviews)throw Error('Picture previews are unavailable: '+(picturePreviewError||'not ready'));
+    if(action==='pictures.discard'){const a=active();return picturePreviews.batches.discard(p.id,p.requestDatabaseId||a.databaseId);}
+    if(action==='pictures.response.pick'){active();const choice=await dialog.showOpenDialog(win,{title:'Open completed catalogue picture files',properties:['openFile','multiSelections'],filters:[{name:'Picture response JSON',extensions:['json']}]});if(choice.canceled)return null;if(choice.filePaths.length>100)throw Error('Choose up to 100 picture JSON files.');const inputs=[];let totalBytes=0;for(const file of choice.filePaths){try{inputs.push({name:path.basename(file),bytes:await require('./catalogue-picture-previews.cjs').readResponse(file)});totalBytes+=inputs.at(-1).bytes.length;if(totalBytes>16*1024*1024)throw Error('Selected picture JSON files exceed 16 MiB. Choose fewer files.');}catch(e){throw Error(path.basename(file)+': '+e.message);}}active();return picturePreviews.batches.importFiles(inputs);}
+    if(action.startsWith('pictures.preview.')){active();return picturePreviews.batches.command(action.slice('pictures.preview.'.length),p.id,p);}
+    if(action==='pictures.export'||action==='pictures.reexport'){
+      const before=active(),journals=action==='pictures.export'?await pictures.run(store.file,'prepare',p):[journal.get(p.id,before)];
+      const choice=await dialog.showOpenDialog(win,{title:'Choose a folder for your picture-request files',properties:['openDirectory','createDirectory']});if(choice.canceled)return null;
+      const after=active();if(action==='pictures.export'&&after.revision!==before.revision)throw Error('The collection changed while choosing a folder. Refresh the selection before exporting.');
+      if(action==='pictures.export')journal.save(journals);
+      return pictures.exportBundle(choice.filePaths[0],journals,protectedFiles);
+    }
+    throw Error('Unknown picture-request action.');
+  }
+  if(action==='catalogue.groups')return require('./catalogue-research.cjs').groups();
+  if(action==='catalogue.kits'){
+    const currency=require('./catalogue-pricing.cjs').currency(p.currency);
+    const ids=p.groups;const groups=require('./catalogue-research.cjs').groups();
+    if(!Array.isArray(ids)||!ids.length||ids.length>groups.length||new Set(ids).size!==ids.length||ids.some(id=>!groups.some(g=>g.id===id)))throw Error('Choose supported research groups.');
+    const r=await dialog.showOpenDialog(win,{title:'Choose a folder for the research templates',properties:['openDirectory','createDirectory']});if(r.canceled)return null;
+    const directory=await fs.promises.mkdtemp(path.join(r.filePaths[0],'SlotForge-catalogue-kits-'));
+    for(const id of ids)exportJSON(path.join(directory,id+'.json'),catalogueImport.kit(id,currency),protectedFiles);
+    return {directory,count:ids.length};
+  }
+  if(action==='catalogue.kit'){const currency=require('./catalogue-pricing.cjs').currency(p.currency);const r=await dialog.showSaveDialog(win,{title:'Save manufacturer catalogue import kit',defaultPath:'SlotForge-catalogue-kit.json',filters:[{name:'Catalogue JSON kit',extensions:['json']}]});return r.canceled?null:exportJSON(r.filePath,catalogueImport.kit(undefined,currency),protectedFiles);}
   if(action==='catalogue.instructions')return catalogueImport.instructions;
-  if(action==='catalogue.pick'){const r=await dialog.showOpenDialog(win,{title:'Review a manufacturer catalogue',properties:['openFile'],filters:[{name:'SlotForge catalogue JSON',extensions:['json']}]});if(r.canceled)return null;const file=r.filePaths[0];if(fs.statSync(file).size>16*1024*1024)throw Error('Catalogue file exceeds 16 MB.');const input=readJSON(file,16*1024*1024);const preview=catalogueImport.preview(store.data,input);return {name:path.basename(file),input,preview};}
+  if(action==='catalogue.pick'){
+    const identity=store.data.id;
+    const r=await dialog.showOpenDialog(win,{title:'Review manufacturer catalogues',properties:['openFile','multiSelections'],filters:[{name:'SlotForge catalogue JSON',extensions:['json']}]});if(r.canceled)return null;
+    const batch=require('./catalogue-batch.cjs'),files=await batch.readFiles(r.filePaths);
+    if(club.store!==store||store.data.id!==identity)throw Error('The collection changed. Import the catalogues again.');
+    if(files.length===1&&files[0].input?.format==='slotforge-catalogue-images'){
+      if(!picturePreviews)throw Error('Picture previews are unavailable: '+picturePreviewError);
+      return {picturePreview:await picturePreviews.batches.importFiles([{name:files[0].name,bytes:Buffer.from(JSON.stringify(files[0].input))}])};
+    }
+    const result=batch.combine(files);return {...result,preview:store.plan('catalogue.preview',{input:result.input})};
+  }
   if(action==='guide.pick'){
     const r=await dialog.showOpenDialog(win,{title:'Add a manual or part guide',properties:['openFile'],filters:[{name:'PDF or image',extensions:['pdf','png','jpg','jpeg','webp']}]});if(r.canceled)return null;
     const document=readDocument(r.filePaths[0]);if(!require('./guides.cjs').allowed.has(document.mime))throw Error('Choose a PDF or supported image.');let picture='';
@@ -100,6 +144,11 @@ async function files(action,p={}){
     const doc=store.data.documents.find(d=>d.id===p.id);if(!doc)throw Error('Document not found.');const bytes=validateDocument(doc);
     if(action==='document.export'){const r=await dialog.showSaveDialog(win,{title:'Save document copy',defaultPath:doc.name});return r.canceled?null:exportBytes(r.filePath,bytes,protectedFiles);}
     const directory=fs.mkdtempSync(path.join(app.getPath('temp'),'slotforge-document-')),file=path.join(directory,'attachment-'+doc.id+path.extname(doc.name).toLowerCase());temporaryDocuments.push({directory,file});fs.writeFileSync(file,bytes,{flag:'wx'});const error=await shell.openPath(file);if(error)throw Error(error);return {opened:true};
+  }
+  if(action==='assembly-image'){
+    const r=await dialog.showOpenDialog(win,{title:'Choose an assembly photograph',properties:['openFile'],filters:[{name:'Still photographs',extensions:['png','jpg','jpeg','webp']}]});if(r.canceled)return null;
+    const file=await fs.promises.open(r.filePaths[0],'r');let bytes;try{const max=require('./catalogue-pictures-contract.cjs').limits.sourcePhotoBytes;bytes=Buffer.alloc(max+1);let size=0;while(size<bytes.length){const read=await file.read(bytes,size,bytes.length-size,null);if(!read.bytesRead)break;size+=read.bytesRead;}if(size>max)throw Error('This original is too large. Choose a photograph smaller than 9 MiB.');bytes=bytes.subarray(0,size);}finally{await file.close();}
+    const data=require('./photo-import.cjs').originalPhoto(bytes);await assemblyPhotoDecoder.decode(data);return {name:path.basename(r.filePaths[0]),data};
   }
   if(action==='image'){
     const r=await dialog.showOpenDialog(win,{title:'Choose a car photo',properties:['openFile'],filters:[{name:'Images',extensions:['png','jpg','jpeg','webp']}]});if(r.canceled)return null;
@@ -115,12 +164,12 @@ async function files(action,p={}){
   }
   if(action==='export'||action==='export-timing'){
     const db=store.snapshot();
-    const content=action==='export-timing'?timingExport(db,p.ids||[],p.options||{}):makePackage(db,p.ids||[],p.options||{});
+    const content=action==='export-timing'?timingExport(db,p.ids||[],p.options||{}):require('./car-file.cjs').write(db,p.ids||[],p.options||{});
     const r=await dialog.showSaveDialog(win,{title:action==='export-timing'?'Export cars for SlotForge Timing':'Export selected cars',defaultPath:action==='export-timing'?'slotforge-timing-export.json':'SlotForge-cars.json',filters:[{name:'SlotForge JSON',extensions:['json']}]});if(r.canceled)return null;
     return exportJSON(r.filePath,content,protectedFiles);
   }
   if(action==='import'){
-    const r=await dialog.showOpenDialog(win,{title:'Import cars for review',properties:['openFile'],filters:[{name:'SlotForge Paddock or Timing export',extensions:['json']}]});if(r.canceled)return null;const input=readJSON(r.filePaths[0]),timing=input?.format==='slotforge-timing-export',bundle=timing?timingPackage(input):input;return {...await club.mutate('submission.add',{package:bundle}),importKind:timing?'timing':'package',carCount:bundle.cars.length};
+    const r=await dialog.showOpenDialog(win,{title:'Import cars for review',properties:['openFile'],filters:[{name:'SlotForge Paddock or Timing export',extensions:['json']}]});if(r.canceled)return null;const input=readJSON(r.filePaths[0]),timing=input?.format==='slotforge-timing-export',submission=timing?{package:timingPackage(input)}:require('./car-file.cjs').read(input);return {...await club.mutate('submission.add',submission),importKind:timing?'timing':'package',carCount:submission.package.cars.length};
   }
   if(action==='restore'){
     const r=await dialog.showOpenDialog(win,{title:'Choose a complete backup',properties:['openFile'],filters:[{name:'SlotForge backup',extensions:['sfpbackup','json']}]});if(r.canceled)return null;const revision=store.data.revision;
@@ -150,8 +199,8 @@ const startupTask=app.whenReady().then(async()=>{
   for(const name of fs.readdirSync(media.folder))if(/^[a-f0-9-]{36}\.media$/.test(name)){const file=path.resolve(media.folder,name);if(path.dirname(file)===path.resolve(media.folder))try{if(fs.statSync(file).isFile())fs.unlinkSync(file);}catch{}}
   protocol.handle('paddock-media',async request=>{
     if(request.method!=='GET')return new Response(null,{status:405});
-    try{const found=media.lookup(request.url);if(!found)return new Response(null,{status:404});
-     const image=found.thumbnail?await thumbnails.get(found.entry.meta.hash,request.url.replace('?thumbnail=1','')):await media.responseAsync(request.url);if(!image)return new Response(null,{status:503});
+    try{if(request.url.startsWith('paddock-media://catalogue-preview/')){const image=await picturePreviews?.response(request.url);return image?new Response(image.bytes,{headers:{'Content-Type':image.mime,'Cache-Control':'no-store'}}):new Response(null,{status:404});}const found=media.lookup(request.url);if(!found)return new Response(null,{status:404});
+     let image;if(found.thumbnail){image=await sharedPreviews.get(found.entry);if(image===undefined)image=await thumbnails.get(found.entry.meta.hash,request.url.replace('?thumbnail=1',''));}else image=await media.responseAsync(request.url);if(!image)return new Response(null,{status:503});
      return new Response(image.bytes,{headers:{'Content-Type':image.mime,'Cache-Control':'private, max-age=3600'}});
     }catch{return new Response(null,{status:500});}
   });
@@ -167,10 +216,13 @@ const startupTask=app.whenReady().then(async()=>{
   network=new Network(store,change=>{if(win&&!win.isDestroyed())win.webContents.send('sf:changed',change);},result=>{if(win&&!win.isDestroyed())win.webContents.send('sf:network-state',media.project(result));});
   try{club=new Club(store,network,app.getPath('userData'),change=>{if(win&&!win.isDestroyed())win.webContents.send('sf:changed',change);});}catch(e){dialog.showErrorBox('Club copy could not be opened',e.message+'\nYour personal database and club files have not been replaced.');app.quit();return;}
   club.backupJobs=backupJobs;
+  network.retirement=new (require('./sharing-retirement.cjs').SharingRetirement)(network,club,app.getPath('userData'));
+  let lastPreviewWrite;store.subscribe(()=>{const change=store.photoPreviewWrites;if(change&&change!==lastPreviewWrite&&change.revision===store.data.revision){lastPreviewWrite=change;sharedPreviews.warm(change.ids);}});
   try{resultInbox=new (require('./result-inbox.cjs').ResultInbox)(app.getPath('userData'));}catch{resultInbox={file:path.join(app.getPath('userData'),'result-review.sqlite'),read:()=>({total:0,error:'Race-result notices could not be opened. Saved results remain available in each car’s Performance section. Check the profile storage and restart Paddock.'}),seen:()=>{throw Error('Race-result notices are unavailable.');},close:()=>{}};}store.resultInbox=resultInbox;
   const localModule=require('./local-library.cjs');
   localLibrary=new localModule.LocalLibrary({store,profile:app.getPath('userData'),launcher:launchCommand,folder:smoke||process.argv.includes('--test-collection')?path.join(app.getPath('userData'),'local-library-v1'):localModule.directory(),available:()=>!restoring&&(!store.data.club||club.coordinator),unavailableReason:()=>restoring?'A database replacement is in progress.':'This copy belongs to another dealership. Connect Timing to its original host.',onStatus:()=>{backgroundMode?.refresh();network.notify();},onChange:change=>{if(win&&!win.isDestroyed())win.webContents.send('sf:changed',change);}});
   network.localLibrary=localLibrary;
+  network.sharedFileStatus=()=>require('./library-status.cjs').libraryStatus(store,sharedRoot);
   portal=new (require('./paddock-portal.cjs').PaddockPortal)({getStore:()=>club.store,available:(candidate=store)=>!restoring&&!startupClosing&&club.store===store&&!candidate.data.club?.replica,validatePhoto:bytes=>{require('./portal-photo.cjs').check(bytes);if(nativeImage.createFromBuffer(bytes).isEmpty())throw Object.assign(Error('This photograph could not be opened. Choose another JPEG, PNG or WebP photo.'),{code:'INVALID_PHOTO',httpStatus:400});},makeThumbnail:picture=>{try{if(!picture)return null;const bytes=Buffer.from(picture.split(',')[1],'base64');require('./portal-photo.cjs').check(bytes);const image=nativeImage.createFromBuffer(bytes);if(image.isEmpty())return null;const size=image.getSize(),factor=Math.min(1,160/Math.max(size.width,size.height));return 'data:image/jpeg;base64,'+image.resize({width:Math.max(1,Math.round(size.width*factor)),height:Math.max(1,Math.round(size.height*factor))}).toJPEG(75).toString('base64');}catch{return null;}},onStatus:()=>network.notify(),onChange:change=>{if(win&&!win.isDestroyed())win.webContents.send('sf:changed',change);}});
   network.portal=portal;
   if(sharedRoot)sharedObserver=require('./shared-library-observer.cjs').observe(store,()=>{network.notify();if(win&&!win.isDestroyed())win.webContents.send('sf:changed',{kind:'shared-library'});},error=>{if(win&&!win.isDestroyed())win.webContents.send('sf:changed',{kind:'shared-library-error',message:error.message});});
@@ -183,15 +235,22 @@ const startupTask=app.whenReady().then(async()=>{
   // LocalLibrary.starting before releasing the profile.
   void localLibrary.start().then(()=>network.notify()).catch(()=>network.notify());
   if(!smoke){networkTimer=setInterval(()=>network.poll().catch(()=>{}),5000);networkTimer.unref();}
+  assemblyPhotoDecoder=new (require('./assembly-photo-decoder.cjs').AssemblyPhotoDecoder)({getWindow:()=>win,url:pathToFileURL(entry).href});
+  try{picturePreviews=new (require('./catalogue-picture-previews.cjs').PicturePreviews)({profile:app.getPath('userData'),getStore:()=>club.store,decode:(picture,options)=>assemblyPhotoDecoder.decode(picture,options)});new (require('./catalogue-picture-application.cjs').PictureApplication)(picturePreviews,club);new (require('./catalogue-picture-batches.cjs').PictureBatches)(picturePreviews);club.decodeCataloguePicture=picture=>picturePreviews.serialDecode(picture,new AbortController().signal);}catch(error){picturePreviewError=error.message;}
   win=new BrowserWindow({width:1440,height:980,minWidth:960,minHeight:700,show:false,backgroundColor:'#171b21',icon:path.join(__dirname,'..','assets','icon.png'),title:'SlotForge Paddock',autoHideMenuBar:true,webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
   backgroundMode.attach(win);
   win.webContents.setWindowOpenHandler(()=>({action:'deny'}));win.webContents.on('will-navigate',event=>event.preventDefault());
-  win.webContents.on('did-start-loading',()=>{rendererReady=false;transfer.clear();media.clear();thumbnails.clear();});
+  win.webContents.on('did-start-loading',()=>{rendererReady=false;void picturePreviews?.stop();assemblyPhotoDecoder.reset();sharedEncoder.reset();transfer.clear();media.clear();thumbnails.clear();});
+  win.webContents.on('render-process-gone',()=>{void picturePreviews?.stop();assemblyPhotoDecoder.reset();sharedEncoder.reset();});
   win.webContents.session.setPermissionRequestHandler((wc,permission,callback)=>callback(permission==='fullscreen'&&wc===win.webContents&&wc.getURL()===pathToFileURL(entry).href));
   ipcMain.on('sf:media-lease',(event,active)=>{if(trustedFrame(event)&&typeof active==='boolean'){media.leaseOpen(active);mediaSweep();}});
+  ipcMain.on('sf:assembly-photo-result',(event,id,result)=>assemblyPhotoDecoder.receive(event,id,result));
   ipcMain.on('sf:thumbnail-result',(event,id,result)=>{if(trustedFrame(event)&&typeof id==='string')thumbnails.receive(id,result);});
-  const mediaTimer=setInterval(()=>{try{mediaSweep();}catch{}},30000);mediaTimer.unref();win.on('closed',()=>{clearInterval(mediaTimer);thumbnails.clear();media.clear();});
-  ipcMain.handle('sf:read',reply(known=>club.store.withIdle(()=>{rendererReady=true;const openCar=pendingCarLink;pendingCarLink=null;const current=club.store,unchanged=known?.databaseId===current.data.id&&known?.revision===current.data.revision&&known?.dataPath===current.file;const result={openCar,data:unchanged?null:known?.queryView?require('./view-query.cjs').view(current,known.queryView):current.snapshot(),club:club.status(),network:network.status(),remote:known?.databaseId?undefined:network.cached,collection:current.metadata(),version:app.getVersion(),dataPath:current.file};return known?.queryView?result:transfer.encode(result,known,current.file);})));
+  ipcMain.on('sf:shared-thumbnail-ready',event=>sharedEncoder.markReady(event));
+  ipcMain.on('sf:shared-thumbnail-result',(event,id,result)=>sharedEncoder.receive(event,id,result));
+  ipcMain.on('sf:shared-thumbnail-failed',event=>{if(sharedEncoder.owns(event))sharedEncoder.reset();});
+  const mediaTimer=setInterval(()=>{try{mediaSweep();}catch{}},30000);mediaTimer.unref();win.on('closed',()=>{clearInterval(mediaTimer);void picturePreviews?.stop();assemblyPhotoDecoder.reset();sharedEncoder.reset();thumbnails.clear();media.clear();});
+  ipcMain.handle('sf:read',reply(known=>club.store.withIdle(()=>{rendererReady=true;const openCar=pendingCarLink;pendingCarLink=null;const current=club.store,unchanged=known?.databaseId===current.data.id&&known?.revision===current.data.revision&&known?.dataPath===current.file;const result={openCar,data:unchanged?null:known?.queryView?require('./view-query.cjs').view(current,known.queryView):current.snapshot(),club:club.status(),network:network.status(),remote:known?.databaseId?undefined:network.cached,collection:current.metadata(),version:app.getVersion(),features:{wishlist:require('./wishlist-activation.json').enabled===true},dataPath:current.file};return known?.queryView?result:transfer.encode(result,known,current.file);})));
   ipcMain.handle('sf:mutate',reply(async(action,payload,known)=>{
    if(restoring)throw Error('Wait for the database replacement to finish.');
    const current=club.store;if(known?.databaseId&&known.databaseId!==current.data.id||known?.dataPath&&known.dataPath!==current.file)throw Error('The selected collection changed. Reopen the editor.');
@@ -201,6 +260,21 @@ const startupTask=app.whenReady().then(async()=>{
   }));
   ipcMain.handle('sf:portal',reply(async(action,p={})=>{if(action==='stop'){await portal.stop();return network.status();}if(action==='start'){if(p.databaseId!==club.store.data.id)throw Error('The collection changed. Reopen Connections.');await portal.start();return network.status();}throw Error('Unknown Portal action.');}));
   ipcMain.handle('sf:plan',reply((action,payload)=>club.store.plan(action,payload)));
+  // Personal shortcuts do not read, refresh or mutate any collection.
+  ipcMain.handle('sf:car-search',async(event,fields)=>{
+    if(!trustedFrame(event))return {error:'Unauthorised application frame.'};
+    try{await shell.openExternal(require('./car-search.cjs').googleUrl(fields));return {ok:true,value:{opened:true}};}
+    catch(e){return {error:e.message};}
+  });
+  ipcMain.handle('sf:quick-links',async(event,action,payload)=>{
+    if(!trustedFrame(event))return {error:'Unauthorised application frame.'};
+    try{return await ipcWork.run(async()=>{
+      if(action==='read')return {ok:true,value:quickLinks.read()};
+      if(action==='save')return {ok:true,value:quickLinks.save(payload)};
+      if(action==='open')return {ok:true,value:await quickLinks.open(payload?.id)};
+      throw Error('Unknown Quick Links operation.');
+    });}catch(e){return {error:e.message};}
+  });
   ipcMain.handle('sf:history-view',reply(async payload=>{
    const current=club.store;
    const guard=()=>{if(restoring||club.store!==current||payload?.databaseId!==current.data.id)throw Error('The collection changed. Reopen its history.');};
@@ -239,20 +313,36 @@ const startupTask=app.whenReady().then(async()=>{
    throw Error('Unknown page query.');
   })));
   ipcMain.handle('sf:file-cancel',reply(id=>backupJobs.cancel(id)));
-  ipcMain.handle('sf:file',reply(async(action,p,known)=>{if(restoring)throw Error('Wait for the restore to finish.');let result;if(['restore','database.reset'].includes(action))restoring=true;let replacement;try{if(['restore','database.reset'].includes(action))await portal.stop('Paddock Portal was turned off for database replacement.');if(sharedRoot&&['restore','database.reset'].includes(action))replacement=await require('./shared-library-location.cjs').beginReplacement(sharedRoot,store.file,store.data.id);result=await files(action,p);}finally{try{if(replacement)await require('./shared-library-location.cjs').finishReplacement(sharedRoot,replacement);}finally{if(['restore','database.reset'].includes(action))restoring=false;}}if(!result||!known?.queryView)return result;return club.store.withIdle(()=>{if(action==='restore')return require('./view-query.cjs').view(club.store,{page:'Overview'});if(result.data?.schema)return {...result,data:require('./view-query.cjs').view(club.store,action==='database.reset'?{page:'Overview'}:known.queryView)};return result;});}));
-  ipcMain.handle('sf:club',reply(async(action,p={})=>{if(['switch','join','leave','update'].includes(action))await portal.stop('The collection changed; Paddock Portal was turned off.');if(restoring)throw Error('Wait for the restore to finish.');const current=club.store;return current.withIdle(async()=>{if(club.store!==current)throw Error('The collection changed. Reopen this action.');switch(action){case 'enable':await club.enableAsync(p.name,p.password);await network.stop();await network.start();return club.status();case 'disable':return club.disableAsync(p);case 'password':return club.setPassword(p.password);case 'start':if(!club.coordinator)throw Error('Enable Dealership Mode first.');return network.start();case 'stop':if(!club.coordinator)throw Error('This is not the dealership computer.');return network.stop();case 'join':return club.connect(p);case 'switch':return club.switchAsync(p.active);case 'update':return club.update(p.revision);case 'preview':return club.preview(p.id);case 'review':return club.reviewAsync(p);case 'retry':return club.sendOutbox();case 'discard':return club.discardOutbox();case 'leave':return club.leaveAsync();default:throw Error('Unknown club operation.');}});}));
-  ipcMain.handle('sf:network',reply(async(action,p={})=>{if(restoring)throw Error('Wait for the restore to finish.');if(club.active&&['submit','retry'].includes(action))throw Error('Open your personal collection before sending a public car package. Club edits use Review.');switch(action){case'background-mode':backgroundMode.setEnabled(p.enabled);return network.status();case'local-retry':await localLibrary.recover();return network.status();case'local-access':await localLibrary.setEnabled(p.enabled);return network.status();case'discover':return network.discover();case'controls':return network.controls(p);case'auto':return network.autoRefresh(p.enabled);case'retry':return network.retrySubmission();case'discard':return network.discardSubmission();case'start':return network.start();case'stop':return network.stop();case'connect':return network.connect(p.address,p.code);case'refresh':return network.refresh();case'disconnect':return network.disconnect();case'submit':return network.submit(p.ids,p.options);default:throw new Error('Unknown network operation.');}}));
+  ipcMain.handle('sf:file',reply(async(action,p,known)=>{if(restoring)throw Error('Wait for the restore to finish.');network.retirement.assertIdle();if(['restore','database.reset'].includes(action))require('./submission-recovery.cjs').assertPreserved(network);let result;if(['restore','database.reset'].includes(action))restoring=true;let replacement;try{if(['restore','database.reset'].includes(action))await portal.stop('Paddock Portal was turned off for database replacement.');if(sharedRoot&&['restore','database.reset'].includes(action))replacement=await require('./shared-library-location.cjs').beginReplacement(sharedRoot,store.file,store.data.id);result=await files(action,p);}finally{try{if(replacement)await require('./shared-library-location.cjs').finishReplacement(sharedRoot,replacement);}finally{if(['restore','database.reset'].includes(action))restoring=false;}}if(!result||!known?.queryView)return result;return club.store.withIdle(()=>{if(action==='restore')return require('./view-query.cjs').view(club.store,{page:'Overview'});if(result.data?.schema)return {...result,data:require('./view-query.cjs').view(club.store,action==='database.reset'?{page:'Overview'}:known.queryView)};return result;});}));
+  ipcMain.handle('sf:club',reply(async(action,p={})=>{network.retirement.assertIdle();if(['enable','join','disable','leave'].includes(action))require('./submission-recovery.cjs').assertPreserved(network);if(['switch','join','leave','update'].includes(action))await portal.stop('The collection changed; Paddock Portal was turned off.');if(restoring)throw Error('Wait for the restore to finish.');const current=club.store;return current.withIdle(async()=>{if(club.store!==current)throw Error('The collection changed. Reopen this action.');switch(action){case 'enable':if(network.hostingMode==='legacy'&&network.server)throw Error('Use Migrate to Dealership Mode to preserve the existing host.');await club.enableAsync(p.name,p.password);await network.stop();await network.start();return club.status();case 'disable':return club.disableAsync(p);case 'password':return club.setPassword(p.password);case 'start':if(!club.coordinator)throw Error('Enable Dealership Mode first.');return network.start();case 'stop':if(!club.coordinator)throw Error('This is not the dealership computer.');return network.stop();case 'join':return club.connect(p);case 'switch':return club.switchAsync(p.active);case 'update':return club.update(p.revision);case 'preview':return club.preview(p.id);case 'review':return club.reviewAsync(p);case 'retry':return club.sendOutbox();case 'discard':return club.discardOutbox();case 'leave':return club.leaveAsync();default:throw Error('Unknown club operation.');}});}));
+  ipcMain.handle('sf:network',reply(async(action,p={})=>{if(restoring)throw Error('Wait for the restore to finish.');network.retirement.assertIdle();if(action==='migrate-host')return network.retirement.host(p);if(action==='migrate-browser'){await portal.stop('The collection changed; Paddock Portal was turned off.');return network.retirement.browser(p);}if(action==='migration-ack')return network.retirement.acknowledge(p);if(action==='recovery-export'||action==='recovery-import')return submissionRecoveryFile(action);if(club.active&&['submit','retry'].includes(action))throw Error('Open your personal collection before sending a public car package. Club edits use Review.');switch(action){case'background-mode':backgroundMode.setEnabled(p.enabled);return network.status();case'local-retry':await localLibrary.recover();return network.status();case'local-access':await localLibrary.setEnabled(p.enabled);return network.status();case'discover':return network.discover();case'controls':return network.controls(p);case'auto':return network.autoRefresh(p.enabled);case'retry':return network.retrySubmission();case'discard':return network.discardSubmission();case'start':return network.start();case'stop':return network.stop();case'connect':return network.connect(p.address,p.code);case'refresh':return network.refresh();case'disconnect':return network.disconnect();case'submit':return network.submit(p.ids,p.options);default:throw new Error('Unknown network operation.');}}));
   try{await win.loadFile(entry);}catch(e){if(!startupClosing)dialog.showErrorBox('SlotForge could not be displayed',e.message);app.quit();return;}
   if(startupClosing||win.isDestroyed())return;startupFeedback?.dispose();startupFeedback=null;
-  if(smoke){try{await localLibrary.start();if(sharedSmoke)await require('../tests/shared-library-smoke.cjs')(win,store,sharedSmoke);else await require('../tests/smoke.cjs')(win,store,network,media);localLibrary?.close();app.exit(0);}catch(e){const ui=await win.webContents.executeJavaScript('document.body.innerText').catch(()=>null);fs.writeFileSync(path.join(__dirname,'..','.qa','smoke-result.json'),JSON.stringify({passed:false,error:e.stack,ui},null,2));console.error(e.stack);localLibrary?.close();app.exit(1);}}
+  if(smoke){try{await localLibrary.start();if(sharedSmoke)await require('../tests/shared-library-smoke.cjs')(win,store,sharedSmoke,{sharedPreviews,sharedEncoder,media,network,localLibrary});else await require('../tests/smoke.cjs')(win,store,network,media,{picturePreviews,assemblyPhotoDecoder});localLibrary?.close();app.exit(0);}catch(e){const ui=await win.webContents.executeJavaScript('document.body.innerText').catch(()=>null);fs.writeFileSync(path.join(__dirname,'..','.qa','smoke-result.json'),JSON.stringify({passed:false,error:e.stack,ui},null,2));console.error(e.stack);localLibrary?.close();app.exit(1);}}
   else if(libraryStartup){await localLibrary.start();backgroundMode.startHidden();}else backgroundMode.open();
 }).catch(error=>{if(!startupClosing)dialog.showErrorBox('Paddock could not finish opening',error.message);app.quit();});
 app.on('activate',()=>backgroundMode?.open());
 app.on('window-all-closed',()=>app.quit());
 app.on('second-instance',(_event,argv)=>{if(argv.some(a=>a.startsWith(launcherModule.PREFIX)))return;for(const arg of argv)acceptCarLink(arg);if(win&&!win.isDestroyed())backgroundMode?.open();else startupFeedback?.focus();});
+async function submissionRecoveryFile(action){
+ const R=require('./submission-recovery.cjs');network.retirement.assertIdle();if(network.sending)throw Error('Wait for the submission to finish.');
+ if(action==='recovery-export'){
+  if(!network.pending)throw Error('There is no pending submission.');const pending=network.pending,bytes=R.encode(pending),proof=R.fingerprint(pending);
+  const r=await dialog.showSaveDialog(win,{title:'Save pending submission recovery',defaultPath:'SlotForge-pending-submission.json',filters:[{name:'Submission recovery JSON',extensions:['json']}]});if(r.canceled)return null;
+  if(network.pending!==pending||R.fingerprint(network.pending)!==proof)throw Error('The pending submission changed. Reopen recovery.');
+  const protectedFiles=[...store.protectedFiles(),club.file,network.retirement.file,...(club.loadedCache?club.loadedCache.protectedFiles():[])];exportBytes(r.filePath,bytes,protectedFiles);network.recoveryProof=proof;network.recoveryPending=pending;network.notify();return {saved:true};
+ }
+ const r=await dialog.showOpenDialog(win,{title:'Open pending submission recovery',properties:['openFile'],filters:[{name:'Submission recovery JSON',extensions:['json']}]});if(r.canceled)return null;
+ network.retirement.assertIdle();return R.restore(network,readJSON(r.filePaths[0],R.FILE_MAX));
+}
+let recoveryQuitPrompt=false;
 let waitingToQuit=false,quitReady=false;
 app.on('before-quit',event=>{
  if(quitReady)return;
+ if(network?.pending&&!require('./submission-recovery.cjs').saved(network)){
+  event.preventDefault();if(recoveryQuitPrompt)return;recoveryQuitPrompt=true;
+  void (async()=>{const r=await dialog.showMessageBox(win,{type:'warning',title:'Pending submission',message:'Save the pending submission before quitting.',detail:'The host may already have received it. A recovery file keeps the same package for safe retry. You can also keep Paddock open and retry or explicitly discard it in Settings → Database.',buttons:['Keep Paddock open','Save recovery and quit'],defaultId:0,cancelId:0});if(r.response===1&&await submissionRecoveryFile('recovery-export')){recoveryQuitPrompt=false;app.quit();}})().catch(e=>dialog.showErrorBox('Recovery was not saved',e.message)).finally(()=>{recoveryQuitPrompt=false;});return;
+ }
  event.preventDefault();backgroundMode?.beginQuit();startupClosing=true;ipcWork.stop();clearInterval(networkTimer);network?.quiesce();club?.quiesce();localLibrary?.quiesce();
  if(waitingToQuit)return;waitingToQuit=true;
  void (async()=>{
@@ -261,7 +351,9 @@ app.on('before-quit',event=>{
   await Promise.allSettled([startupTask]);network?.quiesce();club?.quiesce();localLibrary?.quiesce();
   await Promise.all([ipcWork.idle(),network?.idle(),club?.idle(),localLibrary?.idle()]);
   await portal?.stop();
+  await picturePreviews?.close();
   await sharedObserver?.close();
+  await sharedPreviews.close();
   await Promise.all([store?.whenIdle(),club?.loadedCache?.whenIdle(),require('./collection-open.cjs').whenIdle()]);
   startupFeedback?.dispose();startupFeedback=null;club?.close();network?.close();localLibrary?.close();backgroundMode?.close();resultInbox?.close();
   quitReady=true;app.quit();

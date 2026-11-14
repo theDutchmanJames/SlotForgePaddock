@@ -120,7 +120,7 @@ The authoritative records and scalar fields remain unchanged. Rebuildable query 
 
 Timing profile reads and paginated public catalogue reads select relevant SQL records. Telemetry index/status reads project public metadata without loading measured laps or configuration bodies into the index response; downloading a session reconstructs only that session in its original lap order. Existing public contracts, authentication, origin protection, privacy exclusions, signatures and correction/withdrawal rules are unchanged. The public version 1 Telemetry session download remains a complete bounded session; internal 100-lap UI pages do not change its wire format.
 
-The remaining local screens use scoped view adapters too. Showroom has 48-car gallery pages with a separate complete ID/name sequence for spotlight selection and cross-page slideshows. Workshop jobs and supplies use 24-record pages; shopping uses 30; scratch-building displays 40 candidate parts while retaining assigned parts independently. Assembly pages use 24 records, part installation history uses 50, and workshop reminders have independent 24-record navigation. Settings, Library, Connections and Import & Export receive settings/choice metadata and counts rather than car/part histories.
+The remaining local screens use scoped view adapters too. Showroom has 48-car gallery pages plus compact identity, label and photo-presence choices for cover and presentation selection. Only the chosen cover and viewer cars load additional full records; gallery filters do not restrict those selections. Original photo bytes remain lazy. Workshop jobs and supplies use 24-record pages; shopping uses 30; scratch-building displays 40 candidate parts while retaining assigned parts independently. Assembly pages use 24 records, part installation history uses 50, and workshop reminders have independent 24-record navigation. Settings, Library, Connections and Import & Export receive settings/choice metadata and counts rather than car/part histories.
 
 Editor contexts include complete target records and the compact choices their workflow needs. Stock availability is calculated against all active installations and stored assemblies, including those outside the displayed page. Car/setup selectors stay complete. Closing an editor releases its working context and reloads the active page. Mutation and import responses use the same projection; explicit legacy full reads remain available for compatibility and tests. Empty, unsaved in-memory stores retain their compatibility adapter.
 
@@ -150,6 +150,80 @@ Car/result indexes return 50 entries. Public main photos transfer in 256 KiB chu
 
 The API response ceiling is 8 MiB. No supported payload is silently truncated. Full non-media core-model loading, collection-sized reconciliation after history expiration, and bounded full metadata within a selected session still exist. These public reads don't replace the private replica protocol; the aggregate media cap is removed by Phase 8's separate safeguards. See schemas, examples and client instructions (internal development reference). Host-side tests are not acceptance of actual Timing/Telemetry client implementations.
 
+
+## Routine car-detail writes
+
+Technical edits read the car and affected installed fields, media changes read
+the car and its framing, manual tests read their captured-configuration dependencies,
+and documents/guides read their linked cars. New cars do not require loading
+existing stock. The same domain validation, revision checks and atomic commits
+still apply; global limits are checked against the stored collection. This does
+not remove the working-metadata cap. Physical operations use the dependency
+workspaces described below.
+
+## Physical stock, setups, builds and purchasing writes
+
+Deferred SQLite writes for parts, assemblies, setup application, build drafts,
+build completion, workshop jobs and delivery corrections now construct a
+transaction workspace from the affected records. Stock checks include every
+active user of an affected part across cars and assemblies. Setup snapshots,
+rebuild sources, relevant shopping requirements and individual-stock purchases
+remain part of the dependency closure. Description-only edits use a smaller
+scope than changes to quantity or tracking.
+
+The existing domain commands and validation still run before the same
+revision-checked atomic commit. Global collection limits are checked against
+the combined manifest, including records outside the workspace. Failed writes
+do not publish partial stock changes; durable command receipts retain their
+existing retry behavior. Sparse commits preserve existing ordering and place
+new jobs and build drafts first, as the full-model commands do.
+
+Modern purchasing records are loaded selectively. The one-time upgrade of a
+legacy shopping ledger still reads all its shopping lines before advancing its
+global format marker. Common definitions and the collection manifest remain
+collection-sized, and a large dependency graph can still require many records.
+Previews, bulk operations and deletion use the separate paths described below.
+Timing, Telemetry and Dealership wire formats are unchanged.
+
+## Review previews, bulk actions and deletion
+
+Deferred preview queries select the records needed by the operation. Bulk car
+edits read selected cars; setup/build previews reuse the physical dependency
+workspace. Reusable-choice queries project the relevant fields and hydrate only
+matching cars for corrections. Installed technical fields retain their existing
+protection. Historical setup/test snapshots are never renamed.
+
+Catalogue matching reads compact identity descriptors, preserving manufacturer,
+reference, ambiguous-match and fuzzy-match behavior. Exact matches are hydrated
+to compare their catalogue product; applying also loads explicitly selected
+targets. Existing owned quantities, notes and photographs are preserved. The
+native file picker uses the same preview query path.
+
+Part deletion searches relevant SQLite metadata for both direct and nested
+historical references, including returned stock, build drafts and shopping
+history. These checks still span every relevant record; the improvement avoids
+decoding their complete bodies in JavaScript. Car deletion loads its dependent
+records, returns fitted stock, retains rebuild protection and preserves unrelated
+plans. Surviving index-keyed plans retain their stored identities after removal.
+
+Previews do not write. Applying recalculates the necessary checks against the
+current revision and retains confirmation, atomic commits, rollback and durable
+receipts. Dealership approval uses the same command paths. Global collection
+limits still inspect the merged manifest. Full backup, restore and integrity
+checks remain full-scope operations. Selector metadata, common definitions and
+the manifest can still grow with the collection; this is not removal of the
+200 MiB working-metadata guard.
+
+## Common-action performance qualification
+
+The six-phase common-action performance plan completed its final local
+qualification on 14 November 2026. The full suite passed 1,670 tests; seven
+optional cross-project cases also passed in the separate Timing/Telemetry
+client run. Ten isolated desktop workflows and both shared-library installation
+orders passed. Review repaired new workshop-plan identity allocation after
+sparse deletion. See the [Phase 6 report](reviews/2026-11-14-routine-performance-phase6.md)
+for measurements, coverage and remaining scaling boundaries. The metadata
+limit and public integration formats remain unchanged.
 
 ## Portable collection backups
 

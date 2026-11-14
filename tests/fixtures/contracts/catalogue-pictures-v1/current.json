@@ -1,0 +1,11 @@
+{
+  "databaseId": "example-library",
+  "recoveryId": "example-recovery-1",
+  "kind": "part",
+  "recordId": "record-0",
+  "revision": 12,
+  "fieldFloor": 0,
+  "pictureVersion": 0,
+  "productHash": "30081a719bbd835b6827c0a767d4c90f235cee438366664d413af2929ab0dd7b",
+  "pictureHash": null
+}

@@ -14,6 +14,8 @@ When only one application is used, it writes directly to the shared file. The ot
 
 ## Implementation
 
+**Settings → Database → Shared local library** shows the actual canonical file and database identity. If a Dealership copy is selected, its details appear separately. **Advanced integration services → Local integration service** controls only the retained loopback HTTP service and its launch registration. Switching that service off does not disable direct shared-file access. See [connection choices and recovery](CONNECTIONS.md).
+
 - Common facade and exact contract: `packages/shared-library/index.cjs` and `CONTRACT.md`.
 - Paddock-owned domain engine: `src/shared-library-*.cjs`.
 - Timing-owned, read-only old-storage converter: vendored `src/timing-legacy/`, including its manifest.

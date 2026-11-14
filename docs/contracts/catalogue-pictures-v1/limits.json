@@ -1,0 +1,22 @@
+{
+  "fileBytes": 2097152,
+  "itemsPerFile": 100,
+  "uriCharacters": 4096,
+  "encodedPhotoBytes": 12582912,
+  "sourcePhotoBytes": 9437166,
+  "decodedPixels": 24000000,
+  "dimensionPixels": 16384,
+  "decodeConcurrency": 1,
+  "decodeTimeoutMs": 10000,
+  "downloadConcurrency": 2,
+  "redirects": 3,
+  "attemptTimeoutMs": 15000,
+  "itemTimeoutMs": 30000,
+  "stagingBytes": 67108864,
+  "previewCacheHours": 72,
+  "resolvedRequestDays": 30,
+  "thumbnailPixels": 512,
+  "thumbnailBytes": 2097152,
+  "activeRequests": 100,
+  "journalBytes": 16777216
+}

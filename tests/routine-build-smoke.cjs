@@ -12,13 +12,13 @@ module.exports=async({win,store,network,js,wait,click,fill,submit,qa})=>{
  assert.equal(store.data.buildDrafts.length,1);assert.equal(store.data.planning.shopping.length,1);assert.equal(store.data.parts[0].quantity,0);assert.equal(store.data.club.proposals.length,0);
  const draft=store.data.buildDrafts[0].id;
  await js("page='Parts';partsTab='Stock';stockScope='owned';buildDirty=false;loadView()");
- // Use the actual stock submenu action so its persisted view state is exercised.
- await click('[data-action="stock-scope"][data-id="shopping"]');
+ // Use the dedicated shopping page and reopen the saved build from its purchase.
+ await click('[data-action="nav"][data-id="Shopping List"]');
  await wait("document.body.innerText.includes('Future GT3 racer')");await click(`[data-action="build-load-draft"][data-id="${draft}"]`);
  await wait("page==='Build from Scratch'&&buildState.name==='Future GT3 racer'");assert.equal(await js('buildState.parts.length'),1);
  checks.push('Zero-stock catalogue selection creates linked shopping and reopens the same plan');
  await js(`buildDirty=false;page='Cars';carId=${JSON.stringify(car)};section='Overview';loadView()`);
- await click('[data-action="car-more"]');await click('[data-action="rebuild-start"]');await submit();await wait("page==='Build from Scratch'&&!!buildState.rebuild");
+ await click('[data-action="car-more"]');await click('[data-action="rebuild-start"]');await submit();await wait("page==='Workshop'&&!!workshopJob");await click('[data-action="rebuild-resume"]');await wait("page==='Build from Scratch'&&!!buildState.rebuild");
  const rebuildId=await js('buildDraftId'),job=store.data.jobs[0].id;
  for(let i=0;i<2;i++){
   await click('[data-action="open-job"]');await click(`[data-action="rebuild-resume"][data-id="${car}"]`);await wait("page==='Build from Scratch'&&!!buildState.rebuild");assert.equal(await js('buildDraftId'),rebuildId);

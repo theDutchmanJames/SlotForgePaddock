@@ -1,0 +1,27 @@
+'use strict';
+const assert=require('node:assert/strict');
+module.exports=async({store,js,wait,click,fill,submit})=>{
+ const checks=[],act=(a,p={})=>store.mutate(a,{revision:store.data.revision,...p}).result;
+ const picture='data:image/png;base64,'+require('node:fs').readFileSync(require('node:path').join(__dirname,'../assets/icon.png')).toString('base64');
+ const part=act('part.save',{data:{name:'Target motor',maker:'NSR',category:'Motors & motor parts',partType:'Motor',quantity:2,tracking:'quantity',picture}});
+ act('part.save',{data:{name:'Suggestion motor',maker:'Other maker',category:'Motors & motor parts',partType:'Custom motor',material:'Other material',quantity:0,tracking:'quantity'}});
+ const supply=act('supply.save',{data:{name:'Oil',kind:'Consumable',category:'Cleaning & lubrication',quantity:2,remaining:10,minimum:2,unit:'ml',picture}});
+ const idle=()=>wait('!actionBusy&&!viewPendingKey&&!modalSaving');
+ await js(`(async()=>{source='local';page='Parts';partsTab='Stock';stockScope='catalogue';partCategory='Motors & motor parts';partId=${JSON.stringify(part)};await loadView()})()`);
+ await click('[data-action="edit-part"]');assert.equal(await js('db.parts.length'),1);
+ assert.equal(await js("!!document.querySelector('datalist option[value=\"Other material\"]')"),true);
+ assert.equal(await js("!!document.querySelector('datalist option[value=\"Custom motor\"]')"),true);
+ await fill({notes:'Edited without losing the photograph'});await submit();await idle();assert.equal(store.data.parts.find(p=>p.id===part).picture,picture);
+ await click('[data-action="part-appearance"]');await js("document.querySelector('[name=iconColour][value=blue]').click()");await submit();await idle();assert.equal(store.data.parts.find(p=>p.id===part).iconColour,'blue');assert.equal(store.data.parts.find(p=>p.id===part).quantity,2);
+ await click('[data-action="shop-add"]');assert.equal(await js("document.querySelector('[name=stockId]').value"),part);await submit();await idle();assert.equal(store.data.planning.shopping.at(-1).partId,part);
+ checks.push('targeted part editors retain custom suggestions, photo, colour, stock and shopping preselection');
+ await click('[data-action="nav"][data-id="Workshop"]');await click('[data-action="toolbox-tab"][data-id="Workshop supplies"]');
+ await click(`[data-action="edit-supply"][data-id="${supply}"]`);assert.equal(await js('db.supplies.length'),1);await fill({remaining:'8'});await submit();await idle();
+ assert.equal(store.data.supplies.find(s=>s.id===supply).history.length,1);assert.equal(store.data.supplies.find(s=>s.id===supply).picture,picture);
+ await click(`[data-action="archive-supply"][data-id="${supply}"]`);await submit();await idle();assert.equal(store.data.supplies.find(s=>s.id===supply).archived,true);
+ checks.push('supply edits and archive retain the original photograph and amount history');
+ await click('[data-action="nav"][data-id="Shopping List"]');await click('[data-action="shop-new-list"]');await fill({name:'Trip list'});await submit();await idle();
+ const list=store.data.planning.shoppingLists.find(l=>l.name==='Trip list');await click(`[data-action="shop-list"][data-id="${list.id}"]`);await click('[data-action="shop-rename-list"]');await fill({name:'Renamed trip list'});await submit();await idle();assert.equal(store.data.planning.shoppingLists.find(l=>l.id===list.id).name,'Renamed trip list');
+ checks.push('new and renamed lists appear immediately after closing the editor');
+ return checks;
+};

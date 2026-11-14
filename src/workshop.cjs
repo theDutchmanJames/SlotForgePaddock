@@ -15,7 +15,7 @@ function touch(db,id){const c=db.cars.find(c=>c.id===id);check(c,'Car not found.
 function event(db,carId,title,notes='',extra={}){db.events.unshift({id:randomUUID(),carId,type:'modification',title,notes,date:now(),...extra});}
 function addInstallation(db,carId,partId,quantity,field,position,assemblyId){
   const c=db.cars.find(c=>c.id===carId),part=db.parts.find(p=>p.id===partId);
-  check(c&&part,'Car or component no longer exists.');check(!c.rebuild?.to,'This original was rebuilt. Fit parts to its successor car.');
+  check(c&&part,'Car or component no longer exists.');require('./car-membership.cjs').physical(c);check(!c.rebuild?.to,'This original was rebuilt. Fit parts to its successor car.');
   check(!field||!active(db).some(i=>i.carId===carId&&i.field===field),'The '+field+' position is already occupied.');
   const i={id:randomUUID(),carId,partId,name:part.name,quantity,field:field||'',position:position||part.category,installed:now(),removed:null};
   if(assemblyId)i.assemblyId=assemblyId;
@@ -122,7 +122,7 @@ function setupOptions(db,id){
 function applySetup(db,p,preview=false){
   check(p.revision===db.revision,'The database changed. Reopen Apply setup to review fresh stock.');
   const setup=db.setups.find(s=>s.id===p.id);check(setup,'Setup not found.');
-  const car=db.cars.find(c=>c.id===setup.carId),before=clone(car.technical);
+  const car=db.cars.find(c=>c.id===setup.carId),before=clone(car.technical);require('./car-membership.cjs').physical(car);
   check(!car.rebuild?.to,'This original was rebuilt. Apply new configurations to its successor car.');
   const reqs=requirements(setup),usedSources=new Set(),picked=[];
   const changes=[],transfers=[];
@@ -177,6 +177,7 @@ function mutateWorkshop(db,action,p,techFields){
   if(action==='assembly.create'){
     check(Array.isArray(p.components)&&p.components.length>0&&p.components.length<=100,'Choose 1–100 components.');
     const a={id:randomUUID(),name:label(p.name),location:label(p.location||'Assembly storage'),notes:typeof p.notes==='string'?p.notes.slice(0,20000):'',components:[],carId:null,created:now(),updated:now()};
+    if(Object.hasOwn(p,'picture')){if(p.picture!=='')require('./assembly-photo.cjs').admission(p.picture);a.picture=p.picture;}
     const used=new Set();
     for(const c of p.components){
       const part=db.parts.find(x=>x.id===c.partId),quantity=Number(c.quantity);
@@ -194,7 +195,7 @@ function mutateWorkshop(db,action,p,techFields){
   }
   const a=liveAssemblies(db).find(a=>a.id===p.id);check(a,'Assembly not found or already dismantled.');
   if(action==='assembly.install'){
-    check(db.cars.some(c=>c.id===p.carId&&!c.archived),'Choose an active car.');
+    check(db.cars.some(c=>c.id===p.carId&&require('./car-membership.cjs').active(c)),'Choose an active car.');
     check(!a.carId||p.allowTransfer===true,'Confirm the transfer from the current car.');installAssembly(db,a,p.carId);
   }else if(action==='assembly.replace'){
     check(p.confirmed===true,'Confirm the physical component replacement.');

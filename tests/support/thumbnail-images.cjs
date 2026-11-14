@@ -1,0 +1,3 @@
+'use strict';
+const zlib=require('node:zlib');
+module.exports=function png(w,h,colour){const chunk=(type,data)=>{const b=Buffer.alloc(data.length+12);b.writeUInt32BE(data.length);b.write(type,4);data.copy(b,8);b.writeUInt32BE(zlib.crc32(b.subarray(4,-4)),b.length-4);return b;},header=Buffer.alloc(13);header.writeUInt32BE(w);header.writeUInt32BE(h,4);header[8]=8;header[9]=6;const pixels=Buffer.alloc((w*4+1)*h,colour);for(let y=0;y<h;y++)pixels[y*(w*4+1)]=0;return 'data:image/png;base64,'+Buffer.concat([Buffer.from([137,80,78,71,13,10,26,10]),chunk('IHDR',header),chunk('IDAT',zlib.deflateSync(pixels)),chunk('IEND',Buffer.alloc(0))]).toString('base64');};

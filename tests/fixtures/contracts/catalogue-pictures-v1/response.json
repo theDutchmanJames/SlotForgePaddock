@@ -1,0 +1,63 @@
+{
+  "format": "slotforge-catalogue-images",
+  "version": 1,
+  "requestId": "picture-request-example-1",
+  "databaseId": "example-library",
+  "recoveryId": "example-recovery-1",
+  "manufacturer": "Example Racing",
+  "createdAt": "2026-11-13T12:00:00.000Z",
+  "items": [
+    {
+      "itemId": "item-motor",
+      "kind": "part",
+      "name": "Example motor",
+      "manufacturer": "Example Racing",
+      "reference": "M-01",
+      "category": "Motors & motor parts",
+      "partType": "Motor",
+      "productPageUrl": "",
+      "imageUrl": "https://images.example.invalid/M-01.png",
+      "imagePageUrl": "https://example.invalid/products/M-01",
+      "notes": ""
+    },
+    {
+      "itemId": "item-motor-lot",
+      "kind": "part",
+      "name": "Example motor",
+      "manufacturer": "Example Racing",
+      "reference": "M-01",
+      "category": "Motors & motor parts",
+      "partType": "Motor",
+      "productPageUrl": "",
+      "imageUrl": "https://images.example.invalid/M-01.png",
+      "imagePageUrl": "https://example.invalid/products/M-01",
+      "notes": ""
+    },
+    {
+      "itemId": "item-oil",
+      "kind": "supply",
+      "name": "Example bearing oil",
+      "manufacturer": "Example Racing",
+      "reference": "OIL-01",
+      "category": "Cleaning & lubrication",
+      "partType": "Bearing oil",
+      "productPageUrl": "",
+      "imageUrl": "https://images.example.invalid/OIL-01.webp",
+      "imagePageUrl": "https://example.invalid/products/OIL-01",
+      "notes": ""
+    },
+    {
+      "itemId": "item-unidentified",
+      "kind": "part",
+      "name": "Example axle",
+      "manufacturer": "Example Racing",
+      "reference": "",
+      "category": "Axles & bearings",
+      "partType": "Axle",
+      "productPageUrl": "",
+      "imageUrl": "",
+      "imagePageUrl": "",
+      "notes": "No reliable exact match without a product reference; picture intentionally left empty."
+    }
+  ]
+}

@@ -4,9 +4,27 @@ One canonical Paddock-format SQLite file, opened independently by both applicati
 
 Source entry: `packages/shared-library/index.cjs`. Reproducible vendored entry: `vendor/slotforge-library/index.cjs`. CommonJS, Node/Electron with `node:sqlite`; async methods run in an engine worker. Both applications must ship the same engine artifact/version. Do not import its internal Store modules from the client.
 
-`await open({application, installationId, sharedRoot?, legacyPaddockPath?, legacyProfiles?})` returns a handle. `sharedRoot` overrides the per-user registration directory for isolated tests, not the application install directory. The resolver keeps the first established library location and refuses a missing/corrupt registered file rather than silently creating an empty replacement. `legacyPaddockPath` can identify an existing Paddock JSON/SQLite collection. Legacy Timing conversion is supplied by Timing's bundled read-only adapter. First adoption preserves originals and never matches physical cars by name.
+`await open({application, installationId, sharedRoot?, legacyPaddockPath?, legacyProfiles?, thumbnailEncoder?})` returns a handle. `sharedRoot` overrides the per-user registration directory for isolated tests, not the application install directory. The resolver keeps the first established library location and refuses a missing/corrupt registered file rather than silently creating an empty replacement. `legacyPaddockPath` can identify an existing Paddock JSON/SQLite collection. Legacy Timing conversion is supplied by Timing's bundled read-only adapter. First adoption preserves originals and never matches physical cars by name.
 
 All write inputs include `databaseId`, `recoveryId`, and a persistent `operationId`. Obtain identity once from status when creating an operation; persist it with retries. Never replace an old recovery identifier automatically. The engine attaches its handle's `installationId` as the editor/source of car operations. All methods return promises.
+
+## Shared previews and compact catalogue (additive extension)
+
+`thumbnail({carId, token?, expectedHash?})` returns a PNG data URL or `null` for a car without a main photo. Missing cars reject with `CAR_NOT_FOUND`. An optional catalogue snapshot token rejects stale reads with `QUERY_CHANGED`; callers must also recheck their snapshot and discard outdated replies before binding images after asynchronous encoding. `expectedHash`, when supplied, must be the 64-character lowercase SHA-256 of the original photo data URL. A mismatching photo returns `null` without generating a derivative. This additive guard lets immutable image URLs refer to precisely one photo, even if the car changes during loading. Existing calls without it remain supported. Original detail/media methods keep their existing full-resolution results.
+
+Pass `thumbnailEncoder: async originalDataUrl => pngDataUrl` to `open()` to generate missing derivatives. Decode and resize in a browser worker, never the UI, main process or SQLite worker. The encoder must preserve alpha and proportions, never enlarge, and produce PNG at most 512 pixels per side and 2 MiB encoded. These are the existing Timing `png-512-v1` format and hash rules, not a new format. Cached reads work without an encoder; uncached reads without one reject and release their lease. Encoder errors do not roll back an already successful car save. Shared `carWrite`/`adoptCar` schedule bounded warming.
+
+Paddock binds its opaque small-preview URLs to trusted lazy-asset file/car/hash metadata. Only the active canonical collection's main photos use this shared cache; full-size views keep original media, and other photos retain the private preview path. Committed write sets supply at most 32 photo-bearing car IDs for background warming, including background command and Portal saves. This does not scan the collection or delay save acknowledgement. Foreground requests take precedence over queued background warming. A cache failure falls back to the exact original photo's private preview. Reload/crash resets pending renderer jobs; only the current owning main frame may supply encoder replies. No network API or permission changes are involved.
+
+The cache is `<resolved shared root>/thumbnails/png-512-v1/cache.sqlite`. Keys are SHA-256 hashes of the original data-URL string (the existing lazy-asset hash). No car record, canonical revision, change cursor, history or receipt changes when previews are generated. Photo replacement/removal selects a new hash/no preview. Backups may omit the cache; restored content selects derivatives by its own hash. Corrupt derivative rows regenerate; a structurally damaged cache rejects preview requests without repairing or modifying the canonical database. Cache eviction, gallery derivatives and LAN endpoints are outside this extension.
+
+One generation lease per content hash lasts 60 seconds across processes. A later owner cannot be overwritten by a stale encoder. Requests coalesce per handle and encode serially. There are at most 128 pending explicit thumbnail requests per handle; warming stops admitting work at 32. Encoders time out after 20 seconds. Closing a handle cancels its thumbnail waits/encoding, releases owned leases where storage remains available, and drains accepted ordinary requests before closing the worker. A late encoder reply cannot store a result after cancellation. Physical host worker cancellation remains the host application's responsibility.
+
+Requests made on a closed handle reject with `LIBRARY_CLOSED`; this is not the `null` result for a car without a photo. Paddock discards a stopped preview worker and opens a fresh handle on the next request, retaining its private-preview fallback for the interrupted request. An abrupt process death can leave a lease until its normal 60-second expiry; another process then regenerates it without editing the collection.
+
+Ordinary worker traffic permits eight outstanding messages plus 128 waiting messages per handle. Overflow rejects with `WORKER_BUSY`; it does not grant permission to retry writes with new identities. Existing operation IDs and receipt/recovery rules remain mandatory.
+
+`catalogueOverview({limit, offset?, search?, token?})` returns `{cars, definitions, total, nextOffset, token}`. Limit is 1–48; nonzero offsets require the prior token. It lists active cars in name order. Each row contains the normal editable projection plus `binding` (this installation's effective Timing settings), `original` (compact original companion fields), `custom`, `service` (the existing service counters), `hasPicture` and `galleryCount`. Main photos and original `extraPictures` are omitted. Original companion evidence is integrity-checked; cached summaries remain bounded to 128 entries/4 MiB, with a 1 MiB entry ceiling. Existing `catalogue`, `car`, settings, merge, history and network contracts remain unchanged.
 
 | Method | Input and result |
 | --- | --- |
@@ -83,5 +101,34 @@ On opening either updated app, projection-v1 adopted sessions can be repaired fr
 History list and Timing record/recent-session rows add `savedAt`, `effectiveDate` and `dateBasis` (`started`, `saved`, `unknown`). `startedAt` remains the actual recorded start or null. `effectiveDate` prefers start, then save date. Timing summaries use that date for `lastDrivenAt`, with `lastDrivenDateBasis`; date filters and chronological views in the direct engine use available dates. HTTP history endpoints retain start-date filtering by default; callers can explicitly select `dateBasis=available`. A saved date must be labelled as saved in the UI.
 
 Both applications should use the same updated engine artifact. Existing network Historical Review and measured delivery retain their separate validation and approval rules.
+
+### Wishlist compatibility, version 1
+
+`status().capabilities.wishlistFiltering === 1` identifies an engine that excludes
+unpurchased Wishlist records from `catalogue`, `catalogueOverview`, `car`, and
+new racing profiles. The internal optional car field `collectionStatus` is
+`collection` or `wishlist`; missing means collection. Ownership text and usage
+labels are unrelated. Callers must not infer membership from either.
+
+Public car/editor response shapes are unchanged. Targeted editor reads and
+create/patch/archive/restore writes cannot address Wishlist records (`CAR_NOT_FOUND`).
+New profiles and accepted result writes reject Wishlist references with
+`CAR_WISHLIST`. Historical intake can remain pending, but acceptance cannot attach
+it until the car is purchased. Existing accepted history is not removed or
+reclassified. Class suggestions exclude Wishlist-only class labels.
+
+Paddock's purchase operation preserves the car ID and photographs. Once committed,
+the ordinary catalogue includes it and `changes({kind:'cars',after})` emits an
+`invalidate` for that ID. Wishlist-only edits may emit `remove` without advancing
+the public catalogue revision. Consumers must honour removals, restart pagination
+on `QUERY_CHANGED`, and rebuild cached catalogue state after `resetRequired` or a
+recovery-ID change. Removal from selectable cars must not delete recorded history
+or an in-progress race's captured configuration.
+
+An older independently bundled engine cannot be upgraded by a running Paddock.
+Timing must ship the qualified replacement bundle before Wishlist activation.
+Engine version `1.0.0` alone does not establish this capability. The capability is
+additive; no SQLite schema or existing public Timing/Telemetry shape is changed.
+Wishlist activation remains disabled pending client rollout and final qualification.
 
 Status: being implemented; this document is not a completion or activation claim.

@@ -36,12 +36,13 @@ function validateCollection(db,context){
 }
 function ensureRevision(db,p){check(db.revision===p.revision,'The database changed. Reopen this action and review the current records.');}
 function journal(db,car,title,notes,changes){car.revision++;car.updated=new Date().toISOString();db.events.unshift({id:randomUUID(),carId:car.id,type:'correction',title,notes,date:car.updated,...(changes?{changes:clone(changes)}:{})});}
-function renameChoice(db,p,context,preview=false){
+function renameChoice(db,p,context,preview=false,knownValues=null){
   ensureRevision(db,p);check(metadata(db,context).choices.some(f=>f.key===p.field),'Unknown choice field.');
-  check(typeof p.from==='string'&&valuesFor(db,p.field).includes(p.from),'That choice no longer exists.');
+  const values=knownValues||valuesFor(db,p.field);
+  check(typeof p.from==='string'&&values.includes(p.from),'That choice no longer exists.');
   check(typeof p.to==='string'&&p.to.trim()&&p.to.length<=160,'Enter a choice of 1–160 characters.');const requested=p.to.trim(),prior=db.choiceAliases.find(a=>a.field===p.field&&a.from===requested),to=prior?.to===p.from?requested:canonical(db,p.field,requested);check(to!==p.from,'Choose a different value.');check(!['usage','tags'].includes(p.field)||!to.includes(','),'Usage labels and tags cannot contain commas.');
   if(!preview)check(p.confirmed===true,'Confirm the reviewed choice change.');
-  const merging=valuesFor(db,p.field).includes(to),sources=new Set([p.from,...db.choiceAliases.filter(a=>a.field===p.field&&a.to===p.from).map(a=>a.from)].filter(v=>v!==to)),rows=[],skipped=[];
+  const merging=values.includes(to),sources=new Set([p.from,...db.choiceAliases.filter(a=>a.field===p.field&&a.to===p.from).map(a=>a.from)].filter(v=>v!==to)),rows=[],skipped=[];
   if(p.updateCars===true)for(const c of db.cars){const before=valueAt(c,p.field);if(!(Array.isArray(before)?before:[before]).some(v=>sources.has(v)))continue;
     if(p.field.startsWith('tech_')&&db.installations.some(i=>i.carId===c.id&&!i.removed&&i.field===p.field.slice(5))){skipped.push({id:c.id,name:c.name,reason:'Managed by installed inventory; correct the stock part in Parts.'});continue;}
     const after=Array.isArray(before)?[...new Set(before.map(v=>sources.has(v)?to:v))]:to;setValue(c,p.field,after);rows.push({id:c.id,name:c.name,before:clone(before),after:clone(after)});const summary=value=>{const text=JSON.stringify(value);return text.length>200?text.slice(0,200)+'…':text;};journal(db,c,'Reusable choice corrected',p.field+': '+summary(before)+' → '+summary(after),[{key:p.field,before,after}]);

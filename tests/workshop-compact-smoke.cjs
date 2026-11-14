@@ -1,0 +1,80 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+module.exports=async({win,store,js,wait,click,fill,submit,qa})=>{
+ const checks=[],act=(a,p={})=>store.mutate(a,{revision:store.data.revision,...p}).result;
+ const image='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=';
+ const car=act('car.save',{data:{name:'British Barn 88C'}}),draft=act('rebuild.start',{carId:car});
+ const build=structuredClone(store.data.buildDrafts.find(d=>d.id===draft).data),job=build.rebuild.jobId;
+ const motor=act('part.save',{data:{name:'NSR SHARK 25K EVO',reference:'3043',maker:'NSR',category:'Motors & motor parts',partType:'Motor',quantity:0,tracking:'quantity',picture:image}});
+ build.parts=[{key:'motor',partId:motor,name:'NSR SHARK 25K EVO',quantity:1,slot:'motor',position:'Motor'}];act('build.draft.save',{id:draft,data:build});
+ act('planning.shopping.applyRequirements',{kind:'build',sourceId:draft,partIds:[motor]});
+ const line=store.data.planning.shopping.find(s=>s.partId===motor).id;
+ for(let i=0;i<12;i++){
+  const part=act('part.save',{data:{name:'Slot.it G25 compound slick tyres — 18 x 10mm (diameter x width) '+i,reference:'PT1207G25-'+i,maker:'Slot.it',category:'Wheels & tyres',partType:'Tyre',quantity:0,tracking:'quantity',picture:image}});
+  act('planning.shopping.add',{partId:part,jobId:job,quantity:2});
+ }
+ const free=act('planning.shopping.add',{item:{kind:'free',name:'Motor pod kit to identify',maker:'',reference:'KK14b'},jobId:job,quantity:1});
+ const supply=act('supply.save',{data:{name:'Bearing oil',category:'Cleaning & lubrication',kind:'Consumable',quantity:0,remaining:10,minimum:5,unit:'ml'}});
+ act('planning.shopping.add',{item:{kind:'supply',id:supply},jobId:job,quantity:1});
+ act('planning.job.save',{jobId:job,priority:'High',targetDate:'2026-12-01',waiting:true,checklist:[{text:'Inspect chassis',done:false},{text:'Clean body',done:true}]});
+ act('planning.job.photo',{jobId:job,stage:'Before',name:'Before rebuild',data:image});
+ const initialPlan=structuredClone(store.data.planning.jobs.find(p=>p.jobId===job));
+ const reload=()=>js(`(async()=>{acceptSnapshot((await api('read')).data);source='local';await openJob(${JSON.stringify(job)});})()`);
+ const settle=()=>wait('!actionBusy&&!viewPendingKey&&!pendingChecklistChanges');
+ await reload();await wait(`document.querySelectorAll('.shopping-compact-row').length===15&&!viewPendingKey`);
+ assert.equal(await js(`document.querySelectorAll('.shopping-compact-row img,.shopping-compact-row .shopping-assignment').length`),0);
+ assert.equal(await js(`document.querySelectorAll('.shopping-category-icon svg').length`),15);
+ await click('[data-action="job-checklist-quick"]');await fill({quickChecklistText:'Replace motor pod'});
+ await js(`document.querySelector('.job-plan-panel').scrollIntoView();new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))`);await new Promise(r=>setTimeout(r,200));
+ win.setSize(1438,1000);await new Promise(r=>setTimeout(r,250));
+ fs.writeFileSync(path.join(qa,'workshop-quick-checklist.png'),(await win.webContents.capturePage()).toPNG());
+ // A queued tick and quick addition must both survive; duplicate submits save once.
+ await js(`document.querySelector('[data-job-step]').click();document.querySelector('[data-quick-checklist]').requestSubmit();document.querySelector('[data-quick-checklist]').requestSubmit();`);await settle();
+ let plan=store.data.planning.jobs.find(p=>p.jobId===job);
+ assert.equal(plan.checklist.length,3);assert.equal(plan.checklist[0].done,true);assert.equal(plan.checklist[1].done,true);
+ assert.equal(plan.priority,initialPlan.priority);assert.equal(plan.targetDate,initialPlan.targetDate);assert.equal(plan.waiting,true);assert.deepEqual(plan.photos,initialPlan.photos);
+ await fill({quickChecklistText:'Check rear axle'});await js(`document.querySelector('[name=quickChecklistText]').focus()`);win.webContents.sendInputEvent({type:'keyDown',keyCode:'Return'});win.webContents.sendInputEvent({type:'char',keyCode:'\r'});win.webContents.sendInputEvent({type:'keyUp',keyCode:'Return'});await wait(`jobPlan(${JSON.stringify(job)}).checklist.length===4`);await settle();
+ assert.equal(store.data.planning.jobs.find(p=>p.jobId===job).checklist.length,4);
+ assert.equal(await js(`document.querySelector('[name=quickChecklistText]').value`),'');
+ await fill({quickChecklistText:'   '});await js(`document.querySelector('[data-quick-checklist]').requestSubmit()`);await settle();assert.equal(store.data.planning.jobs.find(p=>p.jobId===job).checklist.length,4);
+ await click('[data-action="job-checklist-cancel"]');checks.push('Quick entry saves repeatedly, rejects blank input and duplicate submits, preserves ticks, dates, priority, waiting and photos');
+ const selector=a=>`[data-action="${a}"][data-id="${line}"]`;
+ await click(selector('shop-plus'));assert.equal(store.data.planning.shopping.find(s=>s.id===line).purchase.checklist.quantity,2);
+ await js(`document.querySelector('[data-shop-quantity="${line}"]').value='3';document.querySelector('[data-shop-quantity="${line}"]').dispatchEvent(new Event('change',{bubbles:true}))`);await settle();
+ assert.equal(store.data.planning.shopping.find(s=>s.id===line).purchase.checklist.quantity,3);
+ await click(selector('shop-edit'));await fill({listId:'general',notes:'Keep original build linkage'});await submit();await settle();
+ let shopping=store.data.planning.shopping.find(s=>s.id===line);assert.equal(shopping.jobId,job);assert.equal(shopping.buildId,draft);assert.equal(shopping.purchase.listId,'general');
+ await click(selector('shop-done'));await submit();await settle();assert.equal(store.data.parts.find(p=>p.id===motor).quantity,0);
+ await click(selector('shop-reopen'));await click(selector('shop-done'));await js(`document.querySelector('[name=doneMode][value=stock]').click();document.querySelector('[name=confirmed]').checked=true`);await submit();await settle();assert.equal(store.data.parts.find(p=>p.id===motor).quantity,3);
+ await click(selector('shop-edit'));await click(selector('shop-history'));assert.match(await js(`document.querySelector('#dialog').innerText`),/3/);await click('[data-action="close-modal"]');
+ await click(selector('shop-delete'));await settle();await wait(`document.querySelectorAll('.shopping-compact-row').length===14`);
+ await click('[data-action="shop-undo"]');await settle();assert.equal(store.data.parts.find(p=>p.id===motor).quantity,3);assert.equal(store.data.planning.shopping.find(s=>s.id===line).buildId,draft);
+ await click(`[data-action="shop-done"][data-id="${free}"]`);assert.equal(await js(`document.querySelector('[name=doneMode][value=stock]').disabled`),true);await click('[data-action="close-modal"]');
+ checks.push('Compact rows preserve quantity, list reassignment, build/job links, Done, explicit stock addition, receipt history and delete/Undo; free text cannot invent inventory');
+ win.setMinimumSize(520,600);
+ for(const [width,theme]of [[1440,'dark'],[1280,'dark'],[1000,'light'],[740,'light'],[520,'light']]){
+  win.setSize(width,1000);await js(`applyTheme({...db.settings,theme:${JSON.stringify(theme)}})`);await new Promise(r=>setTimeout(r,250));
+  assert.ok(await js(`document.querySelector('#main').scrollWidth<=document.querySelector('#main').clientWidth+2`),'no page overflow at '+width);
+  assert.ok(await js(`[...document.querySelectorAll('.shopping-compact-row')].every(el=>el.scrollWidth<=el.clientWidth+2&&el.getBoundingClientRect().height<85)`),'compact rows fit at '+width);
+  await js(`document.querySelector('.job-plan-panel').scrollIntoView()`);
+  fs.writeFileSync(path.join(qa,`workshop-compact-${width}.png`),(await win.webContents.capturePage()).toPNG());
+ }
+ checks.push('15 shopping rows fit dark/light themes at 1440, 1280, 1000, 740 and 520px without horizontal overflow');
+ win.setSize(1440,1000);
+ await click('[data-action="nav"][data-id="Shopping List"]');await settle();assert.ok(await js(`!!document.querySelector('.shopping-check-row .shopping-assignment')`));
+ await reload();await settle();await click('[data-action="job-checklist-quick"]');await fill({quickChecklistText:'Retain on failed save'});
+ // A real stale-revision conflict must leave the entry available to retry.
+ act('settings.save',{name:store.data.settings.name});await js(`document.querySelector('[data-quick-checklist]').requestSubmit()`);await settle();
+ assert.equal(store.data.planning.jobs.find(p=>p.jobId===job).checklist.length,4);assert.equal(await js(`document.querySelector('[name=quickChecklistText]').value`),'Retain on failed save');
+ await reload();await settle();await js(`document.querySelector('[data-quick-checklist]').requestSubmit()`);await settle();assert.equal(store.data.planning.jobs.find(p=>p.jobId===job).checklist.length,5);
+ await win.webContents.reload();await wait('typeof db!=="undefined"&&!!db');await reload();await settle();assert.equal(await js(`document.querySelectorAll('[data-job-step]').length`),5);
+ const savedPlan=structuredClone(store.data.planning.jobs.find(p=>p.jobId===job));
+ act('planning.job.save',{...savedPlan,checklist:Array.from({length:50},(_,i)=>({text:'Step '+i,done:false}))});await reload();await settle();
+ await click('[data-action="job-checklist-quick"]');assert.equal(await js(`!!document.querySelector('[data-quick-checklist]')`),false);assert.match(await js(`document.querySelector('#toast').innerText`),/50/);
+ act('planning.job.save',savedPlan);await reload();await settle();
+ act('job.cancel',{id:job,confirmed:true});await reload();await settle();
+ assert.equal(await js(`document.querySelectorAll('[data-action="job-checklist-quick"],.shopping-compact-row [data-action="shop-edit"],.shopping-compact-row [data-action="shop-delete"]').length`),0);
+ assert.equal(await js(`[...document.querySelectorAll('.shopping-compact-row input,[data-job-step]')].every(el=>el.disabled)`),true);
+ checks.push('Main Shopping List retains its full controls; stale saves retain text; reload preserves edits; 50-step limit is enforced; cancelled jobs are read-only');
+ return checks;
+};

@@ -1,0 +1,17 @@
+{
+  "databaseId": "example-library",
+  "recoveryId": "example-recovery-1",
+  "version": 1,
+  "operationId": "assembly-picture-operation-1",
+  "kind": "assembly",
+  "recordId": "assembly-1",
+  "expected": {
+    "revision": 10,
+    "productHash": null,
+    "pictureHash": null
+  },
+  "action": "set",
+  "assetHash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "replaceExisting": false,
+  "provenance": null
+}

@@ -93,13 +93,16 @@ Visit each app's repository for its features, downloads and getting-started guid
 
 **Add a car, add a photograph, enjoy your virtual garage.** Technical specifications are optional: you do not need an inventory or a racing setup to use Paddock.
 
-Showroom gives your collection a photo gallery, a featured spotlight car, favourites and a slideshow. Create named **shelves** for selected cars and arrange them in your preferred order. Use full-screen presentation to display your collection at home or at the club. Choose Fit or Fill and adjust a photograph's focal point without changing the original image.
+Showroom pairs a cover photograph with the car’s **Real Racing History**, alongside your collection gallery and favourites. Keep a favourite car on the cover, change it each startup or visit, or rotate it at your chosen interval. Photos fill their frames while respecting your saved focal points; original images stay unchanged.
+
+Create named **Groups** and arrange their cars in your preferred order. **Presentation** displays all cars, selected usage labels, a Group or your favourites, with optional photo-only filtering and shuffle. Choose photographs alone or photographs with racing history, then pause, browse or exit using the visible controls.
 
 ### Car profiles that grow with your hobby
 
 Keep each car's identity, ownership and technical information together:
 
 - Record manufacturer, model, scale, race number, class and identifying details.
+- Open **Google** from a car's detail page to search its manufacturer, brand, model and product reference in your default browser. Empty fields are skipped; if all four are empty, the display name is used.
 - Track location, condition, packaging, purchase information, valuation and loans.
 - Attach photographs and documents, and follow the car's recorded history.
 - Label cars for **Collection / Display**, **Home racing**, **Club racing**, **Competition** or your own uses.
@@ -109,6 +112,12 @@ Keep each car's identity, ownership and technical information together:
 - Choose which car details and configuration fields appear on the overview panels.
 
 Previously entered values become reusable choices. Correct spellings and merge duplicates in **Library**, while historical snapshots retain their recorded values. Add custom text, choice, number, date, yes/no and notes fields when the built-in fields are not enough.
+
+### Plan future additions with Wishlist
+
+Open **Cars → Wishlist** to keep cars you want in their own gallery or table, with photographs, specifications, research and a price. Wishlist cars stay out of My Cars, the Showroom and Timing's race selectors.
+
+When you acquire one, choose **Mark purchased** on its detail page and confirm the purchase details. The same entry moves into your collection, keeping its photos, setups and history. In Dealership Mode, the purchase waits for approval in Review before the car becomes available for racing.
 
 ### Compare two cars
 
@@ -124,23 +133,33 @@ Optionally choose a recorded run for each car to compare reported manual bests o
 | --- | --- |
 | **My stock** | Your owned part records, including parts fitted to cars or held in assemblies. |
 | **Catalogue** | Your full list of part references, including products you do not own yet. |
-| **Shopping list** | Planned purchases, suppliers, expected dates and quantities still to receive. |
+| **Shopping list** | Parts and free-text items organised into lists, with quantities and Done ticks. |
 
 Track quantities or individual components, storage locations, specifications, compatibility notes and photographs. Part icons default to their category; choose a different icon and one of five preset colours for your own organisation scheme.
 
-Link purchases to workshop jobs and receive deliveries in stages. Receiving parts updates stock; fitting them to a car is a separate action. The overview counts **owned part types**, with individual quantities shown separately.
+The dedicated **Shopping List** page brings together general purchases, free-text items, saved builds and workshop requirements. Use **Find a Part** to search catalogue names and references, with manufacturer, group and type filters. Add a match to your selected list, adjust quantities inline, move items between lists or delete them with Undo. **All Items** brings every list together. Mark items **Done**, optionally adding a confirmed quantity to inventory. Build and workshop links stay attached.
+
+Optional unit prices give estimates separately for each currency. Purchase history keeps orders, receipts and corrections, including the supplier and price recorded at the time. A receipt correction can reverse available stock without removing fitted parts or components held in assemblies.
+
+**Quick Links** opens manufacturer and supplier websites in your default browser from Parts, Build from Scratch, Workshop, Shopping List and Parts catalogue. Search the included links or add, edit and hide your own shortcuts. Preferences stay on this computer and do not require Review.
+
+Adding parts to stock updates freely available inventory; it does not reserve parts for a plan or fit them to a car. Free-text items must be linked to a stock record before adding stock. Existing orders and receipts remain available in Stock history. The overview counts **owned part types**, with individual quantities shown separately.
 
 Manage the same product records from **Library → Parts catalogue**, with search, manufacturer and category filters, and a compact editable table. New catalogue entries start at zero owned stock. Select entries across pages and review a bulk deletion: owned parts and records linked to installations, setups, jobs, purchase history or saved build drafts are kept.
+
+**Illustrated Catalogue picture requests** are available from Import & Export. Select existing products from one manufacturer—including workshop supplies—and export English AI requests in batches of up to 100 entries. Open the completed file to automatically download previews after validation, compare current and proposed pictures, and save your selections. Downloads are validated and kept locally. Apply selected originals, or submit them to Dealership Review, with saved progress and safe retries. Existing pictures change only when explicitly selected for replacement. [Picture-request guide](docs/CATALOGUE-PICTURE-REQUESTS.md).
 
 ### Assemblies and Build from Scratch
 
 An **assembly** groups components into a ready-to-use unit, such as a rear axle with wheels and gearing. Install, remove or transfer the unit, or replace its components while retaining their history.
 
+Add an optional photograph when building an assembly, or choose **Edit photograph** on its card later. Click the thumbnail for a larger view. Photographs keep their original quality; replacing or removing one works even while the assembly is installed and does not alter its components, stock or car setup. Dismantling retains the photograph with the historical assembly record.
+
 **Build from Scratch plans a car from stock or catalogue parts.** Open it directly from the main menu, between Parts and Workshop. Click a component on the exploded chassis diagram, choose the part to fit there, and continue with whichever components you have. Additional positions support items such as bodywork, electronics, magnets and ballast.
 
 **Rebuild a car without losing its story.** Start from a car's More menu, Build from Scratch or a Rebuild Workshop job. Choose fitted parts to reuse and add replacements. Completing the rebuild returns unused components to stock, creates a new car and links both profiles with **Rebuilt as / Rebuilt from** cards. The archived original keeps its photos, setups, work history and race results; new work belongs to its successor. Drafts leave inventory unchanged until completion. [How rebuilds work](docs/REBUILDS.md).
 
-Only a name and **one component** are needed to save a car. Use **Save plan & update shopping** to save unfinished builds and add missing quantities to the shopping list, linked to that build. Receive purchases into stock before creating the physical car with an optional **As built** setup snapshot. Stock remains available while drafting and is fitted when the build is saved to Cars. The diagram supports planning; it does not certify physical compatibility.
+Only a name and **one component** are needed to save a car. Use **Save plan** to keep an unfinished build and generate its initial shopping list. Later changes are offered through **Review shopping changes**, preserving manual quantities, deleted items and Done ticks. Add purchased parts to stock before creating the physical car with an optional **As built** setup snapshot. Stock remains available while drafting and is fitted when the build is saved to Cars. The diagram supports planning; it does not certify physical compatibility.
 
 ### Gearing, torque and theoretical performance
 
@@ -213,9 +232,9 @@ Paddock has **no built-in AI**. Its generic webpage reader does not translate pa
 
 ### Manufacturer catalogues without manual retyping
 
-Download the **English catalogue import kit**, which includes supported part and workshop-supply categories, classification examples and instructions. Give it to your own AI with your chosen manufacturer or retailer sources, then import the completed JSON into Paddock.
+Download the **English catalogue research templates** as one complete kit or separate groups. Detailed checklists cover tyre compounds and sizes, motor RPM/voltage and torque, gear dimensions and the specifications relevant to each part or workshop supply. Tyres and wheels have separate research templates while staying together in Paddock's Wheels & tyres category. Give the templates to your own AI with your chosen manufacturer or retailer sources.
 
-Review the file and select the categories or products you want. New references start at **zero owned stock**; a manufacturer's pack size is not a quantity you own. Paddock validates the file and helps identify duplicates, but you still check product facts and compatibility. It does not scrape a manufacturer's entire website automatically. [Catalogue import guide](docs/CATALOGUE-IMPORT.md).
+Import several completed JSON files into **one combined review**. Identical products are combined; conflicting versions require your choice. Select the categories or products you want and confirm once. New references start at **zero owned stock**; existing quantities, photos, installations and personal details stay intact. You still check product facts and compatibility—Paddock does not scrape a manufacturer's entire website automatically. [Catalogue import guide](docs/CATALOGUE-IMPORT.md).
 
 ### Paddock Portal: add cars from your phone or tablet
 
@@ -237,7 +256,7 @@ If a copy has fallen too far behind, Paddock asks for a backed-up refresh rather
 
 ### Connect Timing and Telemetry
 
-In **SlotForge Timing**, connect to Paddock's current host address and port using the Dealership password. Select catalogue cars for racing, then send finalised results back to Paddock. Timing retains its racing cache and queues transfers when disconnected. Results already reviewed in Timing are stored directly; they do not need a second Dealership approval.
+For **SlotForge Timing on another computer**, connect to Paddock's current host address and port using the Dealership password. Select catalogue cars for racing, then send finalised results back to Paddock. Timing retains its racing cache and queues transfers when disconnected. Results already reviewed in Timing are stored directly; they do not need a second Dealership approval. On the same computer, compatible versions use the shared local library described below.
 
 **SlotForge Telemetry** can read delivered sessions, measured laps and captured configurations from Paddock for analysis. Corrections and withdrawals are available to connected analysis clients. These integrations keep race execution in Timing, collection management in Paddock and deeper calculations in Telemetry.
 
@@ -246,7 +265,9 @@ In **SlotForge Timing**, connect to Paddock's current host address and port usin
 
 Compatible versions of Paddock and Timing use **the same local SQLite library** under the same operating-system account. Existing cars and supported racing history are adopted with their original identities preserved. Either app can read and write while the other is closed; opening it later shows the updated collection. This does not require Dealership Mode, an address, a password or a running Paddock background service.
 
-Timing keeps live race recording, recovery and app-specific settings. Recorded history retains the car and configuration evidence available at the time; unknown historical details are not invented. Existing network and older local-service connections remain separate compatibility options. [Shared local library details](docs/SHARED-LOCAL-FOLDER.md).
+Timing keeps live race recording, recovery and app-specific settings. Recorded history retains the car and configuration evidence available at the time; unknown historical details are not invented. **Settings → Database** shows the shared library's actual file and identity, separately from any selected Dealership copy. [Shared local library details](docs/SHARED-LOCAL-FOLDER.md).
+
+**Connections** now focuses on **Dealership Mode** and **Paddock Portal**. Existing public-sharing connections and the separate local HTTP service remain available under **Settings → Database → Advanced integration services**. Migration is an explicit choice: old credentials never silently gain full Dealership access. Pending public submissions can be saved as recovery files and retried without creating a new package. [Connection choices and migration guide](docs/CONNECTIONS.md).
 
 ### Merge duplicate cars without losing information
 
@@ -256,9 +277,11 @@ The retired car's complete original information is preserved in a read-only arch
 
 ### Share selected cars, review imports and protect your collection
 
-Export one or several cars as a Paddock JSON package, with optional additional photographs and setup snapshots. Send the file yourself; the recipient can import and review it without a network connection. Paddock also reads supported Timing car exports and can export supported car details, race classes and photographs in **SlotForge Timing format**.
+Go to **Import & Export → Choose cars**, select your cars, then click **Export selected**. You can also use **Car profile → More → Export this car**. A **Paddock car file (.json)** shares selected public car details and the main photograph, with optional additional photographs and setup snapshots. The recipient reviews the file before accepting it. Wishlist entries remain on Wishlist; importing does not mark them purchased.
 
-For lighter sharing, the separate local-network sharing tools let another Paddock browse public car information and submit new cars or updates for review. These public views and car packages exclude private ownership details, private notes, workshop records and unrelated documents. They are different from the full trusted copy shared by Dealership Mode.
+Paddock also reads supported Timing car exports. **Owned cars only** can be exported in **SlotForge Timing format**, including supported car details, race classes and photographs. A Paddock car file is for sharing selected cars, not a complete database backup.
+
+Selected-car packages exclude private ownership details, private notes, workshop records and unrelated documents. They are different from the full trusted copy shared by Dealership Mode. Older public browsing and submission connections retain their original permissions in the compatibility controls; they are no longer presented as the normal connection setup.
 
 In **Review → Incoming cars**, choose individual incoming fields. If an accepted technical change conflicts with a fitted inventory part, explicitly return that part to stock before applying the new specification. Unselected fields stay unchanged; entering a replacement specification does not automatically fit a different stock item.
 
@@ -280,7 +303,7 @@ Produce **car cards**, **setup sheets**, **club scrutineering sheets** and a **c
 
 Choose from eight preset themes or create your own colours. Under **Settings → Appearance**, set **Interface size** from 80% to 200% to resize text, buttons and menus together, or reset to 100%. Interface size is saved on this computer independently of your collections. Edit the welcome banner, choose overview fields and save collection views. The **Review** button brings incoming cars, Dealership proposals, workshop jobs and maintenance reminders within reach.
 
-Everyday personal collection and workshop use works offline. A new collection starts empty, ready for **your** cars, photographs and parts. [Guide to planning, reports and showroom shelves](docs/COLLECTION-PLANNING.md).
+Everyday personal collection and workshop use works offline. A new collection starts empty, ready for **your** cars, photographs and parts. [Guide to planning, reports and showroom groups](docs/COLLECTION-PLANNING.md).
 
 ## How to install
 

@@ -24,7 +24,7 @@ function accept(db,sub,incoming){
  const item=sub.localTransfer?.items.find(i=>i.paddockCarId===incoming.id);if(!item)return false;
  const car=db.cars.find(c=>c.id===item.paddockCarId);
  if(item.action==='create'){if(car)throw fault('ORIGIN_CONFLICT','This car identity now exists. Reject this transfer and review its link.');return false;}
- if(!car||car.archived||car.revision!==item.expectedRevision)throw fault('TARGET_CHANGED','The selected car changed, was archived or was deleted. Reject this link and review a new transfer in Timing.');
+ if(!car||require('./car-membership.cjs').isWishlist(car)||car.archived||car.revision!==item.expectedRevision)throw fault('TARGET_CHANGED','The selected car changed, was archived or was deleted. Reject this link and review a new transfer in Timing.');
  return true;
 }
 module.exports={digest,identity,id,validate,origin,accept};

@@ -21,7 +21,7 @@ function readCar(store,carId){
  if(!id(carId))fail('INVALID_QUERY','Supply a valid car ID.');
  // Identity, recovery generation and editable fields come from one SQLite
  // read transaction. Do not combine a cached epoch with a separately read car.
- return Q.read(store,null,r=>{const current=r.one('cars',carId);if(!current)fail('CAR_NOT_FOUND','The shared car no longer exists. Do not recreate it automatically.',404);return {version:1,databaseId:r.id,recoveryId:r.epoch,...project(current)};}).value;
+ return Q.read(store,null,r=>{const current=r.one('cars',carId);if(!current||require('./car-membership.cjs').isWishlist(current))fail('CAR_NOT_FOUND','The shared car no longer exists. Do not recreate it automatically.',404);return {version:1,databaseId:r.id,recoveryId:r.epoch,...project(current)};}).value;
 }
 function identity(sourceId,operationId){if(!id(sourceId)||!id(operationId))fail('INVALID_OPERATION','Source and operation IDs must use 1–100 letters, numbers, underscores or hyphens.');return 'shared-'+crypto.createHash('sha256').update(JSON.stringify([sourceId,operationId])).digest('hex');}
 function envelope(store,input,allowEmptyPatch=false){
@@ -42,7 +42,7 @@ function prepare(store,command,options={}){
  // companion write. HTTP callers cannot enable this through the payload.
  const input=command.payload,data=envelope(store,input,options.allowCompanionOnly===true),current=input.action==='create'?null:car(store,input.carId);
  if(input.action!=='create'){
-  if(!current)fail('CAR_NOT_FOUND','The shared car no longer exists. Do not recreate it automatically.',404);
+  if(!current||require('./car-membership.cjs').isWishlist(current))fail('CAR_NOT_FOUND','The shared car no longer exists. Do not recreate it automatically.',404);
   if(current.merge){const identity=Q.read(store,null,r=>r.merges.identity(current.id)).value;fail('CAR_MERGED','This car was merged. Reopen the main car before creating a new edit.',409,{identity});}
   if(current.revision!==input.expectedRevision)fail('REVISION_CONFLICT','This car changed. Compare the current values before applying a new operation.',409,{current:project(current)});
   if(current.rebuild?.to&&['patch','restore'].includes(input.action))fail('CAR_REBUILT','Continue with the rebuilt successor. This original record preserves its history.',409,{successor:current.rebuild.to});

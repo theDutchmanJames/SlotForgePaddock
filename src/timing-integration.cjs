@@ -10,6 +10,7 @@ const sign=(key,value)=>crypto.createHmac('sha256',key).update(canonical(value))
 function capabilities(){return {timing:{versions:[1],profile:'/v1/timing/cars/{carId}',sessions:'/v1/timing/sessions',receipt:'/v1/timing/sessions/{sourceId}/{sessionId}',permission:'timingResults',configurationKinds:['current'],maxRequestBytes:MAX_BYTES,maxLaps:MAX_LAPS,maxParticipants:256,laneBase:1,durationUnit:'ms',distanceUnit:'m'}};}
 function profile(store,carId,{includePicture=true}={}){
   const car=store.file&&store.expectedIdentity!==null?require('./sqlite-query.cjs').read(store,null,r=>r.one('cars',carId)).value:store.data.cars.find(c=>c.id===carId);if(!car)throw fault('CAR_NOT_FOUND','The requested car does not exist.',404);
+  require('./car-membership.cjs').physical(car);
   if(car.rebuild?.to){const e=fault('CAR_REBUILT','This car has been rebuilt. Select its successor for future races.',409);e.details={successor:car.rebuild.to};throw e;}
   // A capture must remain verifiable after restart, even for a previously unsaved collection.
   if(!store.data.timing.key)store.scopedTransact('@timing-key',db=>{db.timing.key=crypto.randomBytes(32).toString('hex');});
@@ -83,7 +84,7 @@ function receive(store,input,{guarded=false}={}){
   }
   if(!existing&&store.data.timing.sessions.length>=MAX_SESSIONS)throw fault('CAPACITY_EXCEEDED','Maximum 10,000 imported session identities in this database.',507);
   const warnings=[];
-  if(input.state==='active')for(const p of input.participants){if(!p.carId)continue;const car=store.data.cars.find(c=>c.id===p.carId);if(!car)throw fault('CAR_NOT_FOUND','Car '+p.carId+' does not exist in this database.',404);verifyConfiguration(store.data,p.carId,p.configuration);if(car.archived)warnings.push({code:'CAR_ARCHIVED',carId:car.id});}
+  if(input.state==='active')for(const p of input.participants){if(!p.carId)continue;const car=store.data.cars.find(c=>c.id===p.carId);if(!car)throw fault('CAR_NOT_FOUND','Car '+p.carId+' does not exist in this database.',404);require('./car-membership.cjs').physical(car);verifyConfiguration(store.data,p.carId,p.configuration);if(car.archived)warnings.push({code:'CAR_ARCHIVED',carId:car.id});}
   const carIds=[...new Set([...(existing?.carIds||[]),...(input.state==='active'?input.participants.map(p=>p.carId).filter(Boolean):[])])];
   const history=[...(existing?.history||[]),...(existing?[{revision:existing.payload.revision,state:existing.payload.state,contentHash:existing.contentHash,receivedAt:existing.receivedAt}]:[])];
   if(history.length>=1000)throw fault('CAPACITY_EXCEEDED','Maximum 1,000 accepted revisions per session.',507);

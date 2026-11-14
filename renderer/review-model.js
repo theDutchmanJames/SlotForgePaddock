@@ -35,6 +35,7 @@
     return db.installations.filter(i=>i.carId===car.id&&!i.removed&&i.field&&Object.hasOwn(technical,i.field)&&technical[i.field]!==car.technical[i.field]&&technical[i.field]!==db.parts.find(p=>p.id===i.partId)?.name);
   }
   function proposalContext(db,proposal){
+    if(proposal.action==='catalogue.picture'){const i=proposal.payload?.intent,r=(i?.kind==='part'?db.parts:db.supplies)?.find(r=>r.id===i?.recordId);return {carId:'',name:r?.name||'Catalogue picture',picture:r?.picture||'',detail:'Illustrated catalogue photograph',renamedTo:''};}
     const p=proposal.payload||{},action=proposal.action||'',record=action==='job.start'&&p.setupId?(db.setups||[]).find(r=>r.id===p.setupId)
       :action.startsWith('job.')||action.startsWith('planning.job.')?(db.jobs||[]).find(r=>r.id===(action.startsWith('planning.job.')?p.jobId:p.id))
       :action.startsWith('setup.')?(db.setups||[]).find(r=>r.id===p.id)

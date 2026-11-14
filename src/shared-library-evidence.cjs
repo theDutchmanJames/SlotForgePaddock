@@ -7,4 +7,14 @@ function decode(row){
  let value=JSON.parse(zlib.gunzipSync(bytes,{maxOutputLength:MAX}).toString('utf8'));if(T.digest(value)!==(row.baseHash||row.hash))throw Object.assign(Error('Original evidence failed its integrity check.'),{code:'ORIGINAL_INTEGRITY'});
  if(row.overrides){value={...value,...row.overrides};if(T.digest(value)!==row.hash)throw Object.assign(Error('Companion fields failed their integrity check.'),{code:'ORIGINAL_INTEGRITY'});}return value;
 }
-module.exports={encode,decode};
+// Compact projections retain no photograph strings. Fingerprint compressed evidence
+// as well as its declared digest, so corruption is never hidden by a cached summary.
+const summaries=new Map();let summaryBytes=0;
+function summary(row){
+ const key=T.digest(row);if(summaries.has(key))return structuredClone(summaries.get(key).value);
+ const value=decode(row);delete value.picture;delete value.extraPictures;
+ const bytes=Buffer.byteLength(JSON.stringify(value));
+ if(bytes<=1024*1024){while(summaries.size&&(summaries.size>=128||summaryBytes+bytes>4*1024*1024)){const k=summaries.keys().next().value;summaryBytes-=summaries.get(k).bytes;summaries.delete(k);}summaries.set(key,{value,bytes});summaryBytes+=bytes;}
+ return structuredClone(value);
+}
+module.exports={encode,decode,summary};

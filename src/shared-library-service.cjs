@@ -19,4 +19,4 @@ function prepare(store,options,input){
  if(input.action==='reset')after.events=[{id:require('node:crypto').randomUUID(),carId:input.carId,type:'maintenance',title:'Service counters reset',notes:'Service recorded from '+options.application,date:new Date().toISOString()}];
  return S.prepare(store,before,after,{carId:input.carId,carRevision:current.car.revision+1,service:{revision:next.revision,lastServicedAt,servicesDone:next.servicesDone,lapsDriven:next.lifetimeBaseline,lapsSinceService:next.sinceBaseline,recordedLaps:current.total,includesOriginalOnly:true}});
 }
-module.exports={read,prepare};
+module.exports={read,prepare,project};

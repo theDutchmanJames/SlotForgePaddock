@@ -5,9 +5,9 @@ module.exports=async({win,store,network,js,wait,click,qa})=>{
  try{
   store.replace(require('../src/store.cjs').initial());if(!local.enabled)await local.setEnabled(true);
   const id=store.mutate('car.save',{data:{name:'Local library UI car',maker:'Original maker',technical:{motor:'Original motor'}}}).result;
-  await js("(async()=>{source='local';page='Connections';carId=null;await loadView();})()");await wait('!viewPendingKey&&!actionBusy');
-  assert.equal(await js("document.body.innerText.includes('Local connection ready')"),true);
-  await click('[data-action="local-library-access"]');assert.equal(local.enabled,false);assert.equal(fs.existsSync(local.file),false);await click('[data-action="local-library-access"]');assert.equal(local.enabled,true);assert.equal(local.status().available,true);checks.push('Connections toggles protected local access without enabling LAN sharing');
+  await js("(async()=>{source='local';page='Settings';settingsSection='Database';connectionPanels.advanced=true;carId=null;await loadView();})()");await wait('!viewPendingKey&&!actionBusy');
+  assert.equal(await js("document.body.innerText.includes('Local service ready')"),true);
+  await click('[data-action="local-library-access"]');assert.equal(local.enabled,false);assert.equal(fs.existsSync(local.file),false);await click('[data-action="local-library-access"]');assert.equal(local.enabled,true);assert.equal(local.status().available,true);checks.push('Settings toggles protected local access without enabling LAN sharing');
   const input={version:1,databaseId:store.data.id,sourceId:'timing-ui',transferId:'ui-link',export:{format:'slotforge-timing-export',fileVersion:1,items:{slotcars:[{id:'local-car',name:'Timing name',brand:'Other maker'}]}},targets:[{timingCarId:'local-car',paddockCarId:id,expectedRevision:store.data.cars[0].revision}]};
   const response=await fetch('http://127.0.0.1:'+local.network.port+'/v1/local-library/imports',{method:'POST',headers:{Authorization:'Bearer '+local.token,'X-SlotForge-Instance':local.instanceId,'Content-Type':'application/json','X-SlotForge-Database':store.data.id},body:JSON.stringify(input)});assert.equal(response.status,200);const receipt=await response.json();
   await js("(async()=>{page='Review';reviewTab='Incoming cars';reviewId=null;reviewCarId=null;await loadView();})()");await wait("document.body.innerText.includes('Approve link')");

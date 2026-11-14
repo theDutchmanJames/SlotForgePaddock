@@ -105,7 +105,7 @@ function read(store,input){const q=query(input);return Q.read(store,input.token,
   const more=rows.length>q.limit;if(more)rows.pop();return {...identity,rows,nextOffset:more?q.offset+rows.length:null};
  }
  if(input.kind==='classes'){
-  const sql=`SELECT DISTINCT json_extract(f.json,'$') label FROM records r JOIN record_fields f ON f.record=r.key AND f.path='["raceClass"]' WHERE r.bucket='["cars"]' AND json_type(f.json)='text' AND trim(json_extract(f.json,'$'))<>''`;
+  const sql=`SELECT DISTINCT json_extract(f.json,'$') label FROM records r JOIN record_fields f ON f.record=r.key AND f.path='["raceClass"]' WHERE r.bucket='["cars"]' AND NOT EXISTS(SELECT 1 FROM record_fields w WHERE w.record=r.key AND w.path='["collectionStatus"]' AND w.json='"wishlist"') AND json_type(f.json)='text' AND trim(json_extract(f.json,'$'))<>''`;
   const total=r.db.prepare('SELECT count(*) n FROM ('+sql+')').get().n,rows=r.db.prepare(sql+' ORDER BY label LIMIT ? OFFSET ?').all(q.limit,q.offset);return {...identity,rows,total,offset:q.offset,nextOffset:q.offset+rows.length<total?q.offset+rows.length:null};
  }
  if(input.kind==='records'){

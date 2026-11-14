@@ -1,6 +1,6 @@
 # Dealership Mode — shared collections
 
-Dealership replication is available in v0.19.0. The single remembered password and separate hosting controls described here are available in v0.20.0. Back up your collection before upgrading: schema-11 saves cannot be reopened in v0.18.x or older.
+Dealership Mode connects trusted computers over your local network. It is separate from Paddock and Timing's same-computer shared library. See [connection choices and migration](CONNECTIONS.md) for existing public-sharing connections and pending-submission recovery.
 
 Run the same Paddock app on your home or club computers. Enable **Dealership Mode** on one computer: it holds the official collection, approves changes and serves Timing. Other trusted computers keep a separate saved copy of that collection. Their personal collection stays separate.
 
@@ -27,7 +27,7 @@ A full recovery backup is saved first. Pending dealership proposals are not appl
 2. Enter the dealership computer's address and port, the dealership password, and a name for this computer.
 3. Paddock downloads a separate club copy and opens it. **Open personal collection** returns to this computer's original collection; **Open saved collection copy** returns to the club.
 
-Joining does not merge existing personal databases. To contribute personal cars, use the existing reviewed car-submission or file-import workflow. One saved club connection is supported per installation.
+Joining does not merge existing personal databases. To contribute selected personal cars, export a car package and import it for review on the dealership computer. Existing public-submission connections remain available in the compatibility controls. One saved club connection is supported per installation.
 
 The host remembers its password across hosting and app restarts. Joined Paddock copies remember their connection password too; reconnecting pre-fills it. Hosting can select a different port after restart, so use the current address. A deliberate password change invalidates the old password and connected copies must reconnect with the new one.
 
@@ -86,14 +86,15 @@ Proposals are saved in a durable local outbox before sending. The dealership com
 
 In Connections, **Retry saved proposals** resends an uncertain delivery. **Discard unsent proposals…** saves a separate recovery file before clearing the retry queue. Discarding a retry does not cancel a proposal that the dealership computer already received: reject that proposal in Review if necessary.
 
-Data files live beside the application's normal database:
+The canonical collection can live in the shared local-library folder. Connection credentials, the replica and recovery guidance belong to this Paddock installation; they are not placed in shared collection exports:
 
 | File or folder | Purpose |
 | --- | --- |
-| `database.json` | This installation's original collection, or its official dealership collection |
-| `club-copy.json` | Separate saved club copy, marked as a replica |
+| SQLite library shown in Settings → Database | This computer's original collection, or its official dealership collection; original JSON remains after migration |
+| `club-copy.json` / SQLite companion | Separate saved club copy, marked as a replica |
 | `club-device.json` | Computer identity, remembered host/connection passwords, pairing information and durable outbox; local to this installation |
 | `club-backups/` | Recovery snapshots before setup, replacement or leaving, and explicitly discarded outboxes |
+| `sharing-migration.json` | Installation-local migration/reconnection guidance; no passwords or car data |
 
 The latest recovery path is shown in Connections. These are private files. Normal complete backups include private collection data. A copy omits the dealership computer's Timing capture-signing secret and cannot re-host or become a dealership computer through ordinary backup restore. Replacing a live club database with a general backup is blocked. Dealership transfer/disaster recovery is not automated in this first implementation; retain the dealership computer's profile and backups.
 
@@ -101,11 +102,11 @@ The database schema is now 11. Older collections migrate on opening and save in 
 
 ## Timing and network scope
 
-Point Timing at the **dealership computer's address and current port**, using the same remembered Dealership password as Paddock. It authorises results immediately, with no additional enable switch or Timing password. Reconnect with the current address if the port changes. Current Timing source accepts passwords of 8–128 characters; accepting 4–7 character Dealership passwords requires its small validation update. The Paddock Timing v1 contract is unchanged. Approved catalogue changes and finalised results become visible in connected club copies. Timing's live browser, local racing cache and outgoing queue remain the responsibility of the Timing app.
+For Timing on another computer, use the **dealership computer's address and current port**, with the same remembered Dealership password as Paddock. It authorises results immediately, with no additional enable switch or Timing password. Reconnect with the current address if the port changes, retaining linked identities and queued results. The Paddock Timing v1 contract is unchanged. Approved catalogue changes and finalised results become visible in connected club copies. Timing's live browser, local racing cache and outgoing queue remain the responsibility of the Timing app. Compatible versions on the same computer use the [shared local file](SHARED-LOCAL-FOLDER.md) without this network connection.
 
 Club connections use private/local IPv4 addresses and existing local-network HTTP sharing. They are not an encrypted or internet-facing service. A shared club password authorises a trusted computer; the displayed computer name is not a verified individual account. No remote-access service is added. Guest Wi-Fi isolation or a firewall can prevent local connections.
 
-Current limits: 10 notification streams, 200 pending proposals, 5,000 retained review identities, 16 MiB per proposal, and the existing 200 MiB database limit. The recent change journal retains at most 32 revisions / 32 MiB; a gap requires a confirmed snapshot update. Review history is retained to recognise retries; automatic archival is not implemented.
+Review identities are retained to recognise retries; automatic archival is not implemented. Request, proposal and replay limits still apply, and a replay gap requires a confirmed snapshot update. The former 200 MiB total collection cap is no longer the storage rule: see [current storage and transport limits](STORAGE-LIMITS.md), including the working-metadata safeguard and sync v2 limits.
 
 ## Validation
 

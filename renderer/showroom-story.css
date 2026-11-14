@@ -1,0 +1,40 @@
+/* Showroom-only framing. The car detail page retains its own photo controls. */
+.showroom-page .showroom-story-hero{grid-template-columns:minmax(0,44fr) minmax(0,56fr);height:auto;min-height:540px}
+.showroom-story-hero .showroom-hero-copy{align-self:stretch;min-width:0;overflow:visible;padding:24px;display:flex;flex-direction:column;justify-content:center}
+.showroom-story-hero .showroom-hero-photo{aspect-ratio:auto;min-height:0;height:100%}
+.showroom-page .showroom-hero-photo img,.showroom-page .showroom-card-photo img{object-fit:cover}
+.showroom-story-hero h2{font-size:clamp(25px,2.5vw,38px);margin:10px 0;line-height:1.12}
+.showroom-story-hero .row,.showroom-story-hero .actions{flex-wrap:wrap}
+.showroom-story-hero h2{overflow-wrap:anywhere}
+.showroom-story-hero .showroom-hero-copy>p{margin:4px 0 10px}
+.showroom-story-hero .showroom-hero-copy>.row:empty{display:none}
+.showroom-story-hero .showroom-story{margin-top:14px;padding:12px 16px}
+.showroom-story-hero .showroom-story-facts{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 16px;margin-top:10px}
+.showroom-story-hero .showroom-fact-team{grid-column:1;grid-row:1}
+.showroom-story-hero .showroom-fact-year{grid-column:2;grid-row:1}
+.showroom-story-hero .showroom-fact-event{grid-column:1 / -1}
+.showroom-story-hero .showroom-story-text{line-height:1.5;margin-top:10px}
+.showroom-story-hero .actions.mt{margin-top:14px}
+.showroom-story{border-left:3px solid var(--blue);padding:14px 18px;background:color-mix(in srgb,var(--blue) 6%,var(--panel));border-radius:0 8px 8px 0;margin-top:20px;min-width:0;color:var(--ink)}
+.showroom-story>.label{display:flex;align-items:center;gap:8px;color:var(--blue);font-weight:650}
+.showroom-story>.label svg{width:16px;height:16px;flex:none}
+.showroom-story-facts{display:flex;gap:12px 24px;flex-wrap:wrap;margin:14px 0 0}
+.showroom-story-facts>div{min-width:0;max-width:100%}
+.showroom-story-facts dt{font-size:11px;color:var(--muted)}
+.showroom-story-facts dd{margin:3px 0 0;font-size:13px;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.showroom-story-text{line-height:1.65;font-size:14px;white-space:pre-line;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;margin:14px 0 6px}
+.showroom-story-text.is-full{display:block;overflow:visible}
+.showroom-story:has(.is-full) .showroom-story-facts dd{display:block;overflow:visible}
+.showroom-label-choices{max-height:220px;overflow:auto;margin:14px 0}
+.showroom-viewer-stage{min-height:0;display:grid;grid-template-columns:minmax(0,1fr);overflow:hidden}
+.showroom-viewer-stage.with-story{grid-template-columns:minmax(250px,36fr) minmax(0,64fr)}
+.showroom-viewer-stage>.showroom-story{align-self:center;margin:20px;max-height:100%;overflow:auto}
+.showroom-viewer-stage .showroom-viewer-image{height:100%;min-width:0}
+.showroom-viewer-stage .showroom-viewer-image img{object-fit:cover}
+dialog.showroom-viewer.presentation[open]{display:grid;grid-template-rows:auto minmax(0,1fr) auto auto;background:var(--panel);color:var(--ink)}
+.showroom-viewer.presentation .showroom-viewer-head,.showroom-viewer.presentation .showroom-viewer-footer{position:static;opacity:1;background:var(--panel);color:var(--ink);padding:12px 20px}
+.showroom-viewer.presentation .showroom-viewer-image{height:100%;max-height:100%}
+.showroom-viewer.presentation .muted{color:var(--muted)}
+.showroom-viewer.presentation .showroom-viewer-hint{display:block;padding-bottom:8px}
+@media(max-width:1050px){.showroom-page .showroom-story-hero{min-height:520px;grid-template-columns:minmax(0,46fr) minmax(0,54fr)}.showroom-story-hero .showroom-hero-copy{padding:20px}.showroom-story{padding:12px}.showroom-story-text{-webkit-line-clamp:4}}
+@media(max-width:760px){.showroom-page .showroom-story-hero{height:auto;min-height:0;grid-template-columns:1fr}.showroom-story-hero .showroom-hero-photo{height:auto;aspect-ratio:4/3;grid-row:1}.showroom-story-hero .showroom-hero-copy{overflow:visible}.showroom-viewer-stage.with-story{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) auto}.showroom-viewer-stage.with-story .showroom-viewer-image{grid-row:1}.showroom-viewer-stage>.showroom-story{margin:10px;max-height:180px}.showroom-viewer-head{padding:12px}.showroom-viewer-head h2{font-size:20px}.showroom-viewer-footer{padding:10px}.showroom-viewer-footer .actions{flex-wrap:wrap}}

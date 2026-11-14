@@ -1,0 +1,911 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://slotforge.invalid/contracts/catalogue-pictures-v1.schema.json",
+  "title": "Paddock catalogue picture enrichment v1",
+  "$ref": "#/$defs/response",
+  "$defs": {
+    "identity": {
+      "type": "object",
+      "properties": {
+        "databaseId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "recoveryId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        }
+      },
+      "required": [
+        "databaseId",
+        "recoveryId"
+      ],
+      "additionalProperties": false
+    },
+    "request": {
+      "type": "object",
+      "properties": {
+        "format": {
+          "const": "slotforge-catalogue-images"
+        },
+        "version": {
+          "const": 1
+        },
+        "requestId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "databaseId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "recoveryId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "manufacturer": {
+          "type": "string",
+          "maxLength": 200,
+          "minLength": 1
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+        },
+        "instructions": {
+          "type": "string",
+          "maxLength": 12000
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "itemId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100,
+                "pattern": "^[a-zA-Z0-9_-]+$"
+              },
+              "kind": {
+                "enum": [
+                  "part",
+                  "supply"
+                ]
+              },
+              "name": {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 1
+              },
+              "manufacturer": {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 1
+              },
+              "reference": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "category": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "partType": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "productPageUrl": {
+                "type": "string",
+                "maxLength": 4096
+              },
+              "imageUrl": {
+                "type": "string",
+                "maxLength": 4096
+              },
+              "imagePageUrl": {
+                "type": "string",
+                "maxLength": 4096
+              },
+              "notes": {
+                "type": "string",
+                "maxLength": 2000
+              }
+            },
+            "required": [
+              "itemId",
+              "kind",
+              "name",
+              "manufacturer",
+              "reference",
+              "category",
+              "partType",
+              "productPageUrl",
+              "imageUrl",
+              "imagePageUrl",
+              "notes"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 1,
+          "maxItems": 100
+        }
+      },
+      "required": [
+        "format",
+        "version",
+        "requestId",
+        "databaseId",
+        "recoveryId",
+        "manufacturer",
+        "createdAt",
+        "instructions",
+        "items"
+      ],
+      "additionalProperties": false
+    },
+    "response": {
+      "type": "object",
+      "properties": {
+        "format": {
+          "const": "slotforge-catalogue-images"
+        },
+        "version": {
+          "const": 1
+        },
+        "requestId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "databaseId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "recoveryId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "manufacturer": {
+          "type": "string",
+          "maxLength": 200,
+          "minLength": 1
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+        },
+        "instructions": {
+          "type": "string",
+          "maxLength": 12000
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "itemId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100,
+                "pattern": "^[a-zA-Z0-9_-]+$"
+              },
+              "kind": {
+                "enum": [
+                  "part",
+                  "supply"
+                ]
+              },
+              "name": {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 1
+              },
+              "manufacturer": {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 1
+              },
+              "reference": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "category": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "partType": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "productPageUrl": {
+                "type": "string",
+                "maxLength": 4096
+              },
+              "imageUrl": {
+                "type": "string",
+                "maxLength": 4096
+              },
+              "imagePageUrl": {
+                "type": "string",
+                "maxLength": 4096
+              },
+              "notes": {
+                "type": "string",
+                "maxLength": 2000
+              }
+            },
+            "required": [
+              "itemId",
+              "kind",
+              "name",
+              "manufacturer",
+              "reference",
+              "category",
+              "partType",
+              "productPageUrl",
+              "imageUrl",
+              "imagePageUrl",
+              "notes"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 0,
+          "maxItems": 100
+        }
+      },
+      "required": [
+        "format",
+        "version",
+        "requestId",
+        "databaseId",
+        "recoveryId",
+        "manufacturer",
+        "createdAt",
+        "items"
+      ],
+      "additionalProperties": false
+    },
+    "journal": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "request": {
+          "type": "object",
+          "properties": {
+            "format": {
+              "const": "slotforge-catalogue-images"
+            },
+            "version": {
+              "const": 1
+            },
+            "requestId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100,
+              "pattern": "^[a-zA-Z0-9_-]+$"
+            },
+            "databaseId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100,
+              "pattern": "^[a-zA-Z0-9_-]+$"
+            },
+            "recoveryId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100,
+              "pattern": "^[a-zA-Z0-9_-]+$"
+            },
+            "manufacturer": {
+              "type": "string",
+              "maxLength": 200,
+              "minLength": 1
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+            },
+            "instructions": {
+              "type": "string",
+              "maxLength": 12000
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "itemId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100,
+                    "pattern": "^[a-zA-Z0-9_-]+$"
+                  },
+                  "kind": {
+                    "enum": [
+                      "part",
+                      "supply"
+                    ]
+                  },
+                  "name": {
+                    "type": "string",
+                    "maxLength": 200,
+                    "minLength": 1
+                  },
+                  "manufacturer": {
+                    "type": "string",
+                    "maxLength": 200,
+                    "minLength": 1
+                  },
+                  "reference": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "category": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "partType": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "productPageUrl": {
+                    "type": "string",
+                    "maxLength": 4096
+                  },
+                  "imageUrl": {
+                    "type": "string",
+                    "maxLength": 4096
+                  },
+                  "imagePageUrl": {
+                    "type": "string",
+                    "maxLength": 4096
+                  },
+                  "notes": {
+                    "type": "string",
+                    "maxLength": 2000
+                  }
+                },
+                "required": [
+                  "itemId",
+                  "kind",
+                  "name",
+                  "manufacturer",
+                  "reference",
+                  "category",
+                  "partType",
+                  "productPageUrl",
+                  "imageUrl",
+                  "imagePageUrl",
+                  "notes"
+                ],
+                "additionalProperties": false
+              },
+              "minItems": 1,
+              "maxItems": 100
+            }
+          },
+          "required": [
+            "format",
+            "version",
+            "requestId",
+            "databaseId",
+            "recoveryId",
+            "manufacturer",
+            "createdAt",
+            "instructions",
+            "items"
+          ],
+          "additionalProperties": false
+        },
+        "targets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "itemId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100,
+                "pattern": "^[a-zA-Z0-9_-]+$"
+              },
+              "kind": {
+                "enum": [
+                  "part",
+                  "supply"
+                ]
+              },
+              "recordId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100,
+                "pattern": "^[a-zA-Z0-9_-]+$"
+              },
+              "expected": {
+                "type": "object",
+                "properties": {
+                  "revision": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "productHash": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^[a-f0-9]{64}$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "pictureHash": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^[a-f0-9]{64}$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "revision",
+                  "productHash",
+                  "pictureHash"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "itemId",
+              "kind",
+              "recordId",
+              "expected"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 1,
+          "maxItems": 100
+        }
+      },
+      "required": [
+        "version",
+        "request",
+        "targets"
+      ],
+      "additionalProperties": false
+    },
+    "current": {
+      "type": "object",
+      "properties": {
+        "databaseId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "recoveryId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "kind": {
+          "enum": [
+            "part",
+            "supply",
+            "assembly"
+          ]
+        },
+        "recordId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "fieldFloor": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "pictureVersion": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "productHash": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "pictureHash": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "databaseId",
+        "recoveryId",
+        "kind",
+        "recordId",
+        "revision",
+        "fieldFloor",
+        "pictureVersion",
+        "productHash",
+        "pictureHash"
+      ],
+      "additionalProperties": false
+    },
+    "intent": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "databaseId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100,
+              "pattern": "^[a-zA-Z0-9_-]+$"
+            },
+            "recoveryId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100,
+              "pattern": "^[a-zA-Z0-9_-]+$"
+            },
+            "version": {
+              "const": 1
+            },
+            "operationId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100,
+              "pattern": "^[a-zA-Z0-9_-]+$"
+            },
+            "kind": {
+              "enum": [
+                "part",
+                "supply",
+                "assembly"
+              ]
+            },
+            "recordId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100,
+              "pattern": "^[a-zA-Z0-9_-]+$"
+            },
+            "expected": {
+              "type": "object",
+              "properties": {
+                "revision": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "productHash": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^[a-f0-9]{64}$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "pictureHash": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^[a-f0-9]{64}$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "revision",
+                "productHash",
+                "pictureHash"
+              ],
+              "additionalProperties": false
+            },
+            "action": {
+              "const": "set"
+            },
+            "assetHash": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "replaceExisting": {
+              "type": "boolean"
+            },
+            "provenance": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 100,
+                      "pattern": "^[a-zA-Z0-9_-]+$"
+                    },
+                    "itemId": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 100,
+                      "pattern": "^[a-zA-Z0-9_-]+$"
+                    },
+                    "imageUrl": {
+                      "type": "string",
+                      "maxLength": 4096,
+                      "minLength": 1
+                    },
+                    "imagePageUrl": {
+                      "type": "string",
+                      "maxLength": 4096
+                    },
+                    "downloadedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+                    },
+                    "sourceBytesHash": {
+                      "type": "string",
+                      "pattern": "^[a-f0-9]{64}$"
+                    }
+                  },
+                  "required": [
+                    "requestId",
+                    "itemId",
+                    "imageUrl",
+                    "imagePageUrl",
+                    "downloadedAt",
+                    "sourceBytesHash"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "databaseId",
+            "recoveryId",
+            "version",
+            "operationId",
+            "kind",
+            "recordId",
+            "expected",
+            "action",
+            "assetHash",
+            "replaceExisting",
+            "provenance"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "databaseId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100,
+              "pattern": "^[a-zA-Z0-9_-]+$"
+            },
+            "recoveryId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100,
+              "pattern": "^[a-zA-Z0-9_-]+$"
+            },
+            "version": {
+              "const": 1
+            },
+            "operationId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100,
+              "pattern": "^[a-zA-Z0-9_-]+$"
+            },
+            "kind": {
+              "enum": [
+                "part",
+                "supply",
+                "assembly"
+              ]
+            },
+            "recordId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100,
+              "pattern": "^[a-zA-Z0-9_-]+$"
+            },
+            "expected": {
+              "type": "object",
+              "properties": {
+                "revision": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "productHash": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^[a-f0-9]{64}$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "pictureHash": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^[a-f0-9]{64}$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "revision",
+                "productHash",
+                "pictureHash"
+              ],
+              "additionalProperties": false
+            },
+            "action": {
+              "const": "remove"
+            }
+          },
+          "required": [
+            "databaseId",
+            "recoveryId",
+            "version",
+            "operationId",
+            "kind",
+            "recordId",
+            "expected",
+            "action"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "receipt": {
+      "type": "object",
+      "properties": {
+        "databaseId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "recoveryId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "version": {
+          "const": 1
+        },
+        "operationId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "requestHash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "kind": {
+          "enum": [
+            "part",
+            "supply",
+            "assembly"
+          ]
+        },
+        "recordId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "status": {
+          "enum": [
+            "applied",
+            "unchanged"
+          ]
+        },
+        "pictureHash": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "duplicate": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "databaseId",
+        "recoveryId",
+        "version",
+        "operationId",
+        "requestHash",
+        "kind",
+        "recordId",
+        "status",
+        "pictureHash",
+        "revision",
+        "duplicate"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

@@ -10,11 +10,12 @@ function context(store,action,p={}){
  const {Store,validateDatabase}=require('./store.cjs'),s=new Store(),data=s.data,source=store.data,state=store.deferredState;
  for(const key of common)data[key]=source[key];
  const oneCar=id=>state.read(r=>r.record(JSON.stringify(['cars','id:'+id]),{assetHandle:true}));
- const simpleCar=['car.favourite','car.archive','work.add'].includes(action)||action==='car.save'&&p.id&&!Object.hasOwn(p.data||{},'picture')&&!Object.hasOwn(p.data||{},'photos')&&!Object.hasOwn(p.data||{},'technical');
- if(action==='car.delete'){for(const key of ['cars','parts','assemblies','installations','setups','tests','jobs','events','documents','planning','buildDrafts'])data[key]=source[key];}
+ const simpleCar=['car.purchase','car.favourite','car.archive','work.add'].includes(action)||action==='car.save'&&p.id&&!Object.hasOwn(p.data||{},'picture')&&!Object.hasOwn(p.data||{},'photos')&&!Object.hasOwn(p.data||{},'technical');
+ if(action==='car.delete'){for(const key of ['cars','parts','supplies','assemblies','installations','setups','tests','jobs','events','documents','planning','buildDrafts'])data[key]=source[key];}
  else if(simpleCar){
   data.cars=[oneCar(action==='work.add'?p.carId:p.id)];
- }else if(action.startsWith('supply.'))data.supplies=source.supplies;
+ }else if(action==='part.appearance')data.parts=state.read(r=>[r.record(JSON.stringify(['parts','id:'+p.id]),{assetHandle:true})].filter(Boolean));
+ else if(['supply.save','supply.archive'].includes(action))data.supplies=p.id?state.read(r=>[r.record(JSON.stringify(['supplies','id:'+p.id]),{assetHandle:true})].filter(Boolean)):[];
  else if(['submission.add','submission.cancelLocal'].includes(action))data.submissions=source.submissions;
  else if(['settings.save','view.save','view.delete','custom.add','choice.add','columns.save'].includes(action)){
   if(p.showroomFeaturedId)data.cars=[oneCar(p.showroomFeaturedId)];
@@ -38,14 +39,14 @@ function context(store,action,p={}){
  else{
   // Workshop/stock/setup changes share invariants. Load the entire connected
   // stock group, including reservations and historic assembly references.
-  for(const key of ['cars','parts','assemblies','installations','setups','jobs','planning'])data[key]=source[key];
+  for(const key of ['cars','parts','supplies','assemblies','installations','setups','jobs','planning'])data[key]=source[key];
   // History is append-only except when checking whether stock may be deleted.
   if(['part.delete','part.deleteMany'].includes(action)){data.events=source.events;data.tests=source.tests;data.buildDrafts=source.buildDrafts;}
   if(action==='choice.rename')data.tests=source.tests;
   if(action.startsWith('document.')||action.startsWith('guide.'))data.documents=source.documents;
   if(action==='submission.review')data.submissions=source.submissions;
   if(action==='catalogue.apply')data.supplies=source.supplies;
-  if(action.startsWith('build.')||action.startsWith('rebuild.')||action.startsWith('job.'))data.buildDrafts=source.buildDrafts;
+  if(require('./shopping-requirements.cjs').affects(action)||action.startsWith('planning.checklist.')||action==='planning.shopping.applyRequirements'||action.startsWith('build.')||action.startsWith('rebuild.')||action.startsWith('job.')||['planning.receive','planning.shopping.reconcile','planning.order.place','planning.order.cancel','planning.delivery.receive','planning.receipt.correct'].includes(action))data.buildDrafts=source.buildDrafts;
  }
  s.data=validateDatabase(data);return s;
 }
@@ -58,7 +59,7 @@ function merge(full,before,after,path=[]){
   // A complete array owns its ordering (including index-keyed planning data).
   if(old.size===all.size&&[...old].every(k=>all.has(k)))return after;
   const kept=full.array.filter(x=>!old.has(x.record)||next.has(x.record));
-  return {array:prepend.has(path.at(-1))?[...added,...kept]:[...kept,...added]};
+  return {array:(prepend.has(path.at(-1))||path.length===1&&['jobs','buildDrafts'].includes(path[0]))?[...added,...kept]:[...kept,...added]};
  }
  if(before.object&&after.object&&full.object){
   const b=new Map(before.object),a=new Map(after.object),f=new Map(full.object);
@@ -68,32 +69,44 @@ function merge(full,before,after,path=[]){
  }
  return after;
 }
-function prepare(store,before,after,result){
+function prepare(store,before,after,result,recordKeys=null,afterRecordKeys=recordKeys){
  if(before===after)return {noop:true,result};
  if(after.id!==store.data.id||!Number.isSafeInteger(after.revision)||after.revision!==store.data.revision+1||!Number.isSafeInteger(after.catalogueRevision))throw Error('Invalid scoped collection revision.');
  // Describe the workspace without serializing its unchanged record bodies.
  const prior=sqlite.packChanges(before,before,store.assetHashes),packed=sqlite.packChanges(before,after,store.assetHashes,prior.manifest);
+ // Index-keyed job plans keep their original directory position in sparse edits.
+ if(recordKeys){
+  const remap=(node,map)=>{if(node.record)node.record=map.get(node.record)||node.record;else if(node.array)node.array.forEach(n=>remap(n,map));else if(node.object)node.object.forEach(([,v])=>remap(v,map));};
+  for(const pack of [prior,packed]){const map=pack===prior?recordKeys:afterRecordKeys||recordKeys;const tree=JSON.parse(pack.manifest);remap(tree,map);pack.manifest=JSON.stringify(tree);for(const row of pack.records){row.key=map.get(row.key)||row.key;const path=JSON.parse(row.key);row.bucket=JSON.stringify(path.slice(0,-1));row.identity=path.at(-1);}if(pack.removed)pack.removed=pack.removed.map(k=>recordKeys.get(k)||k);}
+ }
+ if(recordKeys&&afterRecordKeys!==recordKeys){
+  const entries=node=>node.record?[node.record]:node.array?node.array.flatMap(entries):node.object?node.object.flatMap(([,v])=>entries(v)):[];
+  const next=new Set(entries(JSON.parse(packed.manifest)));
+  packed.removed=entries(JSON.parse(prior.manifest)).filter(k=>!next.has(k));
+ }
  packed.manifest=JSON.stringify(merge(JSON.parse(store.persistedManifest),JSON.parse(prior.manifest),JSON.parse(packed.manifest)));
  // A sparse context cannot itself enforce collection-wide count/size limits.
  const tree=JSON.parse(packed.manifest),roots=new Map(tree.object);
- for(const [key,max]of [['cars',10000],['parts',50000]])if(roots.get(key).array.length>max)throw Error('Database limit exceeded.');
+ for(const [key,max]of [['cars',10000],['parts',50000],['supplies',10000]])if(roots.get(key).array.length>max)throw Error('Database limit exceeded.');
+ for(const [key,max]of [['assemblies',10000],['jobs',10000],['buildDrafts',100]])if(roots.get(key).array.length>max)throw Error('Too many '+key+' records.');
+ const planning=new Map(roots.get('planning').object);for(const [key,max]of [['shopping',10000],['shoppingLists',20000],['shoppingChecklistSources',20000]])if((planning.get(key)?.array?.length||0)>max)throw Error('Too many '+key+' records.');if(planning.get('jobs').array.length>10000)throw Error('Too many jobs records.');if(planning.get('focus').array.length>50000)throw Error('Too many focus records.');
  const seed=Object.fromEntries(['schema','id','revision','catalogueRevision'].map(k=>[JSON.stringify([k]),after[k]]));
  const state=deferred.create(store.file,packed.manifest,{...store.deferredState.token,revision:after.revision},seed);
- return {data:state.data,result,scope:{kind:'scoped',packed,state,before,after}};
+ return {data:state.data,result,scope:{kind:'scoped',packed,state,before,after,recordKeys,afterRecordKeys}};
 }
 function compact(store,action,p){
  if(action!=='car.save'||!p?.id)return p;
  const car=store.deferredState.read(r=>r.record(JSON.stringify(['cars','id:'+p.id]),{assetHandle:true}));
  return require('./club-model.cjs').compactPayload({cars:[car]},action,p);
 }
-function command(store,action,p){p=compact(store,action,p);const s=context(store,action,p),before=s.data;const result=s.mutate(action,p,{snapshot:false}).result;return prepare(store,before,s.data,result);}
+function command(store,action,p){if(require('./review-query.cjs').supports(action))return require('./review-query.cjs').prepare(store,action,p);if(require('./physical-write.cjs').supports(action,p))return require('./physical-write.cjs').prepare(store,action,p);if(require('./car-detail-write.cjs').supports(action))return require('./car-detail-write.cjs').prepare(store,action,p);if(action==='catalogue.picture')return require('./catalogue-picture-apply.cjs').prepare(store,p);if(action==='assembly.photo')return require('./assembly-photo.cjs').prepare(store,p);if(require('./routine-write.cjs').supports(action))return require('./routine-write.cjs').prepare(store,action,p);if(require('./shopping-write.cjs').supports(action,p))return require('./shopping-write.cjs').prepare(store,action,p);p=compact(store,action,p);const s=context(store,action,p),before=s.data;const result=s.mutate(action,p,{snapshot:false}).result;return prepare(store,before,s.data,result);}
 function clubChange(store,proposalId,fn,baseScope){
  const before=baseScope?.kind==='scoped'?baseScope.before:context(store,'@club').data;
  const base=baseScope?.kind==='scoped'?baseScope.after:before;
  const actual=store.data.club;
  const left={...before,club:actual},right={...base,club:cloneJSON(actual),revision:store.data.revision+1};
  fn(right.club);require('./club-model.cjs').validate(right);
- return prepare(store,left,right);
+ return prepare(store,left,right,undefined,baseScope?.recordKeys,baseScope?.afterRecordKeys);
 }
 function receiveTiming(store,input,options){
  store.assertIdle();
