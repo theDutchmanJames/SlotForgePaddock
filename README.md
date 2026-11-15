@@ -277,6 +277,8 @@ The retired car's complete original information is preserved in a read-only arch
 
 ### Share selected cars, review imports and protect your collection
 
+Already have a collection in Excel or CSV? Use **Import & Export → Import spreadsheet**. Paddock suggests column mappings and lets you search its editable car fields, including ownership, current and Factory specifications, Real Car History and custom fields. Review possible duplicates and choose individual fields before saving. Blank cells preserve existing information, and unfinished imports can be resumed from Review. [Spreadsheet import guide](docs/SPREADSHEET-IMPORT.md).
+
 Go to **Import & Export → Choose cars**, select your cars, then click **Export selected**. You can also use **Car profile → More → Export this car**. A **Paddock car file (.json)** shares selected public car details and the main photograph, with optional additional photographs and setup snapshots. The recipient reviews the file before accepting it. Wishlist entries remain on Wishlist; importing does not mark them purchased.
 
 Paddock also reads supported Timing car exports. **Owned cars only** can be exported in **SlotForge Timing format**, including supported car details, race classes and photographs. A Paddock car file is for sharing selected cars, not a complete database backup.

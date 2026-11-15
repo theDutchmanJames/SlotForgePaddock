@@ -45,7 +45,7 @@ class PicturePreviews{
  activeIdentity(){return P.withReader(this.getStore(),(_r,a)=>a);}
  descriptor(id){return this.journal.get(id,this.activeIdentity());}
  idle(id){this.application?.assertIdle();if(this.discarding.has(id)||this.running.has(id))throw fault('DOWNLOAD_BUSY','Stop downloads before changing this preview.');}
- prepareImport(bytes,previous){const response=C.parse(bytes),active=this.activeIdentity(),descriptor=this.journal.get(response.requestId,active);C.validateResponse(response,descriptor,{databaseId:active.databaseId,recoveryId:active.recoveryId});this.idle(response.requestId);
+ prepareImport(bytes,previous,prepared){const response=C.parse(bytes),active=this.activeIdentity(),descriptor=prepared||this.journal.get(response.requestId,active);C.validateResponse(response,descriptor,{databaseId:active.databaseId,recoveryId:active.recoveryId});this.idle(response.requestId);
   let job;try{job=this.job(response.requestId);}catch(error){if(error.code!=='RESPONSE_NOT_FOUND')throw error;job={version:1,requestId:response.requestId,rows:descriptor.request.items.map(r=>({itemId:r.itemId,status:'unreturned',imageUrl:'',imagePageUrl:'',notes:'',selected:false}))};}
   if(previous)job=structuredClone(previous);
   for(const row of response.items){const current=rowFor(job,row.itemId);if(current.status!=='unreturned'&&['imageUrl','imagePageUrl','notes'].some(k=>current[k]!==row[k]))throw fault('RESPONSE_CHANGED','This row already has a different response. Use Edit image links for URL corrections, or create a new request for revised research notes.');if(current.status==='unreturned')Object.assign(current,{imageUrl:row.imageUrl,imagePageUrl:row.imagePageUrl,notes:row.notes,status:row.imageUrl?'needs-download':'no-image'});}

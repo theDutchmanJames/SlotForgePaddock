@@ -9,33 +9,48 @@ class PictureBatches{
  resolve(id){return this.p.all().find(j=>j.batch?.members.some(m=>m.id===id))?.requestId||id;}
  state(id){return this.p.job(this.resolve(id)).batch;}
  update(id,fn){const job=this.p.job(id);fn(job.batch);this.p.save(job);}
- idle(){if(this.work||this.p.running.size||this.p.application?.work)throw fault('BATCH_BUSY','Finish or stop the current picture work first.');if(this.p.closed)throw Error('Picture previews are closing.');}
+ idle(){if(this.importing||this.work||this.p.running.size||this.p.application?.work)throw fault('BATCH_BUSY','Finish or stop the current picture work first.');if(this.p.closed)throw Error('Picture previews are closing.');}
  async importFiles(inputs){
-  this.idle();if(!Array.isArray(inputs)||!inputs.length||inputs.length>C.limits.activeRequests)throw Error('Choose between 1 and '+C.limits.activeRequests+' picture JSON files.');
+  this.idle();this.importing=true;let lead;
+  try{lead=await this.prepareFiles(inputs);}finally{this.importing=false;}
+  this.launch(lead,'download',w=>this.drain(lead,w));return this.view(lead);
+ }
+ async prepareFiles(inputs){
+  if(!Array.isArray(inputs)||!inputs.length||inputs.length>C.limits.activeRequests)throw Error('Choose between 1 and '+C.limits.activeRequests+' picture JSON files.');
+  const active=this.p.activeIdentity(),file=this.p.getStore().file,generation=this.p.generation;
+  const check=()=>{if(this.p.closed||generation!==this.p.generation)throw fault('BATCH_STOPPED','Picture import stopped.');P.identity(this.p.activeIdentity(),active);if(this.p.getStore().file!==file)throw fault('COLLECTION_CHANGED','The active collection changed.');};
   // All files are validated before one journal change or network request. A bad
   // filename is included in the error; corrected files can be selected again safely.
   if(inputs.reduce((n,i)=>n+i.bytes.length,0)>C.limits.journalBytes)throw Error('Selected picture JSON files exceed the 16 MiB metadata budget. Choose fewer files.');
-  const jobs=new Map(),members=new Map(),queue=new Map(),notices=[],seen=new Set();
+  const jobs=new Map(),members=new Map(),queue=new Map(),notices=[],seen=new Set(),descriptors=new Map();
   const addQueue=(id,itemId)=>queue.set(key(id,itemId),{requestId:id,itemId});
   for(const input of inputs){const name=path.basename(input.name||'Picture JSON');try{
-   const response=C.parse(input.bytes),id=response.requestId;
+   const resolved=await require('./catalogue-picture-matching.cjs').resolve(this.p,C.parse(input.bytes),descriptors);check();
+   notices.push(...resolved.notices.map(note=>name+': '+note));
+   if(!resolved.response)continue;
+   const {response,descriptor}=resolved,id=response.requestId;descriptors.set(id,descriptor);
    const old=this.p.all().find(j=>j.batch?.members.some(m=>m.id===id));
    if(old&&!seen.has(old.requestId)){seen.add(old.requestId);for(const m of old.batch.members){const job=this.p.job(m.id);delete job.batch;jobs.set(m.id,job);members.set(m.id,m);}for(const q of old.batch.queue)addQueue(q.requestId,q.itemId);}
-   const repeated=members.has(id),job=this.p.prepareImport(input.bytes,jobs.get(id));delete job.batch;jobs.set(id,job);
+   const repeated=members.has(id),job=this.p.prepareImport(Buffer.from(JSON.stringify(response)),jobs.get(id),descriptor);delete job.batch;jobs.set(id,job);
    if(!members.has(id))members.set(id,{id,name});else if(repeated)notices.push(name+': existing request reused; no duplicate products added.');
    for(const row of response.items){const r=job.rows.find(x=>x.itemId===row.itemId);if(!r.attempt&&r.imageUrl&&(!r.asset||![r.asset,r.thumbnail,r.currentThumbnail].filter(Boolean).every(a=>this.p.exists(a)))&&['needs-download','download-failed','ready'].includes(r.status))addQueue(id,r.itemId);}
   }catch(e){throw fault(e.code||'INVALID_FILE',name+': '+e.message);}}
-  for(const id of members.keys())this.p.descriptor(id);
+  check();if(!members.size)throw fault('NO_MATCHES','No pictures matched a unique manufacturer and product reference. '+notices.join('\n'));
+  for(const id of members.keys())if(!descriptors.has(id))this.p.descriptor(id);
   const lead=members.keys().next().value;
   jobs.get(lead).batch={version:1,members:[...members.values()],queue:[...queue.values()],auto:true,pause:null,error:'',notices};
   // One transaction: invalid inputs and metadata exhaustion cannot leave half a batch.
   this.p.journal.use(db=>{db.exec('BEGIN IMMEDIATE');try{
+   const existing=new Set(db.prepare('SELECT id FROM requests').all().map(r=>r.id)),added=[...descriptors].filter(([id])=>!existing.has(id));
+   if(existing.size+added.length>C.limits.activeRequests)throw fault('JOURNAL_FULL','Picture requests are full. Discard an unused request before continuing.');
+   const insert=db.prepare("INSERT INTO requests VALUES(?,?,?,?,'awaiting-response',?)");
+   for(const [id,d]of added){C.validateJournal(d);insert.run(id,d.request.databaseId,d.request.recoveryId,d.request.createdAt,JSON.stringify(d));}
    const current=new Map(db.prepare('SELECT request_id,data FROM picture_jobs').all().map(r=>[r.request_id,r.data]));for(const [id,j]of jobs)current.set(id,JSON.stringify(j));
    const size=db.prepare('SELECT COALESCE(sum(length(CAST(descriptor AS BLOB))),0) n FROM requests').get().n+[...current.values()].reduce((n,t)=>n+Buffer.byteLength(t),0);
    if(size>C.limits.journalBytes)throw fault('JOURNAL_FULL','Picture-request metadata is full. Discard an unused request before continuing.');
    for(const [id,j]of jobs){db.prepare('INSERT INTO picture_jobs VALUES(?,?) ON CONFLICT(request_id) DO UPDATE SET data=excluded.data').run(id,JSON.stringify(j));db.prepare("UPDATE requests SET state='preview' WHERE id=?").run(id);}db.exec('COMMIT');
   }catch(e){db.exec('ROLLBACK');throw e;}});
-  this.launch(lead,'download',w=>this.drain(lead,w));return this.view(lead);
+  return lead;
  }
  launch(id,phase,fn){this.idle();const identity=this.p.activeIdentity(),file=this.p.getStore().file,work={id,phase,stopped:false,promise:null};this.work=work;
   work.check=()=>{if(work.stopped||this.p.closed)throw fault('BATCH_STOPPED','Picture work stopped.');P.identity(this.p.activeIdentity(),identity);if(this.p.getStore().file!==file)throw fault('COLLECTION_CHANGED','The active collection changed.');};
@@ -93,7 +108,7 @@ class PictureBatches{
    else throw Error('Unknown picture batch action.');
   })();try{await work.promise;}finally{if(this.work===work)this.work=null;}return this.view(id);
  }
- async single(method,id,p){const service=this.p;if(!['open','status','close'].includes(method)&&this.work)throw fault('BATCH_BUSY','Finish or stop the combined import first.');
+ async single(method,id,p){const service=this.p;if(!['open','status','close'].includes(method)&&(this.importing||this.work))throw fault('BATCH_BUSY','Finish or stop the combined import first.');
   if(method==='open'||method==='status')return service.view(id);
   if(method==='apply'||method==='retry-save')return service.application.start(id,{retry:method==='retry-save'});
   if(method==='reconcile')return service.application.reconcile(id);

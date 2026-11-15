@@ -52,6 +52,7 @@ function renderExchangeDesign(){
   if(!local())return empty('Use your local database','Switch to your collection to import, export or back up records.');
   if(catalogueReview?.active)return renderCatalogueReview();
   const cards=[
+    ['Import spreadsheet','list','blue','Import CSV or Excel (.xlsx) car tables. Match columns to editable car fields and review the rows before saving. Resume unfinished imports from Review.','Choose CSV / XLSX','sheet-pick','primary',''],
     ['Import cars','download','blue','Open a Paddock car file or a Timing JSON export. Review every car before importing.','Choose a JSON file','import','primary',''],
     ['Export cars','upload','accent','Export selected cars as a Paddock car file (.json), keeping My Cars or Wishlist status. Owned cars can also be exported for Timing.','Choose cars','choose-export-cars','',''],
     ['Back up this database','database','green','Keep a complete copy of cars, stock, jobs, photos, history and settings. Portable backups include original photos and private information. Progress and cancellation are available.','Create backup','backup','',''],

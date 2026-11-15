@@ -15,6 +15,7 @@ function openReview(tab){const raw=ReviewModel.summary(db),counts=db._view?.revi
 function renderReviewHub(){
   if(!local())return empty('Review belongs to your local database','Open your local collection to review incoming cars, workshop jobs and maintenance.',btn('Open local Review','open-review','primary'));
   const s=ReviewModel.summary(db),tabs=[['Incoming cars','inbox',db._view?.review?.incoming??s.incoming.length],['Workshop jobs','tool',db._view?.review?.jobs??s.jobs.length],['Maintenance','calendar',db._view?.review?.maintenance??s.maintenance.length]];
+  tabs.push(['Spreadsheet imports','list',null]);
   if(mergeReviewAvailable)tabs.push(['Car merges','car',db._view?.carMerges?.total??null]);
   if(db._view?.timingCollection)tabs.unshift(['Timing collection','database',db._view.timingCollection.total]);
   if(db._view?.historyImports)tabs.push(['Historical imports','history',db._view.historyImports.total]);
@@ -23,6 +24,7 @@ function renderReviewHub(){
   const head=heading('Review','Incoming cars, race results, planned work and maintenance for '+db.settings.name,reviewTab==='Incoming cars'?btn('Refresh inbox','refresh-inbox'):reviewTab==='Workshop jobs'?btn(icon('plus')+' New workshop job','new-job','primary'):'');
   const nav=`<div class="tabs review-tabs" aria-label="Review sections">${tabs.map(([name,symbol,count])=>`<button type="button" data-action="review-tab" data-id="${name}" class="${reviewTab===name?'active':''}" aria-pressed="${reviewTab===name}">${icon(symbol)}${name==='Club changes'?'Dealership changes':name} ${count===null?'':'<span class="badge">'+count+'</span>'}</button>`).join('')}</div>`;
   if(reviewTab==='Car merges'&&mergeReviewAvailable)return head+nav+renderMergeHub();
+  if(reviewTab==='Spreadsheet imports')return head+nav+renderSpreadsheetImports();
   if(reviewTab==='Timing collection')return head+nav+renderTimingCollection();
   if(reviewTab==='Historical imports')return head+nav+renderHistoricalImports();
   if(reviewTab==='Race results')return head+nav+renderResultInbox();
@@ -36,7 +38,7 @@ async function reviewAction(action,id){
   if(await timingCollectionAction(action,id))return true;
   if(action==='review-select-safe'||action==='review-select-none'){const card=document.querySelector('[data-review-submission]');if(card)ReviewSelection.select(card,action==='review-select-safe');return true;}
   if(action==='open-review'){openReview();return true;}
-  if(action==='review-tab'){if([...(mergeReviewAvailable?['Car merges']:[]),'Timing collection','Club changes','Incoming cars','Workshop jobs','Maintenance','Race results','Historical imports'].includes(id)){reviewTab=id;render();}return true;}
+  if(action==='review-tab'){if([...(mergeReviewAvailable?['Car merges']:[]),'Spreadsheet imports','Timing collection','Club changes','Incoming cars','Workshop jobs','Maintenance','Race results','Historical imports'].includes(id)){reviewTab=id;render();}return true;}
   if(action==='history-import-inspect'){await inspectHistoricalImport(id);return true;}
   if(action==='result-session'){const row=db._view?.resultInbox?.rows?.[Number(id)],context=db.id;if(row&&window.slotforge.historyView){await openSharedHistory(row.source,row.session,row.primaryCar||row.cars[0]);return true;}if(row){const result=await api('query','session',{sourceId:row.source,sessionId:row.session,carId:row.primaryCar||row.cars[0],offset:0,token:db._view.token});if(context!==db.id)return true;timingDetail={record:result.record,carId:row.primaryCar||row.cars[0],query:result};timingLapPage=0;showTimingSession();}return true;}
   if(action==='result-seen'){const row=db._view?.resultInbox?.rows?.[Number(id)];if(row){await api('query','result-seen',{databaseId:db.id,source:row.source,session:row.session,hash:row.hash});if(db._view.resultInbox.rows.length===1)viewOffset=Math.max(0,viewOffset-20);await loadView();}return true;}

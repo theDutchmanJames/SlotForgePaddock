@@ -1,7 +1,8 @@
 let carComparison=null;
 function comparisonChoose(id){
  const cars=db.cars.slice().sort((a,b)=>a.name.localeCompare(b.name));if(cars.length<2){modal('Compare cars','<p>Add a second car to compare your collection.</p>',null);return;}
- const first=cars.some(c=>c.id===id)?id:(cars.some(c=>c.id===carComparison?.ids?.[0])?carComparison.ids[0]:cars[0].id),second=cars.some(c=>c.id===carComparison?.ids?.[1]&&c.id!==first)?carComparison.ids[1]:cars.find(c=>c.id!==first).id;
+ const chosen=id?[]:[...selected].filter(key=>cars.some(c=>c.id===key));
+ const first=cars.some(c=>c.id===id)?id:chosen[0]||(cars.some(c=>c.id===carComparison?.ids?.[0])?carComparison.ids[0]:cars[0].id),second=chosen.find(key=>key!==first)||(cars.some(c=>c.id===carComparison?.ids?.[1]&&c.id!==first)?carComparison.ids[1]:cars.find(c=>c.id!==first).id);
  carComparison={choices:cars,ids:[first,second],databaseId:db.id};showComparisonChooser();
 }
 function showComparisonChooser(){const s=carComparison;modal('Choose two cars',`<p>Compare their current specifications and optionally choose recorded runs to compare measured pace.</p><div class="form-grid">${['First car','Second car'].map((label,i)=>`<label class="field">${label}<select name="compare-${i}" required>${s.choices.map(c=>`<option value="${esc(c.id)}" ${s.ids[i]===c.id?'selected':''}>${esc(c.name)}${c.archived?' · Archived':''}</option>`).join('')}</select></label>`).join('')}</div>`,async values=>{const ids=[values['compare-0'],values['compare-1']];if(ids[0]===ids[1])throw Error('Choose two different cars.');const result=await api('plan','car.compare',{ids});if(result.databaseId!==s.databaseId||db.id!==s.databaseId)throw Error('The collection changed. Choose the cars again.');Object.assign(s,result,{ids,differences:false,runIds:ids.map(id=>result.runs.find(r=>r.carId===id)?.id||'')});setTimeout(showCarComparison,0);},'Compare');}

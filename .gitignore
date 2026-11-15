@@ -14,6 +14,7 @@ Thumbs.db
 # Local design, coordination, review and one-off qualification artifacts
 /integration-handoff/
 /concept/
+/outputs/
 /docs/reviews/
 /docs/releases/
 /docs/REVIEW-*.md

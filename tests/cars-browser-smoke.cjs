@@ -1,0 +1,46 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+module.exports=async({win,store,js,wait,click,fill,submit,qa})=>{
+ const originalSize=win.getSize(),checks=[];
+ store.mutate('car.save',{data:{name:'Seed',maker:'NSR'}});
+ store.transact(db=>{const seed=db.cars[0];db.events=[];db.cars=Array.from({length:99},(_,i)=>({...seed,id:'browser-'+i,name:'Car '+String(i+1).padStart(3,'0'),reference:'REF-'+i,usage:[i%2?'Home racing':'Collection / Display']}));db.cars.push({...seed,id:'wish-1',name:'Wishlist car',collectionStatus:'wishlist',ownership:'Wanted'},{...seed,id:'archived-1',name:'Archived car',archived:true});});
+ const idle=()=>wait('!viewPendingKey&&!actionBusy&&!modalSaving');
+ const change=async(selector,value)=>{await js(`(()=>{const el=document.querySelector(${JSON.stringify(selector)});el.value=${JSON.stringify(value)};el.dispatchEvent(new Event('change',{bubbles:true}));})()`);await idle();};
+ await js("UiScale.apply(100);sort='name';sortDirection='asc';switchCarScope('collection')");
+ await click('[data-action="nav"][data-id="Cars"]');await wait('db._view?.list?.total===99&&!viewPendingKey');
+ assert.equal(await js('document.querySelectorAll(".cars-pagination").length'),2);
+ assert.equal(await js('document.querySelector("#cars-filter-panel").hidden'),true);
+ assert.equal(await js('document.querySelector(".cars-result-range").textContent'),'1–48 of 99 cars');
+ assert.equal(await js('document.querySelectorAll(".car-card").length'),48);
+ win.setSize(1426,973);await new Promise(r=>setTimeout(r,150));
+ assert.ok(await js('document.querySelector("#cars-results").getBoundingClientRect().top-document.querySelector(".cars-heading").getBoundingClientRect().top<230'));
+ assert.equal(await js(`getComputedStyle(document.querySelector('[data-action="cars-tab"][data-id="wishlist"]')).backgroundColor===getComputedStyle(document.querySelector('[data-action="cars-filters"]')).backgroundColor`),true);
+ for(let attempt=0;;attempt++)try{fs.writeFileSync(path.join(qa,'cars-browser-desktop.png'),(await win.webContents.capturePage()).toPNG());break;}catch(e){if(attempt===2)throw e;await new Promise(r=>setTimeout(r,200));}
+ await js('window.scrollTo(0,document.body.scrollHeight)');await click('.cars-results-bottom [data-action="query-next"]');await wait('db._view.list.offset===48&&!viewPendingKey');
+ assert.equal(await js('db.cars[0].name'),'Car 049');assert.ok(await js('document.querySelector(".cars-results-bar").getBoundingClientRect().top<100'));
+ await click('[data-action="cars-page"][data-id="96"]');assert.equal(await js('db.cars.length'),3);assert.equal(await js('document.querySelector(".cars-result-range").textContent'),'97–99 of 99 cars');
+ await click('[data-action="cars-select-page"]');assert.equal(await js('selected.size'),3);
+ await click('.selection-bar [data-action="car-compare"]');assert.deepEqual(await js('carComparison.ids'),['browser-96','browser-97']);await click('[data-action="close-modal"]');await idle();
+ await click('[data-action="select-filtered"]');assert.equal(await js('selected.size'),99);assert.equal(await js('db.cars.length'),3);
+ await click('[data-action="export-selected"]');assert.equal(await js('document.querySelector("#dialog").open'),true);await click('[data-action="close-modal"]');await idle();
+ await click('[data-action="clear-selection"]');
+ await click('[data-action="cars-filters"]');await click('[data-action="usage"][data-id="Home racing"]');await wait('db._view.list.total===49&&!viewPendingKey');
+ assert.equal(await js('document.querySelector("#cars-filter-panel").hidden'),false);await click('[data-action="cars-filters"]');assert.equal(await js('document.querySelector(".cars-active-filters").hidden'),false);
+ await click('[data-action="cars-clear-filters"]');await wait('db._view.list.total===99&&!viewPendingKey');
+ await js(`document.querySelector('#car-search').value='REF-98';document.querySelector('#car-search').dispatchEvent(new Event('input',{bubbles:true}))`);await wait('db._view.list.total===1&&!viewPendingKey');assert.equal(await js('db.cars[0].id'),'browser-98');
+ await click('[data-action="cars-clear-query"]');await change('#cars-sort','name:desc');assert.equal(await js('db.cars[0].name'),'Car 099');
+ await click('[data-action="save-view"]');await fill({name:'Descending cars'});await submit();await idle();const savedView=store.data.views[0].id;
+ await change('#cars-sort','name:asc');await change('#saved-view',savedView);assert.equal(await js('document.querySelector("#cars-sort").value'),'name:desc');
+ await click('[data-action="cars-tab"][data-id="wishlist"]');await wait('db._view.list.total===1&&!viewPendingKey');assert.equal(await js('selected.size'),0);
+ assert.equal(await js(`document.querySelector('[data-action="cars-tab"][data-id="wishlist"]').getAttribute('aria-pressed')`),'true');
+ assert.equal(await js(`getComputedStyle(document.querySelector('[data-action="cars-tab"][data-id="collection"]')).backgroundColor===getComputedStyle(document.querySelector('[data-action="cars-filters"]')).backgroundColor`),true);
+ assert.equal(await js('document.querySelector("[data-action=compare-pace]")'),null);
+ await click('[data-action="cars-select-page"]');assert.deepEqual(await js('[...selected]'),['wish-1']);await click('[data-action="export-selected"]');assert.equal(await js('document.querySelector("#dialog").textContent.includes("Wishlist")'),true);await click('[data-action="close-modal"]');
+ await click('[data-action="mode"][data-id="table"]');assert.equal(await js('!!document.querySelector(".table-name")'),true);
+ await click('[data-action="cars-tab"][data-id="collection"]');await change('#saved-view','');await click('[data-action="mode"][data-id="gallery"]');
+ await click('[data-action="cars-filters"]');await js(`document.querySelector('#archived').click()`);await idle();assert.equal(await js('db.cars[0].name'),'Archived car');await click('[data-action="cars-clear-filters"]');await idle();
+ for(const width of [800,520]){win.setSize(width,950);await new Promise(r=>setTimeout(r,120));assert.equal(await js('document.querySelector(".cars-browser").scrollWidth<=document.querySelector(".cars-browser").clientWidth+1'),true);}
+ await js("document.documentElement.dataset.theme='light';document.documentElement.dataset.tone='light'");assert.equal(await js(`getComputedStyle(document.querySelector('[data-action="cars-tab"][data-id="wishlist"]')).backgroundColor===getComputedStyle(document.querySelector('[data-action="cars-filters"]')).backgroundColor`),true);
+ win.setSize(...originalSize);
+ checks.push('Compact header, neutral inactive tabs and active Wishlist','Top/bottom numbered paging and scroll to results','Page-only versus all-matching selection','Owned and Wishlist export dialogs','Search, removable usage filters and archived scope','Combined sorting and saved-view restoration','Gallery/table, narrow layouts and light theme');return checks;
+};

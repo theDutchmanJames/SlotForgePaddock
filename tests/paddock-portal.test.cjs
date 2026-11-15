@@ -7,7 +7,9 @@ async function fixture(t){
  const portal=new PaddockPortal({getStore:()=>store,available:()=>available,validatePhoto:b=>{assert.deepEqual(b,bytes);},onChange:()=>changes++,interfaces:()=>['127.0.0.1'],host:'127.0.0.1'});
  t.after(async()=>{await portal.stop();await store.whenIdle();fs.rmSync(root,{recursive:true,force:true});});
  await portal.start();let base=`http://127.0.0.1:${portal.active.port}`,token='';
- const call=async(route,body,headers={})=>{const response=await fetch(base+route,{method:body?'POST':'GET',headers:{...(body?{'Content-Type':'application/json',Origin:base}:{}),...(token?{Authorization:'Bearer '+token}:{}),...headers},body:body?JSON.stringify(body):undefined});return {status:response.status,value:await response.json()};};
+ // Fixtures deliberately stop/restart servers and may immediately reuse a port.
+ // Do not let Node's process-wide fetch pool reuse a socket from a stopped server.
+ const call=async(route,body,headers={})=>{const response=await fetch(base+route,{method:body?'POST':'GET',headers:{Connection:'close',...(body?{'Content-Type':'application/json',Origin:base}:{}),...(token?{Authorization:'Bearer '+token}:{}),...headers},body:body?JSON.stringify(body):undefined});return {status:response.status,value:await response.json()};};
  const auth=async input=>{const r=await call('/api/session',input||{code:portal.status().code});if(r.status===200)token=r.value.token;return r;};
  const car=extra=>({operationId:crypto.randomUUID(),manufacturer:'NSR',model:'Mosler MT900R',reference:'001',picture,...extra});
  return {store,portal,call,auth,car,get base(){return base;},get changes(){return changes;},unavailable:()=>{available=false;},restart:async()=>{await portal.stop();await portal.start();base=`http://127.0.0.1:${portal.active.port}`;token='';}};
