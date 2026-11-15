@@ -311,7 +311,8 @@ Open the **[latest GitHub release](https://github.com/theDutchmanJames/SlotForge
 
 | Your computer | Download | Open or install |
 | --- | --- | --- |
-| **Windows · Intel/AMD 64-bit** | `SlotForge.Paddock.…exe` | Save the portable executable in a folder you want to keep, then double-click it. |
+| **Windows · installer · Intel/AMD 64-bit** | `SlotForgePaddock-…-Setup.exe` | Install for your Windows account, choose the application folder and launch from the desktop or Start menu. |
+| **Windows · portable · Intel/AMD 64-bit** | `SlotForgePaddock-…-Portable.exe` | Save the executable in a folder you want to keep, then double-click it. No installation required. |
 | **macOS · Intel or Apple Silicon** | Universal `.dmg` | Open the disk image and drag Paddock into Applications. A ZIP of the app is also available. |
 | **Linux · Ubuntu/Debian** | `.deb` matching your processor | Open it with your software installer, then launch Paddock from your applications menu. |
 | **Linux · other compatible distributions** | `.AppImage` matching your processor | Allow the file to run as a program in its permissions, then open it. |
@@ -330,6 +331,8 @@ Windows downloads are unsigned. macOS downloads are ad-hoc signed, not Apple-not
 ### Updating and moving to another computer
 
 Make a complete backup through **Import & Export**, close the running app and open the new version. Your collection is stored separately in your operating-system user profile. Moving or replacing the executable does not move the collection; use the backup/export tools to transfer your data. For a Dealership collection, follow its [recovery guidance](docs/SHARED-CLUB.md).
+
+On Windows, run the newer **Setup** to replace an existing installed version. Quit Paddock completely first, including its tray icon if background mode is enabled; the installer will not force-stop it. Updates and uninstalling retain your collection, photographs, settings and the shared Timing library. Installing after using the portable finds the same data when you use the same Windows account. Open the installed app once to refresh its background-launch registration. Keep old portable executables or remove them yourself; Setup does not search for and delete loose downloads. The installed app does not unpack on every launch.
 
 ### Run or build from source
 

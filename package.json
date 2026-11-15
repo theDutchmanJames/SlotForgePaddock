@@ -1,6 +1,6 @@
 {
   "name": "slotforge-database",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "description": "Slot-car collections, parts and setup history",
   "author": "theDutchmanJames",
   "private": true,
@@ -9,10 +9,11 @@
     "start": "electron .",
     "test": "node --test tests/*.test.cjs",
     "check": "node scripts/check-syntax.cjs",
-    "dist": "electron-builder --win portable",
+    "dist": "electron-builder --win",
     "pack": "electron-builder --dir",
     "dist:mac": "electron-builder --mac",
     "dist:linux": "electron-builder --linux",
+    "build:splash": "electron scripts/build-startup-splash.cjs",
     "build:icons": "node scripts/build-icons.cjs",
     "build:diagram": "node scripts/build-diagram.cjs",
     "benchmark:database": "node scripts/benchmark-database.cjs",
@@ -23,13 +24,16 @@
     "qualify:local-library": "node scripts/qualify-local-library.cjs",
     "qualify:local-library:large": "node scripts/qualify-local-library.cjs --large",
     "qualify:shared-launch": "node scripts/qualify-shared-launch.cjs",
-    "test:history:activation": "node scripts/qualify-history-gates.cjs"
+    "test:history:activation": "node scripts/qualify-history-gates.cjs",
+    "dist:portable": "electron-builder --win portable",
+    "dist:installer": "electron-builder --win nsis"
   },
   "devDependencies": {
     "electron": "45.1.0",
     "electron-builder": "26.18.0"
   },
   "build": {
+    "afterPack": "scripts/portable-splash.cjs",
     "appId": "nl.slotforge.database",
     "productName": "SlotForge Paddock",
     "directories": {
@@ -43,9 +47,16 @@
       "package.json"
     ],
     "win": {
-      "target": "portable",
+      "target": [
+        "nsis",
+        "portable"
+      ],
       "icon": "assets/icon.ico",
       "signExecutable": false
+    },
+    "portable": {
+      "splashImage": "assets/startup-splash.bmp",
+      "artifactName": "SlotForgePaddock-${version}-Portable.${ext}"
     },
     "mac": {
       "target": [
@@ -95,7 +106,20 @@
           "slotforge-paddock"
         ]
       }
-    ]
+    ],
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowElevation": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "runAfterFinish": true,
+      "deleteAppDataOnUninstall": false,
+      "packElevateHelper": false,
+      "include": "build/installer.nsh",
+      "artifactName": "SlotForgePaddock-${version}-Setup.${ext}"
+    }
   },
   "homepage": "https://github.com/theDutchmanJames/SlotForgePaddock",
   "repository": {

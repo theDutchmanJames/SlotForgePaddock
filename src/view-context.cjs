@@ -106,7 +106,7 @@ function editor(db,data,r,request){
  // Editors only need document metadata; never send full PDF/image bytes to rename or remove a guide.
  data.documents=data.documents.map(d=>{const out=pick(d,['id','guide','carId','name','mime','size','title','category','added','updated']);require('./lazy-assets.cjs').copyProperty(out,'picture',d);return out;});
  if(carId)h.add('cars',carId);
- if(carId&&['slotcar-research','slotcar-kit','slotcar-pick'].includes(a))h.installations(carId);
+ if(carId&&['factory-specs','slotcar-research','slotcar-kit','slotcar-pick'].includes(a))h.installations(carId);
  if(['guide-add','guide-edit','car-compare','reports','export-selected'].includes(a))h.chooseCars(true);
  if(['install-part','install-stock','install-assembly','new-job','maintenance-job','shelf-new','shelf-edit','send-selected','select-filtered'].includes(a))h.chooseCars();
  if(['add-assembly','replace-assembly','install-part','install-stock','receive-stock','shop-receive'].includes(a)){h.stock();h.chooseCars();}

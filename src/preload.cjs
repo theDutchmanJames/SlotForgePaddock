@@ -1,5 +1,6 @@
 const { contextBridge, ipcRenderer, webFrame } = require('electron');
 contextBridge.exposeInMainWorld('slotforge',{
+  startupReady:()=>ipcRenderer.send('sf:startup-ready'),
   setZoom:factor=>{if(![0.8,0.9,1,1.1,1.25,1.5,1.75,2].includes(factor))throw Error('Invalid interface size.');webFrame.setZoomFactor(factor);},
   mediaLease:active=>ipcRenderer.send('sf:media-lease',active),
   thumbnailResult:(id,result)=>ipcRenderer.send('sf:thumbnail-result',id,result),

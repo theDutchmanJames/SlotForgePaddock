@@ -3,6 +3,17 @@
 const {spawnSync}=require('node:child_process');
 const path=require('node:path');
 const files=[
+  "renderer/factory-specs-model.js",
+  "renderer/factory-specs.js",
+  "tests/factory-specs.test.cjs",
+  "src/application-frame.cjs",
+  "src/startup-feedback.cjs",
+  "scripts/portable-splash.cjs",
+  "scripts/build-startup-splash.cjs",
+  "tests/application-frame.test.cjs",
+  "tests/startup-feedback.test.cjs",
+  "tests/startup-window-smoke.cjs",
+  "tests/windows-installer.test.cjs",
   "src/catalogue-pricing.cjs",
   "tests/catalogue-pricing.test.cjs",
   "src/setup-suggestions.cjs",
