@@ -133,3 +133,4 @@ dialog:not(.showroom-viewer){border-top:3px solid var(--accent);width:min(960px,
   width: 100%;
 }
 .catalogue-preview-footer > .actions { margin-left: auto; }
+.library-move-paths{display:grid;gap:8px;margin:14px 0}.library-move-paths>div{display:grid;grid-template-columns:64px 1fr;gap:10px;align-items:baseline}.library-move-paths dt{color:var(--muted);font-size:12px}.library-move-paths dd{margin:0;overflow-wrap:anywhere;white-space:pre-wrap}

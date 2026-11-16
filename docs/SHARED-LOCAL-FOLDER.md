@@ -12,6 +12,21 @@ Original Timing fields and lap evidence remain in the same shared database. Hist
 
 When only one application is used, it writes directly to the shared file. The other sees current data when it reopens. Concurrent applications refresh their normal screens from shared change notifications/cursors. SQLite serializes commits, revision checks prevent conflicting edits, and durable receipts make uncertain retries safe.
 
+## Moving the library to another folder
+
+**Settings → Database → Shared local library → Move library…** lets you choose another folder on this computer, for example a second drive.
+
+1. Paddock checks the folder:
+   - It must be on this computer (not a network share) and outside the Paddock program folder.
+   - It must not already contain a `library.sqlite`.
+   - You must be able to write to it, and it needs room for a copy.
+   - Folders that look cloud-synced (OneDrive, Dropbox, iCloud and similar) get a warning, because sync tools can damage a database while it is in use.
+2. After you confirm, Paddock restarts and moves the library before opening it. It copies the file, checks the copy, and then points `library.json` at the new location.
+3. **SlotForge Timing finds the new location by itself** the next time it opens. Close Timing before moving. If Timing is busy saving, Paddock waits briefly, then asks you to close it and try again, or to cancel. A Timing that stays open cannot save into the old file; it reconnects (updated Timing) or asks to be restarted (older Timing).
+4. The old file stays where it was, with the same name, locked against changes, and a `MOVED-TO.txt` note beside it. Delete it yourself once both apps work from the new folder. Older backup files in that folder are not moved.
+
+If the move is interrupted (crash or power cut), the next start finishes it when the verified copy is already in place. Otherwise it puts the original back. The [engine contract](../packages/shared-library/CONTRACT.md#moving-the-library-relocation-additive) has the exact steps.
+
 ## Implementation
 
 **Settings → Database → Shared local library** shows the actual canonical file and database identity. If a Dealership copy is selected, its details appear separately. **Advanced integration services → Local integration service** controls only the retained loopback HTTP service and its launch registration. Switching that service off does not disable direct shared-file access. See [connection choices and recovery](CONNECTIONS.md).

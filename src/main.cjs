@@ -39,7 +39,7 @@ let libraryStartup=null,libraryStartupError=null;try{libraryStartup=launcherModu
 const ownsInstance=!libraryStartupError&&app.requestSingleInstanceLock();
 const quickLinks=new (require('./quick-links.cjs').QuickLinks)(app.getPath('userData'),{openExternal:url=>shell.openExternal(url)});
 if(libraryStartupError){console.error('The registered local library could not be started. Open Paddock normally to check its registration.');app.exit(1);}else if(!ownsInstance)app.quit();
-let sharedObserver,sharedRoot;
+let sharedObserver,sharedRoot,libraryMoveResult=null;
 let win,store,network,club,portal,localLibrary,backgroundMode,resultInbox,networkTimer,rendererReady=false,startupFeedback,startupPage,startupClosing=false;
 const ipcWork=new (require('./work-gate.cjs').WorkGate)();
 const backupJobs=new (require('./backup-jobs.cjs').BackupJobs)(value=>{if(win&&!win.isDestroyed())win.webContents.send('sf:file-progress',value);});
@@ -52,6 +52,19 @@ function mediaSweep(){media.retain([store?.data,club?.loadedCache?.data,network?
 function trustedFrame(event){return applicationFrame.owns(win,event,entryURL);}
 function reply(fn){return async(event,...args)=>{let value;try{return await ipcWork.run(async()=>{if(!trustedFrame(event))return {error:'Unauthorised application frame.'};if(sharedObserver&&!restoring)await sharedObserver.refresh();value=await fn(...media.expand(args));return {ok:true,value:media.project(value)};});}catch(e){return {error:e.message,code:value?.commandId?'WRITE_UNCERTAIN':e.code,definiteRejection:e.definiteRejection===true};}};}
 async function files(action,p={}){
+  if(action==='library.move-choose'||action==='library.move-request'){
+    // Always the personal shared library, even while a Dealership copy is selected.
+    const status=network.sharedFileStatus();if(!status.shared||!status.file)throw Error('This session is not using the shared local library.');
+    const M=require('./shared-library-move.cjs'),appFolder=app.isPackaged?(process.platform==='darwin'?path.resolve(process.execPath,'..','..','..'):path.dirname(process.execPath)):null,check=folder=>M.inspect(folder,{file:status.file,appFolder});
+    if(action==='library.move-choose'){const r=await dialog.showOpenDialog(win,{title:'Choose a new folder for the shared library',defaultPath:path.dirname(status.file),properties:['openDirectory','createDirectory','promptToCreate']});if(r.canceled||!r.filePaths[0])return null;return check(r.filePaths[0]);}
+    // A pending submission would stop the quit; resolve it first so the restart really happens.
+    if(network.pending&&!require('./submission-recovery.cjs').saved(network))throw Error('A public car submission is still waiting. Resolve it in Settings → Database before moving the library.');
+    const info=check(p.folder);M.request(app.getPath('userData'),{folder:info.folder,file:status.file,databaseId:status.databaseId});
+    // The move runs on the next start, before the library is opened. Reply first, then restart
+    // (without one-off arguments such as car links or background-start flags).
+    setTimeout(()=>{const execPath=process.env.PORTABLE_EXECUTABLE_FILE||process.env.APPIMAGE;app.relaunch(execPath?{execPath,args:[]}:{args:process.argv.slice(1).filter(a=>!a.startsWith(launcherModule.PREFIX)&&!reports.parseLink(a))});if(backgroundMode)backgroundMode.quit();else app.quit();},400);
+    return {restarting:true,target:info.target};
+  }
   const store=club.store;
   if(action.startsWith('spreadsheet.')){
     if(!spreadsheetImports)throw Error('Spreadsheet imports are not ready');
@@ -71,7 +84,7 @@ async function files(action,p={}){
     throw Error('Unknown spreadsheet action');
   }
   const pictureJournalPath=path.join(app.getPath('userData'),'catalogue-picture-requests.sqlite');
-  const protectedFiles=[...(spreadsheetImports?['','-journal','-wal','-shm'].map(s=>spreadsheetImports.file+s):[]),quickLinks.file,quickLinks.file+'.tmp',...(picturePreviews?.protectedFiles()||[]),pictureJournalPath,pictureJournalPath+'-journal',pictureJournalPath+'-wal',pictureJournalPath+'-shm',...(sharedRoot?['library.json','replacement.json','coordination.sqlite','coordination.sqlite-journal','coordination.sqlite-wal','coordination.sqlite-shm'].map(name=>path.join(sharedRoot,name)):[]),...(backgroundMode?[backgroundMode.file]:[]),...(resultInbox?[resultInbox.file,resultInbox.file+'-journal',resultInbox.file+'-wal',resultInbox.file+'-shm']:[]),...(localLibrary?[...(localLibrary.launcher?[localLibrary.launcher.file]:[]),localLibrary.file,localLibrary.settingsFile,localLibrary.settingsFile+'.tmp']:[]),...club.main.protectedFiles(),...club.protectedFiles(),club.file,club.file+'.previous',club.file+'.tmp',...Array.from(media.byUrl.values(),e=>e.staged).filter(Boolean)];
+  const protectedFiles=[...(spreadsheetImports?['','-journal','-wal','-shm'].map(s=>spreadsheetImports.file+s):[]),quickLinks.file,quickLinks.file+'.tmp',...(picturePreviews?.protectedFiles()||[]),pictureJournalPath,pictureJournalPath+'-journal',pictureJournalPath+'-wal',pictureJournalPath+'-shm',...(sharedRoot?['library.json','replacement.json','relocation.json','coordination.sqlite','coordination.sqlite-journal','coordination.sqlite-wal','coordination.sqlite-shm'].map(name=>path.join(sharedRoot,name)):[]),...(backgroundMode?[backgroundMode.file]:[]),...(resultInbox?[resultInbox.file,resultInbox.file+'-journal',resultInbox.file+'-wal',resultInbox.file+'-shm']:[]),...(localLibrary?[...(localLibrary.launcher?[localLibrary.launcher.file]:[]),localLibrary.file,localLibrary.settingsFile,localLibrary.settingsFile+'.tmp']:[]),...club.main.protectedFiles(),...club.protectedFiles(),club.file,club.file+'.previous',club.file+'.tmp',...Array.from(media.byUrl.values(),e=>e.staged).filter(Boolean)];
   if(action==='database.reset')return require('./collection-reset.cjs').reset({store,club,network,backupJobs,protectedFiles},p);
   if(action==='restore'&&store.data.club)throw Error('Shared club copies cannot restore or replace the official database. Use Connections to update the club copy.');
   if(['slotcar.kit','slotcar.pick'].includes(action)){
@@ -225,7 +238,10 @@ const startupTask=app.whenReady().then(async()=>{
     }catch{return new Response(null,{status:500});}
   });
   try{let collectionFile=path.join(app.getPath('userData'),'database.json');
-   if((!smoke&&require('./shared-library-activation.json').enabled)||sharedSmoke){const isolated=process.argv.includes('--test-collection');sharedRoot=sharedSmoke?path.join(sharedSmoke,'shared'):isolated?path.join(app.getPath('userData'),'shared-library'):require('./shared-library-location.cjs').directory();const library=await require('../packages/shared-library/index.cjs').open({application:'SlotForge Paddock',installationId:'paddock-desktop',legacyPaddockPath:collectionFile,sharedRoot,...(isolated?{legacyProfiles:[]}:{}),appData:sharedSmoke?path.join(sharedSmoke,'profiles'):app.getPath('appData')});try{collectionFile=(await library.status()).file;}finally{await library.close();}}
+   if((!smoke&&require('./shared-library-activation.json').enabled)||sharedSmoke){const isolated=process.argv.includes('--test-collection');sharedRoot=sharedSmoke?path.join(sharedSmoke,'shared'):isolated?path.join(app.getPath('userData'),'shared-library'):require('./shared-library-location.cjs').directory();
+     // A move requested in Settings runs here, before anything opens the library.
+     if(!sharedSmoke)libraryMoveResult=await require('./shared-library-move.cjs').runPending({profile:app.getPath('userData'),root:sharedRoot,dialog});
+     const library=await require('../packages/shared-library/index.cjs').open({application:'SlotForge Paddock',installationId:'paddock-desktop',legacyPaddockPath:collectionFile,sharedRoot,...(isolated?{legacyProfiles:[]}:{}),appData:sharedSmoke?path.join(sharedSmoke,'profiles'):app.getPath('appData')});try{collectionFile=(await library.status()).file;}finally{await library.close();}}
    store=await Store.open(collectionFile);
    // The very first editor also needs a durable generation for retry identity.
    if(store.expectedIdentity===null)await store.exclusiveFileOperation(()=>store.persistAsync(store.data));
@@ -343,6 +359,7 @@ const startupTask=app.whenReady().then(async()=>{
   if(pageStatus!=='ready'&&pageStatus!=='timeout'){dialog.showErrorBox('Paddock could not finish opening','The first page could not be prepared. Please try opening Paddock again. Your saved collection has not been replaced.');app.quit();return;}
   if(smoke){try{await localLibrary.start();if(sharedSmoke)await require('../tests/shared-library-smoke.cjs')(win,store,sharedSmoke,{sharedPreviews,sharedEncoder,media,network,localLibrary});else await require('../tests/smoke.cjs')(win,store,network,media,{picturePreviews,assemblyPhotoDecoder,spreadsheetImports});localLibrary?.close();app.exit(0);}catch(e){const ui=await win.webContents.executeJavaScript('document.body.innerText').catch(()=>null);fs.writeFileSync(path.join(__dirname,'..','.qa','smoke-result.json'),JSON.stringify({passed:false,error:e.stack,ui},null,2));console.error(e.stack);localLibrary?.close();app.exit(1);}}
   else if(libraryStartup){await localLibrary.start();backgroundMode.startHidden();}else backgroundMode.open();
+  if(libraryMoveResult&&!smoke){const r=libraryMoveResult;libraryMoveResult=null;void dialog.showMessageBox(win,r.status==='moved'?{type:'info',title:'Library moved',message:'The shared library has moved.',detail:`Paddock and SlotForge Timing now use:\n${r.file}\n\nThe old copy was left in place, locked against changes:\n${r.from}\n\nYou can delete it once you have checked Paddock and Timing.`,noLink:true}:r.status==='cancelled'?{type:'info',title:'Library not moved',message:'The move was cancelled.',detail:'The library is still in its original folder.',noLink:true}:{type:'warning',title:'Library not moved',message:'The library could not be moved.',detail:r.error+'\n\nThe library is still in its original folder. Nothing was lost.',noLink:true}).catch(()=>{});}
   startupFeedback?.dispose();startupFeedback=null;
 }).catch(error=>{if(!startupClosing)dialog.showErrorBox('Paddock could not finish opening',error.message);app.quit();});
 app.on('activate',()=>startupFeedback?startupFeedback.focus():backgroundMode?.open());

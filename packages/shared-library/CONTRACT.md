@@ -88,6 +88,37 @@ Original-only history is a separate projection from accepted racing statistics, 
 
 The normal per-account registration lives under `%LOCALAPPDATA%/SlotForge/shared-library/v1` on Windows, `~/Library/Application Support/SlotForge/shared-library/v1` on macOS, and `$XDG_DATA_HOME/slotforge/shared-library/v1` (default `~/.local/share`) on Linux. Its `library.json` points to the one canonical SQLite file. An existing Paddock library keeps its established file path and database ID. Clients do not select another library simply because the registered file is unavailable.
 
+### Moving the library (relocation, additive)
+
+`library.json` is the only place either application looks for the library, so moving the library means copying the file and repointing `library.json`. Both apps already read it on every `open()`, so **no client change is needed to find a moved library at startup**.
+
+`relocate(root,{file,databaseId,folder})` (in `src/shared-library-location.cjs`, run by Paddock at startup before it opens anything) works inside the coordination lock and records each step in `<root>/relocation.json`:
+
+1. **Lock the old file in place.** Set state key `relocated_to` (`{file,at}`) and add `BEFORE INSERT/UPDATE/DELETE` triggers named `library_moved_*` on every table, in one `BEGIN IMMEDIATE` transaction. The triggers abort any later write with a message starting `LIBRARY_MOVED:`.
+   - Taking the write lock waits up to 30 s for another app's in-flight save to commit. If it can't, the result is `LIBRARY_IN_USE` and nothing has changed.
+   - The old file is never renamed or deleted. No app can recreate an empty library at the old path, older launchers that check for the file still find it, and no live journal is moved.
+2. Copy it with SQLite's backup API to a temporary file beside the target. Remove the marker and triggers from the copy, run `PRAGMA integrity_check` and compare the database ID.
+3. Hard-link the copy to `<folder>/library.sqlite`. This fails rather than replacing a file that appeared there.
+4. Publish `library.json`. **From here the move is final.** Writing `MOVED-TO.txt` beside the old file and removing the receipt are best effort, and the next `open()` finishes them.
+
+The database ID and recovery ID do not change, so retained operation IDs and receipts stay valid.
+
+`open()` (via `resolve`) settles any leftover receipt:
+- If `library.json` already names the new file, or the verified copy is in place, it completes the move.
+- If the receipt belongs to a different library, it is discarded.
+- Otherwise it removes the copy and unlocks the old file.
+
+`open()` also re-checks `library.json` inside the coordination lock before adoption/repair. If a move finished while it waited, it reopens at the new path.
+
+No step can lose a committed write: anything committed before step 1 is in the copy, and step 1 blocks everything after it.
+
+**Client behaviour.** The engine checks the open file before every call (`checkOpen`). On a handle opened before a move, calls reject with:
+
+- `LIBRARY_MOVED` (`details.movedTo` = new file) once the move is published. **Close the handle and call `open()` again**; it follows `library.json`. Retain pending operations and retry them with their existing operation IDs on the new handle.
+- `LIBRARY_BUSY` while a move is in progress. Retry shortly.
+
+A stale handle never writes to or recreates the old file, including `restore`. An application with an engine older than this one cannot see these codes. Its writes fail with a SQLite error that starts `LIBRARY_MOVED:`, its reads still show the old snapshot, and it works normally again after a restart.
+
 Complete compatibility qualification must cover installation in either order, two processes, one process absent for weeks, interrupted adoption, conflicting writes and restore/retry safety before activation. Host database tests and a native Paddock test are passing; the full Timing application adapter and joint native tests remain separate work.
 
 ### Native Timing history projection, version 2
