@@ -39,7 +39,9 @@ let libraryStartup=null,libraryStartupError=null;try{libraryStartup=launcherModu
 const ownsInstance=!libraryStartupError&&app.requestSingleInstanceLock();
 const quickLinks=new (require('./quick-links.cjs').QuickLinks)(app.getPath('userData'),{openExternal:url=>shell.openExternal(url)});
 if(libraryStartupError){console.error('The registered local library could not be started. Open Paddock normally to check its registration.');app.exit(1);}else if(!ownsInstance)app.quit();
-let sharedObserver,sharedRoot,libraryMoveResult=null;
+let sharedObserver,sharedRoot,libraryMoveResult=null,autoBackup,autoBackupTimer;
+// The user is working in Paddock right now: its window has focus and there was recent input.
+function userActive(){return !!win&&!win.isDestroyed()&&win.isFocused()&&powerMonitor.getSystemIdleTime()<30;}
 let win,store,network,club,portal,localLibrary,backgroundMode,resultInbox,networkTimer,rendererReady=false,startupFeedback,startupPage,startupClosing=false;
 const ipcWork=new (require('./work-gate.cjs').WorkGate)();
 const backupJobs=new (require('./backup-jobs.cjs').BackupJobs)(value=>{if(win&&!win.isDestroyed())win.webContents.send('sf:file-progress',value);});
@@ -50,7 +52,11 @@ const sharedPreviews=new (require('./paddock-thumbnails.cjs').PaddockThumbnails)
 const thumbnails=new (require('./thumbnail-cache.cjs').ThumbnailCache)(job=>{if(win&&!win.isDestroyed())win.webContents.send('sf:thumbnail',job);},url=>media.responseAsync(url));
 function mediaSweep(){media.retain([store?.data,club?.loadedCache?.data,network?.cached,...transfer.history.map(x=>x.data)]);}
 function trustedFrame(event){return applicationFrame.owns(win,event,entryURL);}
-function reply(fn){return async(event,...args)=>{let value;try{return await ipcWork.run(async()=>{if(!trustedFrame(event))return {error:'Unauthorised application frame.'};if(sharedObserver&&!restoring)await sharedObserver.refresh();value=await fn(...media.expand(args));return {ok:true,value:media.project(value)};});}catch(e){return {error:e.message,code:value?.commandId?'WRITE_UNCERTAIN':e.code,definiteRejection:e.definiteRejection===true};}};}
+// An automatic backup gives way to the user: a request made while someone is using Paddock
+// stops it first. Background requests while nobody is using it simply wait for the backup.
+// A backup the user started with "Back up now" is never stopped this way (see AutoBackup.yield).
+let userRequests=0;
+function reply(fn){return async(event,...args)=>{let value;userRequests++;try{try{return await ipcWork.run(async()=>{if(!trustedFrame(event))return {error:'Unauthorised application frame.'};if(autoBackup?.running&&userActive())await autoBackup.yield();if(sharedObserver&&!restoring)await sharedObserver.refresh();value=await fn(...media.expand(args));return {ok:true,value:media.project(value)};});}finally{userRequests--;}}catch(e){return {error:e.message,code:value?.commandId?'WRITE_UNCERTAIN':e.code,definiteRejection:e.definiteRejection===true};}};}
 async function files(action,p={}){
   if(action==='library.move-choose'||action==='library.move-request'){
     // Always the personal shared library, even while a Dealership copy is selected.
@@ -251,6 +257,18 @@ const startupTask=app.whenReady().then(async()=>{
   network=new Network(store,change=>{if(win&&!win.isDestroyed())win.webContents.send('sf:changed',change);},result=>{if(win&&!win.isDestroyed())win.webContents.send('sf:network-state',media.project(result));});
   try{club=new Club(store,network,app.getPath('userData'),change=>{if(win&&!win.isDestroyed())win.webContents.send('sf:changed',change);});}catch(e){dialog.showErrorBox('Club copy could not be opened',e.message+'\nYour personal database and club files have not been replaced.');app.quit();return;}
   club.backupJobs=backupJobs;
+  // The standard folder sits in Paddock's profile: never synced to OneDrive/iCloud without the user choosing so.
+  autoBackup=new (require('./auto-backup.cjs').AutoBackup)({
+   profile:app.getPath('userData'),
+   defaultFolder:path.join(app.getPath('userData'),'Automatic backups'),
+   getStore:()=>store,
+   jobs:backupJobs,
+   // Also busy while any request is in progress: it may be waiting on a file dialog that took focus.
+   busy:()=>restoring||startupClosing||userRequests>0||!!network?.retirement?.busy,
+   idleFor:()=>!win||win.isDestroyed()||!win.isVisible()||!win.isFocused()?Infinity:powerMonitor.getSystemIdleTime()*1000,
+   protectedFiles:()=>store.protectedFiles(),
+   onChange:()=>{if(win&&!win.isDestroyed())win.webContents.send('sf:auto-backup');},
+  });
   network.retirement=new (require('./sharing-retirement.cjs').SharingRetirement)(network,club,app.getPath('userData'));
   let lastPreviewWrite;store.subscribe(()=>{const change=store.photoPreviewWrites;if(change&&change!==lastPreviewWrite&&change.revision===store.data.revision){lastPreviewWrite=change;sharedPreviews.warm(change.ids);}});
   try{resultInbox=new (require('./result-inbox.cjs').ResultInbox)(app.getPath('userData'));}catch{resultInbox={file:path.join(app.getPath('userData'),'result-review.sqlite'),read:()=>({total:0,error:'Race-result notices could not be opened. Saved results remain available in each car’s Performance section. Check the profile storage and restart Paddock.'}),seen:()=>{throw Error('Race-result notices are unavailable.');},close:()=>{}};}store.resultInbox=resultInbox;
@@ -270,6 +288,8 @@ const startupTask=app.whenReady().then(async()=>{
   // LocalLibrary.starting before releasing the profile.
   void localLibrary.start().then(()=>network.notify()).catch(()=>network.notify());
   if(!smoke){networkTimer=setInterval(()=>network.poll().catch(()=>{}),5000);networkTimer.unref();}
+  // Checks once a minute whether an automatic backup is due; it starts only while Paddock is not in use.
+  if(!smoke){autoBackupTimer=setInterval(()=>{void autoBackup.tick().catch(()=>{});},60*1000);autoBackupTimer.unref();}
   assemblyPhotoDecoder=new (require('./assembly-photo-decoder.cjs').AssemblyPhotoDecoder)({getWindow:()=>win,url:entryURL});
   spreadsheetImports=new (require('./spreadsheet-import.cjs').SpreadsheetImports)({profile:app.getPath('userData'),getStore:()=>club.store,club});
   try{picturePreviews=new (require('./catalogue-picture-previews.cjs').PicturePreviews)({profile:app.getPath('userData'),getStore:()=>club.store,decode:(picture,options)=>assemblyPhotoDecoder.decode(picture,options)});new (require('./catalogue-picture-application.cjs').PictureApplication)(picturePreviews,club);new (require('./catalogue-picture-batches.cjs').PictureBatches)(picturePreviews);club.decodeCataloguePicture=picture=>picturePreviews.serialDecode(picture,new AbortController().signal);}catch(error){picturePreviewError=error.message;}
@@ -348,6 +368,31 @@ const startupTask=app.whenReady().then(async()=>{
    if(operation==='session')return require('./sqlite-query.cjs').read(club.store,payload.token,r=>require('./query-timing.cjs').session(r,payload.sourceId,payload.sessionId,payload.carId,payload.offset)).value;
    throw Error('Unknown page query.');
   })));
+  ipcMain.handle('sf:auto-backup',async(event,action,payload)=>{
+   if(!trustedFrame(event))return {error:'Unauthorised application frame.'};
+   userRequests++;
+   try{return {ok:true,value:await ipcWork.run(async()=>{
+    if(action==='status')return autoBackup.status();
+    if(action==='save')return autoBackup.save(payload||{});
+    if(action==='default-folder')return autoBackup.save({folder:null});
+    if(action==='choose'){
+     const r=await dialog.showOpenDialog(win,{title:'Choose a folder for automatic backups',defaultPath:autoBackup.folder(),properties:['openDirectory','createDirectory','promptToCreate']});
+     if(r.canceled||!r.filePaths[0])return null;
+     return autoBackup.save({folder:r.filePaths[0]});
+    }
+    if(action==='run'){
+     if(restoring)throw Error('Wait for the restore to finish.');
+     try{const result=await autoBackup.run({manual:true});return {...autoBackup.status(),result};}
+     catch(e){if(e.code==='CANCELLED')return autoBackup.status();throw e;}
+    }
+    if(action==='open'){
+     const folder=autoBackup.folder();
+     if(!fs.existsSync(folder))throw Error('This folder does not exist yet. Paddock creates it with the first backup.');
+     const error=await shell.openPath(folder);if(error)throw Error(error);return {opened:true};
+    }
+    throw Error('Unknown automatic backup action.');
+   })};}catch(e){return {error:e.message,code:e.code};}finally{userRequests--;}
+  });
   ipcMain.handle('sf:file-cancel',reply(id=>backupJobs.cancel(id)));
   ipcMain.handle('sf:file',reply(async(action,p,known)=>{if(restoring)throw Error('Wait for the restore to finish.');network.retirement.assertIdle();if(['restore','database.reset'].includes(action))require('./submission-recovery.cjs').assertPreserved(network);let result;if(['restore','database.reset'].includes(action))restoring=true;let replacement;try{if(['restore','database.reset'].includes(action))await spreadsheetImports?.stop();if(['restore','database.reset'].includes(action))await portal.stop('Paddock Portal was turned off for database replacement.');if(sharedRoot&&['restore','database.reset'].includes(action))replacement=await require('./shared-library-location.cjs').beginReplacement(sharedRoot,store.file,store.data.id);result=await files(action,p);}finally{try{if(replacement)await require('./shared-library-location.cjs').finishReplacement(sharedRoot,replacement);}finally{if(['restore','database.reset'].includes(action))restoring=false;}}if(!result||!known?.queryView)return result;return club.store.withIdle(()=>{if(action==='restore')return require('./view-query.cjs').view(club.store,{page:'Overview'});if(result.data?.schema)return {...result,data:require('./view-query.cjs').view(club.store,action==='database.reset'?{page:'Overview'}:known.queryView)};return result;});}));
   ipcMain.handle('sf:club',reply(async(action,p={})=>{network.retirement.assertIdle();if(['enable','join','disable','leave'].includes(action))require('./submission-recovery.cjs').assertPreserved(network);if(['switch','join','leave','update'].includes(action))await portal.stop('The collection changed; Paddock Portal was turned off.');if(restoring)throw Error('Wait for the restore to finish.');const current=club.store;return current.withIdle(async()=>{if(club.store!==current)throw Error('The collection changed. Reopen this action.');switch(action){case 'enable':if(network.hostingMode==='legacy'&&network.server)throw Error('Use Migrate to Dealership Mode to preserve the existing host.');await club.enableAsync(p.name,p.password);await network.stop();await network.start();return club.status();case 'disable':return club.disableAsync(p);case 'password':return club.setPassword(p.password);case 'start':if(!club.coordinator)throw Error('Enable Dealership Mode first.');return network.start();case 'stop':if(!club.coordinator)throw Error('This is not the dealership computer.');return network.stop();case 'join':return club.connect(p);case 'switch':return club.switchAsync(p.active);case 'update':return club.update(p.revision);case 'preview':return club.preview(p.id);case 'review':return club.reviewAsync(p);case 'retry':return club.sendOutbox();case 'discard':return club.discardOutbox();case 'leave':return club.leaveAsync();default:throw Error('Unknown club operation.');}});}));
@@ -384,12 +429,13 @@ app.on('before-quit',event=>{
   event.preventDefault();if(recoveryQuitPrompt)return;recoveryQuitPrompt=true;
   void (async()=>{const r=await dialog.showMessageBox(win,{type:'warning',title:'Pending submission',message:'Save the pending submission before quitting.',detail:'The host may already have received it. A recovery file keeps the same package for safe retry. You can also keep Paddock open and retry or explicitly discard it in Settings → Database.',buttons:['Keep Paddock open','Save recovery and quit'],defaultId:0,cancelId:0});if(r.response===1&&await submissionRecoveryFile('recovery-export')){recoveryQuitPrompt=false;app.quit();}})().catch(e=>dialog.showErrorBox('Recovery was not saved',e.message)).finally(()=>{recoveryQuitPrompt=false;});return;
  }
- event.preventDefault();if(spreadsheetImports?.work)spreadsheetImports.work.stopped=true;backgroundMode?.beginQuit();startupClosing=true;startupPage?.cancel();ipcWork.stop();clearInterval(networkTimer);network?.quiesce();club?.quiesce();localLibrary?.quiesce();
+ event.preventDefault();if(spreadsheetImports?.work)spreadsheetImports.work.stopped=true;backgroundMode?.beginQuit();startupClosing=true;startupPage?.cancel();void autoBackup?.stop();clearInterval(autoBackupTimer);ipcWork.stop();clearInterval(networkTimer);network?.quiesce();club?.quiesce();localLibrary?.quiesce();
  if(waitingToQuit)return;waitingToQuit=true;
  void (async()=>{
   // Startup may still be creating the first store. Wait for the whole bootstrap,
   // then recheck producers before draining every accepted IPC/HTTP operation.
   await Promise.allSettled([startupTask]);network?.quiesce();club?.quiesce();localLibrary?.quiesce();
+  await autoBackup?.stop();
   await Promise.all([ipcWork.idle(),network?.idle(),club?.idle(),localLibrary?.idle()]);
   await portal?.stop();
   await spreadsheetImports?.close();

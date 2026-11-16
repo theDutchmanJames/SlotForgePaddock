@@ -22,6 +22,8 @@ contextBridge.exposeInMainWorld('slotforge',{
   club:(action,payload)=>ipcRenderer.invoke('sf:club',action,payload),
   plan:(action,payload)=>ipcRenderer.invoke('sf:plan',action,payload),
   quickLinks:(action,payload)=>ipcRenderer.invoke('sf:quick-links',action,payload),
+  autoBackup:(action,payload)=>ipcRenderer.invoke('sf:auto-backup',action,payload),
+  onAutoBackup:callback=>{const handler=()=>callback();ipcRenderer.on('sf:auto-backup',handler);return()=>ipcRenderer.removeListener('sf:auto-backup',handler);},
   carSearch:fields=>ipcRenderer.invoke('sf:car-search',fields),
   cancelFile:id=>ipcRenderer.invoke('sf:file-cancel',id),
   onFileProgress:callback=>ipcRenderer.on('sf:file-progress',(_event,value)=>callback(value)),

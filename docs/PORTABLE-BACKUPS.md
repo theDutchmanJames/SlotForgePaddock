@@ -4,6 +4,17 @@ Paddock's default complete backup is a **`.sfpbackup` file**. It contains a vers
 
 Use **Import & Export → Create backup**. Progress appears at the bottom right, with Cancel during export, verification and staging. **Restore a backup** validates a separate staging database before asking to replace the current collection. Before replacement, Paddock saves a verified recovery backup in `recovery-backups` beside the live database. **Settings → Database → Export previous revision** writes a complete backup of the preceding committed revision, including its original attachments.
 
+## Automatic backups
+
+**Settings → Database → Automatic backups** makes the same complete `.sfpbackup` on a schedule. It is on by default: once a week, keeping the newest 5, in the **Automatic backups** folder inside Paddock's own profile folder. That standard folder is deliberately not in Documents, which OneDrive or iCloud often upload, because backups contain private collection details. Choose **Change schedule…** for daily, weekly or monthly backups and how many to keep (1–50), and **Choose folder…** for another folder, ideally on a second drive or USB disk. **Back up now** makes one immediately; **Open folder** shows the files.
+
+- An automatic backup only starts while you are not using Paddock: its window is in the background or minimised, or there has been no keyboard or mouse input for two minutes. When you start working in Paddock again, an automatic backup in progress stops at once and runs again later. A backup started with **Back up now** finishes like **Create backup**.
+- Files are named `SlotForge-Paddock-auto-<collection>-<computer>-<date>-<time>.sfpbackup`. When there are more than you keep, only the oldest files with that pattern **for this collection on this computer** are removed, only after a newer backup has been verified and saved, and never a file dated after the new backup (in case the clock was wrong). Your own backups, other computers' backups in a shared folder and other files are never touched. After a reset or restore, the new collection gets its own series; old files stay until you remove them.
+- A chosen folder that is missing, such as an unplugged USB drive, is not created. A folder that does not respond within 15 seconds, such as a sleeping network drive, counts as missing. Settings shows the problem and Paddock tries again an hour later. The standard folder is created when needed.
+- Paddock leaves free space on the drive after a backup: 5% of the drive, at least 1 GB and at most 20 GB. If there is not enough, the backup is skipped and Settings says so.
+- Temporary files from a backup that was cut off by a crash or power cut are removed from the folder once they are more than a day old.
+- The settings belong to this computer, not to the collection, so they are not part of backups, Dealership copies or Timing. A Dealership copy is not backed up automatically; the dealership computer backs up the official collection.
+
 The save dialog also offers **Legacy JSON backup**. Existing version 1 JSON backups still restore through validation and migration. Old Paddock versions cannot read `.sfpbackup`; select JSON when an older version requires it, subject to that version's schema and size support. Selected-car packages, Timing exports and manufacturer catalogues retain their existing versioned JSON formats.
 
 ## Contents and privacy
