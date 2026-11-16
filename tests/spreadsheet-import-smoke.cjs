@@ -18,7 +18,20 @@ module.exports=async({win,store,js,wait,click,qa,service})=>{
   assert.equal(await js('document.querySelector("#sheet-map-6").value'),'description');await assign(6,'privateNotes','private');
   await click('[data-action=sheet-assign][data-id="4"]');await search('motor');await change('#sheet-field-group','Factory specifications');
   assert.ok(await js('document.querySelectorAll(".sheet-field-option").length<15'));await click('[data-action=sheet-field-pick][data-id="factory.motor"]');
-  await assign(1,'name','display name');assert.equal(await js('document.querySelector("[data-action=sheet-preview]").disabled'),true);await assign(1,'maker','manufacturer');
+  // Duplicate field: the box names both columns, the grid marks them, and "Choose cars" points at the box instead of advancing.
+  await assign(1,'name','display name');assert.equal(await js('document.querySelector("[data-action=sheet-preview]").getAttribute("aria-disabled")'),'true');
+  assert.equal(await js('document.querySelector("#sheet-blockers").hidden'),false);assert.match(await js('document.querySelector("#sheet-blockers").innerText'),/Display name is used by 2 columns[\s\S]*column A “Name” and column B “Manufacturer”/);
+  assert.deepEqual(await js('[...document.querySelectorAll(".sheet-grid thead .sheet-col-problem.sheet-map-cell")].map(e=>e.dataset.sheetColumn)'),['0','1']);assert.equal(await js('document.querySelector(\'.sheet-map-cell[data-sheet-column="0"] .sheet-col-flag\').textContent'),'Same field as column B');
+  assert.match(await js('document.querySelector("#sheet-footer-blocked").textContent'),/Fix 1 thing above/);assert.equal(await js('document.querySelector("#sheet-mapping-status").getBoundingClientRect().height<=1'),true);
+  await click('[data-action="sheet-preview"]');assert.equal(await js('!!document.querySelector(".sheet-review")'),false);assert.equal(await js('document.querySelector("#sheet-blockers").classList.contains("sheet-blockers-flash")'),true);
+  await capture('spreadsheet-mapping-blocked-duplicate.png');
+  await click('[data-action=sheet-blocker-column][data-id="1"]');await wait('!!document.querySelector("#sheet-field-dialog")');await search('manufacturer');await click('[data-action=sheet-field-pick][data-id="maker"]');
+  assert.equal(await js('document.querySelector("#sheet-blockers").hidden'),true);assert.equal(await js('document.querySelector("[data-action=sheet-preview]").getAttribute("aria-disabled")'),'false');assert.equal(await js('document.querySelectorAll(".sheet-col-flag").length'),0);
+  // Missing Display name: the box offers a column chooser that assigns it in one step.
+  await click('[data-action=sheet-assign][data-id="0"]');await click('[data-action=sheet-field-ignore]');assert.match(await js('document.querySelector("#sheet-blockers").innerText'),/Choose the column with your car names/);
+  await capture('spreadsheet-mapping-blocked-name.png');
+  await click('[data-action=sheet-name-column]');await wait('!!document.querySelector("[data-action=sheet-name-pick]")');await click('[data-action=sheet-name-pick][data-id="0"]');
+  assert.equal(await js('document.querySelector("#sheet-map-0").value'),'name');assert.equal(await js('document.querySelector("#sheet-blockers").hidden'),true);
   await click('[data-action=sheet-assign][data-id="6"]');await click('[data-action=sheet-field-ignore]');assert.equal(await js(`document.querySelector('[data-sheet-column="6"]').classList.contains('sheet-ignored')`),true);await assign(6,'privateNotes','private');
   await capture('spreadsheet-mapping-verified.png');
   await js(`document.documentElement.dataset.theme='light';document.documentElement.dataset.tone='light'`);

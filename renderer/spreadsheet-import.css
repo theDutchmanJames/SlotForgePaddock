@@ -33,6 +33,20 @@
 .sheet-cell-text{height:63px;max-height:63px;padding:8px 12px;overflow:auto;white-space:pre-wrap}
 .sheet-grid-note{padding:10px 12px;font-size:11px;color:var(--muted);background:var(--bg)}
 .sheet-footer-summary{font-size:13px}.sheet-footer-summary .tiny{margin-top:3px}
+.sheet-blockers{margin:0 0 14px;padding:14px 16px;border:1px solid color-mix(in srgb,var(--accent) 55%,var(--line));border-left:4px solid var(--accent);border-radius:8px;background:color-mix(in srgb,var(--accent) 9%,var(--panel));outline:none}
+.sheet-blockers h4{margin:0 0 2px;font-size:15px}.sheet-blockers>.tiny{margin:0 0 10px;color:var(--muted)}
+.sheet-blockers ul{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.sheet-blockers li{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;padding:10px 12px;border-radius:6px;background:var(--panel);border:1px solid var(--line)}
+.sheet-blockers li>div:first-child{flex:1 1 320px;min-width:0}.sheet-blockers li strong{font-size:13px}.sheet-blockers li p{margin:3px 0 0;font-size:12px;color:var(--muted);overflow-wrap:anywhere}.sheet-blockers li p b{color:var(--ink)}
+.sheet-blockers .actions{gap:6px;flex-wrap:wrap}
+.sheet-blockers-flash{animation:sheet-blockers-flash .9s ease-out 1}
+@keyframes sheet-blockers-flash{0%,40%{box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 45%,transparent)}100%{box-shadow:0 0 0 0 transparent}}
+@media(prefers-reduced-motion:reduce){.sheet-blockers-flash{animation:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 45%,transparent)}}
+.sheet-grid thead .sheet-col-problem{box-shadow:inset 0 0 0 2px var(--accent)}
+.sheet-col-flag{display:block;margin:0 0 5px;font-size:11px;font-weight:600;color:var(--accent)}
+.sheet-import .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+.sheet-footer-blocked{margin-top:3px;font-size:12px;font-weight:600;color:var(--accent)}
+.dialog-footer .btn.sheet-blocked{opacity:.55;cursor:help}
 .sheet-review-toolbar{margin:18px 0 12px}.sheet-review-toolbar .sheet-tab-selected{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,var(--panel));color:var(--ink)}
 .sheet-review{width:100%;min-width:650px}.sheet-review td{vertical-align:middle;overflow-wrap:anywhere;padding:13px 12px}.sheet-review td:nth-child(2){max-width:420px}.sheet-review td:first-child{width:60px}.sheet-review th{font-size:12px}.sheet-review .tiny{margin-top:4px}.sheet-review .badge{white-space:normal}.sheet-review .btn{white-space:nowrap}.sheet-review td:last-child .btn{margin:3px}
 .sheet-excluded-row{color:var(--muted)}.sheet-import progress{width:100%}
