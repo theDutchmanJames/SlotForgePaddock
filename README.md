@@ -303,6 +303,8 @@ The fresh collection receives a new identity and sharing stops. Reconnect Timing
 
 Produce **car cards**, **setup sheets**, **club scrutineering sheets** and a **collection inventory** through **Cars → Print / PDF**. Preview the report and save a PDF for printing. Purchase details are excluded unless explicitly selected. Car-card QR links open the matching collection in Paddock; they are not public web pages.
 
+Press **Ctrl+K** (⌘K on a Mac), or click **Search…** in the bar under the menu, to search everything at once: cars, parts, workshop jobs, manuals, pages and common commands. Every word you type must match, in any order, and accents don't matter. Other shortcuts: **Ctrl+N** adds a car, **Ctrl+F** searches the current page, **Ctrl+,** opens Settings, **Alt+1–9** opens the main menu pages and **?** lists them all.
+
 Choose from eight preset themes or create your own colours. Under **Settings → Appearance**, set **Interface size** from 80% to 200% to resize text, buttons and menus together, or reset to 100%. Interface size is saved on this computer independently of your collections. Edit the welcome banner, choose overview fields and save collection views. The **Review** button brings incoming cars, Dealership proposals, workshop jobs and maintenance reminders within reach.
 
 Everyday personal collection and workshop use works offline. A new collection starts empty, ready for **your** cars, photographs and parts. [Guide to planning, reports and showroom groups](docs/COLLECTION-PLANNING.md).
@@ -331,6 +333,8 @@ Windows downloads are unsigned. macOS downloads are ad-hoc signed, not Apple-not
 4. Add parts, setups and workshop jobs whenever you want more detail.
 
 ### Updating and moving to another computer
+
+Paddock tells you when a new version is published: a small **Paddock x.y.z is available** notice appears in the top bar, with **Download** (opens the release page in your browser) and **Not now** (hides it until an even newer version appears). It asks GitHub for the newest version number at most twice a day; nothing about you or your collection is sent, and Paddock never downloads or installs anything by itself. **Settings → Database → Updates** shows your version, has **Check now**, and turns the automatic check off.
 
 Make a complete backup through **Import & Export**, close the running app and open the new version. Your collection is stored separately in your operating-system user profile. Moving or replacing the executable does not move the collection; use the backup/export tools to transfer your data. For a Dealership collection, follow its [recovery guidance](docs/SHARED-CLUB.md).
 

@@ -1,5 +1,5 @@
 let assemblyPhotoDecoder,picturePreviews,picturePreviewError,spreadsheetImports;
-const {app,BrowserWindow,ipcMain,dialog,nativeImage,shell,protocol,Tray,Menu,powerMonitor}=require('electron');
+const {app,BrowserWindow,ipcMain,dialog,nativeImage,shell,protocol,Tray,Menu,powerMonitor,net}=require('electron');
 const fs=require('node:fs');
 const path=require('node:path');
 const applicationFrame=require('./application-frame.cjs');
@@ -39,7 +39,7 @@ let libraryStartup=null,libraryStartupError=null;try{libraryStartup=launcherModu
 const ownsInstance=!libraryStartupError&&app.requestSingleInstanceLock();
 const quickLinks=new (require('./quick-links.cjs').QuickLinks)(app.getPath('userData'),{openExternal:url=>shell.openExternal(url)});
 if(libraryStartupError){console.error('The registered local library could not be started. Open Paddock normally to check its registration.');app.exit(1);}else if(!ownsInstance)app.quit();
-let sharedObserver,sharedRoot,libraryMoveResult=null,autoBackup,autoBackupTimer;
+let sharedObserver,sharedRoot,libraryMoveResult=null,autoBackup,autoBackupTimer,updateCheck,updateTimer;
 // The user is working in Paddock right now: its window has focus and there was recent input.
 function userActive(){return !!win&&!win.isDestroyed()&&win.isFocused()&&powerMonitor.getSystemIdleTime()<30;}
 let win,store,network,club,portal,localLibrary,backgroundMode,resultInbox,networkTimer,rendererReady=false,startupFeedback,startupPage,startupClosing=false;
@@ -290,6 +290,17 @@ const startupTask=app.whenReady().then(async()=>{
   if(!smoke){networkTimer=setInterval(()=>network.poll().catch(()=>{}),5000);networkTimer.unref();}
   // Checks once a minute whether an automatic backup is due; it starts only while Paddock is not in use.
   if(!smoke){autoBackupTimer=setInterval(()=>{void autoBackup.tick().catch(()=>{});},60*1000);autoBackupTimer.unref();}
+  // "A new version is available": installed/portable apps check GitHub by themselves (at most every 12 hours);
+  // development copies only check when asked in Settings.
+  updateCheck=new (require('./update-check.cjs').UpdateCheck)({
+   profile:app.getPath('userData'),
+   current:app.getVersion(),
+   homepage:require('../package.json').homepage,
+   fetch:(url,init)=>net.fetch(url,init),
+   automatic:app.isPackaged&&!smoke,
+   onChange:()=>{if(win&&!win.isDestroyed())win.webContents.send('sf:update-check');},
+  });
+  if(!smoke){updateTimer=setTimeout(()=>{void updateCheck.tick();updateTimer=setInterval(()=>{void updateCheck.tick();},60*60*1000);updateTimer.unref();},20*1000);updateTimer.unref();}
   assemblyPhotoDecoder=new (require('./assembly-photo-decoder.cjs').AssemblyPhotoDecoder)({getWindow:()=>win,url:entryURL});
   spreadsheetImports=new (require('./spreadsheet-import.cjs').SpreadsheetImports)({profile:app.getPath('userData'),getStore:()=>club.store,club});
   try{picturePreviews=new (require('./catalogue-picture-previews.cjs').PicturePreviews)({profile:app.getPath('userData'),getStore:()=>club.store,decode:(picture,options)=>assemblyPhotoDecoder.decode(picture,options)});new (require('./catalogue-picture-application.cjs').PictureApplication)(picturePreviews,club);new (require('./catalogue-picture-batches.cjs').PictureBatches)(picturePreviews);club.decodeCataloguePicture=picture=>picturePreviews.serialDecode(picture,new AbortController().signal);}catch(error){picturePreviewError=error.message;}
@@ -368,6 +379,19 @@ const startupTask=app.whenReady().then(async()=>{
    if(operation==='session')return require('./sqlite-query.cjs').read(club.store,payload.token,r=>require('./query-timing.cjs').session(r,payload.sourceId,payload.sessionId,payload.carId,payload.offset)).value;
    throw Error('Unknown page query.');
   })));
+  // Search everything (Ctrl+K): reads the open collection in memory; never writes.
+  ipcMain.handle('sf:search',reply(query=>{if(restoring)throw Error('Wait for the restore to finish.');return require('./global-search.cjs').searchStore(club.store,query);}));
+  ipcMain.handle('sf:update-check',async(event,action,payload)=>{
+   if(!trustedFrame(event))return {error:'Unauthorised application frame.'};
+   try{return {ok:true,value:await (async()=>{
+    if(action==='status')return updateCheck.status();
+    if(action==='check')return await updateCheck.check();
+    if(action==='enable')return updateCheck.setEnabled(payload?.enabled);
+    if(action==='skip')return updateCheck.skip(payload?.version);
+    if(action==='open'){await shell.openExternal(updateCheck.releaseUrl());return {opened:true};}
+    throw Error('Unknown update action.');
+   })()};}catch(e){return {error:e.message,code:e.code};}
+  });
   ipcMain.handle('sf:auto-backup',async(event,action,payload)=>{
    if(!trustedFrame(event))return {error:'Unauthorised application frame.'};
    userRequests++;
@@ -429,7 +453,7 @@ app.on('before-quit',event=>{
   event.preventDefault();if(recoveryQuitPrompt)return;recoveryQuitPrompt=true;
   void (async()=>{const r=await dialog.showMessageBox(win,{type:'warning',title:'Pending submission',message:'Save the pending submission before quitting.',detail:'The host may already have received it. A recovery file keeps the same package for safe retry. You can also keep Paddock open and retry or explicitly discard it in Settings → Database.',buttons:['Keep Paddock open','Save recovery and quit'],defaultId:0,cancelId:0});if(r.response===1&&await submissionRecoveryFile('recovery-export')){recoveryQuitPrompt=false;app.quit();}})().catch(e=>dialog.showErrorBox('Recovery was not saved',e.message)).finally(()=>{recoveryQuitPrompt=false;});return;
  }
- event.preventDefault();if(spreadsheetImports?.work)spreadsheetImports.work.stopped=true;backgroundMode?.beginQuit();startupClosing=true;startupPage?.cancel();void autoBackup?.stop();clearInterval(autoBackupTimer);ipcWork.stop();clearInterval(networkTimer);network?.quiesce();club?.quiesce();localLibrary?.quiesce();
+ event.preventDefault();if(spreadsheetImports?.work)spreadsheetImports.work.stopped=true;backgroundMode?.beginQuit();startupClosing=true;startupPage?.cancel();void autoBackup?.stop();clearInterval(autoBackupTimer);clearTimeout(updateTimer);clearInterval(updateTimer);updateCheck?.stop();ipcWork.stop();clearInterval(networkTimer);network?.quiesce();club?.quiesce();localLibrary?.quiesce();
  if(waitingToQuit)return;waitingToQuit=true;
  void (async()=>{
   // Startup may still be creating the first store. Wait for the whole bootstrap,

@@ -12,8 +12,9 @@ module.exports=async({win,store,js,wait,click,fill,submit,qa,dialog})=>{
     await wait("document.body.innerText.includes('Timing QA car')");await click('[data-action="accept-review"]');assert.equal(store.data.cars.length,count+1);
     const repeated=await js("api('file','import')");assert.equal(repeated.result,'duplicate');assert.equal(store.data.cars.length,count+1);
   }finally{dialog.showOpenDialog=old;}
-  await js(`carId=${JSON.stringify(imported.id)};page='Cars';section='Overview';render();`);
-  assert.ok(await js("document.querySelector('#main').innerText.includes('2.385:1')"));
+  // The car Overview shows the user's chosen fields; gearing lives under Technical & parts.
+  await js(`carId=${JSON.stringify(imported.id)};page='Cars';section='Technical & parts';render();`);
+  await wait("document.querySelector('#main').innerText.includes('2.385:1')");
   await click('[data-action="edit-car"]');await click('[data-action="form-tab"][data-id="Technical"]');
   await fill({'technical.pinion':'9','technical.gear':'27'});assert.equal(await js("document.querySelector('[data-gear-ratio=technical]').textContent"),'3.00:1');
   await fill({'technical.pinion':'0'});assert.ok(await js("document.querySelector('[data-gear-ratio=technical]').textContent.includes('positive whole')"));

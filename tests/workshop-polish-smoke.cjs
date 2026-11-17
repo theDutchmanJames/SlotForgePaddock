@@ -8,7 +8,9 @@ module.exports=async({win,store,js,wait,click,fill,submit,qa})=>{
   // Click the real no-ID button: calling addShopping() directly misses the dispatcher regression.
   assert.equal(await js(`document.querySelector('[data-action="shop-add"]').hasAttribute('data-id')`),false);
   await click('[data-action="shop-add"]');await wait(`document.querySelector('#dialog').open`);
-  await fill({quantity:'2'});await submit();assert.equal(store.data.planning.shopping[0].jobId,'');
+  // The dialog needs a catalogue item or a free-text item; use free text for an unlinked item.
+  await js(`(()=>{const k=document.querySelector('#dialog [name=kind]');k.value='free';k.dispatchEvent(new Event('change',{bubbles:true}));purchaseKindFields();})()`);
+  await fill({name:'Unlinked QA item',quantity:'2'});await submit();assert.equal(store.data.planning.shopping[0].jobId,'');
   checks.push('general shopping button with no part ID opens and saves an unlinked shopping item');
 
   await js(`openJob(${JSON.stringify(jobId)})`);
@@ -17,6 +19,8 @@ module.exports=async({win,store,js,wait,click,fill,submit,qa})=>{
   fs.writeFileSync(path.join(qa,'workshop-polish-empty.png'),(await win.webContents.capturePage()).toPNG());
   await click('.job-plan-panel [data-action="shop-add"]');await wait(`document.querySelector('#dialog').open`);
   assert.equal(await js(`document.querySelector('[name=jobId]').value`),jobId);
+  // Choose the part in the catalogue search (the old dropdown pre-selected it).
+  await wait(`!!document.querySelector('#dialog [data-pick-stock="${partId}"]')`);await js(`document.querySelector('#dialog [data-pick-stock="${partId}"]').click()`);
   await fill({quantity:'1',supplier:'Club shop'});await submit();assert.equal(store.data.planning.shopping.find(s=>s.jobId===jobId).partId,partId);
   checks.push('job purchasing button keeps the correct workshop job selected');
 

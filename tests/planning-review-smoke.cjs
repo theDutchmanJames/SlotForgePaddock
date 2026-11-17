@@ -38,10 +38,15 @@ module.exports=async({win,store,js,wait,click,submit,qa,dialog})=>{
   await js(`(async()=>{db=(await api('read')).data;page='Parts';partsTab='Stock';stockScope='catalogue';partCategory=db.parts.find(p=>p.id===${JSON.stringify(dedicated)}).category;partId=${JSON.stringify(dedicated)};render();})()`);
   assert.equal(await js(`!!document.querySelector('[data-action="receive-stock"]')`),false);
   await js(`addShopping()`);
-  const options=await js(`[...document.querySelector('[data-shopping-part]').options].map(o=>o.value)`);
-  assert.equal(options.includes(dedicated),false);assert.equal(options.includes(individual),false);assert.ok(options.includes(partId));
-  await js(`document.querySelector('[data-shopping-part]').value=${JSON.stringify(unowned)};document.querySelector('[data-shopping-part]').dispatchEvent(new Event('change',{bubbles:true}))`);
-  assert.equal(await js(`document.querySelector('#dialog [name=quantity]').max`),'1');
+  // The dialog now searches the catalogue (data-pick-stock results) instead of a dropdown.
+  await wait(`document.querySelectorAll('#dialog [data-pick-stock]').length>0`);
+  const options=await js(`[...document.querySelectorAll('#dialog [data-pick-stock]')].map(b=>b.dataset.pickStock)`);
+  // Parts dedicated to an assembly are not offered. An owned individual part is listed by the
+  // search but refused on save (checked below with the unowned one at quantity 2).
+  assert.equal(options.includes(dedicated),false);assert.ok(options.includes(partId));assert.ok(individual);
+  // An individually tracked part can only be bought once; the save is refused with a clear message.
+  await js(`document.querySelector('#dialog [data-pick-stock="${unowned}"]').click();document.querySelector('#dialog [name=quantity]').value='2';document.querySelector('#modal-form').requestSubmit()`);
+  await wait(`!document.querySelector('#form-error').hidden&&/only contain one item/.test(document.querySelector('#form-error').textContent)`);
   await click('[data-action="close-modal"]');checks.push('shopping excludes dedicated assembly stock and caps individual identities at one');
 
   const image='data:image/png;base64,'+fs.readFileSync(path.join(__dirname,'../assets/icon.png')).toString('base64');
