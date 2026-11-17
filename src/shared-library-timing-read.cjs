@@ -126,4 +126,15 @@ function read(store,input){const q=query(input);return Q.read(store,input.token,
  return {...identity,summary:summary(r,q),weekStart:week,topDistanceCars,topWinners,recentSessions,fastestThisWeek};
  }).value;}
 function serviceCount(r,carId,from=null){return r.db.prepare(BASE+' SELECT count(*) n FROM samples WHERE carId=?'+(from?' AND (startedAt IS NULL OR julianday(startedAt)>=julianday(?))':'')).get(...(from?[carId,from]:[carId])).n+require('./shared-library-lap-counts.cjs').originals(r,carId,from);}
-module.exports={read,serviceCount};
+// Paddock lap reminders: laps per reminder in one pass over the lap index.
+// wanted: [{key,carId,from}]. Only sessions with a known date count (a start time, or when
+// Timing saved them): undated imported history must not make every new reminder due.
+function datedLapCounts(r,wanted){
+ const counts=new Map(wanted.map(w=>[w.key,0]));if(!wanted.length)return counts;
+ const rows=r.db.prepare(BASE+`, wanted AS (SELECT json_extract(value,'$.key') k,json_extract(value,'$.carId') carId,json_extract(value,'$.from') since FROM json_each(?)) SELECT w.k key,count(s.sessionKey) n FROM wanted w LEFT JOIN samples s ON s.carId=w.carId AND s.effectiveDate IS NOT NULL AND julianday(s.effectiveDate)>=julianday(w.since) GROUP BY w.k`).all(JSON.stringify(wanted));
+ for(const row of rows)counts.set(row.key,row.n);
+ const originals=require('./shared-library-lap-counts.cjs').originals;
+ for(const w of wanted)counts.set(w.key,counts.get(w.key)+originals(r,w.carId,w.from,{dated:true}));
+ return counts;
+}
+module.exports={read,serviceCount,datedLapCounts};

@@ -30,7 +30,7 @@ function view(store,request={}){
    // Page-specific context supplied above.
   }else if(request.page==='Overview'){
    data.cars=r.list('cars',{collectionStatus:'collection',archived:false,sort:'updated',limit:3}).rows;data.events=r.list('events',{limit:4}).rows;data.jobs=r.list('jobs',{status:'active',limit:3}).rows;data.jobs.forEach(j=>addCar(j.carId));
-   info.stats=summary;
+   info.stats=summary;info.value=require('./collection-value.cjs').summary(r);
   }else if(request.page==='Parts'){
    const owned=request.stockScope==='owned',groups=r.db.prepare("SELECT json_extract(aux,'$.category') category,count(*) count,sum(json_extract(aux,'$.quantity')) quantity FROM query_records WHERE bucket=? "+(owned?"AND json_extract(aux,'$.quantity')>0 ":'')+'GROUP BY category').all('["parts"]');
    const used=new Map();for(const row of r.db.prepare("SELECT json_extract(aux,'$.partId') id,sum(json_extract(aux,'$.quantity')) n FROM query_records WHERE bucket='[\"installations\"]' AND json_extract(aux,'$.removed')=0 GROUP BY id").all())used.set(row.id,row.n);
@@ -57,7 +57,7 @@ function view(store,request={}){
     for(const {s,c}of pending.slice(offset,offset+limit)){let sub=data.submissions.find(x=>x.id===s.id);if(!sub){sub={...Object.fromEntries(Object.entries(s).filter(([k])=>k!=='package'&&k!=='outcomes').map(([k,v])=>[k,cloneJSON(v)])),package:{...s.package,cars:[]},outcomes:{}};data.submissions.push(sub);}sub.package.cars.push(cloneJSON(c));addCar(c.id);}
     for(const c of data.cars){const installed=r.list('installations',{carId:c.id,removed:false,hasField:true,limit:200}).rows.filter(i=>!i.removed);data.installations.push(...installed);for(const i of installed)if(!data.parts.some(p=>p.id===i.partId)){const p=r.one('parts',i.partId);if(p)data.parts.push(p);}}
    }else if(tab==='Workshop jobs'){const result=r.list('jobs',{status:'active',offset,limit});total=result.total;data.jobs=result.rows;data.jobs.forEach(j=>addCar(j.carId));data.planning.jobs=cloneJSON(db.planning.jobs.filter(p=>data.jobs.some(j=>j.id===p.jobId)));}
-   else if(tab==='Maintenance'){const reminders=r.reminders();total=reminders.length;data.events=reminders.slice(offset,offset+limit).map(x=>r.record(x.key));data.events.forEach(e=>addCar(e.carId));data.jobs=db.jobs.filter(j=>j.status==='active'&&data.cars.some(c=>c.id===j.carId)).map(cloneJSON);}
+   else if(tab==='Maintenance'){const reminders=r.reminders();total=reminders.length;data.events=reminders.slice(offset,offset+limit).map(x=>require('./lap-reminders.cjs').decorate(r.record(x.key),x));data.events.forEach(e=>addCar(e.carId));data.jobs=db.jobs.filter(j=>j.status==='active'&&data.cars.some(c=>c.id===j.carId)).map(cloneJSON);}
    else throw queries.fault('INVALID_QUERY','Unknown review section.');
    info.list={offset,limit,total,nextOffset:offset+limit<total?offset+limit:null};
   }else if(request.page==='Cars'&&!request.carId){

@@ -191,7 +191,7 @@ Create a **Workshop job** for maintenance, a modification or a planned setup cha
 - Add before/after photographs and record progress.
 - Leave and resume work, then complete or cancel the job.
 
-Use **Record work** for maintenance or modifications already performed. Set future maintenance dates to create reminders. Workshop supplies provide a digital toolbox for tools, oils, cleaners, adhesives and other consumables, with locations, remaining amounts and low-stock thresholds.
+Use **Record work** for maintenance or modifications already performed. Set a future maintenance date, a number of laps (for example new braids every 500 laps) or both to create a reminder; whichever comes first makes it due. Laps from SlotForge Timing races and manual track tests count from the start of the day of the work, and Review, Workshop and the car's history show the progress, such as "420 of 500 laps". Recording the same task again starts a new count. These reminders are Paddock's own, one per task; they are separate from Timing's single "laps since service" counter. Races without a known date (some imported old history) are not counted, and Timing races should not also be recorded as manual tests. Workshop supplies provide a digital toolbox for tools, oils, cleaners, adhesives and other consumables, with locations, remaining amounts and low-stock thresholds.
 
 ### Manuals and Part Guides
 
@@ -300,6 +300,8 @@ Use **Settings → Database → Reset database…** to start empty. Paddock requ
 The fresh collection receives a new identity and sharing stops. Reconnect Timing, Telemetry and Dealership copies to this new collection before importing fresh data. Old queued results cannot silently enter it. This resets the active collection; it does not erase external exports, recovery backups or other computers' copies.
 
 ### Reports, personalisation and everyday use
+
+The **Overview** shows your **collection value**: what your cars are worth now (each car's valuation, or what you paid when there is none) and what you spent on cars per year, as a chart with a table view. Amounts stay in their own currency and are never converted. Wishlist cars are left out; sold cars still count towards what you spent. These figures stay private on your computer.
 
 Produce **car cards**, **setup sheets**, **club scrutineering sheets** and a **collection inventory** through **Cars → Print / PDF**. Preview the report and save a PDF for printing. Purchase details are excluded unless explicitly selected. Car-card QR links open the matching collection in Paddock; they are not public web pages.
 

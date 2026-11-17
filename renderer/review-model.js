@@ -4,7 +4,7 @@
     const incoming=db.submissions.filter(s=>s.status==='pending').flatMap(s=>s.package.cars.filter(c=>!s.outcomes[c.id]));
     const jobs=db.jobs.filter(j=>j.status==='active');
     const maintenance=domain.reminders(db.events).filter(e=>db.cars.some(c=>c.id===e.carId&&!c.archived));
-    const due=maintenance.filter(e=>e.nextDue<=day),upcoming=maintenance.filter(e=>e.nextDue>day);
+    const due=maintenance.filter(e=>domain.reminderDue(e,day)),upcoming=maintenance.filter(e=>!domain.reminderDue(e,day));
     return {incoming,jobs,maintenance,due,upcoming,attention:incoming.length+due.length,day};
   }
   // Technical values are independent choices, not one all-or-nothing object.
