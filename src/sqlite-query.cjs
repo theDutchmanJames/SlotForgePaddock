@@ -102,6 +102,24 @@ class Reader {
     return this.record(JSON.stringify(path));
   }
   list(bucket, options = {}) {
+    // Which records match is remembered for this revision (see revision-memory.cjs): going
+    // back to a list, or opening a part from it, asks the same question again. The records
+    // themselves are always read afresh.
+    const found = options.ids
+      ? this.matching(bucket, options)
+      : require('./revision-memory.cjs').remember(this, 'list:' + JSON.stringify([bucket, options]), () =>
+          this.matching(bucket, options)
+        );
+    const offset = options.offset ?? 0;
+    return {
+      rows: found.keys.map(key => (options.idsOnly ? JSON.parse(key)[1].slice(3) : this.record(key))),
+      total: found.total,
+      nextOffset: offset + found.keys.length < found.total ? offset + found.keys.length : null,
+      token: this.token
+    };
+  }
+  /** The keys of one page of matching records, and how many match in all. */
+  matching(bucket, options = {}) {
     if (!buckets.has(bucket)) throw fault('INVALID_QUERY', 'Unknown record type.');
     const {
       offset = 0,
@@ -241,7 +259,7 @@ class Reader {
       }
     }
     if (ids) {
-      if (!ids.length) return { rows: [], total: 0, nextOffset: null, token: this.token };
+      if (!ids.length) return { keys: [], total: 0 };
       where.push(`r.identity IN (${ids.map(() => '?').join(',')})`);
       params.push(...ids.map(id => 'id:' + id));
     }
@@ -297,12 +315,7 @@ class Reader {
         keys = keys.slice(offset, offset + limit);
       }
     }
-    return {
-      rows: keys.map(r => (options.idsOnly ? JSON.parse(r.key)[1].slice(3) : this.record(r.key))),
-      total,
-      nextOffset: offset + keys.length < total ? offset + keys.length : null,
-      token: this.token
-    };
+    return { keys: keys.map(r => r.key), total };
   }
   count(bucket, options = {}) {
     return this.list(bucket, { ...options, countOnly: true }).total;

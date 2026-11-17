@@ -23,17 +23,19 @@ function setup(t) {
   return { file: s.file, key };
 }
 
-/** Counts how often the statement that reads through a whole attachment is prepared. */
-function countSlow(t) {
+/** Counts how often a statement containing `fragment` is prepared. */
+function countSlowText(t, fragment) {
   const prepare = DatabaseSync.prototype.prepare;
   let slow = 0;
   DatabaseSync.prototype.prepare = function (text) {
-    if (text.includes(SLOW)) slow++;
+    if (text.includes(fragment)) slow++;
     return prepare.call(this, text);
   };
   t.after(() => (DatabaseSync.prototype.prepare = prepare));
   return () => slow;
 }
+/** Counts how often the statement that reads through a whole attachment is prepared. */
+const countSlow = t => countSlowText(t, SLOW);
 
 const readCar = (file, key) => {
   const r = new Q.Reader(file);
@@ -138,6 +140,107 @@ test('Find a Part: the manufacturer choices follow the collection', t => {
   assert.deepEqual(find('crown').makers, before.makers, 'the choices do not depend on what is typed');
   add('Guide', 'Policar', 'P1');
   assert.ok(find('tyre').makers.includes('Policar'), 'a save refreshes them');
+});
+
+test('answers are remembered per revision and file, and only for that revision', () => {
+  const M = require('../src/revision-memory.cjs');
+  M.clear();
+  let n = 0;
+  const reader = (file, revision) => ({ file, token: { id: 'db', revision, epoch: 'e' } });
+  const ask = (r, name = 'q') => M.remember(r, name, () => ++n);
+  assert.equal(ask(reader('a', 1)), 1);
+  assert.equal(ask(reader('a', 1)), 1, 'same revision: remembered');
+  assert.equal(ask(reader('a', 1), 'other question'), 2);
+  assert.equal(ask(reader('b', 1)), 3, 'another file has its own answers');
+  assert.equal(ask(reader('a', 2)), 4, 'a new revision asks again');
+  assert.equal(ask(reader('a', 1)), 5, 'and the old revision is forgotten, not kept beside it');
+  assert.equal(
+    M.remember({ token: { id: 'x' } }, 'q', () => 'direct'),
+    'direct',
+    'no file: nothing is kept'
+  );
+  assert.throws(
+    () =>
+      M.remember(reader('c', 1), 'bad', () => {
+        throw Error('failed');
+      }),
+    /failed/
+  );
+  assert.equal(
+    M.remember(reader('c', 1), 'bad', () => 'ok'),
+    'ok',
+    'a failure is never remembered'
+  );
+});
+
+test('a remembered list never hides a change', t => {
+  const { s, add } = catalogue(t);
+  const names = () => Q.read(s, null, r => r.list('parts', { query: 'crown', sort: 'name', limit: 50 })).value;
+  const slow = countSlowText(t, 'SELECT count(*) n FROM records r JOIN query_records');
+  assert.equal(names().total, 5);
+  const counted = slow();
+  assert.equal(names().rows.length, 5);
+  assert.equal(slow(), counted, 'the same question in the same revision is not asked of the database again');
+  add('Crown gear 6', 'Sloting Plus', 'G6');
+  const after = names();
+  assert.equal(after.total, 6, 'a save shows at once');
+  assert.ok(after.rows.some(p => p.name === 'Crown gear 6'));
+  s.mutate(
+    'part.save',
+    {
+      id: after.rows[0].id,
+      revision: after.rows[0].revision,
+      data: { name: 'Renamed gear', quantity: 0, tracking: 'quantity' }
+    },
+    { snapshot: false }
+  );
+  assert.ok(Q.read(s, null, r => r.list('parts', { query: 'renamed', limit: 5 })).value.rows[0], 'so does an edit');
+});
+
+test('the Parts page follows the collection', t => {
+  const { s, add } = catalogue(t);
+  const V = require('../src/view-query.cjs');
+  const page = () =>
+    V.view(new Store(s.file, { deferred: true }), { page: 'Parts', partsTab: 'Stock', stockScope: 'catalogue' })._view;
+  const before = page();
+  assert.deepEqual(page().groups, before.groups, 'a second visit gives the same answer');
+  const count = v => v.groups.reduce((n, g) => n + g.count, 0);
+  assert.equal(count(before), 50);
+  assert.ok(!before.partMakers.includes('Policar'));
+  before.groups.length = 0; // The page's copy is its own: changing it must not change the memory.
+  add('Guide', 'Policar', 'P1');
+  const after = page();
+  assert.equal(count(after), 51);
+  assert.ok(after.partMakers.includes('Policar'));
+});
+
+test('Ctrl+K: searching the prepared text gives the same answer as asking the database', t => {
+  const { s, add } = catalogue(t);
+  add('Citroën DS3 mirror', 'Ørsted Models', 'ØR-1');
+  const G = require('../src/global-search.cjs');
+  const M = require('../src/revision-memory.cjs');
+  const ask = (terms, upTo) =>
+    Q.read(s, null, r => {
+      M.clear();
+      r.db.function('sf_fold', { deterministic: true }, value => G.fold(value));
+      const found = G.candidates(r, 'parts', terms, upTo);
+      return { keys: found.rows.map(x => x.key), total: found.total };
+    }).value;
+  for (const query of ['tyre', 'slot.it tyre', 'citroen', 'orsted mirror', 'crown gear 3', 'nothing here', 'e']) {
+    const terms = G.words(query);
+    assert.deepEqual(ask(terms, 20000), ask(terms, 0), query);
+  }
+  assert.equal(ask(G.words('tyre'), 20000).total, 45);
+  // And through the real entry point, a save is found at once.
+  const store = new Store(s.file, { deferred: true });
+  assert.equal(G.searchStore(store, 'policar').parts.total, 0);
+  store.mutate(
+    'part.save',
+    { data: { name: 'Guide', maker: 'Policar', quantity: 0, tracking: 'quantity' } },
+    { snapshot: false }
+  );
+  assert.equal(G.searchStore(store, 'policar').parts.total, 1);
+  assert.equal(G.searchStore(store, 'POLICAR guide').parts.items[0].label, 'Guide');
 });
 
 test('storage totals for Settings are worked out once per revision', t => {

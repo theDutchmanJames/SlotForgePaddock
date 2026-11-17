@@ -137,60 +137,79 @@ function view(store, request = {}) {
       info.stats = summary;
       info.value = require('./collection-value.cjs').summary(r);
     } else if (request.page === 'Parts') {
-      const owned = request.stockScope === 'owned',
-        groups = r.db
+      // These describe the whole catalogue and scan every part. They are the same on every
+      // visit until something is saved, so each is remembered for the revision.
+      const { remember } = require('./revision-memory.cjs');
+      const owned = request.stockScope === 'owned';
+      const used = remember(r, 'parts:used', () => {
+        const used = new Map();
+        for (const row of r.db
+          .prepare(
+            "SELECT json_extract(aux,'$.partId') id,sum(json_extract(aux,'$.quantity')) n FROM query_records WHERE bucket='[\"installations\"]' AND json_extract(aux,'$.removed')=0 GROUP BY id"
+          )
+          .all())
+          used.set(row.id, row.n);
+        for (const row of r.db
+          .prepare(
+            "SELECT json_extract(c.value,'$.partId') id,sum(json_extract(c.value,'$.quantity')) n FROM query_records q,json_each(q.aux,'$.components') c WHERE q.bucket='[\"assemblies\"]' GROUP BY id"
+          )
+          .all())
+          used.set(row.id, (used.get(row.id) || 0) + row.n);
+        return used;
+      });
+      const overview = remember(r, 'parts:overview:' + owned, () => {
+        const groups = r.db
           .prepare(
             "SELECT json_extract(aux,'$.category') category,count(*) count,sum(json_extract(aux,'$.quantity')) quantity FROM query_records WHERE bucket=? " +
               (owned ? "AND json_extract(aux,'$.quantity')>0 " : '') +
               'GROUP BY category'
           )
           .all('["parts"]');
-      const used = new Map();
-      for (const row of r.db
-        .prepare(
-          "SELECT json_extract(aux,'$.partId') id,sum(json_extract(aux,'$.quantity')) n FROM query_records WHERE bucket='[\"installations\"]' AND json_extract(aux,'$.removed')=0 GROUP BY id"
+        const categories = new Map(
+          r.db
+            .prepare(
+              "SELECT identity,json_extract(aux,'$.category') category FROM records r JOIN query_records q ON q.key=r.key WHERE r.bucket='[\"parts\"]'"
+            )
+            .all()
+            .map(p => [p.identity.slice(3), p.category])
+        );
+        return {
+          groups: groups.map(g => ({
+            ...g,
+            available:
+              g.quantity -
+              [...used].filter(([id]) => categories.get(id) === g.category).reduce((n, [id, q]) => n + q, 0)
+          })),
+          assemblies: r.db
+            .prepare(
+              "SELECT count(*) n FROM query_records WHERE bucket='[\"assemblies\"]' AND json_extract(aux,'$.dismantled')=0"
+            )
+            .get().n,
+          makers: r.db
+            .prepare(
+              "SELECT min(json_extract(f.json,'$')) maker FROM query_records q JOIN record_fields f ON f.record=q.key AND f.path='[\"maker\"]' WHERE q.bucket='[\"parts\"]' AND q.maker<>'' " +
+                (owned ? "AND json_extract(q.aux,'$.quantity')>0 " : '') +
+                'GROUP BY q.maker ORDER BY q.maker'
+            )
+            .all()
+            .map(x => x.maker)
+        };
+      });
+      // Copies: the page data is handed on and must not share the remembered objects.
+      info.groups = overview.groups.map(g => ({ ...g }));
+      info.assemblies = overview.assemblies;
+      info.partMakers = [...overview.makers];
+      info.partTypes = [
+        ...remember(r, 'parts:types:' + (request.partCategory || ''), () =>
+          r.db
+            .prepare(
+              "SELECT DISTINCT json_extract(aux,'$.partType') type FROM query_records WHERE bucket='[\"parts\"]' AND (?='' OR json_extract(aux,'$.category')=?) ORDER BY type"
+            )
+            .all(request.partCategory || '', request.partCategory || '')
+            .map(x => x.type)
+            .filter(Boolean)
         )
-        .all())
-        used.set(row.id, row.n);
-      for (const row of r.db
-        .prepare(
-          "SELECT json_extract(c.value,'$.partId') id,sum(json_extract(c.value,'$.quantity')) n FROM query_records q,json_each(q.aux,'$.components') c WHERE q.bucket='[\"assemblies\"]' GROUP BY id"
-        )
-        .all())
-        used.set(row.id, (used.get(row.id) || 0) + row.n);
-      const categories = new Map(
-        r.db
-          .prepare(
-            "SELECT identity,json_extract(aux,'$.category') category FROM records r JOIN query_records q ON q.key=r.key WHERE r.bucket='[\"parts\"]'"
-          )
-          .all()
-          .map(p => [p.identity.slice(3), p.category])
-      );
-      info.groups = groups.map(g => ({
-        ...g,
-        available:
-          g.quantity - [...used].filter(([id]) => categories.get(id) === g.category).reduce((n, [id, q]) => n + q, 0)
-      }));
-      info.assemblies = r.db
-        .prepare(
-          "SELECT count(*) n FROM query_records WHERE bucket='[\"assemblies\"]' AND json_extract(aux,'$.dismantled')=0"
-        )
-        .get().n;
-      info.partTypes = r.db
-        .prepare(
-          "SELECT DISTINCT json_extract(aux,'$.partType') type FROM query_records WHERE bucket='[\"parts\"]' AND (?='' OR json_extract(aux,'$.category')=?) ORDER BY type"
-        )
-        .all(request.partCategory || '', request.partCategory || '')
-        .map(x => x.type)
-        .filter(Boolean);
-      info.partMakers = r.db
-        .prepare(
-          "SELECT min(json_extract(f.json,'$')) maker FROM query_records q JOIN record_fields f ON f.record=q.key AND f.path='[\"maker\"]' WHERE q.bucket='[\"parts\"]' AND q.maker<>'' " +
-            (owned ? "AND json_extract(q.aux,'$.quantity')>0 " : '') +
-            'GROUP BY q.maker ORDER BY q.maker'
-        )
-        .all()
-        .map(x => x.maker);
+      ];
       if (request.partCategory || request.partType || request.partMaker || request.partQuery?.trim()) {
         const result = r.list('parts', {
           owned,

@@ -253,16 +253,53 @@ const KINDS = {
   }
 };
 
-function searchIndex(reader, kind, terms, phrase, limit) {
-  const k = KINDS[kind];
+const candidateSql = kind =>
+  `SELECT r.key key,${kind === 'guides' ? `COALESCE(NULLIF(${field('title')},''),${field('name')})` : field('name')} label,${KINDS[kind].reference} reference,${KINDS[kind].order} ord,${KINDS[kind].text} text
+    FROM records r JOIN query_records q ON q.key=r.key WHERE q.bucket=? AND ${KINDS[kind].where}`;
+
+// Above this many records of one kind, each search asks the database instead of keeping
+// every record's searchable text in memory.
+const REMEMBER_UP_TO = 20000;
+
+/**
+ * Every record of a kind with its searchable text already folded, in the database's own
+ * order. Preparing this reads a few fields of every record, which is nearly all the work of
+ * a search; it is remembered for the revision, so the next keystroke only compares text.
+ * Null when there are too many records to keep.
+ */
+function prepared(reader, kind, upTo) {
+  return require('./revision-memory.cjs').remember(reader, 'search:' + kind, () => {
+    const bucket = JSON.stringify([KINDS[kind].bucket]);
+    if (reader.db.prepare('SELECT count(*) n FROM query_records WHERE bucket=?').get(bucket).n > upTo) return null;
+    return reader.db
+      .prepare(candidateSql(kind))
+      .all(bucket)
+      .map(row => ({ key: row.key, label: row.label, reference: row.reference, ord: row.ord, text: fold(row.text) }));
+  });
+}
+
+/** The first candidates that contain every word, and how many records match in all. */
+function candidates(reader, kind, terms, rememberUpTo = REMEMBER_UP_TO) {
+  const all = prepared(reader, kind, rememberUpTo);
+  if (all) {
+    const matches = all.filter(row => terms.every(t => row.text.includes(t)));
+    return { rows: matches.slice(0, CANDIDATES + 1), total: matches.length };
+  }
+  const bucket = JSON.stringify([KINDS[kind].bucket]);
   const conditions = terms.map(() => 'instr(sf_fold(text),?)>0').join(' AND ');
-  const sql = `SELECT key,label,reference,ord FROM (SELECT r.key key,${kind === 'guides' ? `COALESCE(NULLIF(${field('title')},''),${field('name')})` : field('name')} label,${k.reference} reference,${k.order} ord,${k.text} text
-    FROM records r JOIN query_records q ON q.key=r.key WHERE q.bucket=? AND ${k.where}) WHERE ${conditions}`;
-  const rows = reader.db.prepare(`${sql} LIMIT ${CANDIDATES + 1}`).all(JSON.stringify([k.bucket]), ...terms);
-  const total =
-    rows.length > CANDIDATES
-      ? reader.db.prepare(`SELECT count(*) n FROM (${sql})`).get(JSON.stringify([k.bucket]), ...terms).n
-      : rows.length;
+  const sql = `SELECT key,label,reference,ord FROM (${candidateSql(kind)}) WHERE ${conditions}`;
+  const rows = reader.db.prepare(`${sql} LIMIT ${CANDIDATES + 1}`).all(bucket, ...terms);
+  return {
+    rows,
+    total:
+      rows.length > CANDIDATES
+        ? reader.db.prepare(`SELECT count(*) n FROM (${sql})`).get(bucket, ...terms).n
+        : rows.length
+  };
+}
+
+function searchIndex(reader, kind, terms, phrase, limit) {
+  const { rows, total } = candidates(reader, kind, terms);
   const ranked = sorted(
     rows.map(row => ({
       key: row.key,
@@ -309,4 +346,4 @@ function searchStore(store, query, { limit = LIMIT } = {}) {
   }).value;
 }
 
-module.exports = { search, searchStore, fold, words, rank, LIMIT, MAX_QUERY };
+module.exports = { search, searchStore, candidates, fold, words, rank, LIMIT, MAX_QUERY };
