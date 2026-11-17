@@ -34,12 +34,12 @@ Visit each app's repository for its features, downloads and getting-started guid
     <th width="50%">Your Showroom · dark theme</th>
   </tr>
   <tr>
-    <td><a href="docs/screenshots/showroom-light.png"><img src="docs/screenshots/showroom-light.png" alt="Showroom in the Ocean light theme, featuring an Aston Martin Vantage V12 and the collection gallery" width="100%"></a></td>
-    <td><a href="docs/screenshots/showroom-dark.png"><img src="docs/screenshots/showroom-dark.png" alt="The same Aston Martin spotlight and collection gallery in the dark theme" width="100%"></a></td>
+    <td><a href="docs/screenshots/showroom-light.jpg"><img src="docs/screenshots/showroom-light.jpg" alt="Showroom in the light theme, with an AvantSlot Aston Martin Vantage V12 in the spotlight, its real racing history and the collection gallery" width="100%"></a></td>
+    <td><a href="docs/screenshots/showroom-dark.jpg"><img src="docs/screenshots/showroom-dark.jpg" alt="The same Aston Martin spotlight and collection gallery in the dark theme" width="100%"></a></td>
   </tr>
 </table>
 
-*Your cars, your photographs, your collection. Click any screenshot for a closer look. These screenshots show an earlier interface with the SlotForge Database name; the app is now SlotForge Paddock.*
+*Your cars, your photographs, your collection. Click any screenshot for a closer look. Prices in these pictures are made up.*
 
 <details>
   <summary><strong>Explore the collection, workshop, parts and settings</strong></summary>
@@ -47,41 +47,74 @@ Visit each app's repository for its features, downloads and getting-started guid
 <table>
   <tr>
     <th width="50%">Your collection at a glance</th>
-    <th width="50%">Browse and organise your cars</th>
+    <th width="50%">What it's worth and what you spent</th>
   </tr>
   <tr>
-    <td><a href="docs/screenshots/overview.png"><img src="docs/screenshots/overview.png" alt="Overview with a personalised welcome banner, collection totals, active jobs and recent activity" width="100%"></a></td>
-    <td><a href="docs/screenshots/car-collection.png"><img src="docs/screenshots/car-collection.png" alt="Cars gallery with photographs, search, usage filters and saved-view controls" width="100%"></a></td>
+    <td><a href="docs/screenshots/overview.jpg"><img src="docs/screenshots/overview.jpg" alt="Overview with the welcome banner, collection totals, the cars on the workbench and recent activity" width="100%"></a></td>
+    <td><a href="docs/screenshots/collection-value.jpg"><img src="docs/screenshots/collection-value.jpg" alt="Collection value on the Overview: current value, total spent and a bar chart of spending per purchase year" width="100%"></a></td>
+  </tr>
+</table>
+
+<table>
+  <tr>
+    <th width="50%">Browse and organise your cars</th>
+    <th width="50%">Search everything with Ctrl+K</th>
+  </tr>
+  <tr>
+    <td><a href="docs/screenshots/car-collection.jpg"><img src="docs/screenshots/car-collection.jpg" alt="Cars gallery with photographs, search, sorting, usage filters and saved views" width="100%"></a></td>
+    <td><a href="docs/screenshots/search.jpg"><img src="docs/screenshots/search.jpg" alt="The search window listing matching cars and parts for the word ferrari" width="100%"></a></td>
   </tr>
 </table>
 
 <table>
   <tr>
     <th width="50%">Parts organised by category</th>
-    <th width="50%">Build a car from your inventory</th>
+    <th width="50%">Every reference in the catalogue</th>
   </tr>
   <tr>
-    <td><a href="docs/screenshots/parts-categories.png"><img src="docs/screenshots/parts-categories.png" alt="Parts category folders with stock counts for motors, gears, chassis, wheels and other components" width="100%"></a></td>
-    <td><a href="docs/screenshots/build-from-scratch.png"><img src="docs/screenshots/build-from-scratch.png" alt="Build from Scratch with the interactive exploded chassis diagram, inventory picker and new-car details" width="100%"></a></td>
+    <td><a href="docs/screenshots/parts-categories.jpg"><img src="docs/screenshots/parts-categories.jpg" alt="Parts main groups such as body, chassis, motors, gears, axles, wheels and tyres, with record counts" width="100%"></a></td>
+    <td><a href="docs/screenshots/wheels-tyres.jpg"><img src="docs/screenshots/wheels-tyres.jpg" alt="The Wheels and tyres group of the parts catalogue as a table with available and fitted counts" width="100%"></a></td>
+  </tr>
+</table>
+
+<table>
+  <tr>
+    <th width="50%">Build a car from stock or catalogue parts</th>
+    <th width="50%">Shopping lists that know your parts</th>
+  </tr>
+  <tr>
+    <td><a href="docs/screenshots/build-from-scratch.jpg"><img src="docs/screenshots/build-from-scratch.jpg" alt="Build from Scratch with the exploded chassis diagram and a motor picker" width="100%"></a></td>
+    <td><a href="docs/screenshots/shopping-list.jpg"><img src="docs/screenshots/shopping-list.jpg" alt="Shopping List with Find a Part, lists on the left and items with quantities" width="100%"></a></td>
   </tr>
 </table>
 
 <table>
   <tr>
     <th width="50%">Plan and resume workshop jobs</th>
-    <th width="50%">Keep track of what needs attention</th>
+    <th width="50%">Checklist, parts and photos per job</th>
   </tr>
   <tr>
-    <td><a href="docs/screenshots/workshop-jobs.png"><img src="docs/screenshots/workshop-jobs.png" alt="Workshop showing active job cards, completed jobs, upcoming maintenance and recent work" width="100%"></a></td>
-    <td><a href="docs/screenshots/review-hub.png"><img src="docs/screenshots/review-hub.png" alt="Review hub with tabs for incoming cars, workshop jobs and maintenance" width="100%"></a></td>
+    <td><a href="docs/screenshots/workshop.jpg"><img src="docs/screenshots/workshop.jpg" alt="Workshop with active job cards, upcoming maintenance and recent work" width="100%"></a></td>
+    <td><a href="docs/screenshots/workshop-job.jpg"><img src="docs/screenshots/workshop-job.jpg" alt="A workshop job with its checklist, linked shopping items, progress photos and the car" width="100%"></a></td>
   </tr>
 </table>
 
 <table>
-  <tr><th width="50%">Import, export and backups</th><th width="50%">Appearance settings</th></tr>
   <tr>
-    <td><a href="docs/screenshots/import-export.png"><img src="docs/screenshots/import-export.png" alt="Car transfers, manufacturer catalogue imports and database backups" width="100%"></a></td>
-    <td><a href="docs/screenshots/appearance-settings.png"><img src="docs/screenshots/appearance-settings.png" alt="Preset themes and custom appearance settings" width="100%"></a></td>
+    <th width="50%">Keep track of what needs attention</th>
+    <th width="50%">Import, export and backups</th>
+  </tr>
+  <tr>
+    <td><a href="docs/screenshots/review.jpg"><img src="docs/screenshots/review.jpg" alt="Review with tabs for Timing, incoming cars, workshop jobs, maintenance, imports, car merges and race results" width="100%"></a></td>
+    <td><a href="docs/screenshots/import-export.jpg"><img src="docs/screenshots/import-export.jpg" alt="Import and Export with catalogue research, car transfers and database backups" width="100%"></a></td>
+  </tr>
+</table>
+
+<table>
+  <tr><th width="50%">Eight themes or your own colours</th><th width="50%"></th></tr>
+  <tr>
+    <td><a href="docs/screenshots/appearance-settings.jpg"><img src="docs/screenshots/appearance-settings.jpg" alt="Settings, Appearance: the preset themes and a custom colour option" width="100%"></a></td>
+    <td></td>
   </tr>
 </table>
 
