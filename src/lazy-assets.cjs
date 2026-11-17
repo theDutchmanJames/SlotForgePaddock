@@ -94,6 +94,25 @@ function valid(meta, hash, size) {
     ['width', 'height'].every(k => meta[k] === null || (Number.isSafeInteger(meta[k]) && meta[k] > 0))
   );
 }
+// Verified attachment descriptions, remembered per collection file and change epoch.
+//
+// In the assets table the description (meta) is stored after the attachment itself, so
+// SQLite has to read through the whole photograph (megabytes) to reach it: about 2 ms per
+// photo, on every page that shows cars. An attachment is identified by the hash of its
+// content, so a description that passed the integrity check stays true for that hash. The
+// caller still checks that the attachment exists, which only touches the index.
+const verified = new Map(),
+  VERIFIED_LIMIT = 50000;
+const verifiedKey = (file, epoch, hash) => sourceKey(file) + '|' + epoch + '|' + hash;
+function remembered(file, epoch, hash) {
+  return typeof epoch === 'string' && epoch ? verified.get(verifiedKey(file, epoch, hash)) : undefined;
+}
+function remember(file, epoch, hash, meta) {
+  if (typeof epoch !== 'string' || !epoch) return meta;
+  if (verified.size >= VERIFIED_LIMIT) verified.delete(verified.keys().next().value);
+  verified.set(verifiedKey(file, epoch, hash), Object.freeze(meta));
+  return meta;
+}
 function sourceKey(file) {
   const full = path.resolve(file);
   return process.platform === 'win32' ? full.toLowerCase() : full;
@@ -181,6 +200,7 @@ function stats() {
 }
 function clearCache() {
   cache.clear();
+  verified.clear();
   cacheBytes = 0;
   reads = 0;
 }
@@ -218,6 +238,8 @@ function adopt(data, file, packed, metadata) {
 module.exports = {
   metadata,
   valid,
+  remembered,
+  remember,
   asset,
   isAsset: value => !!value && typeof value === 'object' && handles.has(value),
   attach,

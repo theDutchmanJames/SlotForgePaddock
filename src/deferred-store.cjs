@@ -157,7 +157,8 @@ function create(file, manifest, token, seed = {}) {
   const stats = { recordReads: 0, loadedSections: [] },
     resolvers = new WeakMap();
   let reader = null,
-    complete = false;
+    complete = false,
+    measured;
   const read = fn => {
     if (reader) return fn(reader);
     reader = new Reader(file, token);
@@ -231,7 +232,9 @@ function create(file, manifest, token, seed = {}) {
     get complete() {
       return complete;
     },
-    measure: connection => measure(connection, tree),
+    // This state describes one revision, so its sizes cannot change: Settings asks for them
+    // on every visit, and walking every record takes a few hundred milliseconds.
+    measure: connection => (measured ??= measure(connection, tree)),
     materialize() {
       if (complete) return data;
       return read(r => {

@@ -64,11 +64,21 @@ class Reader {
     if (expected.size !== actual.size || [...expected].some(hash => !actual.has(hash)))
       throw Error('Attachment reference integrity check failed.');
     for (const ref of envelope.refs) {
-      const row = this.db.prepare('SELECT meta,meta_digest,length(value) size FROM assets WHERE hash=?').get(ref.hash);
-      if (!row) throw Error('Missing attachment.');
-      const meta = JSON.parse(row.meta);
-      if (lazy.digest(row.meta) !== row.meta_digest || !lazy.valid(meta, ref.hash, row.size))
-        throw Error('Attachment metadata integrity check failed.');
+      // A description verified earlier is reused (see lazy-assets.cjs): reading it again
+      // would pull the whole attachment off disk. Existence is still checked, from the index.
+      let meta = lazy.remembered(this.file, this.epoch, ref.hash);
+      if (meta) {
+        this.assetExists ??= this.db.prepare('SELECT 1 FROM assets WHERE hash=?');
+        if (!this.assetExists.get(ref.hash)) throw Error('Missing attachment.');
+      } else {
+        this.assetInfo ??= this.db.prepare('SELECT meta,meta_digest,length(value) size FROM assets WHERE hash=?');
+        const row = this.assetInfo.get(ref.hash);
+        if (!row) throw Error('Missing attachment.');
+        meta = JSON.parse(row.meta);
+        if (lazy.digest(row.meta) !== row.meta_digest || !lazy.valid(meta, ref.hash, row.size))
+          throw Error('Attachment metadata integrity check failed.');
+        lazy.remember(this.file, this.epoch, ref.hash, meta);
+      }
       const asset = lazy.asset(this.file, meta);
       if (!ref.path.length) {
         envelope.value = assetHandle ? asset : asset.read();
