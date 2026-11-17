@@ -5,7 +5,16 @@ let shoppingUndo = null,
   shoppingContext = '',
   finderSerial = 0,
   finderTimer = null,
-  finderRequest = null;
+  finderRequest = null,
+  // The manufacturer choices from the last catalogue search, per collection and item kind.
+  // Every redraw of the page rebuilds the search box; while it is closed it only needs these
+  // choices back, not a new search of the whole catalogue (see loadShoppingMatches).
+  finderMakers = null;
+function fillFinderMakers(root, makers, selected) {
+  root.querySelector('[name=finderMaker]').innerHTML =
+    '<option value="">All manufacturers</option>' +
+    makers.map(m => `<option value="${esc(m)}" ${m === selected ? 'selected' : ''}>${esc(m)}</option>`).join('');
+}
 const shopQuantity = s => s.purchase?.checklist?.quantity ?? s.quantity;
 const shopDone = s => s.purchase?.checklist?.done ?? s.received >= s.quantity;
 const shopDeleted = s => s.purchase?.checklist?.deleted === true;
@@ -133,6 +142,14 @@ async function loadShoppingMatches(root, expand = true) {
     partType: root.querySelector('[name=finderType]').value
   };
   if (root.dataset.shoppingFinder === 'page') Object.assign(shoppingFinder, f);
+  const makersKey = origin + '|' + kind;
+  // Closed search box (after a redraw, such as a quantity change): nothing is shown, so do
+  // not search. It searches afresh as soon as it gets the focus or is typed in.
+  // Only the page's own box: a dialog's picker loads its matches once, when it opens.
+  if (!expand && root.dataset.shoppingFinder === 'page' && finderMakers?.key === makersKey) {
+    fillFinderMakers(root, finderMakers.makers, f.maker);
+    return;
+  }
   if (expand) {
     out.hidden = false;
     out.textContent = 'Searching…';
@@ -157,11 +174,9 @@ async function loadShoppingMatches(root, expand = true) {
       void loadShoppingMatches(root, expand);
       return;
     }
-    const data = result.data._view.shoppingFinder,
-      maker = root.querySelector('[name=finderMaker]');
-    maker.innerHTML =
-      '<option value="">All manufacturers</option>' +
-      data.makers.map(m => `<option value="${esc(m)}" ${m === f.maker ? 'selected' : ''}>${esc(m)}</option>`).join('');
+    const data = result.data._view.shoppingFinder;
+    finderMakers = { key: makersKey, makers: data.makers };
+    fillFinderMakers(root, data.makers, f.maker);
     out.innerHTML =
       data.items
         .map(

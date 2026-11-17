@@ -85,6 +85,61 @@ test('descriptions are remembered per collection file', t => {
   assert.equal(slow(), 1, 'another file is verified for itself, even with the same photograph');
 });
 
+function catalogue(t) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'paddock-finder-'));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const s = new Store(path.join(dir, 'db.sqlite'));
+  const add = (name, maker, reference) =>
+    s.mutate('part.save', { data: { name, maker, reference, quantity: 0, tracking: 'quantity' } }, { snapshot: false });
+  for (let i = 1; i <= 45; i++) add(`Slick tyre ${String(i).padStart(2, '0')}`, i % 2 ? 'Slot.it' : 'NSR', 'T' + i);
+  for (let i = 1; i <= 5; i++) add(`Crown gear ${i}`, 'Sloting Plus', 'G' + i);
+  return { s, add };
+}
+
+test('a field search counts and pages in one pass with the same answer as before', t => {
+  const { s } = catalogue(t);
+  const search = {
+    searchFields: ['name', 'maker', 'reference', 'partType'],
+    searchTerms: ['tyre', 'slot.it'],
+    sort: 'name'
+  };
+  Q.read(s, null, r => {
+    const counted = r.count('parts', search); // The separate count, as every search used to do.
+    assert.equal(counted, 23);
+    const first = r.list('parts', { ...search, limit: 20, idsOnly: true });
+    assert.equal(first.total, counted);
+    assert.equal(first.rows.length, 20);
+    assert.equal(first.nextOffset, 20);
+    const second = r.list('parts', { ...search, limit: 20, offset: 20, idsOnly: true });
+    assert.equal(second.rows.length, 3);
+    assert.equal(second.nextOffset, null);
+    const all = r.list('parts', { ...search, limit: 200, idsOnly: true });
+    assert.deepEqual([...first.rows, ...second.rows], all.rows, 'the pages are the ordered result, cut in two');
+    // The collection's own order (used by Build from Scratch) pages the same way.
+    const ordered = r.list('parts', { ...search, sort: 'order', limit: 200, idsOnly: true });
+    const paged = r.list('parts', { ...search, sort: 'order', limit: 5, offset: 5, idsOnly: true });
+    assert.deepEqual(paged.rows, ordered.rows.slice(5, 10));
+    assert.equal(paged.total, counted);
+    assert.equal(r.list('parts', { ...search, searchTerms: ['no such part'], limit: 20 }).total, 0);
+  });
+});
+
+test('Find a Part: the manufacturer choices follow the collection', t => {
+  const { s, add } = catalogue(t);
+  const P = require('../src/page-query.cjs');
+  const find = query => Q.read(s, null, r => P.finder(r, { kind: 'part', query })).value;
+  const before = find('tyre');
+  assert.deepEqual(
+    before.makers,
+    ['NSR', 'Sloting Plus', 'Slot.it'].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))
+  );
+  assert.equal(before.total, 45);
+  assert.equal(before.rows.length, 20);
+  assert.deepEqual(find('crown').makers, before.makers, 'the choices do not depend on what is typed');
+  add('Guide', 'Policar', 'P1');
+  assert.ok(find('tyre').makers.includes('Policar'), 'a save refreshes them');
+});
+
 test('storage totals for Settings are worked out once per revision', t => {
   const { file } = setup(t);
   const store = new Store(file, { deferred: true });

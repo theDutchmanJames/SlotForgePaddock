@@ -127,12 +127,23 @@ function finder(r, f) {
     limit: 20
   };
   const result = r.list(bucket, options);
+  return { makers: finderMakers(r, bucket), total: result.total, rows: result.rows };
+}
+// The manufacturer choices do not depend on what is typed, so one answer serves every
+// keystroke until the collection changes (the reader's token changes with every save).
+const makerMemory = new Map();
+function finderMakers(r, bucket) {
+  const key = JSON.stringify([r.file, r.token]),
+    known = makerMemory.get(bucket);
+  if (known?.key === key) return known.makers;
   const makers = r.db
     .prepare(
       `SELECT min(json_extract(f.json,'$')) name FROM query_records q JOIN record_fields f ON f.record=q.key AND f.path='["maker"]' WHERE q.bucket=? AND q.archived=0 AND q.maker<>'' ${bucket === 'parts' ? `AND substr(json_extract(q.key,'$[1]'),4) NOT IN(SELECT json_extract(part.value,'$.partId') FROM query_records a JOIN record_fields c ON c.record=a.key AND c.path='["components"]',json_each(c.json) part WHERE a.bucket='["assemblies"]' AND json_extract(a.aux,'$.dismantled')=0 AND json_extract(part.value,'$.partId') IS NOT NULL)` : ''} GROUP BY q.maker ORDER BY q.maker`
     )
-    .all(JSON.stringify([bucket]));
-  return { makers: makers.map(x => x.name), total: result.total, rows: result.rows };
+    .all(JSON.stringify([bucket]))
+    .map(x => x.name);
+  makerMemory.set(bucket, { key, makers });
+  return makers;
 }
 function rebuild(r, carId) {
   const car = r.one('cars', carId),

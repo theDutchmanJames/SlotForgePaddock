@@ -257,7 +257,13 @@ class Reader {
     // The manifest is the authoritative order for compatibility with existing
     // collection exports. JSON_each visits only record references, never bodies.
     const from = ` FROM records r JOIN query_records q ON q.key=r.key WHERE ${where.join(' AND ')}`;
-    const total = this.db.prepare('SELECT count(*) n' + from).get(...params).n;
+    // A field search looks up several fields for every record, so matching is the expensive
+    // part. Counting and fetching separately would do it twice; instead fetch every matching
+    // key in order once, then count and cut the page here. The result is the same.
+    const onePass = !options.countOnly && !!options.searchFields && options.searchTerms.some(Boolean);
+    let total = onePass ? 0 : this.db.prepare('SELECT count(*) n' + from).get(...params).n;
+    const page = onePass ? '' : ' LIMIT ? OFFSET ?',
+      window = onePass ? [] : [limit, offset];
     let keys = [];
     if (!options.countOnly) {
       if (sort === 'order') {
@@ -266,8 +272,8 @@ class Reader {
         // CROSS JOIN still uses the equality predicates and primary-key lookups.
         const sql = `WITH ordinals AS MATERIALIZED (SELECT json_extract(a.value,'$.record') key,CAST(a.key AS INTEGER) position
      FROM json_each((SELECT m.value FROM json_each((SELECT value FROM state WHERE key='manifest'),'$.object') m WHERE json_extract(m.value,'$[0]')=?),'$[1].array') a)
-     SELECT r.key FROM ordinals o CROSS JOIN records r ON r.key=o.key CROSS JOIN query_records q ON q.key=r.key WHERE ${where.join(' AND ')} ORDER BY o.position LIMIT ? OFFSET ?`;
-        keys = this.db.prepare(sql).all(bucket, ...params, limit, offset);
+     SELECT r.key FROM ordinals o CROSS JOIN records r ON r.key=o.key CROSS JOIN query_records q ON q.key=r.key WHERE ${where.join(' AND ')} ORDER BY o.position${page}`;
+        keys = this.db.prepare(sql).all(bucket, ...params, ...window);
       } else {
         const scalar = ['marque', 'model', 'scale', 'reference', 'created'].includes(sort);
         const expression = scalar
@@ -282,9 +288,13 @@ class Reader {
           .prepare(
             'SELECT r.key' +
               from +
-              ` ORDER BY ${ranking}(${expression}='') ASC,${expression} ${direction},r.identity ASC LIMIT ? OFFSET ?`
+              ` ORDER BY ${ranking}(${expression}='') ASC,${expression} ${direction},r.identity ASC${page}`
           )
-          .all(...params, ...(ranking ? [options.rankReference] : []), limit, offset);
+          .all(...params, ...(ranking ? [options.rankReference] : []), ...window);
+      }
+      if (onePass) {
+        total = keys.length;
+        keys = keys.slice(offset, offset + limit);
       }
     }
     return {
