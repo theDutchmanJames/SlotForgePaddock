@@ -4,7 +4,47 @@ let file,
   databaseId,
   root,
   queue = Promise.resolve(),
-  closed = false;
+  closed = false,
+  kept = null; // { stamp, store }: the view of the library from the last request.
+
+// Building a view of the library reads its whole record directory (about 15 ms for a few
+// thousand records), and used to happen for every request, even one cached thumbnail. The
+// library's identity, revision and change epoch say whether anything changed since: when
+// they are the same as after the last request, that view is still exact and is reused.
+// Requests run one at a time, and a view is never kept across a failed request.
+function stamp() {
+  try {
+    const db = new (require('node:sqlite').DatabaseSync)(file, { readOnly: true, timeout: 5000 });
+    try {
+      const state = Object.fromEntries(
+        db
+          .prepare(
+            "SELECT key,value FROM state WHERE key IN ('identity','change_epoch','query_index_identity','query_index_version')"
+          )
+          .all()
+          .map(r => [r.key, r.value])
+      );
+      return state.identity && state.change_epoch ? state : null;
+    } finally {
+      db.close();
+    }
+  } catch {
+    return null; // Unreadable just now: build a fresh view, which reports the real problem.
+  }
+}
+const sameStamp = (a, b) =>
+  !!a && !!b && ['identity', 'change_epoch', 'query_index_identity', 'query_index_version'].every(k => a[k] === b[k]);
+/** Whether this view still describes exactly what the stamp says is on disk. */
+function current(store, state) {
+  const token = store.deferredState?.token;
+  if (!state || !token || store.pendingWrite) return false;
+  try {
+    const [id, revision] = JSON.parse(state.identity);
+    return token.id === id && token.revision === revision && token.epoch === state.change_epoch;
+  } catch {
+    return false;
+  }
+}
 parentPort.on('message', message => {
   queue = queue.then(async () => {
     try {
@@ -59,13 +99,18 @@ parentPort.on('message', message => {
                 throw Object.assign(Error('The shared library was replaced. Reopen it explicitly before continuing.'), {
                   code: 'DATABASE_MISMATCH'
                 });
-              const store = new (require('./store.cjs').Store)(file, { deferred: true });
+              const before = stamp(),
+                reuse = kept && sameStamp(kept.stamp, before) && current(kept.store, before);
+              const store = reuse ? kept.store : new (require('./store.cjs').Store)(file, { deferred: true });
+              kept = null; // Kept again only after this request succeeds.
               value = await require('./shared-library-engine.cjs').call(
                 store,
                 { ...workerData, thumbnailRoot: root },
                 message.method,
                 message.input
               );
+              const after = stamp();
+              if (current(store, after)) kept = { stamp: after, store };
               break;
             } catch (e) {
               if (
