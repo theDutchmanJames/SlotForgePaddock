@@ -231,6 +231,7 @@ const files=[
   "src/query-local-library.cjs",
   "scripts/qualify-local-library.cjs",
   "tests/support/real-tmpdir.cjs",
+  "tests/json-subquery.test.cjs",
   "tests/support/local-recovery-qualification.cjs",
   "tests/support/local-qualification-host.cjs",
   "tests/support/local-crash-preload.cjs",

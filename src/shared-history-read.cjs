@@ -189,7 +189,7 @@ function session(r, url, match) {
   const [, sourceId, sessionId, participantId] = match,
     p = params(url, participantId ? ['offset', 'token'] : []);
   const projection = participantId
-    ? `json_object('format',json_extract(json,'$.format'),'contentHash',json_extract(json,'$.contentHash'),'payload',json_object('source',json_object('id',source),'sessionId',session,'state',json_extract(json,'$.payload.state'),'participants',(SELECT json_group_array(json_object('id',json_extract(p.value,'$.id'))) FROM json_each(query_sessions.json,'$.payload.participants') p)))`
+    ? `json_object('format',json_extract(json,'$.format'),'contentHash',json_extract(json,'$.contentHash'),'payload',json_object('source',json_object('id',source),'sessionId',session,'state',json_extract(json,'$.payload.state'),'participants',json((SELECT json_group_array(json_object('id',json_extract(p.value,'$.id'))) FROM json_each(query_sessions.json,'$.payload.participants') p))))`
     : "json_remove(json,'$._query','$.history')";
   const row = r.db
     .prepare('SELECT key,' + projection + ' json FROM query_sessions WHERE source=? AND session=?')

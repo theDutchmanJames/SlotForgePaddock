@@ -123,7 +123,7 @@ function readSession(r, source, id, lapsOnly) {
   // Lap pages do not reconstruct every driver's configuration/stint metadata.
   const projection = lapsOnly
     ? `json_object('contentHash',json_extract(json,'$.contentHash'),'receivedAt',json_extract(json,'$.receivedAt'),'warnings',json_extract(json,'$.warnings'),
- 'payload',json_object('state',json_extract(json,'$.payload.state'),'participants',(SELECT json_group_array(json_object('id',json_extract(p.value,'$.id'))) FROM json_each(query_sessions.json,'$.payload.participants') p)))`
+ 'payload',json_object('state',json_extract(json,'$.payload.state'),'participants',json((SELECT json_group_array(json_object('id',json_extract(p.value,'$.id'))) FROM json_each(query_sessions.json,'$.payload.participants') p))))`
     : `json_remove(json,'$._query.runs')`;
   const row = r.db
     .prepare(

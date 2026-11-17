@@ -82,7 +82,7 @@ function receipt(reader, source, id) {
  'summaries',json_extract(json,'$._query.summaries'),
  'payload',json_object('source',json_object('id',source),'sessionId',session,
  'revision',json_extract(json,'$.payload.revision'),'state',json_extract(json,'$.payload.state'),
- 'participants',(SELECT json_group_array(json_object('carId',json_extract(p.value,'$.carId'))) FROM json_each(query_sessions.json,'$.payload.participants') p))) json
+ 'participants',json((SELECT json_group_array(json_object('carId',json_extract(p.value,'$.carId'))) FROM json_each(query_sessions.json,'$.payload.participants') p)))) json
  FROM query_sessions WHERE source=? AND session=?`
     )
     .get(source, id);
@@ -123,7 +123,7 @@ function allMetadata(reader) {
  json_extract(s.json,'$.payload.track.id') trackId,json_extract(s.json,'$.payload.track.name') trackName,
  json_extract(s.json,'$.contentHash') hash,json_extract(s.json,'$.receivedAt') received,
  json_extract(s.json,'$.warnings') warnings,json_extract(s.json,'$.carIds') carIds,json_extract(s.json,'$.lastName') lastName,
- (SELECT json_group_array(json_object('kind',json_extract(p.value,'$.kind'),'carId',json_extract(p.value,'$.carId'))) FROM json_each(s.json,'$.payload.participants') p) participants
+ json((SELECT json_group_array(json_object('kind',json_extract(p.value,'$.kind'),'carId',json_extract(p.value,'$.carId'))) FROM json_each(s.json,'$.payload.participants') p)) participants
  FROM ordinals a JOIN query_sessions s ON s.key=a.key ORDER BY a.position`
     )
     .all()

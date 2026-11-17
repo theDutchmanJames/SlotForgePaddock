@@ -1,0 +1,50 @@
+name: Platform tests (no release)
+run-name: Tests on ${{ inputs.platform }} for ${{ github.ref_name }}
+
+# Runs the checks and tests on macOS or Linux without a version tag or a release, so a
+# platform problem can be found and fixed before the next release is tagged.
+# Start it from Actions → Platform tests (no release) → Run workflow.
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: Where to run the tests
+        type: choice
+        default: macos-15
+        options:
+          - macos-15
+          - ubuntu-24.04
+          - ubuntu-24.04-arm
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: Tests on ${{ inputs.platform }}
+    runs-on: ${{ inputs.platform }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Show the Node.js and SQLite in use
+        run: |
+          node <<'NODE'
+          const os=require('os'),{DatabaseSync}=require('node:sqlite'),db=new DatabaseSync(':memory:');
+          const one=sql=>Object.values(db.prepare(sql).get())[0];
+          console.log('node',process.version,process.platform,process.arch,'| tmpdir',os.tmpdir());
+          console.log('sqlite',one('select sqlite_version()'),one('select sqlite_source_id()'));
+          // A list from a nested query, used as a JSON value: with and without json(...).
+          console.log('bare   ',one("select json_object('a',(select json_group_array(value) from json_each('[1,2]')))"));
+          console.log('wrapped',one("select json_object('a',json((select json_group_array(value) from json_each('[1,2]'))))"));
+          NODE
+      - name: Install, check and test
+        run: |
+          npm ci
+          npm run check
+          npm test
