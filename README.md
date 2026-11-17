@@ -269,6 +269,8 @@ Download the **English catalogue research templates** as one complete kit or sep
 
 Import several completed JSON files into **one combined review**. Identical products are combined; conflicting versions require your choice. Select the categories or products you want and confirm once. New references start at **zero owned stock**; existing quantities, photos, installations and personal details stay intact. You still check product facts and compatibility—Paddock does not scrape a manufacturer's entire website automatically. [Catalogue import guide](docs/CATALOGUE-IMPORT.md).
 
+**Ready-made parts lists** for NSR, ScaleAuto and Slot.it are in the [parts-lists folder](parts-lists/README.md) and are attached to every release. They are optional and supplied separately from the app.
+
 ### Paddock Portal: add cars from your phone or tablet
 
 Turn on **Connections → Paddock Portal**, then scan its QR code on your phone or tablet while connected to the same network. Enter the manufacturer and model, optionally add a product reference, and choose a photograph from your gallery or take one with the camera. **Send to Paddock** saves the car directly with that main photo, confirms success and prepares the next entry. Complete the remaining details later in Paddock.

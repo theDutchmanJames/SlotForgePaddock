@@ -117,6 +117,38 @@ jobs:
             dist/v${{ needs.source.outputs.version }}/SlotForgePaddock-${{ needs.source.outputs.version }}-${{ matrix.platform }}-*
             dist/v${{ needs.source.outputs.version }}/SHA256SUMS-${{ matrix.platform }}-${{ matrix.arch }}.txt
 
+  parts-lists:
+    needs: source
+    if: github.event_name == 'release' || inputs.publish_assets
+    name: Attach parts lists
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.source.outputs.sha }}
+          persist-credentials: false
+      - name: Attach the parts lists that are not on the release yet
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ needs.source.outputs.tag }}
+        run: |
+          shopt -s nullglob
+          files=(parts-lists/*.zip)
+          if [ "${#files[@]}" -eq 0 ]; then echo 'This version has no parts lists.'; exit 0; fi
+          existing="$(gh release view "$RELEASE_TAG" --json assets --jq '.assets[].name')"
+          for file in "${files[@]}"; do
+            name="$(basename "$file")"
+            if grep -Fxq -- "$name" <<<"$existing"; then
+              echo "Already attached, left as it is: $name"
+            else
+              gh release upload "$RELEASE_TAG" "$file"
+            fi
+          done
+
   publish:
     needs: [source, build]
     if: always() && !cancelled() && needs.source.result == 'success' && (github.event_name == 'release' || inputs.publish_assets)
