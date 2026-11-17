@@ -29,6 +29,7 @@ test('unsafe or impossible destinations are refused with plain reasons',t=>{
  assert.throws(go('relative'),e=>e.code==='INVALID_LOCATION');
  assert.throws(go(f.old),e=>e.code==='INVALID_LOCATION'&&/already in this folder/.test(e.message));
  assert.throws(go('\\\\server\\share\\paddock',{platform:'win32'}),e=>e.code==='NETWORK_LOCATION');
+ assert.throws(go('//server/share/paddock',{platform:'win32'}),e=>e.code==='NETWORK_LOCATION');
  assert.throws(go(path.join(f.base,'Program','resources'),{appFolder:path.join(f.base,'Program')}),e=>e.code==='INVALID_LOCATION'&&/program folder/.test(e.message));
  fs.mkdirSync(path.join(f.base,'taken'));fs.writeFileSync(path.join(f.base,'taken','library.sqlite'),'x');assert.throws(go(path.join(f.base,'taken')),e=>e.code==='TARGET_EXISTS');
  assert.throws(go(path.join(f.base,'full'),{requireSpace:()=>{throw Error('no space');}}),e=>e.code==='NOT_ENOUGH_SPACE');assert.equal(fs.existsSync(path.join(f.base,'full')),false);

@@ -25,14 +25,16 @@ function inspect(
   folder,
   { file, appFolder, platform = process.platform, requireSpace = require('./storage-resources.cjs').requireSpace }
 ) {
-  if (typeof folder !== 'string' || !folder || !path.isAbsolute(folder))
-    throw fault('INVALID_LOCATION', 'Choose a complete folder path.');
-  folder = path.resolve(folder);
-  if (platform === 'win32' && /^\\\\/.test(folder))
+  if (typeof folder !== 'string' || !folder) throw fault('INVALID_LOCATION', 'Choose a complete folder path.');
+  // Checked on the text itself, before anything that depends on the computer running this:
+  // a Windows network path is not a "complete path" on Linux or macOS, where the tests also run.
+  if (platform === 'win32' && /^[\\/]{2}/.test(folder))
     throw fault(
       'NETWORK_LOCATION',
       'Choose a folder on this computer. Network folders are not safe for the shared library.'
     );
+  if (!path.isAbsolute(folder)) throw fault('INVALID_LOCATION', 'Choose a complete folder path.');
+  folder = path.resolve(folder);
   if (same(folder, path.dirname(file))) throw fault('INVALID_LOCATION', 'The library is already in this folder.');
   if (appFolder && inside(folder, appFolder))
     throw fault('INVALID_LOCATION', 'Choose a folder outside the Paddock program folder. Updates replace that folder.');
