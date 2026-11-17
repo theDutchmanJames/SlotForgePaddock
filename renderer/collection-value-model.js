@@ -14,11 +14,15 @@
     if (typeof value !== 'string') return null;
     let s = value.trim().replace(/[\s ']/g, '');
     if (!s || !/^\d[\d.,]*$/.test(s)) return null;
-    const dots = (s.match(/\./g) || []).length, commas = (s.match(/,/g) || []).length;
+    const dots = (s.match(/\./g) || []).length,
+      commas = (s.match(/,/g) || []).length;
     if (dots && commas) {
       // Both: the last one is the decimal mark, the other groups thousands.
       const decimal = s.lastIndexOf('.') > s.lastIndexOf(',') ? '.' : ',';
-      s = s.split(decimal === '.' ? ',' : '.').join('').replace(decimal, '.');
+      s = s
+        .split(decimal === '.' ? ',' : '.')
+        .join('')
+        .replace(decimal, '.');
     } else if (dots > 1 || commas > 1) {
       s = s.replace(/[.,]/g, ''); // "1.250.000": only grouping.
     } else if (commas === 1) {
@@ -54,20 +58,32 @@
     const byCurrency = new Map();
     const counts = { active: 0, valued: 0, priceOnly: 0, unknown: 0, unreadable: 0 };
     const entry = currency => {
-      if (!byCurrency.has(currency)) byCurrency.set(currency, { currency, value: 0, valuedCars: 0, spent: 0, boughtCars: 0, years: new Map() });
+      if (!byCurrency.has(currency))
+        byCurrency.set(currency, { currency, value: 0, valuedCars: 0, spent: 0, boughtCars: 0, years: new Map() });
       return byCurrency.get(currency);
     };
     for (const car of cars) {
       if (car.wishlist) continue;
       const currency = currencyCode(car.currency);
-      const price = amount(car.price), costs = amount(car.costs), valuation = amount(car.valuation);
-      if ([car.price, car.costs, car.valuation].some(v => v !== undefined && v !== null && v !== '' && amount(v) === null)) counts.unreadable++;
+      const price = amount(car.price),
+        costs = amount(car.costs),
+        valuation = amount(car.valuation);
+      if (
+        [car.price, car.costs, car.valuation].some(v => v !== undefined && v !== null && v !== '' && amount(v) === null)
+      )
+        counts.unreadable++;
       // What it is worth now: cars still in the collection, valuation first, else what was paid.
       if (!car.archived) {
         counts.active++;
         const worth = valuation ?? price;
-        if (valuation !== null) counts.valued++; else if (price !== null) counts.priceOnly++; else counts.unknown++;
-        if (worth !== null) { const e = entry(currency); e.value += worth; e.valuedCars++; }
+        if (valuation !== null) counts.valued++;
+        else if (price !== null) counts.priceOnly++;
+        else counts.unknown++;
+        if (worth !== null) {
+          const e = entry(currency);
+          e.value += worth;
+          e.valuedCars++;
+        }
       }
       // What was spent, in the year it was bought (sold cars included: the money was spent).
       const paid = price === null && costs === null ? null : (price || 0) + (costs || 0);
@@ -78,7 +94,8 @@
         const y = year(car.acquired);
         if (y !== null) {
           const slot = e.years.get(y) || { year: y, spent: 0, cars: 0 };
-          slot.spent += paid; slot.cars++;
+          slot.spent += paid;
+          slot.cars++;
           e.years.set(y, slot);
         }
       }
@@ -88,17 +105,39 @@
         const known = [...e.years.values()].sort((a, b) => a.year - b.year);
         // Fill the gaps so every year between the first and last purchase has a bar.
         const years = [];
-        if (known.length) for (let y = known[0].year; y <= known.at(-1).year; y++) years.push(e.years.get(y) || { year: y, spent: 0, cars: 0 });
+        if (known.length)
+          for (let y = known[0].year; y <= known.at(-1).year; y++)
+            years.push(e.years.get(y) || { year: y, spent: 0, cars: 0 });
         const round = n => Math.round(n * 100) / 100;
-        return { currency: e.currency, value: round(e.value), valuedCars: e.valuedCars, spent: round(e.spent), boughtCars: e.boughtCars, undatedCars: e.boughtCars - known.reduce((n, y) => n + y.cars, 0), years: years.map(y => ({ ...y, spent: round(y.spent) })) };
+        return {
+          currency: e.currency,
+          value: round(e.value),
+          valuedCars: e.valuedCars,
+          spent: round(e.spent),
+          boughtCars: e.boughtCars,
+          undatedCars: e.boughtCars - known.reduce((n, y) => n + y.cars, 0),
+          years: years.map(y => ({ ...y, spent: round(y.spent) }))
+        };
       })
-      .sort((a, b) => (b.valuedCars + b.boughtCars) - (a.valuedCars + a.boughtCars) || a.currency.localeCompare(b.currency));
+      .sort(
+        (a, b) => b.valuedCars + b.boughtCars - (a.valuedCars + a.boughtCars) || a.currency.localeCompare(b.currency)
+      );
     return { currencies, counts };
   }
 
   /** The fields summarize() needs from a full car record (merged-away cars are left out). */
   function fromCars(cars) {
-    return (cars || []).filter(c => !c.merge).map(c => ({ price: c.price, currency: c.currency, costs: c.costs, valuation: c.valuation, acquired: c.acquired, archived: !!c.archived, wishlist: c.collectionStatus === 'wishlist' }));
+    return (cars || [])
+      .filter(c => !c.merge)
+      .map(c => ({
+        price: c.price,
+        currency: c.currency,
+        costs: c.costs,
+        valuation: c.valuation,
+        acquired: c.acquired,
+        archived: !!c.archived,
+        wishlist: c.collectionStatus === 'wishlist'
+      }));
   }
 
   const api = { amount, currencyCode, year, summarize, fromCars };

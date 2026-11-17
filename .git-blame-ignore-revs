@@ -1,0 +1,3 @@
+# Formatting-only commits (readability cleanup). Use: git config blame.ignoreRevsFile .git-blame-ignore-revs
+# src/ formatted with Prettier
+909eb0c0fa250cff2643d4cc58d276b99081adb2

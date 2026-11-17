@@ -11,7 +11,10 @@ function updateAppReady() {
 
 async function loadUpdateStatus() {
   // A change that arrives while loading is not lost: load once more afterwards.
-  if (updateLoading) { updateReloadQueued = true; return; }
+  if (updateLoading) {
+    updateReloadQueued = true;
+    return;
+  }
   updateLoading = true;
   try {
     updateState = await api('updateCheck', 'status');
@@ -21,7 +24,10 @@ async function loadUpdateStatus() {
     updateLoading = false;
   }
   showUpdateState();
-  if (updateReloadQueued) { updateReloadQueued = false; void loadUpdateStatus(); }
+  if (updateReloadQueued) {
+    updateReloadQueued = false;
+    void loadUpdateStatus();
+  }
 }
 
 /** Updates what is on screen without rebuilding the page the user is working on. */
@@ -45,9 +51,11 @@ function showUpdateState() {
 function updateNoticeHtml() {
   const s = updateState;
   if (!s?.notify || !s.latest) return '';
-  return `<span class="update-notice" role="status">${icon('download')}<span>Paddock ${esc(s.latest.version)} is available</span>` +
+  return (
+    `<span class="update-notice" role="status">${icon('download')}<span>Paddock ${esc(s.latest.version)} is available</span>` +
     `<button type="button" class="btn small primary" data-action="update-open">Download</button>` +
-    `<button type="button" class="btn small ghost" data-action="update-skip" title="Hide until a newer version appears">Not now</button></span>`;
+    `<button type="button" class="btn small ghost" data-action="update-skip" title="Hide until a newer version appears">Not now</button></span>`
+  );
 }
 
 function updateWhen(ms) {
@@ -70,17 +78,20 @@ function renderUpdateSettings() {
     : s.automatic
       ? 'Paddock checks for a new version twice a day at most and shows a notice in the top bar.'
       : 'This copy only checks when you click Check now.';
-  const body = `<p class="muted">${esc(how)} It only asks GitHub for the newest version number; nothing about you or your collection is sent. Paddock never installs anything by itself.</p>` +
+  const body =
+    `<p class="muted">${esc(how)} It only asks GitHub for the newest version number; nothing about you or your collection is sent. Paddock never installs anything by itself.</p>` +
     (s.lastError && !s.checking ? `<p class="note warning">${esc(s.lastError)}</p>` : '') +
     dl([
       ['This version', s.current],
       ['Newest version', state],
-      ['Last checked', s.lastCheck ? updateWhen(s.lastCheck) : 'Never'],
+      ['Last checked', s.lastCheck ? updateWhen(s.lastCheck) : 'Never']
     ]) +
     `<div class="actions mt">${s.latest ? btn(icon('download') + ' Download ' + esc(s.latest.version), 'update-open', 'primary') : ''}` +
     `${btn('Check now', 'update-check')}` +
     `${s.automatic ? btn(s.enabled ? 'Turn off automatic checks' : 'Turn on automatic checks', 'update-toggle') : ''}</div>` +
-    (s.latest ? '<p class="tiny muted mt">Download opens the release page in your browser. Make a backup, close Paddock, then install the new version as before; your collection stays where it is.</p>' : '');
+    (s.latest
+      ? '<p class="tiny muted mt">Download opens the release page in your browser. Make a backup, close Paddock, then install the new version as before; your collection stays where it is.</p>'
+      : '');
   return panel('Updates', body);
 }
 
@@ -93,15 +104,24 @@ async function updateAction(action) {
   if (action === 'update-skip') {
     updateState = await api('updateCheck', 'skip', { version: updateState?.latest?.version });
     showUpdateState();
-    toast('Paddock will remind you again when a newer version appears. Settings → Database → Updates has the download.');
+    toast(
+      'Paddock will remind you again when a newer version appears. Settings → Database → Updates has the download.'
+    );
     return true;
   }
   if (action === 'update-check') {
     // Not awaited: a slow network must not hold up every other button. The status event
     // redraws Settings when the check ends.
     api('updateCheck', 'check').then(
-      s => { updateState = s; showUpdateState(); toast(s.latest ? `Version ${s.latest.version} is available.` : 'You have the latest version.'); },
-      e => { toast(e.message, true); void loadUpdateStatus(); },
+      s => {
+        updateState = s;
+        showUpdateState();
+        toast(s.latest ? `Version ${s.latest.version} is available.` : 'You have the latest version.');
+      },
+      e => {
+        toast(e.message, true);
+        void loadUpdateStatus();
+      }
     );
     return true;
   }
@@ -113,6 +133,10 @@ async function updateAction(action) {
   return false;
 }
 
-window.slotforge.onUpdateCheck(() => { void loadUpdateStatus(); });
+window.slotforge.onUpdateCheck(() => {
+  void loadUpdateStatus();
+});
 // api() and render() live in app.js, which loads after this file.
-window.addEventListener('DOMContentLoaded', () => { void loadUpdateStatus(); });
+window.addEventListener('DOMContentLoaded', () => {
+  void loadUpdateStatus();
+});

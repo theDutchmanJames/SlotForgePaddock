@@ -1,6 +1,6 @@
 'use strict';
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
-const source=fs.readFileSync(path.join(__dirname,'../renderer/app.js'),'utf8'),snippet=source.slice(source.indexOf('const saveRetries='),source.indexOf('function toast('));
+const source=fs.readFileSync(path.join(__dirname,'../renderer/app.js'),'utf8'),snippet=source.slice(source.search(/const saveRetries\s*=/),source.search(/function toast\s*\(/));
 function renderer(storage,mutate,role='personal'){
  const c={SaveRetry:require('../renderer/save-retry.js'),TextEncoder,crypto:require('node:crypto').webcrypto,db:{id:'collection',revision:4,_view:{token:{epoch:'generation'}}},dataPath:'collection.sqlite',clubState:{active:false,role},localStorage:{get length(){return storage.size;},key:i=>[...storage.keys()][i],getItem:k=>storage.get(k),setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},desiredView:()=>({page:'Cars'}),window:{slotforge:{mutate}},slotforgeSnapshot:{apply:()=>{throw Error('Broken patch');}}};vm.createContext(c);vm.runInContext(snippet,c);return c;
 }

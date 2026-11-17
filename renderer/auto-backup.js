@@ -44,19 +44,26 @@ function renderAutoBackupSettings() {
   const last = s.lastSuccess
     ? `${autoBackupWhen(s.lastSuccess.at)} · ${autoBackupSize(s.lastSuccess.size)}`
     : 'None yet';
-  const problem = s.lastError && s.enabled
-    ? `<p class="note warning auto-backup-problem"><strong>The last automatic backup did not work.</strong> ${esc(s.lastError.message)}</p>`
-    : '';
+  const problem =
+    s.lastError && s.enabled
+      ? `<p class="note warning auto-backup-problem"><strong>The last automatic backup did not work.</strong> ${esc(s.lastError.message)}</p>`
+      : '';
   const intro = s.enabled
     ? `<p class="muted">Paddock makes a complete backup ${esc(AUTO_BACKUP_EVERY[s.every].toLowerCase())} and keeps the newest ${s.keep}. It waits until you are not using Paddock and stops at once when you start working again.</p>`
     : '<p class="muted">Automatic backups are off. Turn them on to keep recent complete backups without having to remember.</p>';
-  const body = intro + problem + dl([
-    ['Status', s.enabled ? 'On' : 'Off'],
-    ['Schedule', `${AUTO_BACKUP_EVERY[s.every]} · keep ${s.keep}`],
-    ['Last backup', last],
-    ['Next backup', autoBackupNextText(s)],
-  ]) + `<h3 class="mt">Backup folder</h3><div class="settings-path">${esc(s.folder)}</div>` +
-    (s.customFolder ? '' : '<p class="tiny muted">The standard folder, inside Paddock\'s own profile folder on this computer. Choose a folder on another drive or a USB disk to protect against a broken disk.</p>') +
+  const body =
+    intro +
+    problem +
+    dl([
+      ['Status', s.enabled ? 'On' : 'Off'],
+      ['Schedule', `${AUTO_BACKUP_EVERY[s.every]} · keep ${s.keep}`],
+      ['Last backup', last],
+      ['Next backup', autoBackupNextText(s)]
+    ]) +
+    `<h3 class="mt">Backup folder</h3><div class="settings-path">${esc(s.folder)}</div>` +
+    (s.customFolder
+      ? ''
+      : '<p class="tiny muted">The standard folder, inside Paddock\'s own profile folder on this computer. Choose a folder on another drive or a USB disk to protect against a broken disk.</p>') +
     `<div class="actions mt">${btn(icon('edit') + ' Change schedule…', 'auto-backup-edit', s.enabled ? '' : 'primary')}` +
     `${btn('Choose folder…', 'auto-backup-folder')}` +
     `${s.customFolder ? btn('Use standard folder', 'auto-backup-default-folder') : ''}` +
@@ -75,20 +82,31 @@ async function autoBackupAction(action) {
   if (action === 'auto-backup-edit') {
     const s = autoBackupState || {};
     const everyOptions = Object.entries(AUTO_BACKUP_EVERY)
-      .map(([value, text]) => `<option value="${value}" ${value === s.every ? 'selected' : ''}>${esc(text)}</option>`).join('');
-    simpleForm('Automatic backups',
+      .map(([value, text]) => `<option value="${value}" ${value === s.every ? 'selected' : ''}>${esc(text)}</option>`)
+      .join('');
+    simpleForm(
+      'Automatic backups',
       `<label class="check wide"><input type="checkbox" name="enabled" ${s.enabled ? 'checked' : ''}> Make automatic backups</label>` +
-      `<label class="field">How often<select name="every">${everyOptions}</select></label>` +
-      `<label class="field">Backups to keep<input name="keep" type="number" min="${s.keepRange?.[0] || 1}" max="${s.keepRange?.[1] || 50}" step="1" value="${esc(s.keep || 5)}" required></label>` +
-      '<p class="tiny muted wide">Each backup is a complete copy including photos and documents, so keeping many can take a lot of disk space.</p>',
+        `<label class="field">How often<select name="every">${everyOptions}</select></label>` +
+        `<label class="field">Backups to keep<input name="keep" type="number" min="${s.keepRange?.[0] || 1}" max="${s.keepRange?.[1] || 50}" step="1" value="${esc(s.keep || 5)}" required></label>` +
+        '<p class="tiny muted wide">Each backup is a complete copy including photos and documents, so keeping many can take a lot of disk space.</p>',
       async values => {
-        autoBackupState = await api('autoBackup', 'save', { enabled: values.enabled === 'on', every: values.every, keep: Number(values.keep) });
-      }, 'Save');
+        autoBackupState = await api('autoBackup', 'save', {
+          enabled: values.enabled === 'on',
+          every: values.every,
+          keep: Number(values.keep)
+        });
+      },
+      'Save'
+    );
     return true;
   }
   if (action === 'auto-backup-folder') {
     const value = await api('autoBackup', 'choose');
-    if (value) { refresh(value); toast('Automatic backups will be saved in the new folder.'); }
+    if (value) {
+      refresh(value);
+      toast('Automatic backups will be saved in the new folder.');
+    }
     return true;
   }
   if (action === 'auto-backup-default-folder') {
@@ -109,4 +127,6 @@ async function autoBackupAction(action) {
   return false;
 }
 
-window.slotforge.onAutoBackup(() => { void loadAutoBackupStatus(); });
+window.slotforge.onAutoBackup(() => {
+  void loadAutoBackupStatus();
+});

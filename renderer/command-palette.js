@@ -19,24 +19,40 @@ const PALETTE_SPECIAL = { ø: 'o', ł: 'l', æ: 'ae', œ: 'oe', ß: 'ss', đ: 'd
 
 /** Same matching as the collection search: every word, any order, no accents. */
 function paletteFold(value) {
-  return String(value || '').toLowerCase().replace(/[øłæœßđþ]/g, ch => PALETTE_SPECIAL[ch]).normalize('NFKD').replace(/[̀-ͯ]/g, '');
+  return String(value || '')
+    .toLowerCase()
+    .replace(/[øłæœßđþ]/g, ch => PALETTE_SPECIAL[ch])
+    .normalize('NFKD')
+    .replace(/[̀-ͯ]/g, '');
 }
 function paletteMatches(textValue, query) {
   const hay = paletteFold(textValue);
-  return paletteFold(query).split(/\s+/).filter(Boolean).every(w => hay.includes(w));
+  return paletteFold(query)
+    .split(/\s+/)
+    .filter(Boolean)
+    .every(w => hay.includes(w));
 }
 
 const PALETTE_COMMANDS = [
   { label: 'Add car', detail: 'New car in your collection', keys: `${MOD} N`, run: () => paletteRunAction('add-car') },
-  { label: 'Create backup', detail: 'Import & Export · save a complete backup now', run: () => paletteRunAction('backup') },
-  { label: 'Settings: Database and backups', detail: 'Automatic backups, updates, library', keys: `${MOD} ,`, run: () => paletteGo('Settings', 'Database') },
+  {
+    label: 'Create backup',
+    detail: 'Import & Export · save a complete backup now',
+    run: () => paletteRunAction('backup')
+  },
+  {
+    label: 'Settings: Database and backups',
+    detail: 'Automatic backups, updates, library',
+    keys: `${MOD} ,`,
+    run: () => paletteGo('Settings', 'Database')
+  },
   { label: 'Settings: Appearance', detail: 'Theme and interface size', run: () => paletteGo('Settings', 'Appearance') },
-  { label: 'Keyboard shortcuts', detail: 'List of shortcuts', keys: '?', run: () => showShortcuts() },
+  { label: 'Keyboard shortcuts', detail: 'List of shortcuts', keys: '?', run: () => showShortcuts() }
 ];
 
 /** True (after telling the user) while another action is still running. */
 function paletteBusy() {
-  if (typeof actionBusy !== 'undefined' && actionBusy || typeof modalSaving !== 'undefined' && modalSaving) {
+  if ((typeof actionBusy !== 'undefined' && actionBusy) || (typeof modalSaving !== 'undefined' && modalSaving)) {
     toast('Wait for the current action to finish, then try again.', true);
     return true;
   }
@@ -118,15 +134,25 @@ function paletteDialog() {
   const input = dialog.querySelector('#palette-query');
   input.addEventListener('input', () => {
     clearTimeout(paletteTimer);
-    paletteTimer = setTimeout(() => { paletteTimer = null; void paletteSearch(input.value); }, PALETTE_DEBOUNCE_MS);
+    paletteTimer = setTimeout(() => {
+      paletteTimer = null;
+      void paletteSearch(input.value);
+    }, PALETTE_DEBOUNCE_MS);
   });
   input.addEventListener('keydown', paletteKeys);
   dialog.addEventListener('click', event => {
-    if (event.target === dialog) { dialog.close(); return; } // Click outside the box.
+    if (event.target === dialog) {
+      dialog.close();
+      return;
+    } // Click outside the box.
     const row = event.target.closest('[data-palette-index]');
     if (row) void paletteChoose(Number(row.dataset.paletteIndex));
   });
-  dialog.addEventListener('close', () => { paletteSerial++; clearTimeout(paletteTimer); paletteTimer = null; });
+  dialog.addEventListener('close', () => {
+    paletteSerial++;
+    clearTimeout(paletteTimer);
+    paletteTimer = null;
+  });
   return dialog;
 }
 
@@ -149,15 +175,20 @@ function paletteGroup(title, entries) {
 function paletteSearch(query) {
   const job = paletteLookup(query);
   paletteRunning = job;
-  return job.finally(() => { if (paletteRunning === job) paletteRunning = null; });
+  return job.finally(() => {
+    if (paletteRunning === job) paletteRunning = null;
+  });
 }
 
 async function paletteLookup(query) {
   const serial = ++paletteSerial;
   const q = query.trim();
   const commands = PALETTE_COMMANDS.filter(c => !q || paletteMatches(c.label + ' ' + c.detail, q));
-  const pages = (q ? navs.filter(n => paletteMatches(n, q)) : [])
-    .map(n => ({ label: n, detail: 'Go to page', run: () => paletteRunAction('nav', n) }));
+  const pages = (q ? navs.filter(n => paletteMatches(n, q)) : []).map(n => ({
+    label: n,
+    detail: 'Go to page',
+    run: () => paletteRunAction('nav', n)
+  }));
   let groups = [];
   let note = '';
   if (q) {
@@ -168,12 +199,44 @@ async function paletteLookup(query) {
         const r = await api('search', q);
         if (serial !== paletteSerial) return; // A newer search is on its way.
         groups = [
-          paletteGroup('Cars', r.cars.items.map(c => ({ label: c.label, detail: c.detail, icon: 'car', run: () => paletteRunAction('open-car', c.id) }))),
-          paletteGroup('Parts', r.parts.items.map(p => ({ label: p.label, detail: p.detail, icon: 'box', run: () => paletteOpenPart(p) }))),
-          paletteGroup('Workshop jobs', r.jobs.items.map(j => ({ label: j.label, detail: j.detail, icon: 'tool', run: () => { if (!paletteBusy()) return openJob(j.id); } }))),
-          paletteGroup('Manuals and part guides', r.guides.items.map(g => ({ label: g.label, detail: g.detail, icon: 'list', run: () => paletteRunAction('guide-open', g.id) }))),
+          paletteGroup(
+            'Cars',
+            r.cars.items.map(c => ({
+              label: c.label,
+              detail: c.detail,
+              icon: 'car',
+              run: () => paletteRunAction('open-car', c.id)
+            }))
+          ),
+          paletteGroup(
+            'Parts',
+            r.parts.items.map(p => ({ label: p.label, detail: p.detail, icon: 'box', run: () => paletteOpenPart(p) }))
+          ),
+          paletteGroup(
+            'Workshop jobs',
+            r.jobs.items.map(j => ({
+              label: j.label,
+              detail: j.detail,
+              icon: 'tool',
+              run: () => {
+                if (!paletteBusy()) return openJob(j.id);
+              }
+            }))
+          ),
+          paletteGroup(
+            'Manuals and part guides',
+            r.guides.items.map(g => ({
+              label: g.label,
+              detail: g.detail,
+              icon: 'list',
+              run: () => paletteRunAction('guide-open', g.id)
+            }))
+          )
         ].filter(Boolean);
-        const more = ['cars', 'parts', 'jobs', 'guides'].reduce((n, k) => n + Math.max(0, r[k].total - r[k].items.length), 0);
+        const more = ['cars', 'parts', 'jobs', 'guides'].reduce(
+          (n, k) => n + Math.max(0, r[k].total - r[k].items.length),
+          0
+        );
         if (more) note = `${more} more ${more === 1 ? 'match' : 'matches'}. Type more to narrow it down.`;
       } catch (e) {
         if (serial !== paletteSerial) return;
@@ -192,17 +255,23 @@ function paletteRender(groups, query, note) {
   paletteItems = groups.flatMap(g => g.entries);
   paletteIndex = 0;
   paletteShown = query;
-  let index = 0, group = 0;
-  out.innerHTML = groups.map(g => {
-    const headingId = `palette-group-${group++}`;
-    return `<div class="palette-group" role="group" aria-labelledby="${headingId}"><h3 id="${headingId}" role="presentation">${esc(g.title)}</h3>${g.entries.map(e => {
-      const i = index++;
-      return `<div class="palette-row" id="palette-row-${i}" role="option" data-palette-index="${i}" aria-selected="${i === 0}">${e.icon ? icon(e.icon) : ''}<span><strong>${esc(e.label)}</strong>${e.detail ? `<small>${esc(e.detail)}</small>` : ''}</span>${e.keys ? `<kbd aria-hidden="true">${esc(e.keys)}</kbd>` : ''}</div>`;
-    }).join('')}</div>`;
-  }).join('');
+  let index = 0,
+    group = 0;
+  out.innerHTML = groups
+    .map(g => {
+      const headingId = `palette-group-${group++}`;
+      return `<div class="palette-group" role="group" aria-labelledby="${headingId}"><h3 id="${headingId}" role="presentation">${esc(g.title)}</h3>${g.entries
+        .map(e => {
+          const i = index++;
+          return `<div class="palette-row" id="palette-row-${i}" role="option" data-palette-index="${i}" aria-selected="${i === 0}">${e.icon ? icon(e.icon) : ''}<span><strong>${esc(e.label)}</strong>${e.detail ? `<small>${esc(e.detail)}</small>` : ''}</span>${e.keys ? `<kbd aria-hidden="true">${esc(e.keys)}</kbd>` : ''}</div>`;
+        })
+        .join('')}</div>`;
+    })
+    .join('');
   const status = document.querySelector('#palette-status');
   const found = query && !paletteItems.length && !note ? `Nothing found for “${query}”.` : '';
-  status.textContent = note || found || (query ? `${paletteItems.length} ${paletteItems.length === 1 ? 'result' : 'results'}` : '');
+  status.textContent =
+    note || found || (query ? `${paletteItems.length} ${paletteItems.length === 1 ? 'result' : 'results'}` : '');
   status.classList.toggle('sr-only', !note && !found);
   document.querySelector('#palette-query')?.setAttribute('aria-expanded', String(paletteItems.length > 0));
   paletteHighlight();
@@ -255,7 +324,11 @@ async function paletteChoose(index) {
   if (!item) return;
   if (paletteBusy()) return;
   document.querySelector('#palette')?.close();
-  try { await item.run(); } catch (e) { toast(e.message, true); }
+  try {
+    await item.run();
+  } catch (e) {
+    toast(e.message, true);
+  }
 }
 
 function showShortcuts() {
@@ -267,9 +340,13 @@ function showShortcuts() {
     [`${MOD} ,`, 'Settings'],
     [isMac ? '⌥ 1 – 9' : 'Alt 1 – 9', 'Go to the pages in the main menu, in order (when not typing in a field)'],
     ['Esc', 'Close a window or menu'],
-    ['?', 'This list'],
+    ['?', 'This list']
   ];
-  modal('Keyboard shortcuts', `<table class="shortcut-table"><tbody>${rows.map(([k, t]) => `<tr><th><kbd>${esc(k)}</kbd></th><td>${esc(t)}</td></tr>`).join('')}</tbody></table>`, null);
+  modal(
+    'Keyboard shortcuts',
+    `<table class="shortcut-table"><tbody>${rows.map(([k, t]) => `<tr><th><kbd>${esc(k)}</kbd></th><td>${esc(t)}</td></tr>`).join('')}</tbody></table>`,
+    null
+  );
 }
 
 /** The compact search button in the bar under the main menu. */
@@ -278,7 +355,10 @@ function paletteButtonHtml() {
 }
 
 async function paletteAction(action) {
-  if (action === 'palette-open') { openPalette(); return true; }
+  if (action === 'palette-open') {
+    openPalette();
+    return true;
+  }
   return false;
 }
 
@@ -295,16 +375,23 @@ document.addEventListener('keydown', event => {
   const palette = document.querySelector('#palette');
   if (mod && key === 'k') {
     event.preventDefault();
-    if (palette?.open) palette.close(); else openPalette();
+    if (palette?.open) palette.close();
+    else openPalette();
     return;
   }
-  if (palette?.open || document.querySelector('#dialog')?.open || document.querySelector('#showroom-viewer')?.open) return;
+  if (palette?.open || document.querySelector('#dialog')?.open || document.querySelector('#showroom-viewer')?.open)
+    return;
   const typing = typingInField(event.target);
   if (mod && key === 'f') {
     // Focus this page's own search box if it has one, otherwise search everything.
     event.preventDefault();
-    const own = document.querySelector('#car-search, #main input[type="search"], #main input[placeholder^="Search" i], #main input[placeholder^="Find" i]');
-    if (own) { own.focus(); own.select?.(); } else openPalette();
+    const own = document.querySelector(
+      '#car-search, #main input[type="search"], #main input[placeholder^="Search" i], #main input[placeholder^="Find" i]'
+    );
+    if (own) {
+      own.focus();
+      own.select?.();
+    } else openPalette();
     return;
   }
   if (mod && key === 'n') {
@@ -323,10 +410,20 @@ document.addEventListener('keydown', event => {
   const digit = /^Digit([1-9])$/.exec(event.code || '');
   if (digit && event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey) {
     const target = navs[Number(digit[1]) - 1];
-    if (target) { event.preventDefault(); paletteRunAction('nav', target); }
+    if (target) {
+      event.preventDefault();
+      paletteRunAction('nav', target);
+    }
     return;
   }
   if (event.ctrlKey || event.metaKey || event.altKey) return;
-  if (event.key === '/') { event.preventDefault(); openPalette(); return; }
-  if (event.key === '?') { event.preventDefault(); showShortcuts(); }
+  if (event.key === '/') {
+    event.preventDefault();
+    openPalette();
+    return;
+  }
+  if (event.key === '?') {
+    event.preventDefault();
+    showShortcuts();
+  }
 });

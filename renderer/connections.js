@@ -1,118 +1,398 @@
-let discoveredHosts=[];
-let legacyRecoveryEnabled=false,connectionPanelOverride=false;
-const connectionPanels={advanced:false,legacy:false,recovery:false};
-function rememberConnectionPanels(){
- if(connectionPanelOverride){connectionPanelOverride=false;return;}
- for(const el of document.querySelectorAll('[data-connection-panel]'))connectionPanels[el.dataset.connectionPanel]=el.open;
+let discoveredHosts = [];
+let legacyRecoveryEnabled = false,
+  connectionPanelOverride = false;
+const connectionPanels = { advanced: false, legacy: false, recovery: false };
+function rememberConnectionPanels() {
+  if (connectionPanelOverride) {
+    connectionPanelOverride = false;
+    return;
+  }
+  for (const el of document.querySelectorAll('[data-connection-panel]'))
+    connectionPanels[el.dataset.connectionPanel] = el.open;
 }
-const legacyConnectionActive=()=>!!(net.remote||net.pending||net.sharing&&net.hostingMode==='legacy');
-function connectionPanel(key,title,body){return `<details class="panel integration-details" data-connection-panel="${key}" ${connectionPanels[key]?'open':''}><summary>${title}</summary><div class="integration-body">${body}</div></details>`;}
-function openConnectionSettings(){
- connectionPanels.advanced=true;connectionPanels.legacy=legacyConnectionActive()||legacyRecoveryEnabled;connectionPanelOverride=true;
- switchCollection('local');page='Settings';settingsSection='Database';carId=null;
+const legacyConnectionActive = () => !!(net.remote || net.pending || (net.sharing && net.hostingMode === 'legacy'));
+function connectionPanel(key, title, body) {
+  return `<details class="panel integration-details" data-connection-panel="${key}" ${connectionPanels[key] ? 'open' : ''}><summary>${title}</summary><div class="integration-body">${body}</div></details>`;
 }
-async function connectionSettingsAction(action){
- if(action==='recovery-export'||action==='recovery-import'){const r=await api('network',action);if(r){net=(await readScreen()).network;connectionPanels.advanced=true;connectionPanelOverride=true;render();toast(action==='recovery-export'?'Recovery file saved. Keep it until the original host acknowledges this package.':'Recovery loaded. Reconnect to the original host and retry the same submission.');}return true;}
- if(action==='migrate-host'){hostMigrationDialog();return true;}
- if(action==='migrate-browser'){browserMigrationDialog();return true;}
- if(action==='migration-ack'){
-  const m=net.migration;modal('Have all clients reconnected?',`<p>Confirm that affected Paddock, Timing and Telemetry clients now use this dealership’s current address and password, and that their pending deliveries have been checked.</p><p>Keep linked database and car identities, cached race configurations and outgoing queues. Do not create fresh deliveries to replace uncertain retries.</p><label class="check"><input name="confirmed" type="checkbox" required> I have checked the affected clients and pending deliveries.</label>`,async p=>{net=await api('network','migration-ack',{...m,confirmed:p.confirmed==='on'});},'Mark reconnections checked');return true;
- }
- if(action==='connection-settings'){openConnectionSettings();render();return true;}
- if(action==='library-move'){
-  const info=await api('file','library.move-choose');if(!info)return true;
-  const size=info.size>=1024*1024*1024?(info.size/1024/1024/1024).toFixed(1)+' GB':Math.max(1,Math.round(info.size/1024/1024))+' MB';
-  modal('Move the shared library?',`<div class="library-move"><p>Paddock will restart, copy the library to the new folder, check the copy and then use it from there. SlotForge Timing finds the new location by itself the next time it opens.</p><dl class="library-move-paths"><div><dt>From</dt><dd class="settings-path">${esc(info.current)}</dd></div><div><dt>To</dt><dd class="settings-path">${esc(info.target)}</dd></div><div><dt>Size</dt><dd>${esc(size)}</dd></div></dl>${info.warnings.map(w=>`<p class="note warning">${esc(w)}</p>`).join('')}<p class="note info"><strong>Close SlotForge Timing first.</strong> If it is busy saving, Paddock asks you to close it before moving.</p><p class="tiny muted">The old file stays where it is, locked against changes, so nothing is lost if something goes wrong. You can delete it afterwards. Older backup files are not moved.</p></div>`,async()=>{await api('file','library.move-request',{folder:info.folder});toast('Paddock is restarting to move the library…');},'Move and restart Paddock');
-  return true;
- }
- if(action==='legacy-personal'){await api('club','switch',{active:false});switchCollection('local');await reloadClub();openConnectionSettings();render();return true;}
- if(action==='legacy-recover'){
-  simpleForm('Recover an older connection','<p>These controls are for an existing public sharing connection. For a new connection between computers, use Dealership Mode.</p><p>Opening these controls does not start hosting, change passwords or grant new permissions. Ask the host for its current code. An unsaved retry copy lost when an older app closed cannot be recovered here; use Open recovery file if you saved one.</p><label class="check-row"><input type="checkbox" name="confirmed" value="yes" required> I need to recover an existing older connection.</label>',async values=>{if(values.confirmed!=='yes')throw Error('Confirm that you need the older connection controls.');legacyRecoveryEnabled=true;connectionPanels.advanced=true;connectionPanels.legacy=true;connectionPanelOverride=true;},'Show older connection controls');
-  return true;
- }
- return false;
+function openConnectionSettings() {
+  connectionPanels.advanced = true;
+  connectionPanels.legacy = legacyConnectionActive() || legacyRecoveryEnabled;
+  connectionPanelOverride = true;
+  switchCollection('local');
+  page = 'Settings';
+  settingsSection = 'Database';
+  carId = null;
 }
-function hostMigrationDialog(){
- const databaseId=db.id;
- simpleForm('Migrate to Dealership Mode',`<p><strong>${esc(db.settings.name)}</strong><br>Database identity: ${esc(databaseId)}</p><p>Dealership access includes the full collection: private ownership, stock, jobs, documents and review history. Connected users can make everyday edits and submit important changes for Review. This is broader access than the old browse-only or Timing password.</p><p>A recovery backup is made first. Existing requests finish before the old listener is replaced. Other apps must reconnect using the newly displayed address and your Dealership password; the port may change. Local shared-file access remains available.</p>${net.pending?'<p class="note">Save the pending submission recovery file or resolve it before migrating.</p>':''}${field('name','This computer’s name',clubState?.device||'')}${dealershipPasswordFields()}<label class="check"><input name="confirmed" type="checkbox" required> I approve full Dealership access and will reconnect the affected clients.</label>`,async p=>{
-  if(p.password!==p.confirm)throw Error('The passwords do not match.');let error;try{await api('network','migrate-host',{databaseId,name:p.name,password:p.password,confirmed:p.confirmed==='on'});}catch(e){error=e;}await reloadClub();if(error){if(clubState.role!=='coordinator')throw error;page='Connections';toast('Dealership settings were saved, but hosting needs attention: '+error.message+' Use Start Dealership to retry.',true);return;}page='Connections';toast('Migration saved. Check the new address and reconnect the affected clients.');
- },'Back up & migrate');
+async function connectionSettingsAction(action) {
+  if (action === 'recovery-export' || action === 'recovery-import') {
+    const r = await api('network', action);
+    if (r) {
+      net = (await readScreen()).network;
+      connectionPanels.advanced = true;
+      connectionPanelOverride = true;
+      render();
+      toast(
+        action === 'recovery-export'
+          ? 'Recovery file saved. Keep it until the original host acknowledges this package.'
+          : 'Recovery loaded. Reconnect to the original host and retry the same submission.'
+      );
+    }
+    return true;
+  }
+  if (action === 'migrate-host') {
+    hostMigrationDialog();
+    return true;
+  }
+  if (action === 'migrate-browser') {
+    browserMigrationDialog();
+    return true;
+  }
+  if (action === 'migration-ack') {
+    const m = net.migration;
+    modal(
+      'Have all clients reconnected?',
+      `<p>Confirm that affected Paddock, Timing and Telemetry clients now use this dealership’s current address and password, and that their pending deliveries have been checked.</p><p>Keep linked database and car identities, cached race configurations and outgoing queues. Do not create fresh deliveries to replace uncertain retries.</p><label class="check"><input name="confirmed" type="checkbox" required> I have checked the affected clients and pending deliveries.</label>`,
+      async p => {
+        net = await api('network', 'migration-ack', { ...m, confirmed: p.confirmed === 'on' });
+      },
+      'Mark reconnections checked'
+    );
+    return true;
+  }
+  if (action === 'connection-settings') {
+    openConnectionSettings();
+    render();
+    return true;
+  }
+  if (action === 'library-move') {
+    const info = await api('file', 'library.move-choose');
+    if (!info) return true;
+    const size =
+      info.size >= 1024 * 1024 * 1024
+        ? (info.size / 1024 / 1024 / 1024).toFixed(1) + ' GB'
+        : Math.max(1, Math.round(info.size / 1024 / 1024)) + ' MB';
+    modal(
+      'Move the shared library?',
+      `<div class="library-move"><p>Paddock will restart, copy the library to the new folder, check the copy and then use it from there. SlotForge Timing finds the new location by itself the next time it opens.</p><dl class="library-move-paths"><div><dt>From</dt><dd class="settings-path">${esc(info.current)}</dd></div><div><dt>To</dt><dd class="settings-path">${esc(info.target)}</dd></div><div><dt>Size</dt><dd>${esc(size)}</dd></div></dl>${info.warnings.map(w => `<p class="note warning">${esc(w)}</p>`).join('')}<p class="note info"><strong>Close SlotForge Timing first.</strong> If it is busy saving, Paddock asks you to close it before moving.</p><p class="tiny muted">The old file stays where it is, locked against changes, so nothing is lost if something goes wrong. You can delete it afterwards. Older backup files are not moved.</p></div>`,
+      async () => {
+        await api('file', 'library.move-request', { folder: info.folder });
+        toast('Paddock is restarting to move the library…');
+      },
+      'Move and restart Paddock'
+    );
+    return true;
+  }
+  if (action === 'legacy-personal') {
+    await api('club', 'switch', { active: false });
+    switchCollection('local');
+    await reloadClub();
+    openConnectionSettings();
+    render();
+    return true;
+  }
+  if (action === 'legacy-recover') {
+    simpleForm(
+      'Recover an older connection',
+      '<p>These controls are for an existing public sharing connection. For a new connection between computers, use Dealership Mode.</p><p>Opening these controls does not start hosting, change passwords or grant new permissions. Ask the host for its current code. An unsaved retry copy lost when an older app closed cannot be recovered here; use Open recovery file if you saved one.</p><label class="check-row"><input type="checkbox" name="confirmed" value="yes" required> I need to recover an existing older connection.</label>',
+      async values => {
+        if (values.confirmed !== 'yes') throw Error('Confirm that you need the older connection controls.');
+        legacyRecoveryEnabled = true;
+        connectionPanels.advanced = true;
+        connectionPanels.legacy = true;
+        connectionPanelOverride = true;
+      },
+      'Show older connection controls'
+    );
+    return true;
+  }
+  return false;
 }
-function browserMigrationDialog(){
- const r=net.remote;if(!r)throw Error('Open the existing public connection first.');
- simpleForm('Join the same collection in Dealership Mode',`<p>Original host: <strong>${esc(r.name)}</strong><br>Database identity: ${esc(r.id)}</p><p>Ask the host to enable Dealership Mode first. Enter its new address and password. Paddock verifies the same database identity and downloads a separate full Dealership copy, including private records. Your personal library and existing read-only view remain separate.</p>${net.pending?'<p class="note">Save the pending submission recovery file or resolve it before joining.</p>':''}${field('address','New Dealership address and port',r.address)}${field('name','This computer’s name',clubState?.device||'')}<label class="field">Dealership password<input name="code" type="password" autocomplete="current-password" minlength="4" maxlength="128" required></label><label class="check"><input name="confirmed" type="checkbox" required> I want the full Dealership copy and access provided by this password.</label>`,async p=>{let error;try{await api('network','migrate-browser',{...p,databaseId:r.id,confirmed:p.confirmed==='on'});}catch(e){error=e;}switchCollection('local');await reloadClub();page='Connections';if(error)throw error;},'Verify & join');
+function hostMigrationDialog() {
+  const databaseId = db.id;
+  simpleForm(
+    'Migrate to Dealership Mode',
+    `<p><strong>${esc(db.settings.name)}</strong><br>Database identity: ${esc(databaseId)}</p><p>Dealership access includes the full collection: private ownership, stock, jobs, documents and review history. Connected users can make everyday edits and submit important changes for Review. This is broader access than the old browse-only or Timing password.</p><p>A recovery backup is made first. Existing requests finish before the old listener is replaced. Other apps must reconnect using the newly displayed address and your Dealership password; the port may change. Local shared-file access remains available.</p>${net.pending ? '<p class="note">Save the pending submission recovery file or resolve it before migrating.</p>' : ''}${field('name', 'This computer’s name', clubState?.device || '')}${dealershipPasswordFields()}<label class="check"><input name="confirmed" type="checkbox" required> I approve full Dealership access and will reconnect the affected clients.</label>`,
+    async p => {
+      if (p.password !== p.confirm) throw Error('The passwords do not match.');
+      let error;
+      try {
+        await api('network', 'migrate-host', {
+          databaseId,
+          name: p.name,
+          password: p.password,
+          confirmed: p.confirmed === 'on'
+        });
+      } catch (e) {
+        error = e;
+      }
+      await reloadClub();
+      if (error) {
+        if (clubState.role !== 'coordinator') throw error;
+        page = 'Connections';
+        toast(
+          'Dealership settings were saved, but hosting needs attention: ' +
+            error.message +
+            ' Use Start Dealership to retry.',
+          true
+        );
+        return;
+      }
+      page = 'Connections';
+      toast('Migration saved. Check the new address and reconnect the affected clients.');
+    },
+    'Back up & migrate'
+  );
 }
-function renderMigrationGuidance(){
- const m=net.migration;if(!m)return '';
- return `<section class="panel pending-connection migration-guidance"><h2>${m.state==='check-clients'?'Check client reconnections':m.state==='migrating'?'Migration in progress':'Migration was not completed'}</h2><p>Database identity: ${esc(m.databaseId)}</p>${m.error?`<p class="note">${esc(m.error)}</p>`:''}<p>${m.state==='check-clients'?'Use the current Dealership address and password above. Reconnect affected Paddock, Timing and Telemetry clients to this same database identity and check pending deliveries. Old passwords are not converted to full-access passwords.':'Your collection has not been rolled back. Check the current hosting state before retrying migration.'}</p>${m.backup?`<p class="tiny settings-path">Recovery backup: ${esc(m.backup)}</p>`:''}${m.state==='check-clients'?btn('I have checked client reconnections…','migration-ack'):m.state==='not-completed'&&!db.club?btn('Retry migration…','migrate-host'):''}</section>`;
+function browserMigrationDialog() {
+  const r = net.remote;
+  if (!r) throw Error('Open the existing public connection first.');
+  simpleForm(
+    'Join the same collection in Dealership Mode',
+    `<p>Original host: <strong>${esc(r.name)}</strong><br>Database identity: ${esc(r.id)}</p><p>Ask the host to enable Dealership Mode first. Enter its new address and password. Paddock verifies the same database identity and downloads a separate full Dealership copy, including private records. Your personal library and existing read-only view remain separate.</p>${net.pending ? '<p class="note">Save the pending submission recovery file or resolve it before joining.</p>' : ''}${field('address', 'New Dealership address and port', r.address)}${field('name', 'This computer’s name', clubState?.device || '')}<label class="field">Dealership password<input name="code" type="password" autocomplete="current-password" minlength="4" maxlength="128" required></label><label class="check"><input name="confirmed" type="checkbox" required> I want the full Dealership copy and access provided by this password.</label>`,
+    async p => {
+      let error;
+      try {
+        await api('network', 'migrate-browser', { ...p, databaseId: r.id, confirmed: p.confirmed === 'on' });
+      } catch (e) {
+        error = e;
+      }
+      switchCollection('local');
+      await reloadClub();
+      page = 'Connections';
+      if (error) throw error;
+    },
+    'Verify & join'
+  );
 }
-function renderPaddockPortal(){
- const p=net.portal;if(!p)return '';
- return `<section class="panel portal-panel"><div class="portal-heading"><h2>${icon('car')} Paddock Portal</h2><button type="button" class="btn ${p.enabled?'':'primary'}" data-action="portal-toggle" role="switch" aria-checked="${!!p.enabled}" ${!local()||!p.available?'disabled':''}>${p.enabled?'Turn off':'Turn on'}</button></div><p class="muted">Quickly add cars and their main photographs, or add up to five gallery photos to an existing car, from your phone or tablet. Complete their details afterwards in Paddock.</p>${p.enabled?`<p>${badge('Portal on','good')} <strong>${esc(p.collectionName)}</strong></p><p>Connect your phone or tablet to the same local network. Scan a QR code, or type the address into its browser and enter the access code.</p><p>Access code: <strong class="portal-code">${esc(p.code)}</strong></p>${p.addresses.length?`<div class="portal-addresses">${p.addresses.map(a=>`<div class="portal-address"><div class="portal-qr">${a.qr}</div><div><div class="code">${esc(a.url)}</div><small class="muted">Scan to connect automatically</small></div></div>`).join('')}</div>`:'<p class="note">No local network address was found. Turn the Portal off, connect this computer to your Wi-Fi or LAN, then turn it on again.</p>'}<p class="tiny muted">Keep Paddock running and this computer awake. Guest Wi-Fi or a firewall may prevent a connection. The Portal adds cars directly to this collection; turn it off when finished.</p>`:`${p.reason?`<p class="note">${esc(p.reason)}</p>`:''}${!local()||!p.available?'<p class="tiny muted">Open the original local collection to use the Portal.</p>':''}`}</section>`;
+function renderMigrationGuidance() {
+  const m = net.migration;
+  if (!m) return '';
+  return `<section class="panel pending-connection migration-guidance"><h2>${m.state === 'check-clients' ? 'Check client reconnections' : m.state === 'migrating' ? 'Migration in progress' : 'Migration was not completed'}</h2><p>Database identity: ${esc(m.databaseId)}</p>${m.error ? `<p class="note">${esc(m.error)}</p>` : ''}<p>${m.state === 'check-clients' ? 'Use the current Dealership address and password above. Reconnect affected Paddock, Timing and Telemetry clients to this same database identity and check pending deliveries. Old passwords are not converted to full-access passwords.' : 'Your collection has not been rolled back. Check the current hosting state before retrying migration.'}</p>${m.backup ? `<p class="tiny settings-path">Recovery backup: ${esc(m.backup)}</p>` : ''}${m.state === 'check-clients' ? btn('I have checked client reconnections…', 'migration-ack') : m.state === 'not-completed' && !db.club ? btn('Retry migration…', 'migrate-host') : ''}</section>`;
 }
-const canSubmit=()=>!clubState?.active&&!!net.remote&&net.remote.state==='connected'&&net.remote.permissions?.submit&&!net.pending;
-const connectionTime=value=>value?new Date(value).toLocaleString():'Never';
-function remoteNotice(){const r=net.remote;if(local()||!r)return '';return `<div class="note ${r.state==='connected'?'info':''} connection-notice"><strong>${r.state==='connected'?'Shared read-only view':r.state==='access-required'?'Access needs renewing · saved view':'Offline · saved view'}</strong> · Last checked <time data-sync-time>${esc(connectionTime(r.lastSync))}</time>. ${r.state==='connected'?(r.autoRefresh?'Changes refresh automatically.':'Automatic refresh is paused.'):'These cars may be out of date. Open Settings → Database to reconnect.'}</div>`;}
-function renderBasicConnections(){
-  const r=net.remote,hosting=net.sharing&&net.hostingMode==='legacy',canHost=!clubState?.active&&!db.club;
-  return `<div class="two-col connection-cards">${canHost?panel('Share your local database',`<p><strong>${esc(db.settings.name)}</strong></p><p class="muted">Share public car information. Purchase details, private notes, ownership, storage, documents and workshop jobs stay private. Only this computer can review submissions.</p>${hosting?`${badge('Sharing enabled','good')} ${badge(net.discoverable?'Discoverable nearby':'Manual connection')}<h3 class="mt">Local address</h3>${net.addresses.length?net.addresses.map(a=>`<div class="code">${esc(a)}</div>`).join(''):`<p class="muted">No LAN adapter detected. Local test: 127.0.0.1:${net.port}</p>`}${net.discoveryError?`<p class="muted">${esc(net.discoveryError)}</p>`:''}<h3 class="mt">Browse-only code or password</h3><div class="code">${esc(net.browseCode)}</div>${btn('Set password…','set-host-password','small','browse')}<p class="tiny muted">Can read public cars. Cannot submit or edit.</p><h3 class="mt">Browse + submit code or password</h3><div class="code">${esc(net.code)}</div>${btn('Set password…','set-host-password','small','submit')}<p class="tiny muted">Can send cars to your review inbox. Submissions never edit your collection directly.</p><h3 class="mt">SlotForge Timing</h3><p class="muted">Connect with the dedicated Timing code or password to browse cars and send finalised results. Received results are saved directly against each car after review in Timing.</p><h3 class="mt">Timing connection code or password</h3><div class="code">${esc(net.timingCode)}</div>${btn('Set password…','set-host-password','small','timing')}<p class="tiny muted">Use this Timing credential, not a browse, submission or Dealership credential.</p><p class="tiny muted">Reads public cars and captured configurations. Can send, correct and withdraw sessions. Cannot submit car edits. Codes and passwords change when sharing restarts or you revoke them; reconnect Timing with the current credential.</p><div class="actions mt">${btn(net.allowSubmissions?'Pause submissions':'Resume submissions','toggle-submissions')}${btn('Revoke codes / passwords…','rotate-codes')}${btn('Stop sharing','stop-sharing')}</div>${!net.allowSubmissions?'<p class="note">Submissions are paused for every connected member. Browsing remains available.</p>':''}`:btn('Start sharing','start-sharing','primary')}`):''}
-    ${panel('Browse another collection',`<p class="muted">Find a sharing computer on your local network, or enter its address. Ask the host for the appropriate code or password.</p><div class="actions">${btn('Find nearby databases','discover-hosts','primary')}${btn(r?'Change connection / password…':'Enter connection details','connect')}</div>${r?`<div class="mt">${badge(r.state==='connected'?'Connected':r.state==='access-required'?'New code required':'Offline',r.state==='connected'?'good':'')}${dl([['Database',r.name],['Address',r.address],['Access',r.permissions?.submit?'Browse + submit for review':'Browse only'],['Automatic refresh',r.autoRefresh?'On':'Paused']])}<p class="tiny muted">Last checked <time data-sync-time>${esc(connectionTime(r.lastSync))}</time></p>${r.lastError?`<p class="note">${esc(r.lastError)}</p>`:''}<div class="actions mt">${btn(r.state==='connected'?'Browse shared cars':'Browse saved view','browse-remote','primary')}${btn('Reconnect / refresh','refresh-remote')}${btn(r.autoRefresh?'Pause auto refresh':'Enable auto refresh','toggle-auto')}${btn('Disconnect','disconnect')}</div><p class="tiny muted">The last successful public view stays available while this app is open. Codes, passwords and shared snapshots are not saved to disk.</p></div>`:''}`)}</div>
+function renderPaddockPortal() {
+  const p = net.portal;
+  if (!p) return '';
+  return `<section class="panel portal-panel"><div class="portal-heading"><h2>${icon('car')} Paddock Portal</h2><button type="button" class="btn ${p.enabled ? '' : 'primary'}" data-action="portal-toggle" role="switch" aria-checked="${!!p.enabled}" ${!local() || !p.available ? 'disabled' : ''}>${p.enabled ? 'Turn off' : 'Turn on'}</button></div><p class="muted">Quickly add cars and their main photographs, or add up to five gallery photos to an existing car, from your phone or tablet. Complete their details afterwards in Paddock.</p>${p.enabled ? `<p>${badge('Portal on', 'good')} <strong>${esc(p.collectionName)}</strong></p><p>Connect your phone or tablet to the same local network. Scan a QR code, or type the address into its browser and enter the access code.</p><p>Access code: <strong class="portal-code">${esc(p.code)}</strong></p>${p.addresses.length ? `<div class="portal-addresses">${p.addresses.map(a => `<div class="portal-address"><div class="portal-qr">${a.qr}</div><div><div class="code">${esc(a.url)}</div><small class="muted">Scan to connect automatically</small></div></div>`).join('')}</div>` : '<p class="note">No local network address was found. Turn the Portal off, connect this computer to your Wi-Fi or LAN, then turn it on again.</p>'}<p class="tiny muted">Keep Paddock running and this computer awake. Guest Wi-Fi or a firewall may prevent a connection. The Portal adds cars directly to this collection; turn it off when finished.</p>` : `${p.reason ? `<p class="note">${esc(p.reason)}</p>` : ''}${!local() || !p.available ? '<p class="tiny muted">Open the original local collection to use the Portal.</p>' : ''}`}</section>`;
+}
+const canSubmit = () =>
+  !clubState?.active &&
+  !!net.remote &&
+  net.remote.state === 'connected' &&
+  net.remote.permissions?.submit &&
+  !net.pending;
+const connectionTime = value => (value ? new Date(value).toLocaleString() : 'Never');
+function remoteNotice() {
+  const r = net.remote;
+  if (local() || !r) return '';
+  return `<div class="note ${r.state === 'connected' ? 'info' : ''} connection-notice"><strong>${r.state === 'connected' ? 'Shared read-only view' : r.state === 'access-required' ? 'Access needs renewing · saved view' : 'Offline · saved view'}</strong> · Last checked <time data-sync-time>${esc(connectionTime(r.lastSync))}</time>. ${r.state === 'connected' ? (r.autoRefresh ? 'Changes refresh automatically.' : 'Automatic refresh is paused.') : 'These cars may be out of date. Open Settings → Database to reconnect.'}</div>`;
+}
+function renderBasicConnections() {
+  const r = net.remote,
+    hosting = net.sharing && net.hostingMode === 'legacy',
+    canHost = !clubState?.active && !db.club;
+  return `<div class="two-col connection-cards">${canHost ? panel('Share your local database', `<p><strong>${esc(db.settings.name)}</strong></p><p class="muted">Share public car information. Purchase details, private notes, ownership, storage, documents and workshop jobs stay private. Only this computer can review submissions.</p>${hosting ? `${badge('Sharing enabled', 'good')} ${badge(net.discoverable ? 'Discoverable nearby' : 'Manual connection')}<h3 class="mt">Local address</h3>${net.addresses.length ? net.addresses.map(a => `<div class="code">${esc(a)}</div>`).join('') : `<p class="muted">No LAN adapter detected. Local test: 127.0.0.1:${net.port}</p>`}${net.discoveryError ? `<p class="muted">${esc(net.discoveryError)}</p>` : ''}<h3 class="mt">Browse-only code or password</h3><div class="code">${esc(net.browseCode)}</div>${btn('Set password…', 'set-host-password', 'small', 'browse')}<p class="tiny muted">Can read public cars. Cannot submit or edit.</p><h3 class="mt">Browse + submit code or password</h3><div class="code">${esc(net.code)}</div>${btn('Set password…', 'set-host-password', 'small', 'submit')}<p class="tiny muted">Can send cars to your review inbox. Submissions never edit your collection directly.</p><h3 class="mt">SlotForge Timing</h3><p class="muted">Connect with the dedicated Timing code or password to browse cars and send finalised results. Received results are saved directly against each car after review in Timing.</p><h3 class="mt">Timing connection code or password</h3><div class="code">${esc(net.timingCode)}</div>${btn('Set password…', 'set-host-password', 'small', 'timing')}<p class="tiny muted">Use this Timing credential, not a browse, submission or Dealership credential.</p><p class="tiny muted">Reads public cars and captured configurations. Can send, correct and withdraw sessions. Cannot submit car edits. Codes and passwords change when sharing restarts or you revoke them; reconnect Timing with the current credential.</p><div class="actions mt">${btn(net.allowSubmissions ? 'Pause submissions' : 'Resume submissions', 'toggle-submissions')}${btn('Revoke codes / passwords…', 'rotate-codes')}${btn('Stop sharing', 'stop-sharing')}</div>${!net.allowSubmissions ? '<p class="note">Submissions are paused for every connected member. Browsing remains available.</p>' : ''}` : btn('Start sharing', 'start-sharing', 'primary')}`) : ''}
+    ${panel(
+      'Browse another collection',
+      `<p class="muted">Find a sharing computer on your local network, or enter its address. Ask the host for the appropriate code or password.</p><div class="actions">${btn('Find nearby databases', 'discover-hosts', 'primary')}${btn(r ? 'Change connection / password…' : 'Enter connection details', 'connect')}</div>${
+        r
+          ? `<div class="mt">${badge(r.state === 'connected' ? 'Connected' : r.state === 'access-required' ? 'New code required' : 'Offline', r.state === 'connected' ? 'good' : '')}${dl(
+              [
+                ['Database', r.name],
+                ['Address', r.address],
+                ['Access', r.permissions?.submit ? 'Browse + submit for review' : 'Browse only'],
+                ['Automatic refresh', r.autoRefresh ? 'On' : 'Paused']
+              ]
+            )}<p class="tiny muted">Last checked <time data-sync-time>${esc(connectionTime(r.lastSync))}</time></p>${r.lastError ? `<p class="note">${esc(r.lastError)}</p>` : ''}<div class="actions mt">${btn(r.state === 'connected' ? 'Browse shared cars' : 'Browse saved view', 'browse-remote', 'primary')}${btn('Reconnect / refresh', 'refresh-remote')}${btn(r.autoRefresh ? 'Pause auto refresh' : 'Enable auto refresh', 'toggle-auto')}${btn('Disconnect', 'disconnect')}</div><p class="tiny muted">The last successful public view stays available while this app is open. Codes, passwords and shared snapshots are not saved to disk.</p></div>`
+          : ''
+      }`
+    )}</div>
     <div class="note info mt connection-help">Both computers need a network that allows them to communicate. Discovery advertises only the database name, identity and address; codes or passwords must be shared separately. Guest Wi-Fi, router client isolation, a VPN or firewall may block discovery or connections. If discovery finds nothing, try the host’s displayed address. Sharing uses HTTP on a trusted local network; it is not an internet service. Passwords are case-sensitive. Codes and custom passwords reset when sharing restarts or you revoke them. Use a password just for this app.</div><div class="panel mt"><h2>Timing applications</h2><p class="muted">Paddock supports Timing integration v1: public car profiles, captured configurations, reviewed session results, corrections and withdrawals. The Timing app needs a compatible client. RaceCoordinatorAI integration remains planned.</p></div>`;
 }
-function connectDialog(address=net.remote?.address||''){
-  simpleForm('Connect to a shared database',`<p class="muted">Enter the code or password supplied by the host. Pairing checks access before replacing your current connection.</p>${field('address','Local address and port',address)}<label class="field">Connection code or password<input name="code" type="password" autocomplete="off" required maxlength="200"></label>`,async values=>{const result=await api('network','connect',{address:values.address.trim(),code:values.code.trim()});remote=result.data;net=result.status;switchCollection('remote');page='Cars';},'Connect');
+function connectDialog(address = net.remote?.address || '') {
+  simpleForm(
+    'Connect to a shared database',
+    `<p class="muted">Enter the code or password supplied by the host. Pairing checks access before replacing your current connection.</p>${field('address', 'Local address and port', address)}<label class="field">Connection code or password<input name="code" type="password" autocomplete="off" required maxlength="200"></label>`,
+    async values => {
+      const result = await api('network', 'connect', { address: values.address.trim(), code: values.code.trim() });
+      remote = result.data;
+      net = result.status;
+      switchCollection('remote');
+      page = 'Cars';
+    },
+    'Connect'
+  );
 }
-async function findHosts(){
-  modal('Finding nearby databases','<p>Looking for computers currently sharing SlotForge databases…</p>',null);
-  try{discoveredHosts=await api('network','discover');if(!$('#dialog').open)return;
-    modal('Nearby databases',`<p class="muted">Names are supplied by nearby computers. Verify the collection name and code with its host before connecting.</p>${discoveredHosts.length?discoveredHosts.map((h,index)=>`<div class="list-row"><div><strong>${esc(h.name)}</strong><div class="tiny muted">${esc(h.address)}</div></div>${btn('Connect…','connect-discovered','small',String(index))}</div>`).join(''):'<p>No sharing databases found. Confirm the host has started sharing. You can still try a manual connection if your network blocks discovery.</p>'}<div class="actions mt">${btn('Enter address manually','connect')}</div>`,null);
-  }catch(e){if($('#dialog').open)modal('Discovery unavailable',`<p>${esc(e.message)}</p><p>Ask the host for the displayed address and try a manual connection.</p>${btn('Enter address manually','connect')}`,null);}
+async function findHosts() {
+  modal('Finding nearby databases', '<p>Looking for computers currently sharing SlotForge databases…</p>', null);
+  try {
+    discoveredHosts = await api('network', 'discover');
+    if (!$('#dialog').open) return;
+    modal(
+      'Nearby databases',
+      `<p class="muted">Names are supplied by nearby computers. Verify the collection name and code with its host before connecting.</p>${discoveredHosts.length ? discoveredHosts.map((h, index) => `<div class="list-row"><div><strong>${esc(h.name)}</strong><div class="tiny muted">${esc(h.address)}</div></div>${btn('Connect…', 'connect-discovered', 'small', String(index))}</div>`).join('') : '<p>No sharing databases found. Confirm the host has started sharing. You can still try a manual connection if your network blocks discovery.</p>'}<div class="actions mt">${btn('Enter address manually', 'connect')}</div>`,
+      null
+    );
+  } catch (e) {
+    if ($('#dialog').open)
+      modal(
+        'Discovery unavailable',
+        `<p>${esc(e.message)}</p><p>Ask the host for the displayed address and try a manual connection.</p>${btn('Enter address manually', 'connect')}`,
+        null
+      );
+  }
 }
-function installNetworkUpdates(){let pendingRender=false;
-  const busy=()=>$('#dialog').open||actionBusy||modalSaving||['INPUT','SELECT','TEXTAREA'].includes(document.activeElement?.tagName);
-  const visible=()=>page!=='Review'&&(source==='remote'||page==='Connections'||page==='Settings');
-  const relevant=status=>JSON.stringify({migration:status?.migration,hosting:[status?.sharing,status?.hostingMode,status?.port,status?.addresses,status?.discoverable,status?.discoveryError,status?.allowSubmissions,status?.code,status?.browseCode,status?.timingCode],sharedFile:status?.sharedFile,remote:status?.remote?{id:status.remote.id,state:status.remote.state,permissions:status.remote.permissions,autoRefresh:status.remote.autoRefresh,lastError:status.remote.lastError}:null,pending:status?.pending,localLibrary:status?.localLibrary,background:status?.background,portal:status?.portal});
-  const flush=()=>setTimeout(()=>{if(pendingRender&&!busy()&&visible()){pendingRender=false;render();}},0);
-  document.addEventListener('focusout',flush);
-  $('#dialog').addEventListener('close',flush);
-  window.slotforge.onNetwork(result=>{
-  const changed=relevant(net)!==relevant(result.status)||result.data&&(result.data.id!==remote?.id||result.data.revision!==remote?.revision);
-  net=result.status;if(result.data)remote=result.data;if(!net.remote){remote=null;if(source==='remote')switchCollection('local');}
-  if(net.remote)for(const el of document.querySelectorAll('[data-sync-time]'))el.textContent=connectionTime(net.remote.lastSync);
-  if(changed&&db&&source==='remote'){if($('#remote-notice'))$('#remote-notice').innerHTML=remoteNotice();if(page==='Cars'&&!carId&&$('#cars-results')&&!$('#dialog').open){$('#cars-results').innerHTML=renderCarResults();const count=$('#main .page-head p');if(count)count.textContent=remote.cars.filter(c=>!c.archived).length+' cars in your collection';}}
-  if(changed&&db){if(!busy()&&visible()){pendingRender=false;render();}else pendingRender=true;}
-});}
+function installNetworkUpdates() {
+  let pendingRender = false;
+  const busy = () =>
+    $('#dialog').open ||
+    actionBusy ||
+    modalSaving ||
+    ['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement?.tagName);
+  const visible = () => page !== 'Review' && (source === 'remote' || page === 'Connections' || page === 'Settings');
+  const relevant = status =>
+    JSON.stringify({
+      migration: status?.migration,
+      hosting: [
+        status?.sharing,
+        status?.hostingMode,
+        status?.port,
+        status?.addresses,
+        status?.discoverable,
+        status?.discoveryError,
+        status?.allowSubmissions,
+        status?.code,
+        status?.browseCode,
+        status?.timingCode
+      ],
+      sharedFile: status?.sharedFile,
+      remote: status?.remote
+        ? {
+            id: status.remote.id,
+            state: status.remote.state,
+            permissions: status.remote.permissions,
+            autoRefresh: status.remote.autoRefresh,
+            lastError: status.remote.lastError
+          }
+        : null,
+      pending: status?.pending,
+      localLibrary: status?.localLibrary,
+      background: status?.background,
+      portal: status?.portal
+    });
+  const flush = () =>
+    setTimeout(() => {
+      if (pendingRender && !busy() && visible()) {
+        pendingRender = false;
+        render();
+      }
+    }, 0);
+  document.addEventListener('focusout', flush);
+  $('#dialog').addEventListener('close', flush);
+  window.slotforge.onNetwork(result => {
+    const changed =
+      relevant(net) !== relevant(result.status) ||
+      (result.data && (result.data.id !== remote?.id || result.data.revision !== remote?.revision));
+    net = result.status;
+    if (result.data) remote = result.data;
+    if (!net.remote) {
+      remote = null;
+      if (source === 'remote') switchCollection('local');
+    }
+    if (net.remote)
+      for (const el of document.querySelectorAll('[data-sync-time]'))
+        el.textContent = connectionTime(net.remote.lastSync);
+    if (changed && db && source === 'remote') {
+      if ($('#remote-notice')) $('#remote-notice').innerHTML = remoteNotice();
+      if (page === 'Cars' && !carId && $('#cars-results') && !$('#dialog').open) {
+        $('#cars-results').innerHTML = renderCarResults();
+        const count = $('#main .page-head p');
+        if (count) count.textContent = remote.cars.filter(c => !c.archived).length + ' cars in your collection';
+      }
+    }
+    if (changed && db) {
+      if (!busy() && visible()) {
+        pendingRender = false;
+        render();
+      } else pendingRender = true;
+    }
+  });
+}
 
-function hostPasswordDialog(access){
-  const labels={browse:'Browse only',submit:'Browse + submit',timing:'SlotForge Timing'};
-  if(!Object.hasOwn(labels,access))return;
-  simpleForm('Set password · '+labels[access],'<p>Replace the current code or password for this access type. Anyone using the old one will need to reconnect.</p><label class="field">New password<input name="password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required></label><label class="field">Confirm password<input name="confirm" type="password" autocomplete="new-password" minlength="8" maxlength="128" required></label><p class="tiny muted">8–128 characters. Use English letters, numbers, spaces or symbols, with no spaces at either end. Passwords are case-sensitive and must differ between access types. This password lasts until sharing stops or you revoke it; it is not saved to disk.</p>',async values=>{
-    if(values.password!==values.confirm)throw Error('The passwords do not match.');
-    net=await api('network','controls',{access,password:values.password});toast('Connection password updated.');
-  },'Set password');
+function hostPasswordDialog(access) {
+  const labels = { browse: 'Browse only', submit: 'Browse + submit', timing: 'SlotForge Timing' };
+  if (!Object.hasOwn(labels, access)) return;
+  simpleForm(
+    'Set password · ' + labels[access],
+    '<p>Replace the current code or password for this access type. Anyone using the old one will need to reconnect.</p><label class="field">New password<input name="password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required></label><label class="field">Confirm password<input name="confirm" type="password" autocomplete="new-password" minlength="8" maxlength="128" required></label><p class="tiny muted">8–128 characters. Use English letters, numbers, spaces or symbols, with no spaces at either end. Passwords are case-sensitive and must differ between access types. This password lasts until sharing stops or you revoke it; it is not saved to disk.</p>',
+    async values => {
+      if (values.password !== values.confirm) throw Error('The passwords do not match.');
+      net = await api('network', 'controls', { access, password: values.password });
+      toast('Connection password updated.');
+    },
+    'Set password'
+  );
 }
 
-function renderConnections(){
- return heading('Connections','Connect other computers through Dealership Mode, or upload cars and photographs from your phone through Paddock Portal.')+renderClubConnections()+renderDealershipExit()+renderMigrationGuidance()+renderPaddockPortal()+
- `<div class="note info integration-shortcut"><div><strong>${net.pending?'Submission awaiting acknowledgement':legacyConnectionActive()?'Older connection still available':'Shared local library and integration services'}</strong><p>${net.pending?'Your retry copy is still held in this app. Open connection settings to resolve it before closing Paddock.':legacyConnectionActive()?'Manage your existing public connection under Settings → Database. Its access has not changed.':'Find this computer’s shared library and advanced connection controls under Settings → Database.'}</p></div>${btn('Open connection settings','connection-settings')}</div>`;
+function renderConnections() {
+  return (
+    heading(
+      'Connections',
+      'Connect other computers through Dealership Mode, or upload cars and photographs from your phone through Paddock Portal.'
+    ) +
+    renderClubConnections() +
+    renderDealershipExit() +
+    renderMigrationGuidance() +
+    renderPaddockPortal() +
+    `<div class="note info integration-shortcut"><div><strong>${net.pending ? 'Submission awaiting acknowledgement' : legacyConnectionActive() ? 'Older connection still available' : 'Shared local library and integration services'}</strong><p>${net.pending ? 'Your retry copy is still held in this app. Open connection settings to resolve it before closing Paddock.' : legacyConnectionActive() ? 'Manage your existing public connection under Settings → Database. Its access has not changed.' : 'Find this computer’s shared library and advanced connection controls under Settings → Database.'}</p></div>${btn('Open connection settings', 'connection-settings')}</div>`
+  );
 }
 
-function renderSharedLibraryStatus(){
- const s=net.sharedFile;
- if(!s)return panel('Shared local library','<p class="muted">Library status is unavailable. The current collection path is shown below.</p>');
- return panel('Shared local library',`<p>${badge(s.shared?'Shared file in use':'Separate local collection',s.shared?'good':'')} <strong>${esc(s.name)}</strong></p><p>${s.shared?'Compatible Paddock and Timing installations on this computer use this same library. No connection code or Dealership Mode is needed. Either app can use the library while the other is closed.':'This session is not using the shared local library. Enabling a network or local HTTP service does not change its storage.'}</p>${clubState?.active?'<p class="note info">You are viewing a Dealership copy. The shared local library shown here is this computer’s own collection; the selected copy is listed separately below.</p>':''}<h3>Library folder</h3><div class="settings-path">${esc(s.folder||'Unavailable')}</div><h3>Database file</h3><div class="settings-path">${esc(s.file||'Unavailable')}</div>${s.shared&&s.file?`<div class="actions mt">${btn('Move library…','library-move')}</div><p class="tiny muted">Move the library to another folder on this computer. Paddock restarts to do this; Timing follows automatically.</p>`:''}<p class="tiny muted">Database identity: ${esc(s.databaseId)}. This identifies the opened library, not whether Timing is currently running.</p>`);
+function renderSharedLibraryStatus() {
+  const s = net.sharedFile;
+  if (!s)
+    return panel(
+      'Shared local library',
+      '<p class="muted">Library status is unavailable. The current collection path is shown below.</p>'
+    );
+  return panel(
+    'Shared local library',
+    `<p>${badge(s.shared ? 'Shared file in use' : 'Separate local collection', s.shared ? 'good' : '')} <strong>${esc(s.name)}</strong></p><p>${s.shared ? 'Compatible Paddock and Timing installations on this computer use this same library. No connection code or Dealership Mode is needed. Either app can use the library while the other is closed.' : 'This session is not using the shared local library. Enabling a network or local HTTP service does not change its storage.'}</p>${clubState?.active ? '<p class="note info">You are viewing a Dealership copy. The shared local library shown here is this computer’s own collection; the selected copy is listed separately below.</p>' : ''}<h3>Library folder</h3><div class="settings-path">${esc(s.folder || 'Unavailable')}</div><h3>Database file</h3><div class="settings-path">${esc(s.file || 'Unavailable')}</div>${s.shared && s.file ? `<div class="actions mt">${btn('Move library…', 'library-move')}</div><p class="tiny muted">Move the library to another folder on this computer. Paddock restarts to do this; Timing follows automatically.</p>` : ''}<p class="tiny muted">Database identity: ${esc(s.databaseId)}. This identifies the opened library, not whether Timing is currently running.</p>`
+  );
 }
-function renderPendingSubmission(){
- if(!net.pending)return '';
- return `<section class="panel pending-connection"><h2>Submission awaiting acknowledgement</h2><p>${net.pending.count} car(s) for <strong>${esc(net.pending.name)}</strong>. The host may already have received them. Retry uses the exact same package.</p><p class="tiny muted">${net.pending.recoverySaved?'A recovery file has been saved or loaded. Keep it until delivery is acknowledged.':'Save a recovery file before closing Paddock or changing sharing mode.'} Discarding a retry copy does not withdraw a package already received.</p>${btn('Save recovery file…','recovery-export')}${clubState?.active?`<p>Open your personal collection to manage this submission.</p>${btn('Open personal collection','legacy-personal')}`:!net.remote||net.remote.id!==net.pending.hostId?`<p>Reconnect to the original host to retry.</p>${btn('Reconnect to original host…','connect')}`:btn('Retry same submission','retry-submission','primary')}${btn('Discard retry copy…','discard-submission')}</section>`;
+function renderPendingSubmission() {
+  if (!net.pending) return '';
+  return `<section class="panel pending-connection"><h2>Submission awaiting acknowledgement</h2><p>${net.pending.count} car(s) for <strong>${esc(net.pending.name)}</strong>. The host may already have received them. Retry uses the exact same package.</p><p class="tiny muted">${net.pending.recoverySaved ? 'A recovery file has been saved or loaded. Keep it until delivery is acknowledged.' : 'Save a recovery file before closing Paddock or changing sharing mode.'} Discarding a retry copy does not withdraw a package already received.</p>${btn('Save recovery file…', 'recovery-export')}${clubState?.active ? `<p>Open your personal collection to manage this submission.</p>${btn('Open personal collection', 'legacy-personal')}` : !net.remote || net.remote.id !== net.pending.hostId ? `<p>Reconnect to the original host to retry.</p>${btn('Reconnect to original host…', 'connect')}` : btn('Retry same submission', 'retry-submission', 'primary')}${btn('Discard retry copy…', 'discard-submission')}</section>`;
 }
-function renderIntegrationSettings(){
- const legacy=legacyConnectionActive()||legacyRecoveryEnabled;
- return renderPendingSubmission()+connectionPanel('advanced','Advanced integration services',renderLocalLibraryConnection()+`<section class="panel"><h3>Recover a pending submission</h3><p class="muted">Open a saved recovery file to retry its exact package to its original host. This does not import cars into your collection.</p>${btn('Open recovery file…','recovery-import')}</section>`+
- (legacy?connectionPanel('legacy','Older sharing connections',`<p class="muted">These controls retain the original public connection’s permissions. Migration is a separate explicit action.</p>${clubState?.active||db.club?'<p class="note">Legacy hosting is unavailable in Dealership Mode. Existing public browsing and pending submissions remain separate.</p>':''}${!db.club&&!clubState?.active?btn('Migrate to Dealership Mode…','migrate-host','primary'):''}${net.remote?btn('Join this host’s Dealership…','migrate-browser'):''}${renderBasicConnections()}`):connectionPanel('recovery','Recover an older connection…','<p class="muted">Only needed for an existing public sharing connection. Use Dealership Mode for new connections between computers.</p>'+btn('Recover an older connection…','legacy-recover'))));
+function renderIntegrationSettings() {
+  const legacy = legacyConnectionActive() || legacyRecoveryEnabled;
+  return (
+    renderPendingSubmission() +
+    connectionPanel(
+      'advanced',
+      'Advanced integration services',
+      renderLocalLibraryConnection() +
+        `<section class="panel"><h3>Recover a pending submission</h3><p class="muted">Open a saved recovery file to retry its exact package to its original host. This does not import cars into your collection.</p>${btn('Open recovery file…', 'recovery-import')}</section>` +
+        (legacy
+          ? connectionPanel(
+              'legacy',
+              'Older sharing connections',
+              `<p class="muted">These controls retain the original public connection’s permissions. Migration is a separate explicit action.</p>${clubState?.active || db.club ? '<p class="note">Legacy hosting is unavailable in Dealership Mode. Existing public browsing and pending submissions remain separate.</p>' : ''}${!db.club && !clubState?.active ? btn('Migrate to Dealership Mode…', 'migrate-host', 'primary') : ''}${net.remote ? btn('Join this host’s Dealership…', 'migrate-browser') : ''}${renderBasicConnections()}`
+            )
+          : connectionPanel(
+              'recovery',
+              'Recover an older connection…',
+              '<p class="muted">Only needed for an existing public sharing connection. Use Dealership Mode for new connections between computers.</p>' +
+                btn('Recover an older connection…', 'legacy-recover')
+            ))
+    )
+  );
 }
 
-function renderLocalLibraryConnection(){
-  const c=net.localLibrary;if(!c)return '';
-  return panel('Local integration service',`<p>${badge(c.available?'Local service ready':c.state==='starting'?'Starting local service':c.state==='sleeping'?'Computer sleeping':c.enabled?'Local service unavailable':'Local service disabled',c.available?'good':'')} <strong>${esc(c.name)}</strong></p><p class="muted">Retains same-computer HTTP access for compatible integration clients, including older Timing workflows. It is separate from the shared database file and does not enable LAN sharing.</p><p class="tiny muted">Turning this service off does not disable Paddock and Timing’s shared-file access. It removes the service’s automatic background-start registration and stops clients using this HTTP connection.</p>${c.reason?`<p class="note">${esc(c.reason)}</p>`:''}${c.error?`<p class="note">${esc(c.error)}</p>`:''}<div class="actions">${btn(c.enabled?'Disable local service':'Enable local service','local-library-access')}${c.enabled?btn('Retry local service','local-library-retry'):''}</div>`);
+function renderLocalLibraryConnection() {
+  const c = net.localLibrary;
+  if (!c) return '';
+  return panel(
+    'Local integration service',
+    `<p>${badge(c.available ? 'Local service ready' : c.state === 'starting' ? 'Starting local service' : c.state === 'sleeping' ? 'Computer sleeping' : c.enabled ? 'Local service unavailable' : 'Local service disabled', c.available ? 'good' : '')} <strong>${esc(c.name)}</strong></p><p class="muted">Retains same-computer HTTP access for compatible integration clients, including older Timing workflows. It is separate from the shared database file and does not enable LAN sharing.</p><p class="tiny muted">Turning this service off does not disable Paddock and Timing’s shared-file access. It removes the service’s automatic background-start registration and stops clients using this HTTP connection.</p>${c.reason ? `<p class="note">${esc(c.reason)}</p>` : ''}${c.error ? `<p class="note">${esc(c.error)}</p>` : ''}<div class="actions">${btn(c.enabled ? 'Disable local service' : 'Enable local service', 'local-library-access')}${c.enabled ? btn('Retry local service', 'local-library-retry') : ''}</div>`
+  );
 }

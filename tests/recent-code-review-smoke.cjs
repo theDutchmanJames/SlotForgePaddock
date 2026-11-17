@@ -10,7 +10,8 @@ module.exports=async({win,qa,store,network,js,wait,click})=>{
   await reload();await js(`document.querySelector('#toast').textContent='';document.querySelector('#toast').hidden=true`);
   const r=await fetch('http://127.0.0.1:'+network.port+'/v1/timing/cars/car-a',{headers:{Authorization:'Bearer '+network.browseCode,'X-SlotForge-Database':store.data.id}});assert.equal(r.status,200);await r.json();
   await wait('db.revision==='+store.data.revision);assert.equal(await js(`document.querySelector('#toast').textContent`),'');
-  f=fixtures();store.replace(f.store.snapshot());await store.whenIdle();timing.receive(store,f.normal);
+  // A save started by the steps above may still be running; replacing the database then is refused.
+  await store.whenIdle();f=fixtures();store.replace(f.store.snapshot());await store.whenIdle();timing.receive(store,f.normal);
   const record=store.data.timing.sessions[0],s=record.payload,p=s.participants[0];
   s.heats.push({...s.heats[0],id:'heat-2'});p.stints[0].endedAtMs=10000;p.stints.push({...p.stints[0],id:'stint-2',heatId:'heat-2',startedAtMs:10000,endedAtMs:60000});p.laps=[p.laps[0],{...p.laps[1],number:1,stintId:'stint-2',durationMs:15000,endedAtMs:20000}];record.contentHash=timing.digest(s);
   store.data=migrate(store.data);store.persist(store.data);await reload();assert.match(await js('document.body.innerText'),/Needs correction/);assert.match(await js('document.body.innerText'),/0 contributing sessions/);

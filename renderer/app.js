@@ -1,341 +1,1915 @@
 'use strict';
-const $=s=>document.querySelector(s);
-const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const icons={car:'<path d="m4 10 2-5h12l2 5M3 10h18v8H3zM6 18v2m12-2v2M6 13h2m8 0h2"/>',plus:'<path d="M12 5v14M5 12h14"/>',search:'<circle cx="10" cy="10" r="6"/><path d="m15 15 5 5"/>',grid:'<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>',list:'<path d="M8 5h13M8 12h13M8 19h13M3 5h1M3 12h1M3 19h1"/>',pin:'<path d="M19 10c0 5-7 11-7 11S5 15 5 10a7 7 0 1 1 14 0Z"/><circle cx="12" cy="10" r="2"/>',tool:'<path d="m14 6 4 4 3-3a7 7 0 0 1-9 9l-7 6-3-3 7-7a7 7 0 0 1 8-9z"/>',box:'<path d="m3 6 9-4 9 4v13l-9 3-9-3zM3 6l9 4 9-4M12 10v12"/>',arrow:'<path d="M20 12H4m6-6-6 6 6 6"/>',share:'<circle cx="5" cy="12" r="3"/><circle cx="19" cy="5" r="3"/><circle cx="19" cy="19" r="3"/><path d="m8 11 8-5M8 13l8 5"/>',database:'<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 4 16 4 16 0V5M4 12c0 4 16 4 16 0"/>',check:'<path d="m5 12 4 4 10-10"/>',download:'<path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"/>',lock:'<rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V6a4 4 0 0 1 8 0v4"/>'};
-const icon=name=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name]||uiIcons[name]||icons.car}</svg>`;
-const btn=(label,action,cls='',id='')=>`<button type="button" class="btn ${cls}" data-action="${action}"${id?` data-id="${esc(id)}"`:''}>${label}</button>`;
-const badge=(text,cls='')=>`<span class="badge ${cls}${cls==='usage'?(/collection|display/i.test(text)?' collecting':/home/i.test(text)?' home-use':''):''}">${esc(text)}</span>`;
-const date=slotforgeDomain.displayDate;
-const navs=['Overview','Showroom','Cars','Parts','Shopping List','Build from Scratch','Workshop','Library','Connections','Import & Export','Settings'];
-const usageDefaults=['Collection / Display','Home racing','Club racing','Competition','Testing / Development'];
-let carScope='collection',wishlistUi=false;
-const wishlistTab=()=>local()&&wishlistUi&&carScope==='wishlist';
-const carListStatus=()=>wishlistTab()?'wishlist':'collection';
-const carListCount=()=>local()&&db._view?.carCounts?db._view.carCounts[carListStatus()]:current().cars.filter(c=>!c.archived&&(c.collectionStatus||'collection')===carListStatus()).length;
-function switchCarScope(value){carSavedView='';carScope=value==='wishlist'&&wishlistUi&&local()?'wishlist':'collection';carId=null;selected.clear();query='';usage=[];archived=false;matchAll=false;viewOffset=0;}
-function carTabs(){return carCollectionTabs();}
-let db,net,remote=null,source='local',page='Overview',carId=null,section='Overview',selected=new Set(),query='',usage=[],matchAll=false,mode='gallery',sort=CarSort.load().sort,sortDirection=CarSort.load().sortDirection,archived=false,partId=null,partQuery='',reviewId=null,reviewCarId=null,version='',dataPath='',toastTimer;
-const current=()=>source==='remote'&&remote?remote:db;
-const local=()=>source==='local';
-function acceptSnapshot(next){if(db&&db.id===next.id&&db.revision>next.revision)return;db=next;}
-function switchCollection(next){if(next!==source&&net?.portal?.enabled)void api('portal','stop').then(value=>{net=value;}).catch(e=>toast(e.message,true));workshopJob=null;recentWorkLimit=3;source=next;carScope='collection';carId=null;section='Overview';selected.clear();usage=[];query='';archived=false;matchAll=false;}
-const car=()=>current().cars.find(c=>c.id===carId);
-// Retry storage holds request hashes and IDs only, never entered values.
-const saveRetries=SaveRetry.create({storage:{get length(){return localStorage.length;},key:i=>localStorage.key(i),getItem:k=>localStorage.getItem(k),setItem:(k,v)=>localStorage.setItem(k,v),removeItem:k=>localStorage.removeItem(k)},crypto});
-async function api(method,...args){
- const baseline=db,baselinePath=dataPath,epoch=baseline?._view?.token?.epoch;
- const known=baseline?{databaseId:baseline.id,revision:baseline.revision,dataPath:baselinePath,queryView:baseline._view&&!baseline._view.compatibility?(baseline._view.editor?baseline._view.request:desiredView()):undefined}:null;
- // These single-save editors close after success. Return the destination page
- // once instead of rebuilding the editor and immediately requesting it again.
- if(method==='mutate'&&known?.queryView?.editor&&['part.save','part.appearance','supply.save','supply.archive','planning.list.save'].includes(args[0]))known.queryView=desiredView();
- const dispatch=async(values,commandId)=>{
-  if(method==='mutate'&&baseline)values[2]={...known,...(commandId?{commandId,epoch}:{})};
-  if(method==='file'&&baseline?._view)values[2]={queryView:known.queryView};
-  const r=await window.slotforge[method](...values);
-  if(r?.error)throw Object.assign(new Error(r.error),{code:r.code,definiteRejection:r.definiteRejection===true});
-  if(r?.ok!==true)throw Error('Save acknowledgement was lost. Retry the same operation.');
-  if(r.value?.dataPatch){const p=r.value.dataPatch;if(!baseline||baseline.id!==p.databaseId||baseline.revision!==p.revision||baselinePath!==p.dataPath)throw Error('The collection changed while refreshing. Reopen the collection.');r.value.data=slotforgeSnapshot.apply(baseline,p.changes);delete r.value.dataPatch;}
-  return r.value;
- };
- if(method==='mutate'&&baseline)return saveRetries.run([baselinePath,baseline.id,epoch||'',args[0],args[1]],(value,id)=>dispatch([value[3],value[4]],id));
- return dispatch(args);
+const $ = s => document.querySelector(s);
+const esc = v =>
+  String(v ?? '').replace(
+    /[&<>"']/g,
+    c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]
+  );
+const icons = {
+  car: '<path d="m4 10 2-5h12l2 5M3 10h18v8H3zM6 18v2m12-2v2M6 13h2m8 0h2"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  search: '<circle cx="10" cy="10" r="6"/><path d="m15 15 5 5"/>',
+  grid: '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>',
+  list: '<path d="M8 5h13M8 12h13M8 19h13M3 5h1M3 12h1M3 19h1"/>',
+  pin: '<path d="M19 10c0 5-7 11-7 11S5 15 5 10a7 7 0 1 1 14 0Z"/><circle cx="12" cy="10" r="2"/>',
+  tool: '<path d="m14 6 4 4 3-3a7 7 0 0 1-9 9l-7 6-3-3 7-7a7 7 0 0 1 8-9z"/>',
+  box: '<path d="m3 6 9-4 9 4v13l-9 3-9-3zM3 6l9 4 9-4M12 10v12"/>',
+  arrow: '<path d="M20 12H4m6-6-6 6 6 6"/>',
+  share:
+    '<circle cx="5" cy="12" r="3"/><circle cx="19" cy="5" r="3"/><circle cx="19" cy="19" r="3"/><path d="m8 11 8-5M8 13l8 5"/>',
+  database: '<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 4 16 4 16 0V5M4 12c0 4 16 4 16 0"/>',
+  check: '<path d="m5 12 4 4 10-10"/>',
+  download: '<path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"/>',
+  lock: '<rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V6a4 4 0 0 1 8 0v4"/>'
+};
+const icon = name =>
+  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name] || uiIcons[name] || icons.car}</svg>`;
+const btn = (label, action, cls = '', id = '') =>
+  `<button type="button" class="btn ${cls}" data-action="${action}"${id ? ` data-id="${esc(id)}"` : ''}>${label}</button>`;
+const badge = (text, cls = '') =>
+  `<span class="badge ${cls}${cls === 'usage' ? (/collection|display/i.test(text) ? ' collecting' : /home/i.test(text) ? ' home-use' : '') : ''}">${esc(text)}</span>`;
+const date = slotforgeDomain.displayDate;
+const navs = [
+  'Overview',
+  'Showroom',
+  'Cars',
+  'Parts',
+  'Shopping List',
+  'Build from Scratch',
+  'Workshop',
+  'Library',
+  'Connections',
+  'Import & Export',
+  'Settings'
+];
+const usageDefaults = ['Collection / Display', 'Home racing', 'Club racing', 'Competition', 'Testing / Development'];
+let carScope = 'collection',
+  wishlistUi = false;
+const wishlistTab = () => local() && wishlistUi && carScope === 'wishlist';
+const carListStatus = () => (wishlistTab() ? 'wishlist' : 'collection');
+const carListCount = () =>
+  local() && db._view?.carCounts
+    ? db._view.carCounts[carListStatus()]
+    : current().cars.filter(c => !c.archived && (c.collectionStatus || 'collection') === carListStatus()).length;
+function switchCarScope(value) {
+  carSavedView = '';
+  carScope = value === 'wishlist' && wishlistUi && local() ? 'wishlist' : 'collection';
+  carId = null;
+  selected.clear();
+  query = '';
+  usage = [];
+  archived = false;
+  matchAll = false;
+  viewOffset = 0;
 }
-function toast(message,error=false){clearTimeout(toastTimer);const t=$('#toast');t.textContent=message;t.className=error?'error':'';t.hidden=false;toastTimer=setTimeout(()=>t.hidden=true,error?10000:4000);}
-async function change(action,p={}){if(!local())throw new Error('Switch to your local database to make changes.');const r=await api('mutate',action,p);acceptSnapshot(r.data);if(r.collection)collectionMeta=r.collection;if(r.club)clubState=r.club;clubQueued(r);return r.result;}
-function placeholder(label='Add your own photograph'){return `<div class="placeholder">${icon('car')}<span>${esc(label)}</span></div>`;}
-function thumbnailSource(value){return value?.startsWith('paddock-media://')?value+'?thumbnail=1':value;}
-function photo(c,thumbnail=false){return c.picture?`<img src="${esc(thumbnail?thumbnailSource(c.picture):c.picture)}" alt="${esc(c.name)}" data-focus-car="${esc(c.id)}" data-focus-photo="main" decoding="async" ${thumbnail?'loading="lazy"':''}>`:placeholder();}
-function heading(title,subtitle='',actions=''){return uiHeading(title,subtitle,actions);}
-function empty(title,description,action=''){return `<div class="empty"><div class="empty-symbol">${icon('car')}</div><h2>${esc(title)}</h2><p>${esc(description)}</p>${action}</div>`;}
-function dl(pairs){return `<dl class="details">${pairs.map(([a,b])=>`<div><dt>${esc(a)}</dt><dd>${esc(b||'—')}</dd></div>`).join('')}</dl>`;}
-function timeline(events){return events.length?events.map(e=>`<div class="timeline-item"><span class="timeline-dot"></span><div><time>${date(e.performedDate||e.date)} · ${esc(JobTypes.valid(e.workCategory)?JobTypes.get(e.workCategory).label:e.type)}</time><div>${esc(e.title)}</div>${e.notes?`<p>${esc(e.notes)}</p>`:''}${e.nextDue||e.nextDueLaps?`<p>Next due: ${esc(slotforgeDomain.reminderText(e))}</p>`:''}</div></div>`).join(''):'<p class="muted">Nothing recorded yet.</p>';}
-function panel(title,body){return uiPanel(title,body);}
-let startupAnnounced=false;
-function announceStartup(){if(!startupAnnounced){startupAnnounced=true;window.slotforge.startupReady?.();}}
-function render(){
+function carTabs() {
+  return carCollectionTabs();
+}
+let db,
+  net,
+  remote = null,
+  source = 'local',
+  page = 'Overview',
+  carId = null,
+  section = 'Overview',
+  selected = new Set(),
+  query = '',
+  usage = [],
+  matchAll = false,
+  mode = 'gallery',
+  sort = CarSort.load().sort,
+  sortDirection = CarSort.load().sortDirection,
+  archived = false,
+  partId = null,
+  partQuery = '',
+  reviewId = null,
+  reviewCarId = null,
+  version = '',
+  dataPath = '',
+  toastTimer;
+const current = () => (source === 'remote' && remote ? remote : db);
+const local = () => source === 'local';
+function acceptSnapshot(next) {
+  if (db && db.id === next.id && db.revision > next.revision) return;
+  db = next;
+}
+function switchCollection(next) {
+  if (next !== source && net?.portal?.enabled)
+    void api('portal', 'stop')
+      .then(value => {
+        net = value;
+      })
+      .catch(e => toast(e.message, true));
+  workshopJob = null;
+  recentWorkLimit = 3;
+  source = next;
+  carScope = 'collection';
+  carId = null;
+  section = 'Overview';
+  selected.clear();
+  usage = [];
+  query = '';
+  archived = false;
+  matchAll = false;
+}
+const car = () => current().cars.find(c => c.id === carId);
+// Retry storage holds request hashes and IDs only, never entered values.
+const saveRetries = SaveRetry.create({
+  storage: {
+    get length() {
+      return localStorage.length;
+    },
+    key: i => localStorage.key(i),
+    getItem: k => localStorage.getItem(k),
+    setItem: (k, v) => localStorage.setItem(k, v),
+    removeItem: k => localStorage.removeItem(k)
+  },
+  crypto
+});
+async function api(method, ...args) {
+  const baseline = db,
+    baselinePath = dataPath,
+    epoch = baseline?._view?.token?.epoch;
+  const known = baseline
+    ? {
+        databaseId: baseline.id,
+        revision: baseline.revision,
+        dataPath: baselinePath,
+        queryView:
+          baseline._view && !baseline._view.compatibility
+            ? baseline._view.editor
+              ? baseline._view.request
+              : desiredView()
+            : undefined
+      }
+    : null;
+  // These single-save editors close after success. Return the destination page
+  // once instead of rebuilding the editor and immediately requesting it again.
+  if (
+    method === 'mutate' &&
+    known?.queryView?.editor &&
+    ['part.save', 'part.appearance', 'supply.save', 'supply.archive', 'planning.list.save'].includes(args[0])
+  )
+    known.queryView = desiredView();
+  const dispatch = async (values, commandId) => {
+    if (method === 'mutate' && baseline) values[2] = { ...known, ...(commandId ? { commandId, epoch } : {}) };
+    if (method === 'file' && baseline?._view) values[2] = { queryView: known.queryView };
+    const r = await window.slotforge[method](...values);
+    if (r?.error)
+      throw Object.assign(new Error(r.error), { code: r.code, definiteRejection: r.definiteRejection === true });
+    if (r?.ok !== true) throw Error('Save acknowledgement was lost. Retry the same operation.');
+    if (r.value?.dataPatch) {
+      const p = r.value.dataPatch;
+      if (!baseline || baseline.id !== p.databaseId || baseline.revision !== p.revision || baselinePath !== p.dataPath)
+        throw Error('The collection changed while refreshing. Reopen the collection.');
+      r.value.data = slotforgeSnapshot.apply(baseline, p.changes);
+      delete r.value.dataPatch;
+    }
+    return r.value;
+  };
+  if (method === 'mutate' && baseline)
+    return saveRetries.run([baselinePath, baseline.id, epoch || '', args[0], args[1]], (value, id) =>
+      dispatch([value[3], value[4]], id)
+    );
+  return dispatch(args);
+}
+function toast(message, error = false) {
+  clearTimeout(toastTimer);
+  const t = $('#toast');
+  t.textContent = message;
+  t.className = error ? 'error' : '';
+  t.hidden = false;
+  toastTimer = setTimeout(() => (t.hidden = true), error ? 10000 : 4000);
+}
+async function change(action, p = {}) {
+  if (!local()) throw new Error('Switch to your local database to make changes.');
+  const r = await api('mutate', action, p);
+  acceptSnapshot(r.data);
+  if (r.collection) collectionMeta = r.collection;
+  if (r.club) clubState = r.club;
+  clubQueued(r);
+  return r.result;
+}
+function placeholder(label = 'Add your own photograph') {
+  return `<div class="placeholder">${icon('car')}<span>${esc(label)}</span></div>`;
+}
+function thumbnailSource(value) {
+  return value?.startsWith('paddock-media://') ? value + '?thumbnail=1' : value;
+}
+function photo(c, thumbnail = false) {
+  return c.picture
+    ? `<img src="${esc(thumbnail ? thumbnailSource(c.picture) : c.picture)}" alt="${esc(c.name)}" data-focus-car="${esc(c.id)}" data-focus-photo="main" decoding="async" ${thumbnail ? 'loading="lazy"' : ''}>`
+    : placeholder();
+}
+function heading(title, subtitle = '', actions = '') {
+  return uiHeading(title, subtitle, actions);
+}
+function empty(title, description, action = '') {
+  return `<div class="empty"><div class="empty-symbol">${icon('car')}</div><h2>${esc(title)}</h2><p>${esc(description)}</p>${action}</div>`;
+}
+function dl(pairs) {
+  return `<dl class="details">${pairs.map(([a, b]) => `<div><dt>${esc(a)}</dt><dd>${esc(b || '—')}</dd></div>`).join('')}</dl>`;
+}
+function timeline(events) {
+  return events.length
+    ? events
+        .map(
+          e =>
+            `<div class="timeline-item"><span class="timeline-dot"></span><div><time>${date(e.performedDate || e.date)} · ${esc(JobTypes.valid(e.workCategory) ? JobTypes.get(e.workCategory).label : e.type)}</time><div>${esc(e.title)}</div>${e.notes ? `<p>${esc(e.notes)}</p>` : ''}${e.nextDue || e.nextDueLaps ? `<p>Next due: ${esc(slotforgeDomain.reminderText(e))}</p>` : ''}</div></div>`
+        )
+        .join('')
+    : '<p class="muted">Nothing recorded yet.</p>';
+}
+function panel(title, body) {
+  return uiPanel(title, body);
+}
+let startupAnnounced = false;
+function announceStartup() {
+  if (!startupAnnounced) {
+    startupAnnounced = true;
+    window.slotforge.startupReady?.();
+  }
+}
+function render() {
   QuickLinksUI.close();
-  if(queryGate())return;
+  if (queryGate()) return;
   rememberConnectionPanels();
-  const reviewDraft=captureReviewDraft();
+  const reviewDraft = captureReviewDraft();
   prepareShowroom();
   applyTheme();
-  $('#header').innerHTML=`<div class="brand"><span class="brand-mark" aria-hidden="true"><span class="paddock-brand-symbol"></span></span><div class="brand-copy"><span class="brand-wordmark" role="img" aria-label="SlotForge Paddock"><img class="brand-wordmark-light" src="../assets/paddock-wordmark-light.svg" alt="" width="600" height="90"><img class="brand-wordmark-dark" src="../assets/paddock-wordmark-dark.svg" alt="" width="600" height="90"></span><small>Collection & workshop</small></div></div><nav class="main-nav" aria-label="Main navigation">${navs.map(n=>`<button class="nav-btn ${page===n?'active':''}" data-action="nav" data-id="${esc(n)}" aria-current="${page===n?'page':'false'}">${icon(uiPageIcons[n])}${esc(n)}</button>`).join('')}</nav>${reviewButton()}`;
-  $('#database-bar').innerHTML=`<span class="muted">Database</span><select id="database-select" aria-label="Current database"><option value="local">${esc(db.settings.name)}</option>${remote?`<option value="remote" ${source==='remote'?'selected':''}>${esc(remote.settings.name)} · Shared</option>`:''}</select><span class="db-state">${icon('database')} ${local()?(clubState?.active?'Dealership collection copy':clubState?.role==='coordinator'?'Dealership Mode':'Local database'):net.remote?.permissions?.submit?'Shared collection · Submit for review':'Shared collection · Browse only'}</span>${paletteButtonHtml()}<span class="spacer"></span><span class="db-state"><span class="dot ${local()?clubState?.active&&clubState.state!=='connected'?'offline':'':net.remote?.state!=='connected'?'offline':''}"></span>${local()?(clubState?.active?(clubState.state==='connected'?'Dealership connected':clubState.state==='outdated'?'Collection copy out of date':'Dealership offline · saved copy'):'Saved on this computer'):net.remote?.state==='connected'?'Connected':'Saved view · offline'}</span>${net.sharing?badge(net.hostingMode==='dealership'?'Dealership online':'Sharing enabled','good'):''}${updateNoticeHtml()}`;
-  const views={'Overview':renderOverview,'Showroom':renderShowroom,'Cars':()=>carId&&car()?renderProfile():renderCars(),'Parts':renderParts,'Shopping List':renderShoppingPage,'Build from Scratch':()=>local()?renderBuild(''):'<div class="empty">Choose a local collection to build a car from its inventory.</div>','Workshop':renderWorkshop,'Library':renderLibrary,'Connections':renderConnections,'Import & Export':renderExchange,'Settings':renderSettings,'Review':renderReviewHub};
-  $('#main').dataset.page=page;
-  $('#main').innerHTML=clubBanner()+'<div id="remote-notice">'+remoteNotice()+'</div>'+views[page]()+(local()&&page==='Review'?viewPager(db._view?.list):'');paintCustomTile();applyPhotoFocus();restoreReviewDraft(reviewDraft);releaseInactiveHistory();announceStartup();
+  $('#header').innerHTML =
+    `<div class="brand"><span class="brand-mark" aria-hidden="true"><span class="paddock-brand-symbol"></span></span><div class="brand-copy"><span class="brand-wordmark" role="img" aria-label="SlotForge Paddock"><img class="brand-wordmark-light" src="../assets/paddock-wordmark-light.svg" alt="" width="600" height="90"><img class="brand-wordmark-dark" src="../assets/paddock-wordmark-dark.svg" alt="" width="600" height="90"></span><small>Collection & workshop</small></div></div><nav class="main-nav" aria-label="Main navigation">${navs.map(n => `<button class="nav-btn ${page === n ? 'active' : ''}" data-action="nav" data-id="${esc(n)}" aria-current="${page === n ? 'page' : 'false'}">${icon(uiPageIcons[n])}${esc(n)}</button>`).join('')}</nav>${reviewButton()}`;
+  $('#database-bar').innerHTML =
+    `<span class="muted">Database</span><select id="database-select" aria-label="Current database"><option value="local">${esc(db.settings.name)}</option>${remote ? `<option value="remote" ${source === 'remote' ? 'selected' : ''}>${esc(remote.settings.name)} · Shared</option>` : ''}</select><span class="db-state">${icon('database')} ${local() ? (clubState?.active ? 'Dealership collection copy' : clubState?.role === 'coordinator' ? 'Dealership Mode' : 'Local database') : net.remote?.permissions?.submit ? 'Shared collection · Submit for review' : 'Shared collection · Browse only'}</span>${paletteButtonHtml()}<span class="spacer"></span><span class="db-state"><span class="dot ${local() ? (clubState?.active && clubState.state !== 'connected' ? 'offline' : '') : net.remote?.state !== 'connected' ? 'offline' : ''}"></span>${local() ? (clubState?.active ? (clubState.state === 'connected' ? 'Dealership connected' : clubState.state === 'outdated' ? 'Collection copy out of date' : 'Dealership offline · saved copy') : 'Saved on this computer') : net.remote?.state === 'connected' ? 'Connected' : 'Saved view · offline'}</span>${net.sharing ? badge(net.hostingMode === 'dealership' ? 'Dealership online' : 'Sharing enabled', 'good') : ''}${updateNoticeHtml()}`;
+  const views = {
+    'Overview': renderOverview,
+    'Showroom': renderShowroom,
+    'Cars': () => (carId && car() ? renderProfile() : renderCars()),
+    'Parts': renderParts,
+    'Shopping List': renderShoppingPage,
+    'Build from Scratch': () =>
+      local()
+        ? renderBuild('')
+        : '<div class="empty">Choose a local collection to build a car from its inventory.</div>',
+    'Workshop': renderWorkshop,
+    'Library': renderLibrary,
+    'Connections': renderConnections,
+    'Import & Export': renderExchange,
+    'Settings': renderSettings,
+    'Review': renderReviewHub
+  };
+  $('#main').dataset.page = page;
+  $('#main').innerHTML =
+    clubBanner() +
+    '<div id="remote-notice">' +
+    remoteNotice() +
+    '</div>' +
+    views[page]() +
+    (local() && page === 'Review' ? viewPager(db._view?.list) : '');
+  paintCustomTile();
+  applyPhotoFocus();
+  restoreReviewDraft(reviewDraft);
+  releaseInactiveHistory();
+  announceStartup();
 }
-function renderOverview(){return timingCollectionNotice()+renderOverviewDesign();}
-function filteredCars(){if(local()&&db._view?.list)return db.cars;return current().cars.filter(c=>(c.collectionStatus||'collection')===carListStatus()&&!!c.archived===archived&&(!query||[c.name,c.number,c.maker,c.model,c.reference,c.location,...(c.tags||[]),...Object.values(c.technical||{})].join(' ').toLowerCase().includes(query.toLowerCase()))&&(!usage.length||(matchAll?usage.every(u=>(c.usage||[]).includes(u)):usage.some(u=>(c.usage||[]).includes(u))))).sort((a,b)=>CarSort.compare(a,b,sort,sortDirection));}
-function renderCars(){return renderCarsBrowser();}
-function renderCarResults(){const list=filteredCars();let bar=selected.size?`<div class="selection-bar"><strong>${selected.size} selected</strong>${local()?btn('Edit selected…','bulk-edit','small primary')+btn(icon('download')+' Export selected ('+selected.size+')','export-selected','small primary')+btn('Compare…','car-compare','small')+(!wishlistTab()&&canSubmit()?btn(icon('share')+' Send to club','send-selected','small'):''):''}${btn('Clear selection','clear-selection','small ghost')}</div>`:'';
-  if(exportChoosing)bar='<div class="note info"><strong>Choose cars to export</strong><p>Select cars below, then click Export selected. Use the Wishlist tab to export planned cars to another Paddock collection.</p>'+btn('Cancel export','cancel-export-choice','small')+'</div>'+bar;
-  if(!list.length)return bar+empty((query||usage.length||archived||carListCount())?'No cars match these filters':wishlistTab()?'Start your Wishlist':'Your collection starts here',(query||usage.length||archived||carListCount())?'Try another search or remove a usage filter.':wishlistTab()?'Save cars you would like to own, with photos, specifications and a price. They stay separate from My Cars and the Showroom.':'Add your first car. You only need a name; photos, parts and specifications can come later.',local()?btn(icon('plus')+(wishlistTab()?' Add to Wishlist':' Add car'),'add-car','primary'):'');
-  const check=c=>`<input type="checkbox" aria-label="Select ${esc(c.name)}" data-select-car="${c.id}" ${selected.has(c.id)?'checked':''}>`;
-  if(mode==='table')return bar+renderCollectionTable(list,check);
-  return bar+`<div class="car-grid">${list.map(c=>`<article class="car-card"><label class="car-check">${check(c)}</label><button class="card-photo" data-action="open-car" data-id="${c.id}" aria-label="Open ${esc(c.name)}">${photo(c,true)}</button><div class="card-body"><button class="car-title" data-action="open-car" data-id="${c.id}">${esc(c.name)}</button><div class="card-sub">${esc([c.number,c.maker,c.scale].filter(Boolean).join(' · ')||'Details to add')}</div><div class="row">${(c.usage||[]).slice(0,3).map(u=>badge(u,'usage')).join(' ')}</div><div class="card-foot">${icon('pin')}${esc(c.location||'No location set')}<span class="spacer"></span>${c.availability&&c.availability!=='Available'?badge(c.availability):''}</div></div></article>`).join('')}</div>`;}
-const sections=['Overview','Identity & ownership','Technical & parts','Real Car History','Setups','Maintenance','Performance','Photos & documents','History'];
-function renderProfile(){const c=car(),wish=slotforgeDomain.isWishlist(c);if(local()&&wishlistUi&&carScope!==(wish?'wishlist':'collection')){carScope=wish?'wishlist':'collection';selected.clear();query='';usage=[];archived=false;matchAll=false;}return `<div class="row">${btn(icon('arrow')+(wish?' Wishlist':' Cars'),'back-cars','ghost small')}</div>`+heading(c.name,[c.number,c.maker,c.scale].filter(Boolean).join(' · '),local()?btn('Compare','car-compare','',c.id)+btn(icon('search')+' Google','google-car','',c.id)+btn('Edit details','edit-car','',c.id)+(wish&&wishlistUi&&!c.archived?(db._view?.wishlistPurchasePending?badge('Purchase awaiting Review','warn'):btn('Mark purchased','purchase-car','primary',c.id)):'')+btn('Add setup','save-setup','',c.id)+(wish?'':btn(icon('tool')+' Record work','add-work','primary',c.id))+(!wish&&!c.archived&&!c.rebuild?.to?btn('Start a Rebuild','rebuild-start','',c.id):'')+btn('More','car-more','',c.id):badge('Shared · Read only'))+ (wish?`<div class="note info wishlist-notice"><strong>Wishlist</strong> · A planned addition to your collection. Ownership text does not move this car to My Cars.</div>`:'')+(c.rebuild?.to?`<div class="note info rebuild-history-notice"><strong>Rebuilt · historical record</strong><span> New work and races belong to ${esc(c.rebuild.to.name)}.</span>${btn('Continue with rebuilt car '+icon('next'),'rebuild-open','small',c.rebuild.to.id)}</div>`:'')+`<div class="profile-layout"><aside class="rail" aria-label="Car sections"><div class="row">${(c.usage||[]).map(u=>badge(u,'usage')).join('')}</div><hr>${sections.filter(s=>!wish||!['Maintenance','Performance'].includes(s)).map(s=>`<button class="${section===s?'active':''}" data-action="section" data-id="${s}" aria-current="${section===s?'page':'false'}">${icon(uiSectionIcons[s])}${s}</button>`).join('')}</aside><div class="profile-section-stack">${profileContent(c)}${local()?viewPager(db._view?.history):''}</div></div>`;}
-const techGroups={
-  'Motor & transmission':[['motor','Motor'],['motorLayout','Motor layout'],['pod','Motor pod'],['podSettings','Pod settings'],['ratedRpm','Rated no-load RPM'],['ratedVoltage','Rated at (V)'],['motorType','Motor type'],['motorTorque','Motor torque (gf·cm)'],['torqueType','Torque rating type'],['torqueVoltage','Torque rated at (V)'],['measuredRpm','Measured RPM'],['measuredVoltage','Measured at (V)'],['measuredDate','Measurement date'],['pinionPart','Pinion component'],['pinion','Pinion teeth'],['gearPart','Driven gear component'],['gear','Driven gear teeth'],['gearType','Gear type / pitch']],
-  'Body & chassis':[['body','Body'],['bodyMaterial','Body material'],['bodySettings','Body screw settings'],['chassis','Chassis'],['wheelbase','Wheelbase (mm)'],['weight','Total weight (g)'],['clearance','Ground clearance (mm)']],
-  'Wheels tyres & axles':[['frontAxle','Front axle'],['rearAxle','Rear axle'],['frontBearings','Front bearings'],['rearBearings','Rear bearings'],['frontWheels','Front wheels'],['rearWheels','Rear wheels'],['frontTyres','Front tyres'],['rearTyres','Rear tyres'],['frontDiameter','Front tyre diameter (mm)'],['rearDiameter','Rear tyre diameter (mm)'],['frontWidth','Front track width (mm)'],['rearWidth','Rear track width (mm)'],['frontAxlePlay','Front axle play'],['rearAxlePlay','Rear axle play']],
-  'Guide electrical & fittings':[['guide','Guide'],['braids','Braids'],['wiring','Wiring'],['lights','Lighting'],['digitalSystem','Digital system'],['chip','Decoder'],['magnets','Magnets'],['ballast','Ballast / placement'],['suspension','Suspension'],['fasteners','Fasteners'],['technicalNotes','Technical notes']]
+function renderOverview() {
+  return timingCollectionNotice() + renderOverviewDesign();
+}
+function filteredCars() {
+  if (local() && db._view?.list) return db.cars;
+  return current()
+    .cars.filter(
+      c =>
+        (c.collectionStatus || 'collection') === carListStatus() &&
+        !!c.archived === archived &&
+        (!query ||
+          [
+            c.name,
+            c.number,
+            c.maker,
+            c.model,
+            c.reference,
+            c.location,
+            ...(c.tags || []),
+            ...Object.values(c.technical || {})
+          ]
+            .join(' ')
+            .toLowerCase()
+            .includes(query.toLowerCase())) &&
+        (!usage.length ||
+          (matchAll ? usage.every(u => (c.usage || []).includes(u)) : usage.some(u => (c.usage || []).includes(u))))
+    )
+    .sort((a, b) => CarSort.compare(a, b, sort, sortDirection));
+}
+function renderCars() {
+  return renderCarsBrowser();
+}
+function renderCarResults() {
+  const list = filteredCars();
+  let bar = selected.size
+    ? `<div class="selection-bar"><strong>${selected.size} selected</strong>${local() ? btn('Edit selected…', 'bulk-edit', 'small primary') + btn(icon('download') + ' Export selected (' + selected.size + ')', 'export-selected', 'small primary') + btn('Compare…', 'car-compare', 'small') + (!wishlistTab() && canSubmit() ? btn(icon('share') + ' Send to club', 'send-selected', 'small') : '') : ''}${btn('Clear selection', 'clear-selection', 'small ghost')}</div>`
+    : '';
+  if (exportChoosing)
+    bar =
+      '<div class="note info"><strong>Choose cars to export</strong><p>Select cars below, then click Export selected. Use the Wishlist tab to export planned cars to another Paddock collection.</p>' +
+      btn('Cancel export', 'cancel-export-choice', 'small') +
+      '</div>' +
+      bar;
+  if (!list.length)
+    return (
+      bar +
+      empty(
+        query || usage.length || archived || carListCount()
+          ? 'No cars match these filters'
+          : wishlistTab()
+            ? 'Start your Wishlist'
+            : 'Your collection starts here',
+        query || usage.length || archived || carListCount()
+          ? 'Try another search or remove a usage filter.'
+          : wishlistTab()
+            ? 'Save cars you would like to own, with photos, specifications and a price. They stay separate from My Cars and the Showroom.'
+            : 'Add your first car. You only need a name; photos, parts and specifications can come later.',
+        local() ? btn(icon('plus') + (wishlistTab() ? ' Add to Wishlist' : ' Add car'), 'add-car', 'primary') : ''
+      )
+    );
+  const check = c =>
+    `<input type="checkbox" aria-label="Select ${esc(c.name)}" data-select-car="${c.id}" ${selected.has(c.id) ? 'checked' : ''}>`;
+  if (mode === 'table') return bar + renderCollectionTable(list, check);
+  return (
+    bar +
+    `<div class="car-grid">${list
+      .map(
+        c =>
+          `<article class="car-card"><label class="car-check">${check(c)}</label><button class="card-photo" data-action="open-car" data-id="${c.id}" aria-label="Open ${esc(c.name)}">${photo(c, true)}</button><div class="card-body"><button class="car-title" data-action="open-car" data-id="${c.id}">${esc(c.name)}</button><div class="card-sub">${esc([c.number, c.maker, c.scale].filter(Boolean).join(' · ') || 'Details to add')}</div><div class="row">${(
+            c.usage || []
+          )
+            .slice(0, 3)
+            .map(u => badge(u, 'usage'))
+            .join(
+              ' '
+            )}</div><div class="card-foot">${icon('pin')}${esc(c.location || 'No location set')}<span class="spacer"></span>${c.availability && c.availability !== 'Available' ? badge(c.availability) : ''}</div></div></article>`
+      )
+      .join('')}</div>`
+  );
+}
+const sections = [
+  'Overview',
+  'Identity & ownership',
+  'Technical & parts',
+  'Real Car History',
+  'Setups',
+  'Maintenance',
+  'Performance',
+  'Photos & documents',
+  'History'
+];
+function renderProfile() {
+  const c = car(),
+    wish = slotforgeDomain.isWishlist(c);
+  if (local() && wishlistUi && carScope !== (wish ? 'wishlist' : 'collection')) {
+    carScope = wish ? 'wishlist' : 'collection';
+    selected.clear();
+    query = '';
+    usage = [];
+    archived = false;
+    matchAll = false;
+  }
+  return (
+    `<div class="row">${btn(icon('arrow') + (wish ? ' Wishlist' : ' Cars'), 'back-cars', 'ghost small')}</div>` +
+    heading(
+      c.name,
+      [c.number, c.maker, c.scale].filter(Boolean).join(' · '),
+      local()
+        ? btn('Compare', 'car-compare', '', c.id) +
+            btn(icon('search') + ' Google', 'google-car', '', c.id) +
+            btn('Edit details', 'edit-car', '', c.id) +
+            (wish && wishlistUi && !c.archived
+              ? db._view?.wishlistPurchasePending
+                ? badge('Purchase awaiting Review', 'warn')
+                : btn('Mark purchased', 'purchase-car', 'primary', c.id)
+              : '') +
+            btn('Add setup', 'save-setup', '', c.id) +
+            (wish ? '' : btn(icon('tool') + ' Record work', 'add-work', 'primary', c.id)) +
+            (!wish && !c.archived && !c.rebuild?.to ? btn('Start a Rebuild', 'rebuild-start', '', c.id) : '') +
+            btn('More', 'car-more', '', c.id)
+        : badge('Shared · Read only')
+    ) +
+    (wish
+      ? `<div class="note info wishlist-notice"><strong>Wishlist</strong> · A planned addition to your collection. Ownership text does not move this car to My Cars.</div>`
+      : '') +
+    (c.rebuild?.to
+      ? `<div class="note info rebuild-history-notice"><strong>Rebuilt · historical record</strong><span> New work and races belong to ${esc(c.rebuild.to.name)}.</span>${btn('Continue with rebuilt car ' + icon('next'), 'rebuild-open', 'small', c.rebuild.to.id)}</div>`
+      : '') +
+    `<div class="profile-layout"><aside class="rail" aria-label="Car sections"><div class="row">${(c.usage || []).map(u => badge(u, 'usage')).join('')}</div><hr>${sections
+      .filter(s => !wish || !['Maintenance', 'Performance'].includes(s))
+      .map(
+        s =>
+          `<button class="${section === s ? 'active' : ''}" data-action="section" data-id="${s}" aria-current="${section === s ? 'page' : 'false'}">${icon(uiSectionIcons[s])}${s}</button>`
+      )
+      .join(
+        ''
+      )}</aside><div class="profile-section-stack">${profileContent(c)}${local() ? viewPager(db._view?.history) : ''}</div></div>`
+  );
+}
+const techGroups = {
+  'Motor & transmission': [
+    ['motor', 'Motor'],
+    ['motorLayout', 'Motor layout'],
+    ['pod', 'Motor pod'],
+    ['podSettings', 'Pod settings'],
+    ['ratedRpm', 'Rated no-load RPM'],
+    ['ratedVoltage', 'Rated at (V)'],
+    ['motorType', 'Motor type'],
+    ['motorTorque', 'Motor torque (gf·cm)'],
+    ['torqueType', 'Torque rating type'],
+    ['torqueVoltage', 'Torque rated at (V)'],
+    ['measuredRpm', 'Measured RPM'],
+    ['measuredVoltage', 'Measured at (V)'],
+    ['measuredDate', 'Measurement date'],
+    ['pinionPart', 'Pinion component'],
+    ['pinion', 'Pinion teeth'],
+    ['gearPart', 'Driven gear component'],
+    ['gear', 'Driven gear teeth'],
+    ['gearType', 'Gear type / pitch']
+  ],
+  'Body & chassis': [
+    ['body', 'Body'],
+    ['bodyMaterial', 'Body material'],
+    ['bodySettings', 'Body screw settings'],
+    ['chassis', 'Chassis'],
+    ['wheelbase', 'Wheelbase (mm)'],
+    ['weight', 'Total weight (g)'],
+    ['clearance', 'Ground clearance (mm)']
+  ],
+  'Wheels tyres & axles': [
+    ['frontAxle', 'Front axle'],
+    ['rearAxle', 'Rear axle'],
+    ['frontBearings', 'Front bearings'],
+    ['rearBearings', 'Rear bearings'],
+    ['frontWheels', 'Front wheels'],
+    ['rearWheels', 'Rear wheels'],
+    ['frontTyres', 'Front tyres'],
+    ['rearTyres', 'Rear tyres'],
+    ['frontDiameter', 'Front tyre diameter (mm)'],
+    ['rearDiameter', 'Rear tyre diameter (mm)'],
+    ['frontWidth', 'Front track width (mm)'],
+    ['rearWidth', 'Rear track width (mm)'],
+    ['frontAxlePlay', 'Front axle play'],
+    ['rearAxlePlay', 'Rear axle play']
+  ],
+  'Guide electrical & fittings': [
+    ['guide', 'Guide'],
+    ['braids', 'Braids'],
+    ['wiring', 'Wiring'],
+    ['lights', 'Lighting'],
+    ['digitalSystem', 'Digital system'],
+    ['chip', 'Decoder'],
+    ['magnets', 'Magnets'],
+    ['ballast', 'Ballast / placement'],
+    ['suspension', 'Suspension'],
+    ['fasteners', 'Fasteners'],
+    ['technicalNotes', 'Technical notes']
+  ]
 };
-const techLabels=Object.fromEntries(Object.values(techGroups).flat());
-function profileContent(c){const d=current(),events=d.events.filter(e=>e.carId===c.id),setups=d.setups.filter(s=>s.carId===c.id);
-  if(slotforgeDomain.isWishlist(c)&&['Maintenance','Performance'].includes(section))return empty('Wishlist car','Physical work and racing are available after purchase.');
-  if(section==='Overview')return renderCarOverviewDesign(c);
-  if(section==='Real Car History')return renderRealHistory(c);
-  if(section==='Identity & ownership')return `<div class="two-col">${panel('Identity',dl([['Manufacturer',c.maker],['Reference',c.reference],['Marque',c.marque],['Model',c.model],['Scale',c.scale],['Livery',c.livery],['Race number',c.raceNumber],['Team',c.team],['Edition',c.edition],['Serial',c.serial],['Build origin',c.origin]]))}${panel('Collection & ownership',dl([['Owner',c.owner],['Ownership',c.ownership],['Condition',c.condition],['Packaging',c.packaging],['Location',c.location],['Acquired',c.acquired],['Seller',c.seller],[slotforgeDomain.isWishlist(c)?'Price':'Purchase price',[c.price,c.currency].filter(Boolean).join(' ')],['Borrower',c.loanTo],['Return due',c.returnDate]]))}</div>${panel('Notes',`<p class="prewrap">${esc(c.description||'No description yet.')}</p>${local()&&c.privateNotes?`<h3>${icon('lock')} Private notes</h3><p class="prewrap">${esc(c.privateNotes)}</p>`:''}${d.customFields.length?dl(d.customFields.map(f=>[f.label,c.custom?.[f.id]])):''}`)}`;
-  if(section==='Technical & parts'){const installed=d.installations.filter(i=>i.carId===c.id&&!i.removed);return `<div class="actions">${local()?btn('Edit specifications','edit-car','',c.id)+btn('Use Factory specifications…','factory-specs','',c.id)+(slotforgeDomain.isWishlist(c)?'':btn('Install part','install-part','primary',c.id)):''}</div><div class="two-col mt">${Object.entries(techGroups).map(([title,fields])=>panel(title,dl([...fields.filter(([k])=>c.technical?.[k]).map(([k,label])=>[label,c.technical[k]]),...(title==='Motor & transmission'?ratioRows(c.technical):[])])||'')).join('')}</div>${PerformanceModel.keys.some(k=>c.technical?.[k])?`<div class="mt">${panel('Theoretical performance',performanceStats(c.technical)+'<p class="tiny muted">Ideal calculations before losses and tyre slip. Stall torque is not available at no-load speed. Peak power uses a linear brushed DC model at matching test voltages and is not a continuous rating.</p>')}</div>`:''}<div class="mt">${panel('Installed inventory',installed.length?installed.map(i=>`<div class="list-row"><div><strong>${esc(d.parts.find(p=>p.id===i.partId)?.name)}</strong><div class="tiny muted">${i.quantity} piece(s) · ${esc(i.position)}</div></div>${local()?(i.assemblyId?btn('Remove assembly…','remove-assembly','small',i.assemblyId):btn('Remove','remove-part','small',i.id)):''}</div>`).join(''):'<p class="muted">No tracked inventory installed. You can still describe all parts in the specifications.</p>')}</div><div class="stack mt">${local()?slotcarResearchTools(c):''}${panel('Factory reference',Object.keys(c.factory||{}).length?dl([...Object.entries(c.factory).filter(([,v])=>v).map(([k,v])=>[techLabels[k]||k,v]),...ratioRows(c.factory)]):'<p class="muted">No factory reference recorded.</p>')}</div>`;}
-  if(section==='Setups')return `<div class="page-head"><div><h2>Saved configurations</h2><p class="muted">Save a configuration snapshot or review a suggested setup plan before fitting parts.</p></div>${local()?btn('Add setup','save-setup','primary',c.id):''}</div>${setups.length?`<div class="setup-grid">${setups.map(s=>panel(s.name,`${s.plan?badge('Setup plan · '+(s.plan.source==='factory'?'Factory specifications':'Current configuration'),'info')+'<p class="tiny muted">Planned configuration; saving did not fit parts.</p>':''}<div class="tiny muted">${date(s.date)}${s.track?' · '+esc(s.track):''}</div><p class="prewrap mt">${esc(s.notes)}</p>${dl([['Motor',s.technical.motor],...ratioRows(s.technical),['Rear tyres',s.technical.rearTyres],['Weight',s.technical.weight]])}${s.plan?`<details class="mt"><summary>Planned parts (${s.installations.length})</summary>${s.installations.map(i=>`<p class="tiny">${esc(i.position||techLabels[i.field]||'Part')}: ${i.quantity} × ${esc(i.name)}</p>`).join('')||'<p class="tiny muted">Specifications only; no catalogue parts assigned.</p>'}</details>`:''}<div class="actions mt">${btn('Compare setups…','compare-setup','',s.id)}${local()&&!slotforgeDomain.isWishlist(c)?btn('Apply setup…','apply-setup','primary',s.id)+btn('Work in stages…','start-job','',s.id):''}</div>`)).join('')}</div>`:empty('Save your first setup','Review a suggested plan from specifications, or capture your current fitted configuration.',local()?btn('Add setup','save-setup','primary',c.id):'')}`;
-  if(section==='Maintenance')return panel('Service & modification journal',`<div class="actions">${local()?btn('Record work','add-work','primary',c.id):''}</div>${timeline(events.filter(e=>['maintenance','modification','installation','removal'].includes(e.type)))}`);
-  if(section==='History')return panel('Car history',timeline(events));
-  if(section==='Performance'){const tests=d.tests.filter(t=>t.carId===c.id);return `${local()?`<div class="actions">${btn('Compare pace…','compare-pace','',c.id)}</div>`+renderTimingResults(c)+renderLaneRecords(c):''}<hr class="mt"><div class="page-head"><div><h2>Manual test records</h2><p class="muted">Record your own tests independently of imported Timing sessions.</p></div>${local()?btn('Record test','add-test','primary',c.id):''}</div>${tests.length?tests.map(t=>panel(t.track||'Manual test',`<div class="tiny muted">${date(t.date)} · ${esc(t.setupId?'Saved historical snapshot: '+(setups.find(s=>s.id===t.setupId)?.name||'Setup'):'Actual current configuration')}${t.jobId?' · During workshop job':''}</div>${dl([['Recorded motor',t.technical.motor],...ratioRows(t.technical),['Recorded rear tyres',t.technical.rearTyres],['Recorded weight',t.technical.weight]])}<p class="tiny muted">${t.installations?t.installations.length+' tracked component record(s) captured':'Earlier record: no inventory snapshot'}</p>${dl([['Driver',t.driver],['Lane',t.lane],['Voltage',t.voltage],['Direction',t.direction||'Unknown'],['Magnets',t.magnetStatus||'Unknown'],['Laps',t.laps],['Best (seconds)',t.best],['Average (seconds)',t.average]])}<p class="prewrap mt">${esc(t.notes)}</p>${local()?btn('View recorded configuration','test-snapshot','small',t.id):''}`)).join(''):empty('Keep track of your testing','Record the setup, conditions, figures and how the car felt.')}`;}
-  if(section==='Photos & documents')return `<div class="page-head"><div><h2>Car photographs</h2><p class="muted">Photos are stored with your database and included in complete backups.</p></div>${local()?btn('Add photo','add-photo','primary',c.id):''}</div><div class="photo-grid">${c.picture?`<div class="panel">${photo(c)}<p>Main photograph</p>${local()?btn('Replace','main-photo','small',c.id):''}</div>`:''}${(c.photos||[]).map(p=>`<div class="panel"><img src="${esc(p.data)}" alt="${esc(p.name)}"><p>${esc(p.name)}</p>${local()?btn('Remove','delete-photo','small',p.id):''}</div>`).join('')}</div>${!c.picture&&!c.photos?.length?`<div class="compact-photo-empty">${empty('Add a photograph','Use a PNG, JPEG or WebP image of the car or its components.',local()?btn('Choose main photo','main-photo','primary',c.id):'')}</div>`:''}${renderDocuments(c)}`;
+const techLabels = Object.fromEntries(Object.values(techGroups).flat());
+function profileContent(c) {
+  const d = current(),
+    events = d.events.filter(e => e.carId === c.id),
+    setups = d.setups.filter(s => s.carId === c.id);
+  if (slotforgeDomain.isWishlist(c) && ['Maintenance', 'Performance'].includes(section))
+    return empty('Wishlist car', 'Physical work and racing are available after purchase.');
+  if (section === 'Overview') return renderCarOverviewDesign(c);
+  if (section === 'Real Car History') return renderRealHistory(c);
+  if (section === 'Identity & ownership')
+    return `<div class="two-col">${panel(
+      'Identity',
+      dl([
+        ['Manufacturer', c.maker],
+        ['Reference', c.reference],
+        ['Marque', c.marque],
+        ['Model', c.model],
+        ['Scale', c.scale],
+        ['Livery', c.livery],
+        ['Race number', c.raceNumber],
+        ['Team', c.team],
+        ['Edition', c.edition],
+        ['Serial', c.serial],
+        ['Build origin', c.origin]
+      ])
+    )}${panel(
+      'Collection & ownership',
+      dl([
+        ['Owner', c.owner],
+        ['Ownership', c.ownership],
+        ['Condition', c.condition],
+        ['Packaging', c.packaging],
+        ['Location', c.location],
+        ['Acquired', c.acquired],
+        ['Seller', c.seller],
+        [slotforgeDomain.isWishlist(c) ? 'Price' : 'Purchase price', [c.price, c.currency].filter(Boolean).join(' ')],
+        ['Borrower', c.loanTo],
+        ['Return due', c.returnDate]
+      ])
+    )}</div>${panel('Notes', `<p class="prewrap">${esc(c.description || 'No description yet.')}</p>${local() && c.privateNotes ? `<h3>${icon('lock')} Private notes</h3><p class="prewrap">${esc(c.privateNotes)}</p>` : ''}${d.customFields.length ? dl(d.customFields.map(f => [f.label, c.custom?.[f.id]])) : ''}`)}`;
+  if (section === 'Technical & parts') {
+    const installed = d.installations.filter(i => i.carId === c.id && !i.removed);
+    return `<div class="actions">${local() ? btn('Edit specifications', 'edit-car', '', c.id) + btn('Use Factory specifications…', 'factory-specs', '', c.id) + (slotforgeDomain.isWishlist(c) ? '' : btn('Install part', 'install-part', 'primary', c.id)) : ''}</div><div class="two-col mt">${Object.entries(
+      techGroups
+    )
+      .map(([title, fields]) =>
+        panel(
+          title,
+          dl([
+            ...fields.filter(([k]) => c.technical?.[k]).map(([k, label]) => [label, c.technical[k]]),
+            ...(title === 'Motor & transmission' ? ratioRows(c.technical) : [])
+          ]) || ''
+        )
+      )
+      .join(
+        ''
+      )}</div>${PerformanceModel.keys.some(k => c.technical?.[k]) ? `<div class="mt">${panel('Theoretical performance', performanceStats(c.technical) + '<p class="tiny muted">Ideal calculations before losses and tyre slip. Stall torque is not available at no-load speed. Peak power uses a linear brushed DC model at matching test voltages and is not a continuous rating.</p>')}</div>` : ''}<div class="mt">${panel('Installed inventory', installed.length ? installed.map(i => `<div class="list-row"><div><strong>${esc(d.parts.find(p => p.id === i.partId)?.name)}</strong><div class="tiny muted">${i.quantity} piece(s) · ${esc(i.position)}</div></div>${local() ? (i.assemblyId ? btn('Remove assembly…', 'remove-assembly', 'small', i.assemblyId) : btn('Remove', 'remove-part', 'small', i.id)) : ''}</div>`).join('') : '<p class="muted">No tracked inventory installed. You can still describe all parts in the specifications.</p>')}</div><div class="stack mt">${local() ? slotcarResearchTools(c) : ''}${panel(
+      'Factory reference',
+      Object.keys(c.factory || {}).length
+        ? dl([
+            ...Object.entries(c.factory)
+              .filter(([, v]) => v)
+              .map(([k, v]) => [techLabels[k] || k, v]),
+            ...ratioRows(c.factory)
+          ])
+        : '<p class="muted">No factory reference recorded.</p>'
+    )}</div>`;
+  }
+  if (section === 'Setups')
+    return `<div class="page-head"><div><h2>Saved configurations</h2><p class="muted">Save a configuration snapshot or review a suggested setup plan before fitting parts.</p></div>${local() ? btn('Add setup', 'save-setup', 'primary', c.id) : ''}</div>${setups.length ? `<div class="setup-grid">${setups.map(s => panel(s.name, `${s.plan ? badge('Setup plan · ' + (s.plan.source === 'factory' ? 'Factory specifications' : 'Current configuration'), 'info') + '<p class="tiny muted">Planned configuration; saving did not fit parts.</p>' : ''}<div class="tiny muted">${date(s.date)}${s.track ? ' · ' + esc(s.track) : ''}</div><p class="prewrap mt">${esc(s.notes)}</p>${dl([['Motor', s.technical.motor], ...ratioRows(s.technical), ['Rear tyres', s.technical.rearTyres], ['Weight', s.technical.weight]])}${s.plan ? `<details class="mt"><summary>Planned parts (${s.installations.length})</summary>${s.installations.map(i => `<p class="tiny">${esc(i.position || techLabels[i.field] || 'Part')}: ${i.quantity} × ${esc(i.name)}</p>`).join('') || '<p class="tiny muted">Specifications only; no catalogue parts assigned.</p>'}</details>` : ''}<div class="actions mt">${btn('Compare setups…', 'compare-setup', '', s.id)}${local() && !slotforgeDomain.isWishlist(c) ? btn('Apply setup…', 'apply-setup', 'primary', s.id) + btn('Work in stages…', 'start-job', '', s.id) : ''}</div>`)).join('')}</div>` : empty('Save your first setup', 'Review a suggested plan from specifications, or capture your current fitted configuration.', local() ? btn('Add setup', 'save-setup', 'primary', c.id) : '')}`;
+  if (section === 'Maintenance')
+    return panel(
+      'Service & modification journal',
+      `<div class="actions">${local() ? btn('Record work', 'add-work', 'primary', c.id) : ''}</div>${timeline(events.filter(e => ['maintenance', 'modification', 'installation', 'removal'].includes(e.type)))}`
+    );
+  if (section === 'History') return panel('Car history', timeline(events));
+  if (section === 'Performance') {
+    const tests = d.tests.filter(t => t.carId === c.id);
+    return `${local() ? `<div class="actions">${btn('Compare pace…', 'compare-pace', '', c.id)}</div>` + renderTimingResults(c) + renderLaneRecords(c) : ''}<hr class="mt"><div class="page-head"><div><h2>Manual test records</h2><p class="muted">Record your own tests independently of imported Timing sessions.</p></div>${local() ? btn('Record test', 'add-test', 'primary', c.id) : ''}</div>${
+      tests.length
+        ? tests
+            .map(t =>
+              panel(
+                t.track || 'Manual test',
+                `<div class="tiny muted">${date(t.date)} · ${esc(t.setupId ? 'Saved historical snapshot: ' + (setups.find(s => s.id === t.setupId)?.name || 'Setup') : 'Actual current configuration')}${t.jobId ? ' · During workshop job' : ''}</div>${dl([['Recorded motor', t.technical.motor], ...ratioRows(t.technical), ['Recorded rear tyres', t.technical.rearTyres], ['Recorded weight', t.technical.weight]])}<p class="tiny muted">${t.installations ? t.installations.length + ' tracked component record(s) captured' : 'Earlier record: no inventory snapshot'}</p>${dl(
+                  [
+                    ['Driver', t.driver],
+                    ['Lane', t.lane],
+                    ['Voltage', t.voltage],
+                    ['Direction', t.direction || 'Unknown'],
+                    ['Magnets', t.magnetStatus || 'Unknown'],
+                    ['Laps', t.laps],
+                    ['Best (seconds)', t.best],
+                    ['Average (seconds)', t.average]
+                  ]
+                )}<p class="prewrap mt">${esc(t.notes)}</p>${local() ? btn('View recorded configuration', 'test-snapshot', 'small', t.id) : ''}`
+              )
+            )
+            .join('')
+        : empty('Keep track of your testing', 'Record the setup, conditions, figures and how the car felt.')
+    }`;
+  }
+  if (section === 'Photos & documents')
+    return `<div class="page-head"><div><h2>Car photographs</h2><p class="muted">Photos are stored with your database and included in complete backups.</p></div>${local() ? btn('Add photo', 'add-photo', 'primary', c.id) : ''}</div><div class="photo-grid">${c.picture ? `<div class="panel">${photo(c)}<p>Main photograph</p>${local() ? btn('Replace', 'main-photo', 'small', c.id) : ''}</div>` : ''}${(c.photos || []).map(p => `<div class="panel"><img src="${esc(p.data)}" alt="${esc(p.name)}"><p>${esc(p.name)}</p>${local() ? btn('Remove', 'delete-photo', 'small', p.id) : ''}</div>`).join('')}</div>${!c.picture && !c.photos?.length ? `<div class="compact-photo-empty">${empty('Add a photograph', 'Use a PNG, JPEG or WebP image of the car or its components.', local() ? btn('Choose main photo', 'main-photo', 'primary', c.id) : '')}</div>` : ''}${renderDocuments(c)}`;
   return '';
 }
-function available(p){if(local()&&db._view?.available&&Object.hasOwn(db._view.available,p.id))return db._view.available[p.id];const reserved=(current().assemblies||[]).filter(a=>!a.dismantled&&!a.carId).flatMap(a=>a.components).filter(c=>c.partId===p.id).reduce((n,c)=>n+c.quantity,0);return p.quantity-reserved-current().installations.filter(i=>i.partId===p.id&&!i.removed).reduce((n,i)=>n+i.quantity,0);}
-function renderWorkshopJobs(){const due=(db._view?.maintenance||slotforgeDomain.reminders(db.events)).filter(e=>db.cars.some(c=>c.id===e.carId&&!c.archived));return heading('Workshop','Jobs, service reminders and recent work',btn(icon('plus')+' New workshop job','new-job','primary'))+toolboxTabs()+jobOverview()+`<div class="two-col workshop-panels mt">${panel('Upcoming maintenance',(due.length?due.map(e=>`<div class="list-row"><div><strong>${esc(e.task)}</strong><div class="tiny muted">${esc(db.cars.find(c=>c.id===e.carId)?.name)} · ${slotforgeDomain.reminderDue(e)?'<strong class="reminder-due">Due</strong> · ':''}${esc(slotforgeDomain.reminderText(e))}</div></div>${btn('Open car','open-car','small',e.carId)}</div>`).join(''):'<p class="muted">Record maintenance on a car and set a next due date or a number of laps to create a reminder.</p>')+viewPager(db._view?.reminders))}${panel('Recent work','<div id="recent-work-content">'+renderRecentWork()+'</div>')}</div>`;}
-function valuePreview(key,value){if(value===undefined)return 'Not recorded';if(key==='realHistory')return [value.classification,...historyFields.filter(([k])=>value[k]).map(([k,label])=>label+': '+value[k]),...(value.sources||[]).map(s=>'Source: '+s.title+' · '+s.url),...(value.evidence||[]).map(e=>(HistoryResearch.labels[e.field]||e.field)+' · '+(e.method==='webpage'?'Webpage extraction':'External research file')+' · '+(e.uncertainty||'No uncertainty supplied; not verified.')+'\n'+e.sourceUrls.join('\n')),Object.hasOwn(value,'photos')?(value.photos.length+' reference photograph(s)'):'Reference photographs unchanged'].join('\n');if(key==='picture')return value?'Main photo':'No photo';if(key==='photos')return `${value.length} photographs`;if(key==='technical')return Object.entries(value||{}).filter(([,v])=>v).map(([k,v])=>`${techLabels[k]||k}: ${v}`).join('\n')||'No technical values';if(Array.isArray(value))return value.join(', ');return String(value||'Empty');}
-function pendingItems(){return db.submissions.filter(s=>s.status==='pending').flatMap(s=>s.package.cars.filter(c=>!s.outcomes[c.id]).map(c=>({sub:s,incoming:c})));}
-function renderReview(){return renderSubmissionReview();}
-function renderExchange(){return renderExchangeDesign();}
-function renderSettings(){return renderSettingsDesign();}
-function fieldLabel(k){return ({number:'Collection number',maker:'Slot-car manufacturer',reference:'Product reference',marque:'Real-car marque',model:'Real-car model',usage:'Usage labels',raceClass:'Racing class',picture:'Main photograph',photos:'Additional photos',technical:'Technical specifications',name:'Display name',privateNotes:'Private notes',realHistory:'Real Car History'}[k]||k.replace(/([A-Z])/g,' $1').replace(/^./,s=>s.toUpperCase()));}
-function field(name,label,value='',type='text',choices=[]){if(type!=='select')choices=choiceSuggestions(name,choices);const dlid='dl-'+name.replace(/[^a-z0-9]/gi,'-'),required=name==='name'?' required':'';
-  if(type==='textarea')return `<label class="field wide">${esc(label)}<textarea name="${esc(name)}">${esc(value)}</textarea></label>`;
-  if(type==='select')return `<label class="field">${esc(label)}<select name="${esc(name)}">${choices.map(v=>`<option value="${esc(v)}" ${v===value?'selected':''}>${esc(v)}</option>`).join('')}</select></label>`;
-  return `<label class="field">${esc(label)}<input name="${esc(name)}" type="${type}" value="${esc(value)}"${required}${type==='number'?(name.startsWith('custom.')?' step="any"':' step="any" min="0"'):''}${choices.length?` list="${dlid}"`:''}>${choices.length?`<datalist id="${dlid}">${[...new Set(choices)].map(v=>`<option value="${esc(v)}"></option>`).join('')}</datalist>`:''}</label>`;
+function available(p) {
+  if (local() && db._view?.available && Object.hasOwn(db._view.available, p.id)) return db._view.available[p.id];
+  const reserved = (current().assemblies || [])
+    .filter(a => !a.dismantled && !a.carId)
+    .flatMap(a => a.components)
+    .filter(c => c.partId === p.id)
+    .reduce((n, c) => n + c.quantity, 0);
+  return (
+    p.quantity -
+    reserved -
+    current()
+      .installations.filter(i => i.partId === p.id && !i.removed)
+      .reduce((n, i) => n + i.quantity, 0)
+  );
 }
-let modalSubmit=null,modalPhoto=null,modalSaving=false;
-function modal(title,body,onSubmit,submitLabel='Save'){const dialog=$('#dialog');if(dialog.open)dialog.close();modalSubmit=onSubmit;dialog.innerHTML=`<form id="modal-form"><div class="dialog-head"><h2>${esc(title)}</h2><button type="button" class="btn ghost small" data-action="close-modal" aria-label="Close">✕</button></div><div class="dialog-body">${body}<div class="form-error" role="alert" id="form-error" hidden></div></div><div class="dialog-footer"><button type="button" class="btn" data-action="close-modal">Cancel</button>${onSubmit?`<button type="submit" class="btn primary">${esc(submitLabel)}</button>`:''}</div></form>`;dialog.showModal();dialog.querySelector('input:not([type=hidden]),select,textarea')?.focus();}
-function simpleForm(title,fields,submit,label){modal(title,`<div class="form-grid">${fields}</div>`,submit,label);}
-function comma(value){return String(value||'').split(',').map(s=>s.trim()).filter(Boolean);}
-const identityFields=['name','number','maker','reference','marque','model','scale','vehicleYear','releaseYear','livery','colours','raceNumber','team','drivers','event','edition','serial','origin','category','raceClass','description'];
-const ownershipFields=['owner','ownership','condition','packaging','completeness','location','availability','acquired','acquisitionMethod','seller','price','currency','costs','valuation','valuationDate','valuationSource','loanTo','loanDate','returnDate','disposalDate','disposalMethod','salePrice','inspection','privateNotes'];
-function editCar(id){const c=id?db.cars.find(c=>c.id===id):{technical:{},factory:{},custom:{},usage:[],tags:[],collectionStatus:carListStatus(),ownership:wishlistTab()?'Wanted':'Owned',availability:'Available',scale:'1:32'};const wish=slotforgeDomain.isWishlist(c);modalPhoto=c.picture||'';const standard={scale:['1:24','1:32','1:43','HO'],origin:['Factory-built','Kit-built','Scratch-built','Custom'],ownership:['Owned','Wanted','Ordered','Sold','Gifted','Disposed'],availability:['Available','On loan','In workshop'],condition:['New','Excellent','Good','Fair','Needs work'],currency:['EUR','GBP','USD'],packaging:['Original box','Replacement box','Unboxed']};
-  const input=k=>field(k,k==='price'&&wish?'Price':fieldLabel(k),c[k]||'',(['description','privateNotes','completeness','inspection'].includes(k)?'textarea':['acquired','valuationDate','loanDate','returnDate','disposalDate'].includes(k)?'date':['price','costs','valuation','salePrice'].includes(k)?'number':'text'),[...(standard[k]||[]),...(db.choices[k]||[]),...db.cars.map(c=>c[k]).filter(Boolean)]);
-  const tech=prefix=>Object.entries(techGroups).map(([title,fields])=>`<section class="form-section"><h3>${title}</h3><div class="form-grid">${fields.map(([k,label])=>field(prefix+'.'+k,label,c[prefix]?.[k]||'',k==='technicalNotes'?'textarea':PerformanceModel.choices[k]?'select':'text',PerformanceModel.choices[k]?['',...PerformanceModel.choices[k]]:[...(db.choices['tech_'+k]||[]),...db.cars.flatMap(c=>[c.technical?.[k],c.factory?.[k]]).filter(Boolean)])).join('')}${title==='Motor & transmission'?ratioEditor(prefix,c[prefix]):''}</div></section>`).join('');
-  modal(id?'Edit '+c.name:wish?'Add to Wishlist':'Add a car',`<div class="tabs">${['Identity','Collection','Technical','Factory','Custom'].map((t,i)=>`<button type="button" class="${i===0?'active':''}" data-action="form-tab" data-id="${t}">${icon({Identity:'identity',Collection:'box',Technical:'gear',Factory:'database',Custom:'list'}[t])}${t}</button>`).join('')}</div><div data-form-panel="Identity"><p class="muted tiny">Only a display name is required. Type a new value or choose a previous entry.</p><div class="form-grid">${identityFields.map(input).join('')}${field('usage','Usage labels (comma separated)',(c.usage||[]).join(', '),'text',[...usageDefaults,...(db.choices.usage||[])])}${field('tags','Tags (comma separated)',(c.tags||[]).join(', '),'text',db.choices.tags||[])}</div><div class="actions mt"><button type="button" class="btn" data-action="form-photo">Choose main photo</button><span id="photo-status" class="tiny muted">${modalPhoto?'Photo attached':'No photo yet'}</span></div></div><div data-form-panel="Collection" hidden><p class="muted tiny">Ownership, storage and purchase information stay out of car-sharing packages.</p><div class="form-grid">${ownershipFields.map(input).join('')}</div></div><div data-form-panel="Technical" hidden><p class="muted tiny">${wish?'Record the specifications you want or expect. These are plans, not installed inventory.':'Describe the configuration currently installed. Use Record work to journal physical changes; editing here records a correction.'}</p>${tech('technical')}</div><div data-form-panel="Factory" hidden><p class="muted tiny">Optional original specifications. These do not overwrite the current configuration.</p>${tech('factory')}</div><div data-form-panel="Custom" hidden><div class="form-grid">${db.customFields.map(f=>field('custom.'+f.id,f.label,c.custom?.[f.id]||'',f.type==='notes'?'textarea':f.type==='yesno'?'select':f.type==='choice'?'text':f.type,f.type==='yesno'?['','Yes','No']:f.type==='choice'?(db._view?.carCustomChoices?.[f.id]||db.cars.map(c=>c.custom?.[f.id]).filter(Boolean)):[])).join('')||'<p class="muted">Add custom fields in Settings.</p>'}</div></div>`,async values=>{const data={technical:{},factory:{},custom:{},picture:modalPhoto,...(!id&&wish?{collectionStatus:'wishlist'}:{})};for(const[k,v]of Object.entries(values)){if(k.includes('.')){const[group,key]=k.split('.');data[group][key]=v;}else data[k]=v;}data.usage=comma(values.usage);data.tags=comma(values.tags);const result=await change('car.save',{id,revision:c.revision,data});carId=result;page='Cars';section='Overview';},id?'Save changes':wish?'Add to Wishlist':'Add car');
+function renderWorkshopJobs() {
+  const due = (db._view?.maintenance || slotforgeDomain.reminders(db.events)).filter(e =>
+    db.cars.some(c => c.id === e.carId && !c.archived)
+  );
+  return (
+    heading(
+      'Workshop',
+      'Jobs, service reminders and recent work',
+      btn(icon('plus') + ' New workshop job', 'new-job', 'primary')
+    ) +
+    toolboxTabs() +
+    jobOverview() +
+    `<div class="two-col workshop-panels mt">${panel('Upcoming maintenance', (due.length ? due.map(e => `<div class="list-row"><div><strong>${esc(e.task)}</strong><div class="tiny muted">${esc(db.cars.find(c => c.id === e.carId)?.name)} · ${slotforgeDomain.reminderDue(e) ? '<strong class="reminder-due">Due</strong> · ' : ''}${esc(slotforgeDomain.reminderText(e))}</div></div>${btn('Open car', 'open-car', 'small', e.carId)}</div>`).join('') : '<p class="muted">Record maintenance on a car and set a next due date or a number of laps to create a reminder.</p>') + viewPager(db._view?.reminders))}${panel('Recent work', '<div id="recent-work-content">' + renderRecentWork() + '</div>')}</div>`
+  );
 }
-function purchaseCar(id){
- const c=db.cars.find(c=>c.id===id);if(!wishlistUi||!c||!slotforgeDomain.isWishlist(c)||c.archived)throw Error('Open an active Wishlist car to mark it purchased.');
- const revision=c.revision,review=!!db.club;
- modal('Mark purchased · '+c.name,`<p>${review?'This purchase will wait for approval in Dealership Review. The car stays on Wishlist until approved.':'Move this car to My Cars and the Showroom.'} Photos, specifications and history stay with the same car.</p><p class="muted tiny">Confirm or update the purchase details below. Ownership will become Owned.</p><div class="form-grid">${field('acquired','Purchase date (optional)',c.acquired||'','date')}${field('seller','Seller (optional)',c.seller||'')}${field('price','Purchase price (optional)',c.price||'','number')}${field('currency','Currency',c.currency||'','text',['EUR','GBP','USD',...(db.choices.currency||[])])}</div><label class="check-row mt"><input type="checkbox" name="confirmed" required>I have purchased this car.</label>`,async values=>{
-  await change('car.purchase',{id,revision,confirmed:!!values.confirmed,details:Object.fromEntries(['acquired','seller','price','currency'].map(k=>[k,values[k]]))});
-  switchCarScope('collection');carId=id;page='Cars';section='Overview';toast('Purchased car added to My Cars.');
- },review?'Submit purchase for Review':'Mark purchased');
+function valuePreview(key, value) {
+  if (value === undefined) return 'Not recorded';
+  if (key === 'realHistory')
+    return [
+      value.classification,
+      ...historyFields.filter(([k]) => value[k]).map(([k, label]) => label + ': ' + value[k]),
+      ...(value.sources || []).map(s => 'Source: ' + s.title + ' · ' + s.url),
+      ...(value.evidence || []).map(
+        e =>
+          (HistoryResearch.labels[e.field] || e.field) +
+          ' · ' +
+          (e.method === 'webpage' ? 'Webpage extraction' : 'External research file') +
+          ' · ' +
+          (e.uncertainty || 'No uncertainty supplied; not verified.') +
+          '\n' +
+          e.sourceUrls.join('\n')
+      ),
+      Object.hasOwn(value, 'photos')
+        ? value.photos.length + ' reference photograph(s)'
+        : 'Reference photographs unchanged'
+    ].join('\n');
+  if (key === 'picture') return value ? 'Main photo' : 'No photo';
+  if (key === 'photos') return `${value.length} photographs`;
+  if (key === 'technical')
+    return (
+      Object.entries(value || {})
+        .filter(([, v]) => v)
+        .map(([k, v]) => `${techLabels[k] || k}: ${v}`)
+        .join('\n') || 'No technical values'
+    );
+  if (Array.isArray(value)) return value.join(', ');
+  return String(value || 'Empty');
 }
-function installPart(fixedCarId,fixedPartId){const cars=db.cars.filter(slotforgeDomain.activeCar),parts=db.parts.filter(p=>available(p)>0);if(!cars.length||!parts.length){toast('Add a car and available stock before installing a part.');return;}const options=(items,value,label)=>`<select name="${value}">${items.map(i=>`<option value="${i.id}" ${(value==='carId'?fixedCarId:fixedPartId)===i.id?'selected':''}>${esc(label(i))}</option>`).join('')}</select>`;
-  simpleForm('Install from inventory',`<label class="field">Car${options(cars,'carId',c=>c.name)}</label><label class="field">Available part${options(parts,'partId',p=>p.name+' · '+available(p)+' available')}</label>`+field('quantity','Quantity',1,'number')+field('position','Position / description','')+`<label class="field">Update technical field<select name="field"><option value="">Inventory only</option>${Object.entries(techLabels).filter(([k])=>slotforgeDomain.componentFields.includes(k)).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></label>`,async values=>{await change('part.install',values);},'Install part');}
-function addWork(id){
- const c=db.cars.find(c=>c.id===id),revision=db.revision;
- modal('Record work · '+c.name,jobCategoryField('maintenance')+'<div id="record-work-fields"><p class="muted">Record work you have already completed. To plan future work, create a Workshop job.</p><div class="form-grid">'+field('title','Work performed','')+field('performedDate','Date',slotforgeDomain.today(),'date')+field('notes','Work, parts and observations','','textarea')+'</div><details class="shopping-optional"><summary>Optional service reminder</summary><div class="form-grid">'+field('task','Reminder task (reuse the same name)','','text',db.events.filter(e=>e.carId===id&&e.task).map(e=>e.task))+field('nextDue','Next due date','','date')+field('nextDueLaps','Or after this many laps','','number').replace('step="any" min="0"','step="1" min="1"')+'<p class="tiny muted wide">Laps from SlotForge Timing races and manual track tests count from the start of the day of this work (do not also record Timing races as manual tests). Whichever comes first makes the reminder due.</p>'+'</div></details></div><div id="record-rebuild-fields" class="note info mt" hidden>Start a rebuild project in Workshop. The original car and its history stay intact. Choose parts later in the rebuild editor; inventory changes only when the rebuild is completed.</div>',async values=>{
-  if(values.category==='rebuild'){await openRebuildJob(await change('rebuild.start',{carId:id,revision}));return;}
-  await change('work.add',{carId:id,revision,type:values.category==='maintenance'||values.nextDue||values.nextDueLaps||values.task?.trim()?'maintenance':'modification',...values});
- },'Save work');
- $('#dialog [name=title]').required=true;$('#dialog [name=title]').maxLength=200;$('#dialog [name=performedDate]').required=true;
- $('#dialog [name=category]').id='record-work-category';
+function pendingItems() {
+  return db.submissions
+    .filter(s => s.status === 'pending')
+    .flatMap(s => s.package.cars.filter(c => !s.outcomes[c.id]).map(c => ({ sub: s, incoming: c })));
 }
-function updateRecordWork(){
- const rebuild=$('#record-work-category').value==='rebuild';$('#record-work-fields').hidden=rebuild;$('#record-rebuild-fields').hidden=!rebuild;
- for(const el of $('#record-work-fields').querySelectorAll('input,textarea,select'))el.disabled=rebuild;
- $('#dialog button[type=submit]').textContent=rebuild?'Start rebuild':'Save work';
+function renderReview() {
+  return renderSubmissionReview();
 }
-async function saveSetup(id){await setupSuggestionEditor(id);}
-function addTest(id){const setups=db.setups.filter(s=>s.carId===id);simpleForm('Record a manual test',`<label class="field">Configuration<select name="setupId"><option value="">Actual current car (including unfinished work)</option>${setups.map(s=>`<option value="${s.id}">Saved historical snapshot: ${esc(s.name)} · ${date(s.date)}</option>`).join('')}</select></label>`+field('track','Track','')+field('lane','Lane','')+field('driver','Driver','')+field('voltage','Track voltage (V)','','number')+field('direction','Track direction','Unknown','select',['Unknown','Clockwise','Anticlockwise'])+field('magnetStatus','Traction magnets during this test','Unknown','select',['Unknown','With magnets','Without magnets'])+field('laps','Laps','','number')+field('best','Best lap (seconds)','','number')+field('average','Average lap (seconds)','','number')+field('notes','Observations','','textarea'),async values=>change('test.add',{carId:id,...values}));}
-function updateCarExportFormat(){const timing=$('#car-export-format')?.value==='timing';const detail=$('#car-export-paddock'),notice=$('#car-export-timing');if(detail){detail.hidden=timing;detail.querySelectorAll('input').forEach(el=>el.disabled=timing);}if(notice)notice.hidden=!timing;}
-function share(ids,network=false){
-  if(!ids.length){toast('Select at least one car.');return;}
-  const cars=ids.map(id=>db.cars.find(c=>c.id===id)).filter(Boolean);
-  const wishes=cars.some(slotforgeDomain.isWishlist);
-  if(cars.length!==ids.length)throw Error('Some selected cars are no longer available. Refresh and select them again.');
-  if(network&&wishes)throw Error('Export Wishlist entries as a Paddock car file.');
-  const format=network?'':'<label>Export format<select name="format" id="car-export-format"><option value="paddock">Paddock car file (.json)</option>'+(wishes?'':'<option value="timing">Timing car file (.json)</option>')+'</select></label>'+(wishes?'<p class="note info">Wishlist entries stay on Wishlist in the receiving Paddock collection. Timing exports are available for owned cars only.</p>':'');
-  const body='<p>'+cars.length+' car(s): '+cars.map(c=>esc(c.name)).join(', ')+'</p>'+format+'<div class="note info">Includes the main photograph and public car details. Ownership, storage, prices, private notes, custom fields and club inspections are excluded.</div><label class="check-row"><input name="photos" type="checkbox">Include additional photos (check them for private information)</label><div id="car-export-paddock"><label class="check-row"><input name="setups" type="checkbox">Include saved setup snapshots and their notes</label><p class="tiny muted">The recipient reviews the car file before accepting new cars or changes. Extra photos and setup notes may contain information you entered.</p></div>'+(network?'':'<div id="car-export-timing" hidden><p class="note mt">For Timing’s App Settings → Import and Export page. Includes maker, marque, model (or car name if no model is set), scale, race class, motor, rear tyres, gearing and weight. Timing creates new copies on every import; this does not link or update existing Timing cars.</p><p class="tiny muted">Saved setups, other technical fields, lap histories and simulation settings are not transferred. Use a Paddock car file to share more car details and optional setup snapshots.</p></div>');
-  modal(network?'Send cars to '+net.remote.name:'Export cars',body,async values=>{
-    const timing=!network&&values.format==='timing',options={photos:!!values.photos,setups:!timing&&!!values.setups};
-    if(network){await api('network','submit',{ids,options});toast('Submitted for club review.');}
-    else{const result=await api('file',timing?'export-timing':'export',{ids,options});if(result){exportChoosing=false;toast(timing?'Timing car export saved.':'Paddock car file saved.');}}
-  },network?'Send for review':'Export');
+function renderExchange() {
+  return renderExchangeDesign();
 }
-
-let exportChoosing=false;
-let actionBusy=false;
-document.addEventListener('click',async event=>{
-  const target=event.target.closest('[data-action]');if(!target)return;event.preventDefault();if(actionBusy||modalSaving)return;
-  const action=target.dataset.action,id=target.dataset.id;
-  try{
-    actionBusy=true;if(await carBrowserAction(action,id))return;if(await spreadsheetAction(action,id))return;if(await picturePreviewAction(action,id))return;if(await pictureAction(action,id))return;if(await historicalEvidenceAction(action,id))return;if(await sharedPaceAction(action,id)||await historyViewAction(action,id))return;if(await queryAction(action,id))return;
-    if(await mergeReviewAction(action,id))return;
-    if(action==='factory-specs'){useFactorySpecifications(id);return;}if(await rebuildAction(action,id))return;if(await slotcarResearchAction(action,id))return;if(await carComparisonAction(action,id))return;if(await workshopLibraryAction(action,id))return;if(await historyAction(action,id,target))return;if(await paceAction(action,id))return;if(await clubAction(action,id))return;if(await enhancementAction(action,id,target))return;if(await catalogueAction(action,id))return;if(await buildAction(action,id))return;if(overviewAction(action,id))return;if(await reviewAction(action,id))return;if(await interfaceAction(action,id))return;if(await showroomAction(action,id))return;if(await connectionSettingsAction(action))return;if(await autoBackupAction(action))return;if(await updateAction(action))return;if(await paletteAction(action))return;if(await appearanceAction(action,id))return;if(await inventoryAction(action,id))return;
-    switch(action){
-      case 'photo-fit':setPhotoFit(id);return;
-      case 'choose-export-cars':exportChoosing=true;page='Cars';carId=null;switchCarScope('collection');break;
-      case 'cancel-export-choice':exportChoosing=false;selected.clear();page='Import & Export';carId=null;break;
-      case 'nav':exportChoosing=false;page=id;carId=null;selected.clear();if(id==='Workshop')recentWorkLimit=3;if(id==='Parts')stockScope='owned';if(id==='Library'&&local()&&libraryTab!=='parts')await loadChoices();break;
-      case 'recent-work-more':case 'recent-work-less':{
-        recentWorkLimit=action==='recent-work-more'?recentWorkLimit+5:3;
-        if(local()&&db._view){await loadView();return;}$('#recent-work-content').innerHTML=renderRecentWork();
-        ($('#recent-work-content [data-action="'+action+'"]')||$('#recent-work-content button'))?.focus({preventScroll:true});return;
+function renderSettings() {
+  return renderSettingsDesign();
+}
+function fieldLabel(k) {
+  return (
+    {
+      number: 'Collection number',
+      maker: 'Slot-car manufacturer',
+      reference: 'Product reference',
+      marque: 'Real-car marque',
+      model: 'Real-car model',
+      usage: 'Usage labels',
+      raceClass: 'Racing class',
+      picture: 'Main photograph',
+      photos: 'Additional photos',
+      technical: 'Technical specifications',
+      name: 'Display name',
+      privateNotes: 'Private notes',
+      realHistory: 'Real Car History'
+    }[k] || k.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase())
+  );
+}
+function field(name, label, value = '', type = 'text', choices = []) {
+  if (type !== 'select') choices = choiceSuggestions(name, choices);
+  const dlid = 'dl-' + name.replace(/[^a-z0-9]/gi, '-'),
+    required = name === 'name' ? ' required' : '';
+  if (type === 'textarea')
+    return `<label class="field wide">${esc(label)}<textarea name="${esc(name)}">${esc(value)}</textarea></label>`;
+  if (type === 'select')
+    return `<label class="field">${esc(label)}<select name="${esc(name)}">${choices.map(v => `<option value="${esc(v)}" ${v === value ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select></label>`;
+  return `<label class="field">${esc(label)}<input name="${esc(name)}" type="${type}" value="${esc(value)}"${required}${type === 'number' ? (name.startsWith('custom.') ? ' step="any"' : ' step="any" min="0"') : ''}${choices.length ? ` list="${dlid}"` : ''}>${choices.length ? `<datalist id="${dlid}">${[...new Set(choices)].map(v => `<option value="${esc(v)}"></option>`).join('')}</datalist>` : ''}</label>`;
+}
+let modalSubmit = null,
+  modalPhoto = null,
+  modalSaving = false;
+function modal(title, body, onSubmit, submitLabel = 'Save') {
+  const dialog = $('#dialog');
+  if (dialog.open) dialog.close();
+  modalSubmit = onSubmit;
+  dialog.innerHTML = `<form id="modal-form"><div class="dialog-head"><h2>${esc(title)}</h2><button type="button" class="btn ghost small" data-action="close-modal" aria-label="Close">✕</button></div><div class="dialog-body">${body}<div class="form-error" role="alert" id="form-error" hidden></div></div><div class="dialog-footer"><button type="button" class="btn" data-action="close-modal">Cancel</button>${onSubmit ? `<button type="submit" class="btn primary">${esc(submitLabel)}</button>` : ''}</div></form>`;
+  dialog.showModal();
+  dialog.querySelector('input:not([type=hidden]),select,textarea')?.focus();
+}
+function simpleForm(title, fields, submit, label) {
+  modal(title, `<div class="form-grid">${fields}</div>`, submit, label);
+}
+function comma(value) {
+  return String(value || '')
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean);
+}
+const identityFields = [
+  'name',
+  'number',
+  'maker',
+  'reference',
+  'marque',
+  'model',
+  'scale',
+  'vehicleYear',
+  'releaseYear',
+  'livery',
+  'colours',
+  'raceNumber',
+  'team',
+  'drivers',
+  'event',
+  'edition',
+  'serial',
+  'origin',
+  'category',
+  'raceClass',
+  'description'
+];
+const ownershipFields = [
+  'owner',
+  'ownership',
+  'condition',
+  'packaging',
+  'completeness',
+  'location',
+  'availability',
+  'acquired',
+  'acquisitionMethod',
+  'seller',
+  'price',
+  'currency',
+  'costs',
+  'valuation',
+  'valuationDate',
+  'valuationSource',
+  'loanTo',
+  'loanDate',
+  'returnDate',
+  'disposalDate',
+  'disposalMethod',
+  'salePrice',
+  'inspection',
+  'privateNotes'
+];
+function editCar(id) {
+  const c = id
+    ? db.cars.find(c => c.id === id)
+    : {
+        technical: {},
+        factory: {},
+        custom: {},
+        usage: [],
+        tags: [],
+        collectionStatus: carListStatus(),
+        ownership: wishlistTab() ? 'Wanted' : 'Owned',
+        availability: 'Available',
+        scale: '1:32'
+      };
+  const wish = slotforgeDomain.isWishlist(c);
+  modalPhoto = c.picture || '';
+  const standard = {
+    scale: ['1:24', '1:32', '1:43', 'HO'],
+    origin: ['Factory-built', 'Kit-built', 'Scratch-built', 'Custom'],
+    ownership: ['Owned', 'Wanted', 'Ordered', 'Sold', 'Gifted', 'Disposed'],
+    availability: ['Available', 'On loan', 'In workshop'],
+    condition: ['New', 'Excellent', 'Good', 'Fair', 'Needs work'],
+    currency: ['EUR', 'GBP', 'USD'],
+    packaging: ['Original box', 'Replacement box', 'Unboxed']
+  };
+  const input = k =>
+    field(
+      k,
+      k === 'price' && wish ? 'Price' : fieldLabel(k),
+      c[k] || '',
+      ['description', 'privateNotes', 'completeness', 'inspection'].includes(k)
+        ? 'textarea'
+        : ['acquired', 'valuationDate', 'loanDate', 'returnDate', 'disposalDate'].includes(k)
+          ? 'date'
+          : ['price', 'costs', 'valuation', 'salePrice'].includes(k)
+            ? 'number'
+            : 'text',
+      [...(standard[k] || []), ...(db.choices[k] || []), ...db.cars.map(c => c[k]).filter(Boolean)]
+    );
+  const tech = prefix =>
+    Object.entries(techGroups)
+      .map(
+        ([title, fields]) =>
+          `<section class="form-section"><h3>${title}</h3><div class="form-grid">${fields.map(([k, label]) => field(prefix + '.' + k, label, c[prefix]?.[k] || '', k === 'technicalNotes' ? 'textarea' : PerformanceModel.choices[k] ? 'select' : 'text', PerformanceModel.choices[k] ? ['', ...PerformanceModel.choices[k]] : [...(db.choices['tech_' + k] || []), ...db.cars.flatMap(c => [c.technical?.[k], c.factory?.[k]]).filter(Boolean)])).join('')}${title === 'Motor & transmission' ? ratioEditor(prefix, c[prefix]) : ''}</div></section>`
+      )
+      .join('');
+  modal(
+    id ? 'Edit ' + c.name : wish ? 'Add to Wishlist' : 'Add a car',
+    `<div class="tabs">${['Identity', 'Collection', 'Technical', 'Factory', 'Custom'].map((t, i) => `<button type="button" class="${i === 0 ? 'active' : ''}" data-action="form-tab" data-id="${t}">${icon({ Identity: 'identity', Collection: 'box', Technical: 'gear', Factory: 'database', Custom: 'list' }[t])}${t}</button>`).join('')}</div><div data-form-panel="Identity"><p class="muted tiny">Only a display name is required. Type a new value or choose a previous entry.</p><div class="form-grid">${identityFields.map(input).join('')}${field('usage', 'Usage labels (comma separated)', (c.usage || []).join(', '), 'text', [...usageDefaults, ...(db.choices.usage || [])])}${field('tags', 'Tags (comma separated)', (c.tags || []).join(', '), 'text', db.choices.tags || [])}</div><div class="actions mt"><button type="button" class="btn" data-action="form-photo">Choose main photo</button><span id="photo-status" class="tiny muted">${modalPhoto ? 'Photo attached' : 'No photo yet'}</span></div></div><div data-form-panel="Collection" hidden><p class="muted tiny">Ownership, storage and purchase information stay out of car-sharing packages.</p><div class="form-grid">${ownershipFields.map(input).join('')}</div></div><div data-form-panel="Technical" hidden><p class="muted tiny">${wish ? 'Record the specifications you want or expect. These are plans, not installed inventory.' : 'Describe the configuration currently installed. Use Record work to journal physical changes; editing here records a correction.'}</p>${tech('technical')}</div><div data-form-panel="Factory" hidden><p class="muted tiny">Optional original specifications. These do not overwrite the current configuration.</p>${tech('factory')}</div><div data-form-panel="Custom" hidden><div class="form-grid">${db.customFields.map(f => field('custom.' + f.id, f.label, c.custom?.[f.id] || '', f.type === 'notes' ? 'textarea' : f.type === 'yesno' ? 'select' : f.type === 'choice' ? 'text' : f.type, f.type === 'yesno' ? ['', 'Yes', 'No'] : f.type === 'choice' ? db._view?.carCustomChoices?.[f.id] || db.cars.map(c => c.custom?.[f.id]).filter(Boolean) : [])).join('') || '<p class="muted">Add custom fields in Settings.</p>'}</div></div>`,
+    async values => {
+      const data = {
+        technical: {},
+        factory: {},
+        custom: {},
+        picture: modalPhoto,
+        ...(!id && wish ? { collectionStatus: 'wishlist' } : {})
+      };
+      for (const [k, v] of Object.entries(values)) {
+        if (k.includes('.')) {
+          const [group, key] = k.split('.');
+          data[group][key] = v;
+        } else data[k] = v;
       }
-      case 'reload-choices':await loadChoices();break;
-      case 'add-choice':addChoice();return;
-      case 'rename-choice':renameChoice(id);return;
-      case 'preview-choice':await previewChoice();return;
-      case 'bulk-edit':bulkEdit();return;
-      case 'preview-bulk':await previewBulk();return;
-      case 'configure-columns':configureColumns();return;
-      case 'column-up':case 'column-down':{const i=Number(id),j=action==='column-up'?i-1:i+1;if(j>=0&&j<columnDraft.length)[columnDraft[i],columnDraft[j]]=[columnDraft[j],columnDraft[i]];refreshColumnEditor();return;}
-      case 'column-remove':if(columnDraft[Number(id)]!=='name')columnDraft.splice(Number(id),1);refreshColumnEditor();return;
-      case 'column-add':{const value=$('#column-add-select').value;if(columnDraft.length>=16){toast('Choose no more than 16 columns.');return;}if(value&&!columnDraft.includes(value))columnDraft.push(value);refreshColumnEditor();return;}
-      case 'attach-document':await attachDocument(id);return;
-      case 'open-document':await api('file','document.open',{id});return;
-      case 'export-document':if(await api('file','document.export',{id}))toast('Document copy saved.');return;
-      case 'remove-document':removeDocument(id);return;
-      case 'add-car':editCar();return;
-      case 'edit-car':editCar(id);return;
-      case 'purchase-car':purchaseCar(id);return;
-      case 'google-car':{const c=car();if(!c||c.id!==id)throw Error('Open the car again before searching.');await api('carSearch',Object.fromEntries(['maker','marque','model','reference','name'].map(key=>[key,c[key]])));return;}
-      case 'open-car':page='Cars';carId=id;section='Overview';break;
-      case 'cars-tab':switchCarScope(id);break;
-      case 'back-cars':if(car()&&wishlistUi&&local())carScope=slotforgeDomain.isWishlist(car())?'wishlist':'collection';carId=null;break;
-      case 'section':section=id;break;
-      case 'mode':mode=id;break;
-      case 'usage':usage=usage.includes(id)?usage.filter(u=>u!==id):[...usage,id];selected.clear();carSavedView='';break;
-      case 'clear-selection':selected.clear();break;
-      case 'select-filtered':{const rows=filteredCars();if(rows.length>1000){toast('Narrow the filters to 1,000 cars or fewer.');return;}selected=new Set(rows.map(c=>c.id));break;}
-      case 'save-view':simpleForm('Save this collection view',field('name','View name',''),async values=>change('view.save',{...values,collectionStatus:carListStatus(),query,usage,matchAll,mode,sort,sortDirection,archived,columns:tableColumns}));return;
-      case 'delete-view':await change('view.delete',{id});break;
-      case 'car-more':{const c=db.cars.find(c=>c.id===id);modal('More · '+c.name,`<div class="stack">${!slotforgeDomain.isWishlist(c)&&!c.archived&&!c.rebuild?.to?btn('Start rebuild…','rebuild-start','',id):''}${mergeReviewAvailable?btn('Merge duplicate car…','merge-start','',id):''}${btn(slotforgeDomain.isWishlist(c)?'Duplicate Wishlist entry':'Duplicate as another physical car','duplicate-car','',id)}${btn('Export this car','export-car','',id)}${btn('Print / PDF…','reports','',id)}${btn('Photo framing…','photo-focus','',id)}${!slotforgeDomain.isWishlist(c)&&canSubmit()?btn('Send to '+esc(net.remote.name),'send-car','',id):''}${!c.rebuild?.to?btn(c.archived?'Restore from archive':'Archive car','archive-car','',id):''}${btn('Research slotcar…','slotcar-research','',id)}${btn('Permanently delete car…','car-delete','danger',id)}</div>`,null);return;}
-      case 'duplicate-car':carId=await change('car.duplicate',{id});$('#dialog').close();section='Overview';break;
-      case 'archive-car':{const c=db.cars.find(c=>c.id===id);await change('car.archive',{id,revision:c.revision});$('#dialog').close();carId=null;break;}
-      case 'close-modal':$('#dialog').close();modalSubmit=null;modalPhoto=null;return;
-      case 'form-tab':for(const e of document.querySelectorAll('[data-form-panel]'))e.hidden=e.dataset.formPanel!==id;for(const e of document.querySelectorAll('[data-action="form-tab"]'))e.classList.toggle('active',e.dataset.id===id);return;
-      case 'form-photo':{const result=await api('file','image');if(result){modalPhoto=result.data;$('#photo-status').textContent=result.name;}return;}
-      case 'main-photo':case 'add-photo':{const c=db.cars.find(c=>c.id===id),revision=c.revision,result=await api('file','image');if(!result)return;const data=action==='main-photo'?{picture:result.data}:{photos:[...(c.photos||[]),{id:crypto.randomUUID(),...result}]};await change('car.save',{id,revision,data});break;}
-      case 'delete-photo':{const c=car();await change('car.save',{id:c.id,revision:c.revision,data:{photos:c.photos.filter(p=>p.id!==id)}});break;}
-      case 'parts-tab':if(id==='Build from Scratch')page=id;else partsTab=id;break;
-      case 'add-assembly':createAssembly();return;
-      case 'assembly-photo':await editAssemblyPhoto(id);return;
-      case 'assembly-photo-view':viewAssemblyPhoto(id);return;
-      case 'assembly-photo-pick':await pickAssemblyPhoto();return;
-      case 'assembly-photo-clear':if(assemblyPhotoState&&!assemblyPhotoState.busy){assemblyPhotoState.picture='';refreshAssemblyPhoto();}return;
-      case 'assembly-row':if(assemblyRowCount<100)$('#assembly-rows').insertAdjacentHTML('beforeend',assemblyRow());return;
-      case 'install-assembly':installAssemblyDialog(id);return;
-      case 'remove-assembly':removeAssemblyDialog(id);return;
-      case 'dismantle-assembly':dismantleAssemblyDialog(id);return;
-      case 'start-job':startJob(id);return;
-      case 'new-job':newWorkshopJob();return;
-      case 'job-note':recordJobProgress();return;
-      case 'open-job':await openJob(id);return;
-      case 'jobs-back':workshopJob=null;toolboxTab='Jobs';break;
-      case 'job-fit':case 'job-remove':case 'job-setting':case 'finish-job':case 'cancel-job':jobAction(action,id);return;
-      case 'replace-assembly':replaceAssemblyDialog(id);return;
-      case 'apply-setup':await openApplySetup(id);return;
-      case 'preview-setup':await previewSetup();return;
-      case 'add-part':editPart();return;
-      case 'edit-part':editPart(id);return;
-      case 'select-part':partId=id;break;
-      case 'install-part':installPart(id,null);return;
-      case 'install-stock':installPart(null,id);return;
-      case 'remove-part':simpleForm('Remove installed component',field('destination','Destination','spares','select',['spares','discarded'])+field('location','Return location','Used spares'),async values=>change('part.remove',{id,...values}),'Record removal');return;
-      case 'save-setup':await saveSetup(id);return;
-      case 'compare-setup':openSetupComparison(id);return;
+      data.usage = comma(values.usage);
+      data.tags = comma(values.tags);
+      const result = await change('car.save', { id, revision: c.revision, data });
+      carId = result;
+      page = 'Cars';
+      section = 'Overview';
+    },
+    id ? 'Save changes' : wish ? 'Add to Wishlist' : 'Add car'
+  );
+}
+function purchaseCar(id) {
+  const c = db.cars.find(c => c.id === id);
+  if (!wishlistUi || !c || !slotforgeDomain.isWishlist(c) || c.archived)
+    throw Error('Open an active Wishlist car to mark it purchased.');
+  const revision = c.revision,
+    review = !!db.club;
+  modal(
+    'Mark purchased · ' + c.name,
+    `<p>${review ? 'This purchase will wait for approval in Dealership Review. The car stays on Wishlist until approved.' : 'Move this car to My Cars and the Showroom.'} Photos, specifications and history stay with the same car.</p><p class="muted tiny">Confirm or update the purchase details below. Ownership will become Owned.</p><div class="form-grid">${field('acquired', 'Purchase date (optional)', c.acquired || '', 'date')}${field('seller', 'Seller (optional)', c.seller || '')}${field('price', 'Purchase price (optional)', c.price || '', 'number')}${field('currency', 'Currency', c.currency || '', 'text', ['EUR', 'GBP', 'USD', ...(db.choices.currency || [])])}</div><label class="check-row mt"><input type="checkbox" name="confirmed" required>I have purchased this car.</label>`,
+    async values => {
+      await change('car.purchase', {
+        id,
+        revision,
+        confirmed: !!values.confirmed,
+        details: Object.fromEntries(['acquired', 'seller', 'price', 'currency'].map(k => [k, values[k]]))
+      });
+      switchCarScope('collection');
+      carId = id;
+      page = 'Cars';
+      section = 'Overview';
+      toast('Purchased car added to My Cars.');
+    },
+    review ? 'Submit purchase for Review' : 'Mark purchased'
+  );
+}
+function installPart(fixedCarId, fixedPartId) {
+  const cars = db.cars.filter(slotforgeDomain.activeCar),
+    parts = db.parts.filter(p => available(p) > 0);
+  if (!cars.length || !parts.length) {
+    toast('Add a car and available stock before installing a part.');
+    return;
+  }
+  const options = (items, value, label) =>
+    `<select name="${value}">${items.map(i => `<option value="${i.id}" ${(value === 'carId' ? fixedCarId : fixedPartId) === i.id ? 'selected' : ''}>${esc(label(i))}</option>`).join('')}</select>`;
+  simpleForm(
+    'Install from inventory',
+    `<label class="field">Car${options(cars, 'carId', c => c.name)}</label><label class="field">Available part${options(parts, 'partId', p => p.name + ' · ' + available(p) + ' available')}</label>` +
+      field('quantity', 'Quantity', 1, 'number') +
+      field('position', 'Position / description', '') +
+      `<label class="field">Update technical field<select name="field"><option value="">Inventory only</option>${Object.entries(
+        techLabels
+      )
+        .filter(([k]) => slotforgeDomain.componentFields.includes(k))
+        .map(([k, v]) => `<option value="${k}">${v}</option>`)
+        .join('')}</select></label>`,
+    async values => {
+      await change('part.install', values);
+    },
+    'Install part'
+  );
+}
+function addWork(id) {
+  const c = db.cars.find(c => c.id === id),
+    revision = db.revision;
+  modal(
+    'Record work · ' + c.name,
+    jobCategoryField('maintenance') +
+      '<div id="record-work-fields"><p class="muted">Record work you have already completed. To plan future work, create a Workshop job.</p><div class="form-grid">' +
+      field('title', 'Work performed', '') +
+      field('performedDate', 'Date', slotforgeDomain.today(), 'date') +
+      field('notes', 'Work, parts and observations', '', 'textarea') +
+      '</div><details class="shopping-optional"><summary>Optional service reminder</summary><div class="form-grid">' +
+      field(
+        'task',
+        'Reminder task (reuse the same name)',
+        '',
+        'text',
+        db.events.filter(e => e.carId === id && e.task).map(e => e.task)
+      ) +
+      field('nextDue', 'Next due date', '', 'date') +
+      field('nextDueLaps', 'Or after this many laps', '', 'number').replace('step="any" min="0"', 'step="1" min="1"') +
+      '<p class="tiny muted wide">Laps from SlotForge Timing races and manual track tests count from the start of the day of this work (do not also record Timing races as manual tests). Whichever comes first makes the reminder due.</p>' +
+      '</div></details></div><div id="record-rebuild-fields" class="note info mt" hidden>Start a rebuild project in Workshop. The original car and its history stay intact. Choose parts later in the rebuild editor; inventory changes only when the rebuild is completed.</div>',
+    async values => {
+      if (values.category === 'rebuild') {
+        await openRebuildJob(await change('rebuild.start', { carId: id, revision }));
+        return;
+      }
+      await change('work.add', {
+        carId: id,
+        revision,
+        type:
+          values.category === 'maintenance' || values.nextDue || values.nextDueLaps || values.task?.trim()
+            ? 'maintenance'
+            : 'modification',
+        ...values
+      });
+    },
+    'Save work'
+  );
+  $('#dialog [name=title]').required = true;
+  $('#dialog [name=title]').maxLength = 200;
+  $('#dialog [name=performedDate]').required = true;
+  $('#dialog [name=category]').id = 'record-work-category';
+}
+function updateRecordWork() {
+  const rebuild = $('#record-work-category').value === 'rebuild';
+  $('#record-work-fields').hidden = rebuild;
+  $('#record-rebuild-fields').hidden = !rebuild;
+  for (const el of $('#record-work-fields').querySelectorAll('input,textarea,select')) el.disabled = rebuild;
+  $('#dialog button[type=submit]').textContent = rebuild ? 'Start rebuild' : 'Save work';
+}
+async function saveSetup(id) {
+  await setupSuggestionEditor(id);
+}
+function addTest(id) {
+  const setups = db.setups.filter(s => s.carId === id);
+  simpleForm(
+    'Record a manual test',
+    `<label class="field">Configuration<select name="setupId"><option value="">Actual current car (including unfinished work)</option>${setups.map(s => `<option value="${s.id}">Saved historical snapshot: ${esc(s.name)} · ${date(s.date)}</option>`).join('')}</select></label>` +
+      field('track', 'Track', '') +
+      field('lane', 'Lane', '') +
+      field('driver', 'Driver', '') +
+      field('voltage', 'Track voltage (V)', '', 'number') +
+      field('direction', 'Track direction', 'Unknown', 'select', ['Unknown', 'Clockwise', 'Anticlockwise']) +
+      field('magnetStatus', 'Traction magnets during this test', 'Unknown', 'select', [
+        'Unknown',
+        'With magnets',
+        'Without magnets'
+      ]) +
+      field('laps', 'Laps', '', 'number') +
+      field('best', 'Best lap (seconds)', '', 'number') +
+      field('average', 'Average lap (seconds)', '', 'number') +
+      field('notes', 'Observations', '', 'textarea'),
+    async values => change('test.add', { carId: id, ...values })
+  );
+}
+function updateCarExportFormat() {
+  const timing = $('#car-export-format')?.value === 'timing';
+  const detail = $('#car-export-paddock'),
+    notice = $('#car-export-timing');
+  if (detail) {
+    detail.hidden = timing;
+    detail.querySelectorAll('input').forEach(el => (el.disabled = timing));
+  }
+  if (notice) notice.hidden = !timing;
+}
+function share(ids, network = false) {
+  if (!ids.length) {
+    toast('Select at least one car.');
+    return;
+  }
+  const cars = ids.map(id => db.cars.find(c => c.id === id)).filter(Boolean);
+  const wishes = cars.some(slotforgeDomain.isWishlist);
+  if (cars.length !== ids.length)
+    throw Error('Some selected cars are no longer available. Refresh and select them again.');
+  if (network && wishes) throw Error('Export Wishlist entries as a Paddock car file.');
+  const format = network
+    ? ''
+    : '<label>Export format<select name="format" id="car-export-format"><option value="paddock">Paddock car file (.json)</option>' +
+      (wishes ? '' : '<option value="timing">Timing car file (.json)</option>') +
+      '</select></label>' +
+      (wishes
+        ? '<p class="note info">Wishlist entries stay on Wishlist in the receiving Paddock collection. Timing exports are available for owned cars only.</p>'
+        : '');
+  const body =
+    '<p>' +
+    cars.length +
+    ' car(s): ' +
+    cars.map(c => esc(c.name)).join(', ') +
+    '</p>' +
+    format +
+    '<div class="note info">Includes the main photograph and public car details. Ownership, storage, prices, private notes, custom fields and club inspections are excluded.</div><label class="check-row"><input name="photos" type="checkbox">Include additional photos (check them for private information)</label><div id="car-export-paddock"><label class="check-row"><input name="setups" type="checkbox">Include saved setup snapshots and their notes</label><p class="tiny muted">The recipient reviews the car file before accepting new cars or changes. Extra photos and setup notes may contain information you entered.</p></div>' +
+    (network
+      ? ''
+      : '<div id="car-export-timing" hidden><p class="note mt">For Timing’s App Settings → Import and Export page. Includes maker, marque, model (or car name if no model is set), scale, race class, motor, rear tyres, gearing and weight. Timing creates new copies on every import; this does not link or update existing Timing cars.</p><p class="tiny muted">Saved setups, other technical fields, lap histories and simulation settings are not transferred. Use a Paddock car file to share more car details and optional setup snapshots.</p></div>');
+  modal(
+    network ? 'Send cars to ' + net.remote.name : 'Export cars',
+    body,
+    async values => {
+      const timing = !network && values.format === 'timing',
+        options = { photos: !!values.photos, setups: !timing && !!values.setups };
+      if (network) {
+        await api('network', 'submit', { ids, options });
+        toast('Submitted for club review.');
+      } else {
+        const result = await api('file', timing ? 'export-timing' : 'export', { ids, options });
+        if (result) {
+          exportChoosing = false;
+          toast(timing ? 'Timing car export saved.' : 'Paddock car file saved.');
+        }
+      }
+    },
+    network ? 'Send for review' : 'Export'
+  );
+}
 
-      case 'add-work':addWork(id);return;
-      case 'timing-session':await openTimingSession(id);return;
-      case 'original-history-list':await openOriginalHistory(id);return;
-      case 'original-history-open':if(originalHistoryState)await openOriginalHistory(originalHistoryState.carId,id);return;
-      case 'original-history-prev':await changeOriginalHistory(-1);return;
-      case 'original-history-next':await changeOriginalHistory(1);return;
-      case 'timing-list-prev':timingListPage=Math.max(0,timingListPage-1);break;
-      case 'timing-list-next':timingListPage++;break;
-      case 'timing-laps-prev':await changeLapPage(-1);return;
-      case 'timing-laps-next':await changeLapPage(1);return;
-      case 'test-snapshot':{const t=db.tests.find(t=>t.id===id);modal('Recorded test configuration',snapshotDetails(t),null);return;}
-      case 'add-test':addTest(id);return;
-      case 'export-selected':share([...selected]);return;
-      case 'send-selected':share([...selected],true);return;
-      case 'export-car':share([id]);return;
-      case 'send-car':share([id],true);return;
-      case 'backup':{const result=await api('file','backup');if(result)toast('Complete backup saved.');return;}
-      case 'backup-previous':{const result=await api('file','backup-previous');if(result)toast('Previous revision exported as a complete backup.');return;}
-      case 'restore-backup':{const result=await api('file','restore');if(result){db=result;switchCollection('local');page='Overview';partId=null;const restored=await readScreen();net=restored.network;collectionMeta=restored.collection;tableColumns=[...db.settings.columns];choiceCatalogue=null;remote=null;switchCollection('local');partId=null;partQuery='';partCategory='';partTypeFilter='';reviewId=null;reviewCarId=null;partsTab='Stock';buildContext='';catalogueReview=null;catalogueSelected.clear();toast('Backup restored.');}break;}
-      case 'import':{const result=await api('file','import');if(result){acceptSnapshot(result.data);clubQueued(result);switchCollection('local');page='Review';reviewTab='Incoming cars';if(result.result!=='duplicate'){reviewId=result.result;reviewCarId=null;}toast(result.result==='duplicate'?'This package has already been received.':result.importKind==='timing'?`${result.carCount} Timing cars added to the review inbox.`:'Package added to the review inbox.');}break;}
-      case 'preferences':{const revision=db.revision;simpleForm('Database preferences',field('name','Database name',db.settings.name)+`<label class="field">Theme<select name="theme">${themeOptions(db.settings.theme)}</select></label>`,async values=>change('settings.save',{...values,revision}));return;}
-      case 'custom-add':simpleForm('Add a custom car field',field('label','Field name','')+field('type','Field type','text','select',['text','choice','number','date','yesno','notes']),async values=>change('custom.add',values));return;
+let exportChoosing = false;
+let actionBusy = false;
+document.addEventListener('click', async event => {
+  const target = event.target.closest('[data-action]');
+  if (!target) return;
+  event.preventDefault();
+  if (actionBusy || modalSaving) return;
+  const action = target.dataset.action,
+    id = target.dataset.id;
+  try {
+    actionBusy = true;
+    if (await carBrowserAction(action, id)) return;
+    if (await spreadsheetAction(action, id)) return;
+    if (await picturePreviewAction(action, id)) return;
+    if (await pictureAction(action, id)) return;
+    if (await historicalEvidenceAction(action, id)) return;
+    if ((await sharedPaceAction(action, id)) || (await historyViewAction(action, id))) return;
+    if (await queryAction(action, id)) return;
+    if (await mergeReviewAction(action, id)) return;
+    if (action === 'factory-specs') {
+      useFactorySpecifications(id);
+      return;
+    }
+    if (await rebuildAction(action, id)) return;
+    if (await slotcarResearchAction(action, id)) return;
+    if (await carComparisonAction(action, id)) return;
+    if (await workshopLibraryAction(action, id)) return;
+    if (await historyAction(action, id, target)) return;
+    if (await paceAction(action, id)) return;
+    if (await clubAction(action, id)) return;
+    if (await enhancementAction(action, id, target)) return;
+    if (await catalogueAction(action, id)) return;
+    if (await buildAction(action, id)) return;
+    if (overviewAction(action, id)) return;
+    if (await reviewAction(action, id)) return;
+    if (await interfaceAction(action, id)) return;
+    if (await showroomAction(action, id)) return;
+    if (await connectionSettingsAction(action)) return;
+    if (await autoBackupAction(action)) return;
+    if (await updateAction(action)) return;
+    if (await paletteAction(action)) return;
+    if (await appearanceAction(action, id)) return;
+    if (await inventoryAction(action, id)) return;
+    switch (action) {
+      case 'photo-fit':
+        setPhotoFit(id);
+        return;
+      case 'choose-export-cars':
+        exportChoosing = true;
+        page = 'Cars';
+        carId = null;
+        switchCarScope('collection');
+        break;
+      case 'cancel-export-choice':
+        exportChoosing = false;
+        selected.clear();
+        page = 'Import & Export';
+        carId = null;
+        break;
+      case 'nav':
+        exportChoosing = false;
+        page = id;
+        carId = null;
+        selected.clear();
+        if (id === 'Workshop') recentWorkLimit = 3;
+        if (id === 'Parts') stockScope = 'owned';
+        if (id === 'Library' && local() && libraryTab !== 'parts') await loadChoices();
+        break;
+      case 'recent-work-more':
+      case 'recent-work-less': {
+        recentWorkLimit = action === 'recent-work-more' ? recentWorkLimit + 5 : 3;
+        if (local() && db._view) {
+          await loadView();
+          return;
+        }
+        $('#recent-work-content').innerHTML = renderRecentWork();
+        ($('#recent-work-content [data-action="' + action + '"]') || $('#recent-work-content button'))?.focus({
+          preventScroll: true
+        });
+        return;
+      }
+      case 'reload-choices':
+        await loadChoices();
+        break;
+      case 'add-choice':
+        addChoice();
+        return;
+      case 'rename-choice':
+        renameChoice(id);
+        return;
+      case 'preview-choice':
+        await previewChoice();
+        return;
+      case 'bulk-edit':
+        bulkEdit();
+        return;
+      case 'preview-bulk':
+        await previewBulk();
+        return;
+      case 'configure-columns':
+        configureColumns();
+        return;
+      case 'column-up':
+      case 'column-down': {
+        const i = Number(id),
+          j = action === 'column-up' ? i - 1 : i + 1;
+        if (j >= 0 && j < columnDraft.length) [columnDraft[i], columnDraft[j]] = [columnDraft[j], columnDraft[i]];
+        refreshColumnEditor();
+        return;
+      }
+      case 'column-remove':
+        if (columnDraft[Number(id)] !== 'name') columnDraft.splice(Number(id), 1);
+        refreshColumnEditor();
+        return;
+      case 'column-add': {
+        const value = $('#column-add-select').value;
+        if (columnDraft.length >= 16) {
+          toast('Choose no more than 16 columns.');
+          return;
+        }
+        if (value && !columnDraft.includes(value)) columnDraft.push(value);
+        refreshColumnEditor();
+        return;
+      }
+      case 'attach-document':
+        await attachDocument(id);
+        return;
+      case 'open-document':
+        await api('file', 'document.open', { id });
+        return;
+      case 'export-document':
+        if (await api('file', 'document.export', { id })) toast('Document copy saved.');
+        return;
+      case 'remove-document':
+        removeDocument(id);
+        return;
+      case 'add-car':
+        editCar();
+        return;
+      case 'edit-car':
+        editCar(id);
+        return;
+      case 'purchase-car':
+        purchaseCar(id);
+        return;
+      case 'google-car': {
+        const c = car();
+        if (!c || c.id !== id) throw Error('Open the car again before searching.');
+        await api(
+          'carSearch',
+          Object.fromEntries(['maker', 'marque', 'model', 'reference', 'name'].map(key => [key, c[key]]))
+        );
+        return;
+      }
+      case 'open-car':
+        page = 'Cars';
+        carId = id;
+        section = 'Overview';
+        break;
+      case 'cars-tab':
+        switchCarScope(id);
+        break;
+      case 'back-cars':
+        if (car() && wishlistUi && local()) carScope = slotforgeDomain.isWishlist(car()) ? 'wishlist' : 'collection';
+        carId = null;
+        break;
+      case 'section':
+        section = id;
+        break;
+      case 'mode':
+        mode = id;
+        break;
+      case 'usage':
+        usage = usage.includes(id) ? usage.filter(u => u !== id) : [...usage, id];
+        selected.clear();
+        carSavedView = '';
+        break;
+      case 'clear-selection':
+        selected.clear();
+        break;
+      case 'select-filtered': {
+        const rows = filteredCars();
+        if (rows.length > 1000) {
+          toast('Narrow the filters to 1,000 cars or fewer.');
+          return;
+        }
+        selected = new Set(rows.map(c => c.id));
+        break;
+      }
+      case 'save-view':
+        simpleForm('Save this collection view', field('name', 'View name', ''), async values =>
+          change('view.save', {
+            ...values,
+            collectionStatus: carListStatus(),
+            query,
+            usage,
+            matchAll,
+            mode,
+            sort,
+            sortDirection,
+            archived,
+            columns: tableColumns
+          })
+        );
+        return;
+      case 'delete-view':
+        await change('view.delete', { id });
+        break;
+      case 'car-more': {
+        const c = db.cars.find(c => c.id === id);
+        modal(
+          'More · ' + c.name,
+          `<div class="stack">${!slotforgeDomain.isWishlist(c) && !c.archived && !c.rebuild?.to ? btn('Start rebuild…', 'rebuild-start', '', id) : ''}${mergeReviewAvailable ? btn('Merge duplicate car…', 'merge-start', '', id) : ''}${btn(slotforgeDomain.isWishlist(c) ? 'Duplicate Wishlist entry' : 'Duplicate as another physical car', 'duplicate-car', '', id)}${btn('Export this car', 'export-car', '', id)}${btn('Print / PDF…', 'reports', '', id)}${btn('Photo framing…', 'photo-focus', '', id)}${!slotforgeDomain.isWishlist(c) && canSubmit() ? btn('Send to ' + esc(net.remote.name), 'send-car', '', id) : ''}${!c.rebuild?.to ? btn(c.archived ? 'Restore from archive' : 'Archive car', 'archive-car', '', id) : ''}${btn('Research slotcar…', 'slotcar-research', '', id)}${btn('Permanently delete car…', 'car-delete', 'danger', id)}</div>`,
+          null
+        );
+        return;
+      }
+      case 'duplicate-car':
+        carId = await change('car.duplicate', { id });
+        $('#dialog').close();
+        section = 'Overview';
+        break;
+      case 'archive-car': {
+        const c = db.cars.find(c => c.id === id);
+        await change('car.archive', { id, revision: c.revision });
+        $('#dialog').close();
+        carId = null;
+        break;
+      }
+      case 'close-modal':
+        $('#dialog').close();
+        modalSubmit = null;
+        modalPhoto = null;
+        return;
+      case 'form-tab':
+        for (const e of document.querySelectorAll('[data-form-panel]')) e.hidden = e.dataset.formPanel !== id;
+        for (const e of document.querySelectorAll('[data-action="form-tab"]'))
+          e.classList.toggle('active', e.dataset.id === id);
+        return;
+      case 'form-photo': {
+        const result = await api('file', 'image');
+        if (result) {
+          modalPhoto = result.data;
+          $('#photo-status').textContent = result.name;
+        }
+        return;
+      }
+      case 'main-photo':
+      case 'add-photo': {
+        const c = db.cars.find(c => c.id === id),
+          revision = c.revision,
+          result = await api('file', 'image');
+        if (!result) return;
+        const data =
+          action === 'main-photo'
+            ? { picture: result.data }
+            : { photos: [...(c.photos || []), { id: crypto.randomUUID(), ...result }] };
+        await change('car.save', { id, revision, data });
+        break;
+      }
+      case 'delete-photo': {
+        const c = car();
+        await change('car.save', {
+          id: c.id,
+          revision: c.revision,
+          data: { photos: c.photos.filter(p => p.id !== id) }
+        });
+        break;
+      }
+      case 'parts-tab':
+        if (id === 'Build from Scratch') page = id;
+        else partsTab = id;
+        break;
+      case 'add-assembly':
+        createAssembly();
+        return;
+      case 'assembly-photo':
+        await editAssemblyPhoto(id);
+        return;
+      case 'assembly-photo-view':
+        viewAssemblyPhoto(id);
+        return;
+      case 'assembly-photo-pick':
+        await pickAssemblyPhoto();
+        return;
+      case 'assembly-photo-clear':
+        if (assemblyPhotoState && !assemblyPhotoState.busy) {
+          assemblyPhotoState.picture = '';
+          refreshAssemblyPhoto();
+        }
+        return;
+      case 'assembly-row':
+        if (assemblyRowCount < 100) $('#assembly-rows').insertAdjacentHTML('beforeend', assemblyRow());
+        return;
+      case 'install-assembly':
+        installAssemblyDialog(id);
+        return;
+      case 'remove-assembly':
+        removeAssemblyDialog(id);
+        return;
+      case 'dismantle-assembly':
+        dismantleAssemblyDialog(id);
+        return;
+      case 'start-job':
+        startJob(id);
+        return;
+      case 'new-job':
+        newWorkshopJob();
+        return;
+      case 'job-note':
+        recordJobProgress();
+        return;
+      case 'open-job':
+        await openJob(id);
+        return;
+      case 'jobs-back':
+        workshopJob = null;
+        toolboxTab = 'Jobs';
+        break;
+      case 'job-fit':
+      case 'job-remove':
+      case 'job-setting':
+      case 'finish-job':
+      case 'cancel-job':
+        jobAction(action, id);
+        return;
+      case 'replace-assembly':
+        replaceAssemblyDialog(id);
+        return;
+      case 'apply-setup':
+        await openApplySetup(id);
+        return;
+      case 'preview-setup':
+        await previewSetup();
+        return;
+      case 'add-part':
+        editPart();
+        return;
+      case 'edit-part':
+        editPart(id);
+        return;
+      case 'select-part':
+        partId = id;
+        break;
+      case 'install-part':
+        installPart(id, null);
+        return;
+      case 'install-stock':
+        installPart(null, id);
+        return;
+      case 'remove-part':
+        simpleForm(
+          'Remove installed component',
+          field('destination', 'Destination', 'spares', 'select', ['spares', 'discarded']) +
+            field('location', 'Return location', 'Used spares'),
+          async values => change('part.remove', { id, ...values }),
+          'Record removal'
+        );
+        return;
+      case 'save-setup':
+        await saveSetup(id);
+        return;
+      case 'compare-setup':
+        openSetupComparison(id);
+        return;
 
-      case 'refresh-inbox':{const r=await readScreen();db=r.data;net=r.network;break;}
-      case 'portal-toggle':if(!local())throw Error('Open your local collection to use Paddock Portal.');net=await api('portal',net.portal?.enabled?'stop':'start',{databaseId:db.id});break;
-      case 'local-library-retry':net=await api('network','local-retry');break;
-    case 'local-library-access':net=await api('network','local-access',{enabled:!net.localLibrary?.enabled});break;
-      case 'start-sharing':net=await api('network','start');toast('Sharing started. Give the address and code to trusted club members.');break;
-      case 'stop-sharing':net=await api('network','stop');break;
-      case 'connect':connectDialog();return;
-      case 'discover-hosts':await findHosts();return;
-      case 'connect-discovered':connectDialog(discoveredHosts[Number(id)].address);return;
-      case 'toggle-submissions':net=await api('network','controls',{allowSubmissions:!net.allowSubmissions});break;
-      case 'set-host-password':hostPasswordDialog(id);return;
-      case 'rotate-codes':modal('Revoke connection codes and passwords', '<p>Replace all three codes or passwords with random codes now. Existing members will need a new code for future reads or submissions. Public data they have already read cannot be withdrawn.</p>',async()=>{net=await api('network','controls',{rotate:true});},'Revoke and replace codes');return;
-      case 'toggle-auto':net=await api('network','auto',{enabled:!net.remote.autoRefresh});break;
-      case 'retry-submission':{const result=await api('network','retry');net=(await readScreen()).network;toast(result.duplicate?'The host had already received this submission.':'Submitted for club review.');break;}
-      case 'discard-submission':modal('Discard submission retry copy','<p>This only clears the local retry copy. It does not withdraw a package the host may already have received. Check with the host before submitting a new copy.</p>',async()=>{net=await api('network','discard');},'Discard retry copy');return;
-      case 'browse-remote':switchCollection('remote');page='Cars';break;
-      case 'refresh-remote':{const result=await api('network','refresh');remote=result.data;net=result.status;toast('Shared collection refreshed.');break;}
-      case 'disconnect':net=await api('network','disconnect');remote=null;switchCollection('local');break;
-      case 'review-select':reviewId=id;reviewCarId=target.dataset.car;break;
-      case 'accept-review':case 'reject-review':{const fields=[...document.querySelectorAll('[data-review-field]:checked')].map(e=>e.dataset.reviewField);await change('submission.review',{id:reviewId,carId:reviewCarId,decision:action==='accept-review'?'accept':'reject',fields,stockOverrides:[...document.querySelectorAll('[data-stock-override]:checked')].map(e=>e.dataset.stockOverride),revision:Number($('#review-revision').value),note:$('#review-note').value,includeSetups:!!$('#review-setups')?.checked});reviewCarId=null;toast(action==='accept-review'?'Selected changes accepted.':'Submission rejected.');break;}
-      default:return;
+      case 'add-work':
+        addWork(id);
+        return;
+      case 'timing-session':
+        await openTimingSession(id);
+        return;
+      case 'original-history-list':
+        await openOriginalHistory(id);
+        return;
+      case 'original-history-open':
+        if (originalHistoryState) await openOriginalHistory(originalHistoryState.carId, id);
+        return;
+      case 'original-history-prev':
+        await changeOriginalHistory(-1);
+        return;
+      case 'original-history-next':
+        await changeOriginalHistory(1);
+        return;
+      case 'timing-list-prev':
+        timingListPage = Math.max(0, timingListPage - 1);
+        break;
+      case 'timing-list-next':
+        timingListPage++;
+        break;
+      case 'timing-laps-prev':
+        await changeLapPage(-1);
+        return;
+      case 'timing-laps-next':
+        await changeLapPage(1);
+        return;
+      case 'test-snapshot': {
+        const t = db.tests.find(t => t.id === id);
+        modal('Recorded test configuration', snapshotDetails(t), null);
+        return;
+      }
+      case 'add-test':
+        addTest(id);
+        return;
+      case 'export-selected':
+        share([...selected]);
+        return;
+      case 'send-selected':
+        share([...selected], true);
+        return;
+      case 'export-car':
+        share([id]);
+        return;
+      case 'send-car':
+        share([id], true);
+        return;
+      case 'backup': {
+        const result = await api('file', 'backup');
+        if (result) toast('Complete backup saved.');
+        return;
+      }
+      case 'backup-previous': {
+        const result = await api('file', 'backup-previous');
+        if (result) toast('Previous revision exported as a complete backup.');
+        return;
+      }
+      case 'restore-backup': {
+        const result = await api('file', 'restore');
+        if (result) {
+          db = result;
+          switchCollection('local');
+          page = 'Overview';
+          partId = null;
+          const restored = await readScreen();
+          net = restored.network;
+          collectionMeta = restored.collection;
+          tableColumns = [...db.settings.columns];
+          choiceCatalogue = null;
+          remote = null;
+          switchCollection('local');
+          partId = null;
+          partQuery = '';
+          partCategory = '';
+          partTypeFilter = '';
+          reviewId = null;
+          reviewCarId = null;
+          partsTab = 'Stock';
+          buildContext = '';
+          catalogueReview = null;
+          catalogueSelected.clear();
+          toast('Backup restored.');
+        }
+        break;
+      }
+      case 'import': {
+        const result = await api('file', 'import');
+        if (result) {
+          acceptSnapshot(result.data);
+          clubQueued(result);
+          switchCollection('local');
+          page = 'Review';
+          reviewTab = 'Incoming cars';
+          if (result.result !== 'duplicate') {
+            reviewId = result.result;
+            reviewCarId = null;
+          }
+          toast(
+            result.result === 'duplicate'
+              ? 'This package has already been received.'
+              : result.importKind === 'timing'
+                ? `${result.carCount} Timing cars added to the review inbox.`
+                : 'Package added to the review inbox.'
+          );
+        }
+        break;
+      }
+      case 'preferences': {
+        const revision = db.revision;
+        simpleForm(
+          'Database preferences',
+          field('name', 'Database name', db.settings.name) +
+            `<label class="field">Theme<select name="theme">${themeOptions(db.settings.theme)}</select></label>`,
+          async values => change('settings.save', { ...values, revision })
+        );
+        return;
+      }
+      case 'custom-add':
+        simpleForm(
+          'Add a custom car field',
+          field('label', 'Field name', '') +
+            field('type', 'Field type', 'text', 'select', ['text', 'choice', 'number', 'date', 'yesno', 'notes']),
+          async values => change('custom.add', values)
+        );
+        return;
+
+      case 'refresh-inbox': {
+        const r = await readScreen();
+        db = r.data;
+        net = r.network;
+        break;
+      }
+      case 'portal-toggle':
+        if (!local()) throw Error('Open your local collection to use Paddock Portal.');
+        net = await api('portal', net.portal?.enabled ? 'stop' : 'start', { databaseId: db.id });
+        break;
+      case 'local-library-retry':
+        net = await api('network', 'local-retry');
+        break;
+      case 'local-library-access':
+        net = await api('network', 'local-access', { enabled: !net.localLibrary?.enabled });
+        break;
+      case 'start-sharing':
+        net = await api('network', 'start');
+        toast('Sharing started. Give the address and code to trusted club members.');
+        break;
+      case 'stop-sharing':
+        net = await api('network', 'stop');
+        break;
+      case 'connect':
+        connectDialog();
+        return;
+      case 'discover-hosts':
+        await findHosts();
+        return;
+      case 'connect-discovered':
+        connectDialog(discoveredHosts[Number(id)].address);
+        return;
+      case 'toggle-submissions':
+        net = await api('network', 'controls', { allowSubmissions: !net.allowSubmissions });
+        break;
+      case 'set-host-password':
+        hostPasswordDialog(id);
+        return;
+      case 'rotate-codes':
+        modal(
+          'Revoke connection codes and passwords',
+          '<p>Replace all three codes or passwords with random codes now. Existing members will need a new code for future reads or submissions. Public data they have already read cannot be withdrawn.</p>',
+          async () => {
+            net = await api('network', 'controls', { rotate: true });
+          },
+          'Revoke and replace codes'
+        );
+        return;
+      case 'toggle-auto':
+        net = await api('network', 'auto', { enabled: !net.remote.autoRefresh });
+        break;
+      case 'retry-submission': {
+        const result = await api('network', 'retry');
+        net = (await readScreen()).network;
+        toast(result.duplicate ? 'The host had already received this submission.' : 'Submitted for club review.');
+        break;
+      }
+      case 'discard-submission':
+        modal(
+          'Discard submission retry copy',
+          '<p>This only clears the local retry copy. It does not withdraw a package the host may already have received. Check with the host before submitting a new copy.</p>',
+          async () => {
+            net = await api('network', 'discard');
+          },
+          'Discard retry copy'
+        );
+        return;
+      case 'browse-remote':
+        switchCollection('remote');
+        page = 'Cars';
+        break;
+      case 'refresh-remote': {
+        const result = await api('network', 'refresh');
+        remote = result.data;
+        net = result.status;
+        toast('Shared collection refreshed.');
+        break;
+      }
+      case 'disconnect':
+        net = await api('network', 'disconnect');
+        remote = null;
+        switchCollection('local');
+        break;
+      case 'review-select':
+        reviewId = id;
+        reviewCarId = target.dataset.car;
+        break;
+      case 'accept-review':
+      case 'reject-review': {
+        const fields = [...document.querySelectorAll('[data-review-field]:checked')].map(e => e.dataset.reviewField);
+        await change('submission.review', {
+          id: reviewId,
+          carId: reviewCarId,
+          decision: action === 'accept-review' ? 'accept' : 'reject',
+          fields,
+          stockOverrides: [...document.querySelectorAll('[data-stock-override]:checked')].map(
+            e => e.dataset.stockOverride
+          ),
+          revision: Number($('#review-revision').value),
+          note: $('#review-note').value,
+          includeSetups: !!$('#review-setups')?.checked
+        });
+        reviewCarId = null;
+        toast(action === 'accept-review' ? 'Selected changes accepted.' : 'Submission rejected.');
+        break;
+      }
+      default:
+        return;
     }
     render();
-  }catch(e){if(!finishClubQueued(e))toast(e.message,true);}finally{actionBusy=false;if(pendingDatabaseChange)scheduleDatabaseChange();}
+  } catch (e) {
+    if (!finishClubQueued(e)) toast(e.message, true);
+  } finally {
+    actionBusy = false;
+    if (pendingDatabaseChange) scheduleDatabaseChange();
+  }
 });
-document.addEventListener('submit',async event=>{if(event.target.id!=='modal-form')return;event.preventDefault();if(!modalSubmit||modalSaving||actionBusy)return;modalSaving=true;const values=Object.fromEntries(new FormData(event.target)),controls=[...event.target.querySelectorAll('button,input,select,textarea')].map(el=>({el,disabled:el.disabled}));controls.forEach(({el})=>el.disabled=true);const fn=modalSubmit;try{await fn(values);$('#dialog').close();modalSubmit=null;modalPhoto=null;render();}catch(e){if(finishClubQueued(e))return;const error=$('#form-error');error.textContent=e.message;error.hidden=false;error.scrollIntoView({block:'nearest'});}finally{controls.forEach(({el,disabled})=>el.disabled=disabled);modalSaving=false;if(pendingDatabaseChange)scheduleDatabaseChange();}});
-$('#dialog').addEventListener('cancel',event=>{if(modalSaving||actionBusy)event.preventDefault();else{modalSubmit=null;modalPhoto=null;}});
-document.addEventListener('invalid',event=>{const panel=event.target.closest('[data-form-panel]');if(panel?.hidden){for(const p of document.querySelectorAll('[data-form-panel]'))p.hidden=p!==panel;for(const tab of document.querySelectorAll('[data-action="form-tab"]'))tab.classList.toggle('active',tab.dataset.id===panel.dataset.formPanel);}},true);
-document.addEventListener('input',event=>{if(event.target.id==='car-search'){query=event.target.value;selected.clear();carSavedView='';if(local())scheduleView();else refreshRemoteCarsSearch();}if(event.target.id==='part-search'){partQuery=event.target.value;partCategory='';partTypeFilter='';partId=null;if(local()&&db._view&&!db._view.editor){scheduleView();return;}const position=event.target.selectionStart;$('#main').innerHTML=renderParts();$('#part-search').focus();$('#part-search').setSelectionRange(position,position);}});
-document.addEventListener('change',event=>{const el=event.target;try{
-  if(el.dataset.selectCar){el.checked?selected.add(el.dataset.selectCar):selected.delete(el.dataset.selectCar);$('#cars-results').innerHTML=renderCarResults();applyPhotoFocus();return;}
-  if(el.id==='car-export-format'){updateCarExportFormat();return;}
-  switch(el.id){
-    case'database-select':switchCollection(el.value);break;
-    case'cars-sort':{const [key,direction]=el.value.split(':');if(!CarSort.valid(key)||!['asc','desc'].includes(direction))return;sort=key;sortDirection=direction;CarSort.save(sort,sortDirection);carSavedView='';break;}
-    case'sort':sort=el.value;sortDirection=CarSort.direction(sort);CarSort.save(sort,sortDirection);break;
-    case'sort-direction':sortDirection=el.value;CarSort.save(sort,sortDirection);break;
-    case'match':matchAll=el.value==='all';selected.clear();carSavedView='';break;
-    case'archived':archived=el.checked;selected.clear();carSavedView='';break;
-    case'saved-view':{carSavedView=el.value;if(!el.value){query='';usage=[];matchAll=false;archived=false;selected.clear();break;}const v=current().views.find(v=>v.id===el.value);if(!v||(v.collectionStatus||'collection')!==carListStatus())return;({query,usage,matchAll,mode,sort,archived}=structuredClone(v));sortDirection=CarSort.direction(sort,v.sortDirection);CarSort.save(sort,sortDirection);tableColumns=[...(v.columns||db.settings.columns)];selected.clear();break;}
-    default:return;
-  }render();
-}catch(e){toast(e.message,true);}});
+document.addEventListener('submit', async event => {
+  if (event.target.id !== 'modal-form') return;
+  event.preventDefault();
+  if (!modalSubmit || modalSaving || actionBusy) return;
+  modalSaving = true;
+  const values = Object.fromEntries(new FormData(event.target)),
+    controls = [...event.target.querySelectorAll('button,input,select,textarea')].map(el => ({
+      el,
+      disabled: el.disabled
+    }));
+  controls.forEach(({ el }) => (el.disabled = true));
+  const fn = modalSubmit;
+  try {
+    await fn(values);
+    $('#dialog').close();
+    modalSubmit = null;
+    modalPhoto = null;
+    render();
+  } catch (e) {
+    if (finishClubQueued(e)) return;
+    const error = $('#form-error');
+    error.textContent = e.message;
+    error.hidden = false;
+    error.scrollIntoView({ block: 'nearest' });
+  } finally {
+    controls.forEach(({ el, disabled }) => (el.disabled = disabled));
+    modalSaving = false;
+    if (pendingDatabaseChange) scheduleDatabaseChange();
+  }
+});
+$('#dialog').addEventListener('cancel', event => {
+  if (modalSaving || actionBusy) event.preventDefault();
+  else {
+    modalSubmit = null;
+    modalPhoto = null;
+  }
+});
+document.addEventListener(
+  'invalid',
+  event => {
+    const panel = event.target.closest('[data-form-panel]');
+    if (panel?.hidden) {
+      for (const p of document.querySelectorAll('[data-form-panel]')) p.hidden = p !== panel;
+      for (const tab of document.querySelectorAll('[data-action="form-tab"]'))
+        tab.classList.toggle('active', tab.dataset.id === panel.dataset.formPanel);
+    }
+  },
+  true
+);
+document.addEventListener('input', event => {
+  if (event.target.id === 'car-search') {
+    query = event.target.value;
+    selected.clear();
+    carSavedView = '';
+    if (local()) scheduleView();
+    else refreshRemoteCarsSearch();
+  }
+  if (event.target.id === 'part-search') {
+    partQuery = event.target.value;
+    partCategory = '';
+    partTypeFilter = '';
+    partId = null;
+    if (local() && db._view && !db._view.editor) {
+      scheduleView();
+      return;
+    }
+    const position = event.target.selectionStart;
+    $('#main').innerHTML = renderParts();
+    $('#part-search').focus();
+    $('#part-search').setSelectionRange(position, position);
+  }
+});
+document.addEventListener('change', event => {
+  const el = event.target;
+  try {
+    if (el.dataset.selectCar) {
+      el.checked ? selected.add(el.dataset.selectCar) : selected.delete(el.dataset.selectCar);
+      $('#cars-results').innerHTML = renderCarResults();
+      applyPhotoFocus();
+      return;
+    }
+    if (el.id === 'car-export-format') {
+      updateCarExportFormat();
+      return;
+    }
+    switch (el.id) {
+      case 'database-select':
+        switchCollection(el.value);
+        break;
+      case 'cars-sort': {
+        const [key, direction] = el.value.split(':');
+        if (!CarSort.valid(key) || !['asc', 'desc'].includes(direction)) return;
+        sort = key;
+        sortDirection = direction;
+        CarSort.save(sort, sortDirection);
+        carSavedView = '';
+        break;
+      }
+      case 'sort':
+        sort = el.value;
+        sortDirection = CarSort.direction(sort);
+        CarSort.save(sort, sortDirection);
+        break;
+      case 'sort-direction':
+        sortDirection = el.value;
+        CarSort.save(sort, sortDirection);
+        break;
+      case 'match':
+        matchAll = el.value === 'all';
+        selected.clear();
+        carSavedView = '';
+        break;
+      case 'archived':
+        archived = el.checked;
+        selected.clear();
+        carSavedView = '';
+        break;
+      case 'saved-view': {
+        carSavedView = el.value;
+        if (!el.value) {
+          query = '';
+          usage = [];
+          matchAll = false;
+          archived = false;
+          selected.clear();
+          break;
+        }
+        const v = current().views.find(v => v.id === el.value);
+        if (!v || (v.collectionStatus || 'collection') !== carListStatus()) return;
+        ({ query, usage, matchAll, mode, sort, archived } = structuredClone(v));
+        sortDirection = CarSort.direction(sort, v.sortDirection);
+        CarSort.save(sort, sortDirection);
+        tableColumns = [...(v.columns || db.settings.columns)];
+        selected.clear();
+        break;
+      }
+      default:
+        return;
+    }
+    render();
+  } catch (e) {
+    toast(e.message, true);
+  }
+});
 // A saved Timing session also raises a dealership notification. Coalesce bursts
 // and allow only one read at a time instead of copying all photos for each event.
-let pendingDatabaseChange=null,databaseChangeTimer=null,databaseChangeReading=false;
-function scheduleDatabaseChange(){if(!db||databaseChangeReading||databaseChangeTimer||$('#dialog').open||actionBusy||modalSaving)return;databaseChangeTimer=setTimeout(flushDatabaseChange,60);}
-async function flushDatabaseChange(){
- databaseChangeTimer=null;if(!pendingDatabaseChange||!db||$('#dialog').open||actionBusy||modalSaving)return;
- const change=pendingDatabaseChange;pendingDatabaseChange=null;databaseChangeReading=true;
- try{
-  const request=desiredView(),context={databaseId:db.id,revision:db.revision,dataPath};const r=await api('read',{...context,queryView:request});
-  // Joining/leaving a dealership has its own explicit reload. Never merge a
-  // background reply into a different collection or storage context.
-  if($('#dialog').open||actionBusy||modalSaving){pendingDatabaseChange=change;return;}if(viewKey(request)!==viewKey(desiredView())){pendingDatabaseChange=change;return;}if(db.id!==context.databaseId||dataPath!==context.dataPath||r.dataPath!==context.dataPath||r.data&&(r.data.id!==context.databaseId||r.data.revision<db.revision))return;
-  const changed=!!r.data||JSON.stringify(clubState)!==JSON.stringify(r.club)||JSON.stringify(net)!==JSON.stringify(r.network);
-  if(r.data){const info=r.data._view?.list||r.data._view?.history;if(info&&request.offset>0&&request.offset>=info.total){viewOffset=0;await loadView();return;}acceptSnapshot(r.data);}if(r.collection)collectionMeta=r.collection;clubState=r.club;net=r.network;if(!changed)return;updateReviewIndicator();
-  if(!$('#dialog').open&&!(page==='Review'&&reviewTab==='Incoming cars')&&!(page==='Build from Scratch'||page==='Parts'&&partsTab==='Build from Scratch')&&!(page==='Import & Export'&&catalogueReview?.active)){
-    const focused=document.activeElement,search=['car-search','part-search','supply-search','showroom-search'].includes(focused?.id)?{id:focused.id,start:focused.selectionStart,end:focused.selectionEnd,direction:focused.selectionDirection}:null;
-    render();if(search){const input=document.getElementById(search.id);if(input){input.focus({preventScroll:true});input.setSelectionRange(search.start,search.end,search.direction);}}
-  }
-  if(!['timing-capture','club','shared-library'].includes(change?.kind))toast(change?.kind==='history-import'?'Historical imports updated. Open Review → Historical imports.':change?.kind==='timing'?'Timing results updated. Open Review → Race results to inspect them.':'A new club submission has arrived. Refresh the inbox when your current review is ready.');
- }catch(e){toast(e.message,true);}finally{databaseChangeReading=false;if(pendingDatabaseChange)scheduleDatabaseChange();}
+let pendingDatabaseChange = null,
+  databaseChangeTimer = null,
+  databaseChangeReading = false;
+function scheduleDatabaseChange() {
+  if (!db || databaseChangeReading || databaseChangeTimer || $('#dialog').open || actionBusy || modalSaving) return;
+  databaseChangeTimer = setTimeout(flushDatabaseChange, 60);
 }
-window.slotforge.onChange(change=>{if(change?.kind==='shared-library-error'){toast(change.message,true);return;}invalidateSharedPace(change);if(!pendingDatabaseChange||!['club','timing-capture'].includes(change?.kind))pendingDatabaseChange=change||{};scheduleDatabaseChange();});
-async function init(){try{const result=await api('read',{queryView:desiredView()});db=result.data;await initMergeReview().catch(()=>{});clubState=result.club;net=result.network;collectionMeta=result.collection;tableColumns=[...db.settings.columns];remote=result.remote||null;version=result.version;wishlistUi=result.features?.wishlist===true;dataPath=result.dataPath;if(queuedCarLink||result.openCar){followCarLink(queuedCarLink||result.openCar);queuedCarLink=null;}else render();if(pendingDatabaseChange)scheduleDatabaseChange();}catch(e){$('#main').innerHTML=empty('Unable to open the database',e.message);announceStartup();}}
-function followCarLink(target){if(target.databaseId!==db.id||!db._view&&!db.cars.some(c=>c.id===target.carId)){render();toast('This car link belongs to another collection or a missing car. Open the matching collection first.',true);return;}switchCollection('local');page='Cars';carId=target.carId;section='Overview';render();}
-let queuedCarLink=null;
-window.slotforge.onOpenCar(target=>{if(db)followCarLink(target);else queuedCarLink=target;});
+async function flushDatabaseChange() {
+  databaseChangeTimer = null;
+  if (!pendingDatabaseChange || !db || $('#dialog').open || actionBusy || modalSaving) return;
+  const change = pendingDatabaseChange;
+  pendingDatabaseChange = null;
+  databaseChangeReading = true;
+  try {
+    const request = desiredView(),
+      context = { databaseId: db.id, revision: db.revision, dataPath };
+    const r = await api('read', { ...context, queryView: request });
+    // Joining/leaving a dealership has its own explicit reload. Never merge a
+    // background reply into a different collection or storage context.
+    if ($('#dialog').open || actionBusy || modalSaving) {
+      pendingDatabaseChange = change;
+      return;
+    }
+    if (viewKey(request) !== viewKey(desiredView())) {
+      pendingDatabaseChange = change;
+      return;
+    }
+    if (
+      db.id !== context.databaseId ||
+      dataPath !== context.dataPath ||
+      r.dataPath !== context.dataPath ||
+      (r.data && (r.data.id !== context.databaseId || r.data.revision < db.revision))
+    )
+      return;
+    const changed =
+      !!r.data ||
+      JSON.stringify(clubState) !== JSON.stringify(r.club) ||
+      JSON.stringify(net) !== JSON.stringify(r.network);
+    if (r.data) {
+      const info = r.data._view?.list || r.data._view?.history;
+      if (info && request.offset > 0 && request.offset >= info.total) {
+        viewOffset = 0;
+        await loadView();
+        return;
+      }
+      acceptSnapshot(r.data);
+    }
+    if (r.collection) collectionMeta = r.collection;
+    clubState = r.club;
+    net = r.network;
+    if (!changed) return;
+    updateReviewIndicator();
+    if (
+      !$('#dialog').open &&
+      !(page === 'Review' && reviewTab === 'Incoming cars') &&
+      !(page === 'Build from Scratch' || (page === 'Parts' && partsTab === 'Build from Scratch')) &&
+      !(page === 'Import & Export' && catalogueReview?.active)
+    ) {
+      const focused = document.activeElement,
+        search = ['car-search', 'part-search', 'supply-search', 'showroom-search'].includes(focused?.id)
+          ? {
+              id: focused.id,
+              start: focused.selectionStart,
+              end: focused.selectionEnd,
+              direction: focused.selectionDirection
+            }
+          : null;
+      render();
+      if (search) {
+        const input = document.getElementById(search.id);
+        if (input) {
+          input.focus({ preventScroll: true });
+          input.setSelectionRange(search.start, search.end, search.direction);
+        }
+      }
+    }
+    if (!['timing-capture', 'club', 'shared-library'].includes(change?.kind))
+      toast(
+        change?.kind === 'history-import'
+          ? 'Historical imports updated. Open Review → Historical imports.'
+          : change?.kind === 'timing'
+            ? 'Timing results updated. Open Review → Race results to inspect them.'
+            : 'A new club submission has arrived. Refresh the inbox when your current review is ready.'
+      );
+  } catch (e) {
+    toast(e.message, true);
+  } finally {
+    databaseChangeReading = false;
+    if (pendingDatabaseChange) scheduleDatabaseChange();
+  }
+}
+window.slotforge.onChange(change => {
+  if (change?.kind === 'shared-library-error') {
+    toast(change.message, true);
+    return;
+  }
+  invalidateSharedPace(change);
+  if (!pendingDatabaseChange || !['club', 'timing-capture'].includes(change?.kind))
+    pendingDatabaseChange = change || {};
+  scheduleDatabaseChange();
+});
+async function init() {
+  try {
+    const result = await api('read', { queryView: desiredView() });
+    db = result.data;
+    await initMergeReview().catch(() => {});
+    clubState = result.club;
+    net = result.network;
+    collectionMeta = result.collection;
+    tableColumns = [...db.settings.columns];
+    remote = result.remote || null;
+    version = result.version;
+    wishlistUi = result.features?.wishlist === true;
+    dataPath = result.dataPath;
+    if (queuedCarLink || result.openCar) {
+      followCarLink(queuedCarLink || result.openCar);
+      queuedCarLink = null;
+    } else render();
+    if (pendingDatabaseChange) scheduleDatabaseChange();
+  } catch (e) {
+    $('#main').innerHTML = empty('Unable to open the database', e.message);
+    announceStartup();
+  }
+}
+function followCarLink(target) {
+  if (target.databaseId !== db.id || (!db._view && !db.cars.some(c => c.id === target.carId))) {
+    render();
+    toast('This car link belongs to another collection or a missing car. Open the matching collection first.', true);
+    return;
+  }
+  switchCollection('local');
+  page = 'Cars';
+  carId = target.carId;
+  section = 'Overview';
+  render();
+}
+let queuedCarLink = null;
+window.slotforge.onOpenCar(target => {
+  if (db) followCarLink(target);
+  else queuedCarLink = target;
+});
 installNetworkUpdates();
 init();
