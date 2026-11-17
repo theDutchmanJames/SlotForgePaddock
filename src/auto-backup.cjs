@@ -42,14 +42,19 @@ function fault(message, code) {
 }
 
 function clean(value, fallback) {
-  const text = String(value || '').replace(/[^a-z0-9]/gi, '').slice(0, 8).toLowerCase();
+  const text = String(value || '')
+    .replace(/[^a-z0-9]/gi, '')
+    .slice(0, 8)
+    .toLowerCase();
   return text || fallback;
 }
 
 function stamp(date) {
   const two = n => String(n).padStart(2, '0');
-  return `${date.getFullYear()}-${two(date.getMonth() + 1)}-${two(date.getDate())}-` +
-    `${two(date.getHours())}${two(date.getMinutes())}${two(date.getSeconds())}`;
+  return (
+    `${date.getFullYear()}-${two(date.getMonth() + 1)}-${two(date.getDate())}-` +
+    `${two(date.getHours())}${two(date.getMinutes())}${two(date.getSeconds())}`
+  );
 }
 
 /** SlotForge-Paddock-auto-<collection>-<computer>-<local date and time>.sfpbackup */
@@ -58,7 +63,9 @@ function fileName(databaseId, installation, date) {
 }
 
 function pattern(databaseId, installation) {
-  return new RegExp(`^SlotForge-Paddock-auto-${clean(databaseId, 'collection')}-${clean(installation, 'computer')}-\\d{4}-\\d{2}-\\d{2}-\\d{6}\\.sfpbackup$`);
+  return new RegExp(
+    `^SlotForge-Paddock-auto-${clean(databaseId, 'collection')}-${clean(installation, 'computer')}-\\d{4}-\\d{2}-\\d{2}-\\d{6}\\.sfpbackup$`
+  );
 }
 
 /** Free space Paddock leaves on the drive after an automatic backup: 5% of the drive, at least 1 GiB, at most 20 GiB. */
@@ -96,7 +103,16 @@ function cleanSettings(input = {}, current = DEFAULTS) {
 function limited(promise, folder, ms) {
   let timer;
   const timeout = new Promise((_, reject) => {
-    timer = setTimeout(() => reject(fault(`The backup folder did not respond: ${folder}. Check the drive or network connection.`, 'FOLDER_MISSING')), ms);
+    timer = setTimeout(
+      () =>
+        reject(
+          fault(
+            `The backup folder did not respond: ${folder}. Check the drive or network connection.`,
+            'FOLDER_MISSING'
+          )
+        ),
+      ms
+    );
   });
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
@@ -127,10 +143,12 @@ class AutoBackup {
     this.onChange = o.onChange || (() => {});
     this.now = o.now || (() => Date.now());
     this.folderTimeout = o.folderTimeout || FOLDER_TIMEOUT_MS;
-    this.disk = o.disk || (async folder => {
-      const s = await fsp.statfs(folder);
-      return { free: s.bavail * s.bsize, total: s.blocks * s.bsize };
-    });
+    this.disk =
+      o.disk ||
+      (async folder => {
+        const s = await fsp.statfs(folder);
+        return { free: s.bavail * s.bsize, total: s.blocks * s.bsize };
+      });
     this.running = null;
     this.manual = false;
     this.jobId = null;
@@ -156,12 +174,13 @@ class AutoBackup {
     const record = value => (value && typeof value === 'object' && Number.isFinite(value.at) ? value : null);
     return {
       settings,
-      installation: typeof saved?.installation === 'string' && /^[a-z0-9]{8}$/.test(saved.installation)
-        ? saved.installation
-        : randomUUID().replace(/-/g, '').slice(0, 8),
+      installation:
+        typeof saved?.installation === 'string' && /^[a-z0-9]{8}$/.test(saved.installation)
+          ? saved.installation
+          : randomUUID().replace(/-/g, '').slice(0, 8),
       lastSuccess: record(saved?.lastSuccess),
       lastAttempt: Number.isFinite(saved?.lastAttempt) ? saved.lastAttempt : null,
-      lastError: record(saved?.lastError),
+      lastError: record(saved?.lastError)
     };
   }
 
@@ -185,10 +204,17 @@ class AutoBackup {
     const store = this.getStore();
     // A date in the future means the clock was wrong when it was saved; don't wait for it.
     const believable = at => Number.isFinite(at) && at <= now + DAY;
-    const sameCollection = lastSuccess && store && lastSuccess.databaseId === store.data.id && believable(lastSuccess.at);
+    const sameCollection =
+      lastSuccess && store && lastSuccess.databaseId === store.data.id && believable(lastSuccess.at);
     let due = sameCollection ? lastSuccess.at + INTERVALS[settings.every] : 0;
     // After a failure, wait a little before trying again instead of retrying every minute.
-    if (lastError && lastError.retry !== false && lastAttempt && lastError.at === lastAttempt && believable(lastAttempt)) {
+    if (
+      lastError &&
+      lastError.retry !== false &&
+      lastAttempt &&
+      lastError.at === lastAttempt &&
+      believable(lastAttempt)
+    ) {
       due = Math.max(due, lastAttempt + RETRY_AFTER);
     }
     return due;
@@ -205,10 +231,13 @@ class AutoBackup {
       customFolder: !!settings.folder,
       lastSuccess: forThisCollection,
       // An interrupted run (the user started working) is not a problem worth showing.
-      lastError: lastError && lastError.code !== 'CANCELLED' && (!forThisCollection || lastError.at > forThisCollection.at) ? lastError : null,
+      lastError:
+        lastError && lastError.code !== 'CANCELLED' && (!forThisCollection || lastError.at > forThisCollection.at)
+          ? lastError
+          : null,
       nextDue: this.nextDue(),
       running: !!this.running,
-      keepRange: [KEEP_MIN, KEEP_MAX],
+      keepRange: [KEEP_MIN, KEEP_MAX]
     };
   }
 
@@ -236,7 +265,10 @@ class AutoBackup {
       try {
         stat = await fsp.stat(folder);
       } catch {
-        throw fault(`The backup folder is not available: ${folder}. Connect the drive or choose another folder.`, 'FOLDER_MISSING');
+        throw fault(
+          `The backup folder is not available: ${folder}. Connect the drive or choose another folder.`,
+          'FOLDER_MISSING'
+        );
       }
       if (!stat.isDirectory()) throw fault(`The backup location is not a folder: ${folder}`, 'FOLDER_MISSING');
       try {
@@ -286,31 +318,41 @@ class AutoBackup {
     try {
       if (!store) throw fault('The collection is not open yet.');
       // busy() also counts the user's own "Back up now" request, so it only stops automatic runs.
-      if (!manual && this.busy()) throw fault('Paddock is busy with another database task. Try again in a moment.', 'BUSY');
+      if (!manual && this.busy())
+        throw fault('Paddock is busy with another database task. Try again in a moment.', 'BUSY');
       if (this.jobs.active) throw fault('Another backup is already running.', 'BUSY');
       const folder = this.folder();
       await this.checkFolder(folder, { create: folder === this.defaultFolder });
       await this.sweep(folder);
       const size = this.protectedFiles().reduce((sum, file) => {
-        try { return sum + fs.statSync(file).size; } catch { return sum; }
+        try {
+          return sum + fs.statSync(file).size;
+        } catch {
+          return sum;
+        }
       }, 0);
       const disk = await limited(this.disk(folder), folder, this.folderTimeout);
       const needed = Math.ceil(size * 1.2) + reserve(disk.total);
       if (!(disk.free >= needed)) {
-        throw fault(`Not enough free disk space in ${folder}. Paddock keeps at least ${Math.round(reserve(disk.total) / GIB)} GB free on the drive. Free up space or choose another folder.`, 'NO_SPACE');
+        throw fault(
+          `Not enough free disk space in ${folder}. Paddock keeps at least ${Math.round(reserve(disk.total) / GIB)} GB free on the drive. Free up space or choose another folder.`,
+          'NO_SPACE'
+        );
       }
       const databaseId = store.data.id;
       const destination = path.join(folder, fileName(databaseId, this.state.installation, new Date(startedAt)));
       if (this.cancelled || this.stopped) throw fault('Automatic backup cancelled.', 'CANCELLED');
       await store.exclusiveFileOperation(() => {
         if (this.cancelled || this.stopped) throw fault('Automatic backup cancelled.', 'CANCELLED');
-        if (store.data.id !== databaseId) throw fault('The collection changed. The backup will run again.', 'COLLECTION_CHANGED');
-        if (fs.existsSync(destination)) throw fault('A backup with this name already exists. Try again in a moment.', 'BUSY');
+        if (store.data.id !== databaseId)
+          throw fault('The collection changed. The backup will run again.', 'COLLECTION_CHANGED');
+        if (fs.existsSync(destination))
+          throw fault('A backup with this name already exists. Try again in a moment.', 'BUSY');
         if (!store.expectedIdentity) store.persist(store.data);
         const job = this.jobs.run('export', store.file, destination, {
           label: manual ? 'Backup now' : 'Automatic backup',
           expectedIdentity: store.expectedIdentity,
-          protectedFiles: this.protectedFiles(),
+          protectedFiles: this.protectedFiles()
         });
         this.jobId = this.jobs.active?.id || null;
         return job;
@@ -328,9 +370,13 @@ class AutoBackup {
         message: cancelled ? 'The last automatic backup was interrupted. It will run again later.' : e.message,
         code: e.code || null,
         // A replaced collection is backed up straight away rather than after the retry delay.
-        retry: e.code !== 'COLLECTION_CHANGED',
+        retry: e.code !== 'COLLECTION_CHANGED'
       };
-      try { this.persist(); } catch { /* The error is still returned to the caller. */ }
+      try {
+        this.persist();
+      } catch {
+        /* The error is still returned to the caller. */
+      }
       throw e;
     }
   }
@@ -347,9 +393,13 @@ class AutoBackup {
           // Only old leftovers: another computer may be writing to a shared folder right now.
           const stat = await fsp.lstat(file);
           if (stat.isFile() && Date.now() - stat.mtimeMs > DAY) await fsp.unlink(file);
-        } catch { /* Still in use or already gone. */ }
+        } catch {
+          /* Still in use or already gone. */
+        }
       }
-    } catch { /* A sweep is a courtesy; the backup itself checks the folder. */ }
+    } catch {
+      /* A sweep is a courtesy; the backup itself checks the folder. */
+    }
   }
 
   /**
@@ -370,7 +420,9 @@ class AutoBackup {
           removed.push(name);
           surplus--;
         }
-      } catch { /* An old backup that cannot be removed now is tried again next time. */ }
+      } catch {
+        /* An old backup that cannot be removed now is tried again next time. */
+      }
     }
     return removed;
   }
@@ -385,7 +437,11 @@ class AutoBackup {
     if (!running || (this.manual && !force)) return;
     this.cancelled = true;
     if (this.jobId) this.jobs.cancel(this.jobId);
-    try { await running; } catch { /* Recorded in the status; the user's action continues. */ }
+    try {
+      await running;
+    } catch {
+      /* Recorded in the status; the user's action continues. */
+    }
   }
 
   /** Called at quit: no new backups, cancel the current one. */

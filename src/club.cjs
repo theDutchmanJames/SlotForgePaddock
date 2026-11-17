@@ -1,257 +1,1717 @@
-const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
-const {Store,migrate}=require('./store.cjs');
-const M=require('./club-model.cjs');
-const fieldReview=require('./field-review.cjs'),transactions=require('./transaction.cjs');
-const {cloneJSON}=require('./json-data.cjs');
-const {readJSON}=require('./files.cjs');
-const Sync=require('./club-sync.cjs');
-const MAX=220*1024*1024;
+const fs = require('node:fs'),
+  path = require('node:path'),
+  crypto = require('node:crypto');
+const { Store, migrate } = require('./store.cjs');
+const M = require('./club-model.cjs');
+const fieldReview = require('./field-review.cjs'),
+  transactions = require('./transaction.cjs');
+const { cloneJSON } = require('./json-data.cjs');
+const { readJSON } = require('./files.cjs');
+const Sync = require('./club-sync.cjs');
+const MAX = 220 * 1024 * 1024;
 class Club {
- constructor(store,network,folder,notify=()=>{}){
-  this.main=store;this.network=network;network.club=this;this.folder=folder;this.file=path.join(folder,'club-device.json');this.cacheFile=path.join(folder,'club-copy.json');this._cache=null;this.notify=notify;this.clients=new Set();this.journal=[];this.journalBytes=0;this.last=store.data;this.state='offline';this.active=false;this.busy=false;this.closed=false;this.shutdownAbort=new AbortController();
-  this.snapshots=new Sync.Snapshots(this);this.prevalidated=new WeakMap();
-  this.device=fs.existsSync(this.file)?readJSON(this.file):{version:1,id:crypto.randomUUID(),name:require('node:os').hostname().slice(0,100),pair:null,outbox:[]};
-  M.check(this.device.version===1&&typeof this.device.id==='string'&&Array.isArray(this.device.outbox),'Invalid club device settings.');this.code=this.device.pair?.password||undefined;this.saveDevice();this.unsubscribe=store.subscribe(()=>this.changed());
- }
- saveDevice(next=this.device){M.write(this.file,next);this.device=next;}
- password(value){M.check(typeof value==='string'&&value.length>=4&&value.length<=128&&/^[\x20-\x7e]+$/.test(value)&&value===value.trim(),'Choose a Dealership password of 4–128 letters, numbers, spaces or symbols, without spaces at either end.');return value;}
- setPassword(value){M.check(this.coordinator&&!this.active,'Change the password on the dealership computer.');const password=this.password(value);this.saveDevice({...this.device,hostPassword:password});if(this.network.hostingMode==='dealership'&&this.network.server)this.network.clubCode=password;this.network.authAttempts?.clear();this.network.telemetryEvents?.revalidate();this.network.scalableEvents?.revalidate();for(const client of this.clients)client.res.end();this.clients.clear();this.notify({kind:'club'});return this.status();}
- get coordinator(){return !!this.main.data.club&&!this.main.data.club.replica&&this.device.coordinator===this.main.data.club.id;}
- // The saved replica can be large. Opening the personal collection must not
- // reconstruct it as a second domain model just to paint connection status.
- get cache(){return this._cache??=new Store(this.cacheFile,{deferred:true});}
- async openCache(){if(this._cache)return this._cache;if(!this.openingCache)this.openingCache=Store.open(this.cacheFile).then(store=>this._cache??=store).finally(()=>{this.openingCache=null;});return this.openingCache;}
- set cache(value){this._cache=value;}
- get loadedCache(){return this._cache;}
- protectedFiles(){return require('./sqlite-storage.cjs').protectedFiles(require('./sqlite-storage.cjs').sqlitePath(this.cacheFile));}
- get store(){return this.active?this.cache:this.main;}
- hasCopy(){
-  const pair=this.device.pair;if(!pair)return false;
-  if(this._cache)return this._cache.data.id===pair.databaseId&&this._cache.data.club?.id===pair.clubId;
-  const storage=require('./sqlite-storage.cjs'),file=storage.sqlitePath(this.cacheFile);
-  if(!fs.existsSync(file))return fs.existsSync(this.cacheFile)?this.cache.data.id===pair.databaseId&&this.cache.data.club?.id===pair.clubId:false;
-  // This is only an availability hint. Activating verifies the directory and
-  // identity; bodies and write dependencies load on demand.
-  const hint=storage.collectionHint(file);return hint.id===pair.databaseId&&hint.clubId===pair.clubId;
- }
-
- status(){return {password:this.coordinator?this.device.hostPassword||'':'',savedPassword:this.device.pair?.password||'',role:this.active?'member':this.coordinator?'coordinator':'personal',active:this.active,paired:!!this.device.pair,hasCopy:this.hasCopy(),device:this.device.name,state:this.state,address:this.device.pair?.address||'',name:this.active?this.cache.data.settings.name:this.main.data.settings.name,revision:this.active?this.cache.data.revision:this.main.data.revision,latest:this.latest??null,pending:this.store.pendingClubReviews(),outbox:this.device.outbox.length,lastError:this.lastError||'',backup:this.backupPath||''};}
- changed(){
-  if(!this.main.data.club)return;
-  const next=this.main.data;if(this.coordinator&&next.id===this.last.id&&next.revision>this.last.revision){
-   if(this.legacyRequested||[...this.clients].some(c=>!c.sync2)){const shared=M.shared(next),encoding=require('./json-encoding.cjs'),entry={from:this.last.revision,to:next.revision,changes:M.delta(M.shared(this.last),shared),digest:null};
-   // Legacy peers require the exact whole-snapshot checksum. Compute it only
-   // when that entry is requested, never while acknowledging a committed save.
-   // Retain immutable lazy handles, and account for the snapshot as well as the
-   // wire patch in the bounded journal. Eviction uses the existing snapshot fallback.
-   let snapshot=shared,digest;Object.defineProperty(entry,'digest',{enumerable:true,get(){if(digest===undefined){digest=M.hash(snapshot);snapshot=null;}return digest;}});
-   const bytes=encoding.retainedSize(next)+encoding.byteLength(entry.changes)+256;
-   Object.defineProperty(entry,'retainedBytes',{value:bytes});this.journal.push(entry);this.journalBytes+=bytes;
-   while(this.journal.length>32||this.journalBytes>32*1024*1024)this.journalBytes-=this.journal.shift().retainedBytes;
-   }
-   if(!this.signalTimer)this.signalTimer=setTimeout(()=>{this.signalTimer=null;for(const client of this.clients){if(client.res.writableLength>65536)client.res.destroy();else client.res.write('data: '+JSON.stringify({revision:this.main.data.revision})+'\n\n');}},25);this.signalTimer.unref?.();}
-  this.last=next;if(this.main.data.club)this.notify({kind:'club'});
- }
- backupFile(label){const folder=path.join(this.folder,'club-backups');fs.mkdirSync(folder,{recursive:true});return path.join(folder,label+'-'+Date.now()+'-'+crypto.randomUUID()+'.sfpbackup');}
- backupSource(store){if(store.file){if(!store.expectedIdentity)store.persist(store.data);return {file:store.file,temporary:false};}const file=this.backupFile('temporary-source');require('./sqlite-storage.cjs').write(file,require('./sqlite-storage.cjs').pack(store.data),null);return {file,temporary:true};}
- backup(store,label){store.assertIdle();const source=this.backupSource(store),file=this.backupFile(label);try{require('./portable-backup.cjs').exportBackup(source.file,file,{expectedIdentity:JSON.stringify([store.data.id,store.data.revision]),protectedFiles:store.protectedFiles()});this.backupPath=file;return file;}finally{if(source.temporary)fs.unlinkSync(source.file);}}
- async backupAsync(store,label){return store.exclusiveFileOperation(async()=>{const source=this.backupSource(store),file=this.backupFile(label);try{this.backupJobs??=new (require('./backup-jobs.cjs').BackupJobs)();await this.backupJobs.run('export',source.file,file,{expectedIdentity:JSON.stringify([store.data.id,store.data.revision]),protectedFiles:store.protectedFiles()});this.backupPath=file;return file;}finally{if(source.temporary)fs.unlinkSync(source.file);}});}
- async enableAsync(name,password){this.password(password);M.check(!this.active&&!this.main.data.club,'Open an unshared local collection first.');M.check(typeof name==='string'&&name.trim()&&name.length<=100,'Enter a computer name.');const revision=this.main.data.revision;await this.backupAsync(this.main,'before-sharing');M.check(revision===this.main.data.revision,'The collection changed. Try enabling Dealership Mode again.');return this.enable(name,password,false);}
- async leaveAsync(){await this.openCache();M.check(!this.busy&&!this.sending,'Wait for the club update to finish.');M.check(this.device.outbox.length===0,'Retry the saved proposals before leaving this club.');const revision=this.cache.data.revision;await this.backupAsync(this.cache,'leaving-club');M.check(revision===this.cache.data.revision,'The copy changed. Try leaving again.');return this.leave(false);}
- async disableAsync(input){
-  const guard=()=>{
-   M.check(!this.active&&!this.main.data.club?.replica,'Open the original local collection to turn off Dealership Mode. Use Disconnect from dealership for a downloaded copy.');
-   M.check(!this.busy&&!this.sending,'Wait for the dealership update to finish.');
-   M.check(input?.databaseId===this.main.data.id&&input.clubId===this.main.data.club?.id&&input.revision===this.main.data.revision,'The collection changed. Reopen Turn off Dealership Mode.');
-   M.check(input.recoveryId===require('./sqlite-storage.cjs').syncState(this.main.file).epoch,'The collection was restored. Reopen Turn off Dealership Mode.');
-  };
-  guard();await this.backupAsync(this.main,'before-disabling-dealership');guard();
-  if(this.network.hostingMode==='dealership'||this.network.starting)await this.network.stop();
-  guard();await require('./domain-tasks.cjs').run(this.main,{kind:'dealership-disable',input},guard);
-  clearTimeout(this.signalTimer);this.signalTimer=null;for(const client of this.clients)client.res.end();this.clients.clear();this.snapshots.close();this.journal=[];this.journalBytes=0;this.last=this.main.data;
-  this.notify({kind:'club'});return this.status();
- }
- enable(name,password,backup=true){password=this.password(password);M.check(!this.active,'Switch to the local collection first.');M.check(!this.main.data.club,'This collection is already shared.');M.check(typeof name==='string'&&name.trim()&&name.length<=100,'Enter a computer name.');if(backup)this.backup(this.main,'before-sharing');this.main.assertIdle();const id=crypto.randomUUID();this.saveDevice({...this.device,coordinator:id,name:name.trim(),hostPassword:password});this.main.scopedTransact('@club',db=>{db.club={id,proposals:[]};});this.last=this.main.data;return this.status();}
- assertHost(){M.check(!this.active&&!this.main.data.club?.replica,'A club copy cannot host or serve Timing. Switch to your personal collection, or use the dealership computer.');M.check(!this.main.data.club||this.coordinator,'This shared collection is not authorised for Dealership Mode on this computer.');}
- simulation(action,payload,rebase=true,store=this.main){if(action==='catalogue.picture'){const A=require('./catalogue-picture-apply.cjs'),prepared=A.prepare(store,payload),record=A.reviewBudget(store,payload);return {...prepared,data:prepared.data||store.data,changes:[{field:'Catalogue picture',before:payload.intent.expected.pictureHash?'Existing photograph':'No photograph',after:prepared.noop?'Unchanged photograph':'Selected catalogue photograph'}]};}const scoped=!!store.deferredState;if(scoped)payload=require('./scoped-write.cjs').compact(store,action,payload);const physical=scoped&&(action==='car.save'&&payload.stockOverrides!==undefined||action==='setup.save'&&payload.suggestion!==undefined)?require('./physical-write.cjs').context(store,action,payload):null;const s=physical?.store||(scoped?require('./scoped-write.cjs').context(store,action,payload):new Store());const db=scoped?s.data:store.data;s.data=db;const p=cloneJSON(payload);if(rebase&&action!=='car.purchase'&&Object.hasOwn(p,'revision')){let c;if(['car.save','car.favourite','car.archive'].includes(action))c=db.cars.find(x=>x.id===p.id);if(action==='document.add')c=db.cars.find(x=>x.id===p.carId);if(action==='document.remove'){const d=db.documents.find(x=>x.id===p.id);c=db.cars.find(x=>x.id===d?.carId);}p.revision=c?c.revision:db.revision;}if(rebase&&Object.hasOwn(p,'carRevision')&&!(action==='setup.save'&&p.suggestion!==undefined))p.carRevision=db.cars.find(x=>x.id===p.carId)?.revision;const r=s.mutate(action,p,{snapshot:false});const targeted=s.lastCommand?.kind==='car.edit',noop=s.data===db,changes=noop?[]:targeted?M.summary({cars:[db.cars.find(c=>c.id===p.id)],events:[]},{cars:[s.data.cars.find(c=>c.id===p.id)],events:[s.data.events[0]]},action):M.summary(db,s.data,action);const prepared=scoped?require('./scoped-write.cjs').prepare(store,db,s.data,r.result,physical?.recordKeys||null):null;return {data:prepared?.data||s.data,result:r.result,changes,noop,scope:prepared?.scope||s.lastCommand?.scope};}
- receipt(input){
-  M.check(this.coordinator,'This computer is not in Dealership Mode.');M.command(input);M.check(typeof input.id==='string'&&/^[a-zA-Z0-9_-]{1,100}$/.test(input.id),'Invalid proposal ID.');M.check(input.databaseId===this.main.data.id&&input.clubId===this.main.data.club.id,'Wrong club collection.');
-  if(input.action==='catalogue.picture'){const A=require('./catalogue-picture-apply.cjs');A.validate(input.payload);M.check(input.id===input.payload.intent.operationId,'Picture operation identity differs.');require('./catalogue-picture-requests.cjs').withReader(this.main,(_r,a)=>require('./catalogue-picture-requests.cjs').identity(a,input.payload.intent));}
-  const receiptHash=M.hash(input),old=this.main.data.club.proposals.find(p=>p.id===input.id);if(old){M.check(old.receiptHash===receiptHash,'This proposal identity has different content.');return {existing:{id:old.id,status:old.status,duplicate:true,...(old.pictureReceipt?{result:{...old.pictureReceipt,duplicate:true}}:{})}};}
-  if(input.action==='car.purchase')M.check(!this.main.data.club.proposals.some(p=>p.status==='pending'&&p.action==='car.purchase'&&p.payload.id===input.payload.id),'This car already has a purchase awaiting Review.');
-  if(input.deliveryEpoch!==undefined)M.check(input.deliveryEpoch===Sync.cursor(this.main).epoch,'This operation belongs to an expired Dealership epoch. Review it again before resubmitting.');
-  M.check(this.main.data.club.proposals.length<5000,'Club review history is full. Export a backup before maintenance.');M.check(this.main.data.club.proposals.filter(p=>p.status==='pending').length<200,'Review the pending club changes before sending more.');
-  // Only locally produced proposals may reuse the validation just performed
-  // against this exact immutable state. Network submissions still validate.
-  const validated=this.prevalidated.get(input);this.prevalidated.delete(input);
-  if(validated!==this.main.data&&(input.conditions?!fieldReview.inspect(this.main,input).conflict:input.base===this.comparisonBase(input)))this.simulation(input.action,input.payload);
-  const record={...cloneJSON(input),receiptHash,status:'pending',received:new Date().toISOString()};delete record.acceptedFields;delete record.reviewed;delete record.reviewer;return {record};
- }
- receive(input){const receipt=this.receipt(input);if(receipt.existing)return receipt.existing;transactions.run(this.main,before=>this.main.prepareClubChange(before,input.id,club=>club.proposals.unshift(receipt.record)),{scoped:!!this.main.deferredState});return {id:input.id,status:'pending'};}
- async receiveAsync(input,authorize=()=>{}){
-  return this.main.withIdle(async()=>{
-   authorize();const receipt=this.receipt(input);if(receipt.existing)return receipt.existing;
-   if(input.action==='catalogue.picture'){M.check(this.decodeCataloguePicture,'Picture validation is unavailable. Open Paddock and retry.');await this.decodeCataloguePicture(input.payload.picture);authorize();this.simulation(input.action,input.payload);}
-   await this.main.addClubProposal(receipt.record);return {id:input.id,status:'pending'};
-  });
- }
- comparisonBase(proposal){if(proposal.action==='catalogue.picture')return require('./catalogue-pictures-contract.cjs').digest(proposal.payload.intent.expected);if(proposal.baselineVersion===1)return require('./review-baseline.cjs').digest(this.main);if(require('./json-encoding.cjs').byteLength(this.main.data)>220*1024*1024)return 'legacy-recheck:'+require('./review-baseline.cjs').digest(this.main);return M.digest(this.main.data);}
- inspect(id){M.check(this.coordinator&&!this.active,'Only the dealership computer can review club proposals.');const p=this.main.data.club.proposals.find(p=>p.id===id);M.check(p&&p.status==='pending','This proposal has already been reviewed.');let simulation,error='';try{simulation=this.simulation(p.action,p.payload);}catch(e){error=e.message;}const checked=p.conditions?fieldReview.inspect(this.main,p):null,base=checked?.base||this.comparisonBase(p);return {simulation,view:{id,device:p.device,action:p.action,editing:!!p.payload.id,original:p.original,changes:simulation?.changes||[],error,conflict:checked?checked.conflict:p.base!==base,selectableFields:fieldReview.fields(p.action,p.payload)||null,token:M.hash({base,receipt:p.receiptHash,recoveryId:this.main.file?Sync.cursor(this.main).epoch:null})}};}
- preview(id){const view=this.inspect(id).view,q=this.main.data.club.proposals.find(q=>q.id===id);if(q?.action==='catalogue.picture'){const i=q.payload.intent;let old;try{old=require('./catalogue-picture-apply.cjs').current(this.main,i).record;}catch{}view.pictureComparison={current:{picture:old?.picture||''},proposed:{picture:q.payload.picture},name:old?.name||'Catalogue picture',imageUrl:i.provenance.imageUrl};}return view;}
- prepareReview(p){const {view,simulation:originalSimulation}=this.inspect(p.id);let simulation=originalSimulation;const q=this.main.data.club.proposals.find(q=>q.id===p.id);M.check(p.token===view.token,'The collection changed again. Reopen the comparison.');M.check(['accept','reject'].includes(p.decision),'Choose approve or reject.');if(p.decision==='accept'){if(p.fields!==undefined){const allowed=fieldReview.fields(q.action,q.payload);M.check(allowed&&Array.isArray(p.fields)&&p.fields.length>0&&new Set(p.fields).size===p.fields.length&&p.fields.every(f=>allowed.includes(f)),'Choose valid independent fields.');simulation=this.simulation(q.action,{...q.payload,data:Object.fromEntries(p.fields.map(f=>[f,q.payload.data[f]]))});}M.check(!view.error,view.error);M.check(!view.conflict||p.confirmConflict===true,'Review and confirm the comparison against the current collection.');return this.main.prepareClubChange(this.main.data,q.id,club=>Object.assign(club.proposals.find(x=>x.id===q.id),{...(q.action==='catalogue.picture'?{pictureReceipt:{...simulation.result,revision:this.main.data.revision+1}}:{}),status:'accepted',reviewed:new Date().toISOString(),reviewer:this.device.name,...(p.fields?{acceptedFields:p.fields}: {})}),simulation.data,simulation.scope,!simulation.noop&&!simulation.scope);
-  }return this.main.prepareClubChange(this.main.data,q.id,club=>Object.assign(club.proposals.find(x=>x.id===q.id),{status:'rejected',reviewed:new Date().toISOString(),reviewer:this.device.name}));}
- review(p){transactions.run(this.main,()=>this.prepareReview(p),{scoped:!!this.main.deferredState});return this.status();}
- async reviewAsync(p){await transactions.runAsync(this.main,()=>this.prepareReview(p),{scoped:!!this.main.deferredState});return this.status();}
- async mutate(action,payload={},options={}){
-  const store=this.store;
-
-  return store.withIdle(()=>{M.check(this.store===store,'The collection changed while saving. Reopen the editor.');return this.mutateReady(action,payload,options);});
- }
- async mutateReady(action,payload={},options={}){
-  if(!this.store.data.club)return this.store.mutateAsync(action,payload,options);
-  if(this.active&&action==='submission.add'&&payload.wishlistImport)M.check(this.device.pair?.wishlistCarFiles===1,'Update the dealership host and reconnect before importing Wishlist car files.');
-  if(this.active&&action==='car.purchase')M.check(this.device.pair?.wishlistPurchases===1,'Update the dealership host and reconnect before marking Wishlist cars purchased.');
-  if(this.active&&action.startsWith('car.')&&(require('./car-membership.cjs').isWishlist(payload.data)||payload.id&&require('./car-membership.cjs').isWishlist(this.store.data.cars.find(c=>c.id===payload.id))))M.check(this.device.pair?.wishlist===1,'Update the dealership host and reconnect before saving Wishlist cars.');
-  if(action==='submission.review'){M.check(this.coordinator&&!this.active,'Incoming member cars must be reviewed on the dealership computer.');return this.main.mutateAsync(action,payload,options);}
-  if(!require('./dealership-policy.cjs').requiresReview(action,payload)){
-   M.check(M.ACTIONS.has(action),'This operation cannot be saved through Dealership Mode.');
-   if(!this.active)return this.main.mutateAsync(action,payload,options);
-   M.check(this.state==='connected','Reconnect to the dealership before saving shared changes.');
-   M.check(this.device.pair?.routineWrites===1,'Update the dealership host and reconnect to save routine changes without Review.');
-   if(action.startsWith('planning.checklist.')||action==='planning.shopping.applyRequirements'||action==='planning.shopping.edit'&&payload.checklistQuantity!==undefined)M.check(this.device.pair?.shoppingChecklist===1,'Update the dealership host and reconnect before using the shopping checklist.');
-   if(action==='assembly.photo'||action==='assembly.create'&&payload.picture)M.check(this.device.pair?.assemblyPhotos===1,'Update the dealership host and reconnect before saving assembly photographs.');
-   const compact=this.store.deferredState?require('./scoped-write.cjs').compact(this.store,action,payload):M.compactPayload(this.store.data,action,payload);
-   const epoch=require('./sqlite-storage.cjs').syncState(this.cache.file).replica?.epoch;M.check(epoch,'Refresh this dealership copy before saving.');
-   const completed=options.commandId&&(this.device.directReceipts||[]).find(r=>r.id===options.commandId&&r.databaseId===this.store.data.id&&r.deliveryEpoch===epoch);
-   if(completed){M.check(completed.action===action&&completed.requestHash===M.hash(payload),'This save identity was already used with different content.');await this.catchUp(completed.revision,true);M.check(this.state==='connected'&&this.cache.data.revision>=completed.revision,'Reconnect to refresh the saved change.');return {result:completed.result,queued:false,data:options.snapshot===false?undefined:this.store.snapshot(),collection:this.store.metadata(),club:this.status()};}
-   const pending=this.device.outbox.find(p=>p.direct===true&&p.databaseId===this.store.data.id&&p.deliveryEpoch===epoch&&p.action===action&&(options.commandId?p.id===options.commandId:p.requestHash===M.hash(payload)));
-   M.check(!pending||pending.requestHash===M.hash(payload),'This pending save identity has different content. Retry its original change.');
-   const input=pending||{id:options.commandId||crypto.randomUUID(),direct:true,requestHash:M.hash(payload),databaseId:this.store.data.id,clubId:this.store.data.club.id,sourceId:this.device.id,device:this.device.name,deliveryEpoch:epoch,action,payload:compact,base:M.hash({}),original:[]};
-   if(!pending)this.saveDevice({...this.device,outbox:[...this.device.outbox,input]});
-   let receipt;try{receipt=await this.request('/v1/club/commands',input);}catch(e){if(e.definiteRejection===true)this.saveDevice({...this.device,outbox:this.device.outbox.filter(p=>p.id!==input.id)});else e.retryable=true;throw e;}
-   M.check(receipt.id===input.id&&receipt.status==='accepted'&&Number.isSafeInteger(receipt.revision),'The dealership save acknowledgement is invalid. Retry the same change.');
-   // Keep the command until the local copy catches up: an interrupted refresh
-   // can retry the same durable receipt and recover generated draft/job IDs.
-   await this.catchUp(receipt.revision,true);M.check(this.state==='connected'&&this.cache.data.revision>=receipt.revision,'The change was saved. Reconnect to refresh this copy before continuing.');
-   this.saveDevice({...this.device,outbox:this.device.outbox.filter(p=>p.id!==input.id)});
-   return {result:receipt.result,queued:false,data:options.snapshot===false?undefined:this.store.snapshot(),collection:this.store.metadata(),club:this.status()};
+  constructor(store, network, folder, notify = () => {}) {
+    this.main = store;
+    this.network = network;
+    network.club = this;
+    this.folder = folder;
+    this.file = path.join(folder, 'club-device.json');
+    this.cacheFile = path.join(folder, 'club-copy.json');
+    this._cache = null;
+    this.notify = notify;
+    this.clients = new Set();
+    this.journal = [];
+    this.journalBytes = 0;
+    this.last = store.data;
+    this.state = 'offline';
+    this.active = false;
+    this.busy = false;
+    this.closed = false;
+    this.shutdownAbort = new AbortController();
+    this.snapshots = new Sync.Snapshots(this);
+    this.prevalidated = new WeakMap();
+    this.device = fs.existsSync(this.file)
+      ? readJSON(this.file)
+      : {
+          version: 1,
+          id: crypto.randomUUID(),
+          name: require('node:os').hostname().slice(0, 100),
+          pair: null,
+          outbox: []
+        };
+    M.check(
+      this.device.version === 1 && typeof this.device.id === 'string' && Array.isArray(this.device.outbox),
+      'Invalid club device settings.'
+    );
+    this.code = this.device.pair?.password || undefined;
+    this.saveDevice();
+    this.unsubscribe = store.subscribe(() => this.changed());
   }
-  return this.proposeReady(action,payload,options);
- }
- // Retain explicit proposals for already queued work and older peers. Normal
- // application edits enter through mutate() and the shared review policy.
- async propose(action,payload={},options={}){const store=this.store;return store.withIdle(()=>{M.check(this.store===store,'The collection changed.');return this.proposeReady(action,payload,options);});}
- async proposeReady(action,payload={},options={}){
-  if(this.active&&action==='submission.add'&&payload.wishlistImport)M.check(this.device.pair?.wishlistCarFiles===1,'Update the dealership host and reconnect before importing Wishlist car files.');
-  if(this.active&&action==='car.purchase')M.check(this.device.pair?.wishlistPurchases===1,'Update the dealership host and reconnect before marking Wishlist cars purchased.');
-  if(this.active&&action.startsWith('car.')&&(require('./car-membership.cjs').isWishlist(payload.data)||payload.id&&require('./car-membership.cjs').isWishlist(this.store.data.cars.find(c=>c.id===payload.id))))M.check(this.device.pair?.wishlist===1,'Update the dealership host and reconnect before saving Wishlist cars.');
-  if(action==='submission.review'){M.check(this.coordinator&&!this.active,'Review incoming cars on the dealership computer.');return this.main.mutateAsync(action,payload,options);}
-  M.check(!this.active||this.state==='connected','This club copy is offline or out of date. Reconnect and update before proposing changes.');
-  if(action==='car.purchase'&&[...(this.store.data.club?.proposals||[]),...this.device.outbox].some(p=>p.action===action&&p.payload?.id===payload.id&&(p.status==='pending'||!p.status)))return {queued:true,message:'This car already has a purchase awaiting Review. Open Review to approve or reject it.',data:options.snapshot===false?undefined:this.store.snapshot(),collection:this.store.metadata(),club:this.status()};
-  const simulation=this.simulation(action,payload,false,this.store);
-  if(simulation.noop)return {queued:false,result:simulation.result,data:options.snapshot===false?undefined:this.store.snapshot(),collection:this.store.metadata(),club:this.status()};
-  const compact=this.store.deferredState?require('./scoped-write.cjs').compact(this.store,action,payload):M.compactPayload(this.store.data,action,payload),epoch=this.active?(this.device.pair?.sync===2?require('./sqlite-storage.cjs').syncState(this.cache.file).replica?.epoch:this.device.pair?.fieldReview?.epoch):fieldReview.capability(this.main)?.epoch,conditions=fieldReview.captureStore(this.store,action,compact,epoch);
-  const baselineVersion=!conditions&&(!this.active||this.device.pair?.reviewBaseline===1)?1:undefined;
-  const input={id:crypto.randomUUID(),...(baselineVersion?{baselineVersion}:{}),...((!this.active||this.device.pair?.sync===2)&&epoch?{deliveryEpoch:epoch}:{}),databaseId:this.store.data.id,clubId:this.store.data.club.id,sourceId:this.device.id,device:this.device.name,action,payload:compact,base:conditions?M.hash(conditions):baselineVersion?require('./review-baseline.cjs').digest(this.store):M.digest(this.store.data),...(conditions?{conditions}:{}),original:simulation.changes};M.command(input);
-  if(this.active){this.saveDevice({...this.device,outbox:[...this.device.outbox,input]});await this.sendOutbox();}else {this.prevalidated.set(input,this.main.data);await this.receiveAsync(input);}
-  return {queued:true,message:this.device.outbox.length?'Proposal saved on this computer; retry delivery in Connections.':'Change submitted to club Review. The approved collection is unchanged.',data:options.snapshot===false?undefined:this.store.snapshot(),collection:this.store.metadata(),club:this.status()};
- }
- pictureReceipt(p){
-  const C=require('./catalogue-pictures-contract.cjs'),P=require('./catalogue-picture-requests.cjs');
-  P.withReader(this.main,(_r,a)=>P.identity(a,p));
-  M.check(typeof p.operationId==='string'&&/^[a-zA-Z0-9_-]{1,100}$/.test(p.operationId)&&/^[a-f0-9]{64}$/.test(p.requestHash),'Invalid picture receipt request.');
-  const q=this.main.data.club?.proposals.find(q=>q.id===p.operationId);if(!q)return {status:'absent'};
-  M.check(q.action==='catalogue.picture'&&C.digest(q.payload.intent)===p.requestHash,'This picture operation has different content.');
-  return {status:q.status,...(q.pictureReceipt?{result:q.pictureReceipt}:{})};
- }
- async lookupPicture(intent){
-  if(!this.active)return this.pictureReceipt({...intent,requestHash:require('./catalogue-pictures-contract.cjs').digest(intent)});
-  M.check(this.state==='connected'&&this.device.pair?.cataloguePictures===1,'Reconnect to an updated Dealership host before checking picture reviews.');
-  const q=new URLSearchParams({operationId:intent.operationId,requestHash:require('./catalogue-pictures-contract.cjs').digest(intent),recoveryId:intent.recoveryId});
-  M.check(this.device.pair.databaseId===intent.databaseId,'Open the original dealership collection.');
-  return this.request('/v1/club/catalogue-picture-receipt?'+q);
- }
- async submitPicture(payload){
-  const C=require('./catalogue-pictures-contract.cjs'),A=require('./catalogue-picture-apply.cjs'),i=A.validate(payload);
-  const prior=await this.lookupPicture(i);if(prior.status!=='absent')return prior;
-  M.check(this.store.data.club,'Open the original Dealership collection.');
-  const input={id:i.operationId,databaseId:i.databaseId,clubId:this.store.data.club.id,sourceId:i.operationId,device:'Illustrated catalogue',deliveryEpoch:i.recoveryId,action:'catalogue.picture',payload,base:C.digest(i.expected),original:[{field:'Catalogue picture',before:i.expected.pictureHash?'Existing photograph':'No photograph',after:'Selected original photograph'}]};
-  M.command(input);A.reviewBudget(this.store,payload);
-  return this.active?this.request('/v1/club/proposals',input):this.receiveAsync(input);
- }
- rememberDirect(input,receipt){const saved={id:input.id,databaseId:input.databaseId,deliveryEpoch:input.deliveryEpoch,requestHash:input.requestHash,action:input.action,result:receipt.result,revision:receipt.revision};this.saveDevice({...this.device,outbox:this.device.outbox.filter(p=>p.id!==input.id),directReceipts:[...(this.device.directReceipts||[]).filter(r=>r.id!==input.id),saved].slice(-128)});}
- async receiveRoutine(input,authorize){
-  return this.main.withIdle(async()=>{
-   authorize();M.command(input);M.check(input.direct===true&&typeof input.id==='string'&&/^[a-zA-Z0-9_-]{1,100}$/.test(input.id),'Invalid dealership command.');
-   M.check(input.databaseId===this.main.data.id&&input.clubId===this.main.data.club.id,'Wrong dealership collection.');
-   M.check(!require('./dealership-policy.cjs').requiresReview(input.action,input.payload),'This operation needs Review.');
-   M.check(typeof input.deliveryEpoch==='string'&&input.deliveryEpoch===Sync.cursor(this.main).epoch,'The dealership was restored. Reconcile this saved change before retrying.');
-   const saved=await this.main.mutateAsync(input.action,input.payload,{snapshot:false,commandId:'club-'+M.hash([input.sourceId,input.id]),databaseId:input.databaseId,epoch:input.deliveryEpoch});
-   return {id:input.id,status:'accepted',result:saved.result,revision:this.main.data.revision,duplicate:!!saved.duplicate};
-  });
- }
- async request(route,body,connection){if(this.closed)throw require('./work-gate.cjs').closingError();const {pair,code}=connection||{pair:this.device.pair,code:this.code};M.check(pair&&code,'Reconnect with the dealership computer’s club password.');const {localAddress}=require('./network.cjs');const response=await fetch(localAddress(pair.address)+route,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+code,'Content-Type':'application/json','X-SlotForge-Database':pair.databaseId},body:body?JSON.stringify(body):undefined,redirect:'error',signal:AbortSignal.any([AbortSignal.timeout(60000),this.shutdownAbort.signal])}).catch(e=>{e.retryable=true;throw e;});const limit=route.startsWith('/v1/club/sync/')?4*1024*1024:MAX;M.check(Number(response.headers.get('content-length')||0)<=limit,'Club snapshot too large.');let size=0,chunks=[];try{for await(const c of response.body){size+=c.length;M.check(size<=limit,'Club snapshot too large.');chunks.push(c);}}catch(e){if(size<=limit)e.retryable=true;throw e;}const data=JSON.parse(Buffer.concat(chunks).toString());if(!response.ok){const error=Error(data?.error||'Club connection failed.');error.code=data?.code;error.retryable=response.status>=500||response.status===429;error.definiteRejection=!error.retryable;throw error;}return data;}
- async connect(p){
-  M.check(!this.busy&&!this.sending,'A club connection is already updating.');this.busy=true;
-  try{await this.openCache();}catch(e){this.busy=false;throw e;}
-  try{p={...p,code:p.code||this.device.pair?.password};this.password(p.code);M.check(typeof p.name==='string'&&p.name.trim()&&p.name.length<=100,'Enter a computer name.');const {localAddress}=require('./network.cjs');const address=localAddress(p.address),code=p.code.trim();const response=await this.network.request(address,code,'/v1/status');M.check(response.permissions?.club&&response.capabilities?.club===1,'Use a dealership computer with Dealership Mode and its shared password.');M.check(typeof response.id==='string'&&typeof response.clubId==='string'&&Number.isSafeInteger(response.revision)&&response.revision>=0,'Invalid dealership identity or revision.');M.check(!p.expectedDatabaseId||p.expectedDatabaseId===response.id,'This is not the original public host database. Migration was not applied.');M.check(response.id!==this.main.data.id,'This is already your local collection.');M.check(!this.device.pair||this.device.pair.databaseId===response.id,'This computer is paired with another club. Leave that club first.');
-   const syncStatus=await this.request('/v1/club/status',undefined,{pair:{address,databaseId:response.id},code});M.check(syncStatus.id===response.id&&syncStatus.clubId===response.clubId,'Dealership identity changed during connection.');
-   const pair={address,databaseId:response.id,clubId:response.clubId,password:code,...(syncStatus.shoppingChecklist===1?{shoppingChecklist:1}:{}),...(syncStatus.wishlistCarFiles===1?{wishlistCarFiles:1}:{}),...(syncStatus.wishlist===1?{wishlist:1}:{}),...(syncStatus.wishlistPurchases===1?{wishlistPurchases:1}:{}),...(syncStatus.cataloguePictures===1?{cataloguePictures:1}:{}),...(syncStatus.assemblyPhotos===1?{assemblyPhotos:1}:{}),...(syncStatus.routineWrites===1?{routineWrites:1}:{}),...(syncStatus.reviewBaseline===1?{reviewBaseline:1}:{}),...(syncStatus.syncVersion===2?{sync:2}:{}),...(response.capabilities.clubFieldReview===1&&response.clubFieldReview?.version===1?{fieldReview:response.clubFieldReview}:{})};let snapshot;
-   // Verify the initial download before committing a pairing. A network failure
-   // must not leave the user tied to a collection they never received.
-   if(!this.hasCopy()){if(pair.sync===2)snapshot=await Sync.snapshot(this,{pair,code});else snapshot=this.verify(await this.request('/v1/club/snapshot',undefined,{pair,code}),pair);}
-   const candidate=snapshot||this.cache.data;M.check(candidate.id===pair.databaseId&&candidate.club?.id===pair.clubId,'The dealership computer’s collection identity changed.');
-   if(snapshot&&pair.sync!==2)await this.backupAsync(this.cache,'before-joining');
-   // Save the verified copy before committing its pairing/password. A failed
-   // disk write must not remember a new dealership with an unrelated old copy.
-   if(snapshot&&pair.sync!==2)this.cache.replace(snapshot);
-   this.saveDevice({...this.device,pair,name:p.name.trim()});this.disconnect();this.code=code;this.latest=snapshot?.revision??response.revision;
-   this.active=true;this.lastError='';this.state=this.cache.data.revision===this.latest?'connected':'outdated';if(pair.sync===2){this.state='connected';await this.catchUp(this.latest,true);}if(this.state==='connected'){this.listen();void this.sendOutbox();}this.notify({kind:'club'});return this.status();
-  }finally{this.busy=false;this.notify({kind:'club'});}
- }
- verify(db,pair=this.device.pair,owned=false,previous=null){M.check(db?.club?.replica===true&&db.timing?.key===null,'Not a protected club copy.');M.check(db.id===pair.databaseId&&db.club?.id===pair.clubId,'The dealership computer is serving a different club collection.');return migrate(db,{owned,previous});}
- async update(expected){M.check(this.active&&this.device.pair,'Open the club copy first.');M.check(!this.busy,'An update is already in progress.');this.busy=true;this.disconnect();this.state='outdated';try{if(this.device.pair.sync===2){await Sync.snapshot(this,undefined,expected);this.latest=this.cache.data.revision;this.state='connected';this.lastError='';this.listen();return this.status();}const snapshot=await this.request('/v1/club/snapshot');this.verify(snapshot);this.latest=snapshot.revision;M.check(expected===snapshot.revision,'The club changed while you were reviewing. Check the latest revision and confirm again.');M.check(snapshot.revision>=this.cache.data.revision,'The dealership computer is behind this copy. Check its backup before continuing.');await this.backupAsync(this.cache,'before-update');this.cache.replace(migrate(snapshot));this.state='connected';this.lastError='';this.listen();this.notify({kind:'club'});return this.status();}finally{this.busy=false;this.notify({kind:'club'});}}
- async sendOutbox(){if(this.closed)return this.status();if(this.sending)return this.sending;this.sending=this.deliverOutbox();try{return await this.sending;}finally{this.sending=null;}}
- async deliverOutbox(){for(const input of [...this.device.outbox]){if(this.closed)break;try{const receipt=await this.request(input.direct?'/v1/club/commands':'/v1/club/proposals',input);M.check(receipt?.id===input.id&&(input.direct?receipt.status==='accepted'&&Number.isSafeInteger(receipt.revision):['pending','accepted','rejected'].includes(receipt.status)),'The dealership did not acknowledge this change. Retry delivery.');if(input.direct)this.rememberDirect(input,receipt);else this.saveDevice({...this.device,outbox:this.device.outbox.filter(p=>p.id!==input.id)});this.lastError='';}catch(e){this.lastError=e.message;if(e.retryable&&!this.closed&&this.state==='connected'){clearTimeout(this.outboxRetry);this.outboxRetry=setTimeout(()=>this.sendOutbox(),Math.min(30000,2000*2**Math.min(this.outboxFailures||0,4)));this.outboxRetry.unref?.();this.outboxFailures=(this.outboxFailures||0)+1;}break;}}if(!this.device.outbox.length){clearTimeout(this.outboxRetry);this.outboxFailures=0;}this.notify({kind:'club'});return this.status();}
- switch(active){M.check(!this.busy&&!this.sending,'Wait for the club update to finish.');M.check(!active||this.hasCopy(),'Join a club first.');this.active=!!active;this.notify({kind:'club'});return this.status();}
- async switchAsync(active){M.check(!this.busy&&!this.sending,'Wait for the club update to finish.');if(active)await this.openCache();return this.switch(active);}
- disconnect(){clearTimeout(this.outboxRetry);this.catchUpTarget=0;this.generation=(this.generation||0)+1;this.abort?.abort();clearTimeout(this.retry);clearTimeout(this.watchdog);this.abort=null;this.state='offline';}
- discardOutbox(){M.check(!this.busy&&!this.sending,'Wait for delivery to finish.');const file=path.join(this.folder,'club-backups','unsent-proposals-'+Date.now()+'-'+crypto.randomUUID()+'.json');M.write(file,{format:'slotforge-club-proposals',version:1,pair:this.device.pair?{address:this.device.pair.address,databaseId:this.device.pair.databaseId,clubId:this.device.pair.clubId}:null,proposals:this.device.outbox});this.backupPath=file;this.saveDevice({...this.device,outbox:[]});this.lastError='';this.notify({kind:'club'});return this.status();}
- leave(backup=true){M.check(!this.busy&&!this.sending,'Wait for the club update to finish.');M.check(this.device.outbox.length===0,'Retry the saved proposals before leaving this club.');if(backup)this.backup(this.cache,'leaving-club');this.cache.assertIdle();this.saveDevice({...this.device,pair:null});this.disconnect();this.code=null;this.active=false;this.latest=null;this.lastError='';
-  // Once unpaired, a leftover file is never treated as an active saved copy.
-  // A locked file must not strand the UI or prevent joining another dealership.
-  try{this.cache.replace(new Store().data);}catch(e){this.lastError='Disconnected, but the saved copy could not be cleared: '+e.message;}
-  this.notify({kind:'club'});return this.status();}
- listen(){if(this.closed)return;this.abort?.abort();clearTimeout(this.retry);const abort=this.abort=new AbortController();this.stream(abort).catch(e=>{if(abort.signal.aborted||this.closed)return;clearTimeout(this.watchdog);this.generation=(this.generation||0)+1;this.state='offline';this.lastError=e.message;this.notify({kind:'club'});this.retry=setTimeout(()=>this.reconnect(),Math.min(30000,2000*2**Math.min(this.failures||0,4)));this.retry.unref?.();this.failures=(this.failures||0)+1;});}
- async reconnect(){if(this.closed||!this.code||!this.device.pair)return;const generation=this.generation;try{const status=await this.request('/v1/club/status');if(this.closed||generation!==this.generation)return;M.check(status.id===this.device.pair.databaseId&&status.clubId===this.device.pair.clubId&&Number.isSafeInteger(status.revision),'The dealership computer is serving a different collection.');if(this.device.pair.wishlist!==(status.wishlist===1?1:undefined)){const pair={...this.device.pair};if(status.wishlist===1)pair.wishlist=1;else delete pair.wishlist;this.saveDevice({...this.device,pair});}if(this.device.pair.wishlistPurchases!==(status.wishlistPurchases===1?1:undefined)){const pair={...this.device.pair};if(status.wishlistPurchases===1)pair.wishlistPurchases=1;else delete pair.wishlistPurchases;this.saveDevice({...this.device,pair});}if(this.device.pair.wishlistCarFiles!==(status.wishlistCarFiles===1?1:undefined)){const pair={...this.device.pair};if(status.wishlistCarFiles===1)pair.wishlistCarFiles=1;else delete pair.wishlistCarFiles;this.saveDevice({...this.device,pair});}if(this.device.pair.shoppingChecklist!==(status.shoppingChecklist===1?1:undefined)){const pair={...this.device.pair};if(status.shoppingChecklist===1)pair.shoppingChecklist=1;else delete pair.shoppingChecklist;this.saveDevice({...this.device,pair});}this.latest=status.revision;this.lastError='';if(status.revision!==this.cache.data.revision||this.device.pair.sync===2){if(this.device.pair.sync===2){this.state='connected';await this.catchUp(status.revision,true);if(this.state!=='connected')return;}else{this.state='outdated';this.notify({kind:'club'});return;}}this.state='connected';this.listen();this.notify({kind:'club'});}catch(e){if(this.closed||generation!==this.generation)return;this.state='offline';this.lastError=e.message;this.notify({kind:'club'});this.retry=setTimeout(()=>this.reconnect(),30000);this.retry.unref?.();}}
- async stream(abort){const pair=this.device.pair,{localAddress}=require('./network.cjs');const response=await fetch(localAddress(pair.address)+'/v1/club/events'+(pair.sync===2?'?sync=2':''),{headers:{Authorization:'Bearer '+this.code,'X-SlotForge-Database':pair.databaseId},signal:abort.signal,redirect:'error'});M.check(response.ok,'Club connection closed or permission revoked.');let buffer='',first=true;const reset=()=>{clearTimeout(this.watchdog);this.watchdog=setTimeout(()=>{if(this.abort===abort){abort.abort();this.state='offline';this.notify({kind:'club'});this.generation=(this.generation||0)+1;this.retry=setTimeout(()=>this.reconnect(),2000);}},45000);this.watchdog.unref?.();};reset();for await(const chunk of response.body){reset();buffer+=Buffer.from(chunk).toString('utf8');M.check(buffer.length<65536,'Invalid club event.');let i;while((i=buffer.indexOf('\n\n'))>=0){const frame=buffer.slice(0,i);buffer=buffer.slice(i+2);if(!frame.startsWith('data: '))continue;const event=JSON.parse(frame.slice(6));M.check(Number.isSafeInteger(event.revision),'Invalid club revision.');this.latest=event.revision;if(first&&event.revision<this.cache.data.revision){this.state='outdated';this.lastError='The dealership computer is behind this saved copy. Check its backup before continuing.';this.notify({kind:'club'});}first=false;this.queueCatchUp(event.revision,abort);}}throw Error('Dealership disconnected.');}
- queueCatchUp(revision,abort){this.catchUpTarget=Math.max(this.catchUpTarget||0,revision);if(this.catchUpRunning)return;const generation=this.generation;this.catchUpRunning=(async()=>{while(generation===this.generation&&!abort.signal.aborted&&this.state==='connected'&&this.catchUpTarget>this.cache.data.revision){await this.catchUp(this.catchUpTarget);}})().catch(e=>{if(generation!==this.generation||abort.signal.aborted)return;this.state=e.retryable?'offline':'outdated';if(e.retryable){this.retry=setTimeout(()=>this.reconnect(),Math.min(30000,2000*2**Math.min(this.failures||0,4)));this.retry.unref?.();this.failures=(this.failures||0)+1;}this.lastError=e.message;this.notify({kind:'club'});}).finally(()=>{this.catchUpRunning=null;if(this.state==='connected'&&this.abort&&!this.abort.signal.aborted&&this.catchUpTarget>this.cache.data.revision)this.queueCatchUp(this.catchUpTarget,this.abort);});}
- async catchUp(revision,force=false){const generation=this.generation,previous=this.catchUpFlight;const run=(previous||Promise.resolve()).catch(()=>{}).then(()=>{if(generation!==this.generation||this.closed)return;return this.catchUpOnce(revision,force);});this.catchUpFlight=run;try{return await run;}finally{if(this.catchUpFlight===run)this.catchUpFlight=null;}}
- async catchUpOnce(revision,force=false){if(this.device.pair?.sync===2){const generation=this.generation;while(this.state==='connected'&&(force||revision>this.cache.data.revision)){force=false;const state=require('./sqlite-storage.cjs').syncState(this.cache.file).replica;if(!state){this.state='outdated';break;}const batch=await this.request('/v1/club/sync/changes?epoch='+state.epoch+'&after='+state.after);if(generation!==this.generation||this.closed)return;if(batch.snapshotRequired){this.state='outdated';this.latest=batch.identity[1];this.lastError='Retained change history is unavailable. Confirm replacement with the latest verified copy.';break;}await Sync.apply(this,batch,generation);if(!batch.more)break;}if(this.state==='connected'){this.failures=0;this.lastError='';}this.notify({kind:'club'});return;}const generation=this.generation;if(this.state!=='connected'||revision<=this.cache.data.revision)return;const result=await this.request('/v1/club/changes?since='+this.cache.data.revision);if(generation!==this.generation||this.closed)return;if(result.snapshotRequired){this.state='outdated';this.latest=result.revision;this.notify({kind:'club'});return;}let next=this.cache.snapshot();for(const e of result.entries){M.check(next.revision===e.from,'Missed club update.');next=M.apply(next,e.changes);this.verify(next);M.check(next.revision===e.to&&M.hash(next)===e.digest,'Club update did not verify.');}if(next.revision>this.cache.data.revision)this.cache.replace(next);this.failures=0;this.lastError='';this.notify({kind:'club'});}
- async handle(req,res,url,access,code){
-  const send=(status,value)=>{if(!res.destroyed&&!res.writableEnded){res.writeHead(status,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify(value));}};
-  if(!this.coordinator||!access.club){send(403,{error:'Trusted club access is required.',code:'CLUB_PERMISSION_REQUIRED'});return;}
-  try{const peer=req.socket.remoteAddress?.replace(/^::ffff:/,'');require('./network.cjs').localAddress(peer==='::1'?'127.0.0.1':peer);}catch{send(403,{error:'Club connections are limited to the local network.',code:'LAN_REQUIRED'});return;}
-  const databaseId=this.main.data.id,clubId=this.main.data.club.id;
-  if(req.headers['x-slotforge-database']!==databaseId){send(409,{error:'Wrong club database.',code:'DATABASE_MISMATCH'});return;}
-  try{
-   if(req.method==='GET'&&url.pathname.startsWith('/v1/club/sync/')){await this.main.withIdle(()=>{M.check(this.coordinator&&this.network.access(code)?.club&&this.main.data.id===databaseId,'Dealership access changed.');const route=url.pathname.slice('/v1/club/sync/'.length);if(route==='changes')send(200,Sync.changes(this.main,url.searchParams.get('epoch'),Number(url.searchParams.get('after'))));else if(route==='snapshot')send(200,this.snapshots.create());else if(route==='chunk')send(200,this.snapshots.chunk(url.searchParams.get('id'),Number(url.searchParams.get('offset'))));else if(route==='release'){this.snapshots.release(url.searchParams.get('id'));send(200,{released:true});}else if(route==='asset'){const hash=url.searchParams.get('hash'),id=url.searchParams.get('id');if(id)M.check(this.snapshots.get(id).hashes.has(hash),'Attachment is not in this snapshot.');send(200,require('./sqlite-storage.cjs').assetChunk(this.main.file,hash,Number(url.searchParams.get('offset'))));}else send(404,{error:'Unknown sync operation.'});});return;}
-   if(req.method==='GET'&&url.pathname==='/v1/club/catalogue-picture-receipt'){send(200,await this.main.withIdle(()=>{M.check(this.coordinator&&this.network.access(code)?.club&&this.main.data.id===databaseId&&this.main.data.club.id===clubId,'Dealership access changed.');return this.pictureReceipt({operationId:url.searchParams.get('operationId'),requestHash:url.searchParams.get('requestHash'),databaseId,recoveryId:url.searchParams.get('recoveryId')});}));return;}
-   if(req.method==='GET'&&url.pathname==='/v1/club/status'){send(200,{id:databaseId,clubId,revision:this.main.data.revision,syncVersion:2,reviewBaseline:1,routineWrites:1,assemblyPhotos:1,cataloguePictures:1,wishlist:1,wishlistPurchases:1,wishlistCarFiles:1,shoppingChecklist:1});return;}
-   if(req.method==='GET'&&url.pathname==='/v1/club/snapshot'){const snapshot=M.shared(this.main.data);if(require('./json-encoding.cjs').byteLength(snapshot)>MAX){send(413,{error:'This collection requires a Paddock client with Dealership sync v2.',code:'CLUB_SNAPSHOT_TOO_LARGE'});return;}send(200,snapshot);return;}
-   if(req.method==='GET'&&url.pathname==='/v1/club/changes'){this.main.ensureLoaded();this.legacyRequested=true;const since=Number(url.searchParams.get('since'));M.check(Number.isSafeInteger(since)&&since>=0,'Invalid revision.');let cursor=since;const entries=[];for(const e of this.journal)if(e.from===cursor){entries.push(e);cursor=e.to;}send(200,cursor===this.main.data.revision?{entries}:{snapshotRequired:true,revision:this.main.data.revision});return;}
-   if(req.method==='GET'&&url.pathname==='/v1/club/events'){
-    M.check(this.clients.size<10,'Maximum 10 trusted club connections.');if(url.searchParams.get('sync')!=='2')this.main.ensureLoaded();res.writeHead(200,{'Content-Type':'text/event-stream','Cache-Control':'no-cache','Connection':'keep-alive'});res.write('data: '+JSON.stringify({revision:this.main.data.revision})+'\n\n');const client={res,sync2:url.searchParams.get('sync')==='2'};this.clients.add(client);const heartbeat=setInterval(()=>{if(!this.coordinator||this.main.data.id!==databaseId||this.main.data.club.id!==clubId||!this.network.access(code)?.club){res.end();return;}if(res.writableLength>65536){res.destroy();return;}res.write(client.sync2?'data: '+JSON.stringify({revision:this.main.data.revision})+'\n\n':': heartbeat\n\n');},15000);heartbeat.unref();res.on('close',()=>{clearInterval(heartbeat);this.clients.delete(client);});return;
-   }
-   if(req.method==='POST'&&['/v1/club/proposals','/v1/club/commands'].includes(url.pathname)){
-    if(Number(req.headers['content-length'])>16*1024*1024){send(413,{error:'Club proposal exceeds 16 MiB.'});req.resume();return;}
-    M.check(/^application\/json(?:;\s*charset=utf-8)?$/i.test(req.headers['content-type']||''),'Send application/json.');M.check(!req.headers['content-encoding']||req.headers['content-encoding']==='identity','Compressed submissions are unsupported.');let size=0,chunks=[];for await(const c of req.iterator({destroyOnReturn:false})){size+=c.length;if(size>16*1024*1024){send(413,{error:'Club proposal exceeds 16 MiB.'});req.resume();return;}chunks.push(c);}M.check(this.coordinator&&this.main.data.id===databaseId&&this.main.data.club.id===clubId&&this.network.access(code)?.club,'Club permission or identity changed during upload.');const value=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(Buffer.concat(chunks)));send(200,await (url.pathname==='/v1/club/commands'?this.receiveRoutine.bind(this):this.receiveAsync.bind(this))(value,()=>M.check(this.coordinator&&this.main.data.id===databaseId&&this.main.data.club.id===clubId&&this.network.access(code)?.club,'Club permission or identity changed during upload.')));return;
-   }
-   send(404,{error:'Unknown club operation.'});
-  }catch(e){send(e.code==='WRITE_UNCERTAIN'?503:400,{error:e.message,code:e.code||'CLUB_REQUEST_FAILED'});}
- }
- quiesce(){this.closed=true;this.shutdownAbort.abort();clearTimeout(this.signalTimer);this.disconnect();this.unsubscribe();for(const c of this.clients)c.res.end();this.clients.clear();}
- async idle(){await Promise.allSettled([this.sending,this.catchUpRunning,this.catchUpFlight,this.openingCache]);}
- close(){this.quiesce();this.snapshots.close();}
+  saveDevice(next = this.device) {
+    M.write(this.file, next);
+    this.device = next;
+  }
+  password(value) {
+    M.check(
+      typeof value === 'string' &&
+        value.length >= 4 &&
+        value.length <= 128 &&
+        /^[\x20-\x7e]+$/.test(value) &&
+        value === value.trim(),
+      'Choose a Dealership password of 4–128 letters, numbers, spaces or symbols, without spaces at either end.'
+    );
+    return value;
+  }
+  setPassword(value) {
+    M.check(this.coordinator && !this.active, 'Change the password on the dealership computer.');
+    const password = this.password(value);
+    this.saveDevice({ ...this.device, hostPassword: password });
+    if (this.network.hostingMode === 'dealership' && this.network.server) this.network.clubCode = password;
+    this.network.authAttempts?.clear();
+    this.network.telemetryEvents?.revalidate();
+    this.network.scalableEvents?.revalidate();
+    for (const client of this.clients) client.res.end();
+    this.clients.clear();
+    this.notify({ kind: 'club' });
+    return this.status();
+  }
+  get coordinator() {
+    return !!this.main.data.club && !this.main.data.club.replica && this.device.coordinator === this.main.data.club.id;
+  }
+  // The saved replica can be large. Opening the personal collection must not
+  // reconstruct it as a second domain model just to paint connection status.
+  get cache() {
+    return (this._cache ??= new Store(this.cacheFile, { deferred: true }));
+  }
+  async openCache() {
+    if (this._cache) return this._cache;
+    if (!this.openingCache)
+      this.openingCache = Store.open(this.cacheFile)
+        .then(store => (this._cache ??= store))
+        .finally(() => {
+          this.openingCache = null;
+        });
+    return this.openingCache;
+  }
+  set cache(value) {
+    this._cache = value;
+  }
+  get loadedCache() {
+    return this._cache;
+  }
+  protectedFiles() {
+    return require('./sqlite-storage.cjs').protectedFiles(require('./sqlite-storage.cjs').sqlitePath(this.cacheFile));
+  }
+  get store() {
+    return this.active ? this.cache : this.main;
+  }
+  hasCopy() {
+    const pair = this.device.pair;
+    if (!pair) return false;
+    if (this._cache) return this._cache.data.id === pair.databaseId && this._cache.data.club?.id === pair.clubId;
+    const storage = require('./sqlite-storage.cjs'),
+      file = storage.sqlitePath(this.cacheFile);
+    if (!fs.existsSync(file))
+      return fs.existsSync(this.cacheFile)
+        ? this.cache.data.id === pair.databaseId && this.cache.data.club?.id === pair.clubId
+        : false;
+    // This is only an availability hint. Activating verifies the directory and
+    // identity; bodies and write dependencies load on demand.
+    const hint = storage.collectionHint(file);
+    return hint.id === pair.databaseId && hint.clubId === pair.clubId;
+  }
+
+  status() {
+    return {
+      password: this.coordinator ? this.device.hostPassword || '' : '',
+      savedPassword: this.device.pair?.password || '',
+      role: this.active ? 'member' : this.coordinator ? 'coordinator' : 'personal',
+      active: this.active,
+      paired: !!this.device.pair,
+      hasCopy: this.hasCopy(),
+      device: this.device.name,
+      state: this.state,
+      address: this.device.pair?.address || '',
+      name: this.active ? this.cache.data.settings.name : this.main.data.settings.name,
+      revision: this.active ? this.cache.data.revision : this.main.data.revision,
+      latest: this.latest ?? null,
+      pending: this.store.pendingClubReviews(),
+      outbox: this.device.outbox.length,
+      lastError: this.lastError || '',
+      backup: this.backupPath || ''
+    };
+  }
+  changed() {
+    if (!this.main.data.club) return;
+    const next = this.main.data;
+    if (this.coordinator && next.id === this.last.id && next.revision > this.last.revision) {
+      if (this.legacyRequested || [...this.clients].some(c => !c.sync2)) {
+        const shared = M.shared(next),
+          encoding = require('./json-encoding.cjs'),
+          entry = {
+            from: this.last.revision,
+            to: next.revision,
+            changes: M.delta(M.shared(this.last), shared),
+            digest: null
+          };
+        // Legacy peers require the exact whole-snapshot checksum. Compute it only
+        // when that entry is requested, never while acknowledging a committed save.
+        // Retain immutable lazy handles, and account for the snapshot as well as the
+        // wire patch in the bounded journal. Eviction uses the existing snapshot fallback.
+        let snapshot = shared,
+          digest;
+        Object.defineProperty(entry, 'digest', {
+          enumerable: true,
+          get() {
+            if (digest === undefined) {
+              digest = M.hash(snapshot);
+              snapshot = null;
+            }
+            return digest;
+          }
+        });
+        const bytes = encoding.retainedSize(next) + encoding.byteLength(entry.changes) + 256;
+        Object.defineProperty(entry, 'retainedBytes', { value: bytes });
+        this.journal.push(entry);
+        this.journalBytes += bytes;
+        while (this.journal.length > 32 || this.journalBytes > 32 * 1024 * 1024)
+          this.journalBytes -= this.journal.shift().retainedBytes;
+      }
+      if (!this.signalTimer)
+        this.signalTimer = setTimeout(() => {
+          this.signalTimer = null;
+          for (const client of this.clients) {
+            if (client.res.writableLength > 65536) client.res.destroy();
+            else client.res.write('data: ' + JSON.stringify({ revision: this.main.data.revision }) + '\n\n');
+          }
+        }, 25);
+      this.signalTimer.unref?.();
+    }
+    this.last = next;
+    if (this.main.data.club) this.notify({ kind: 'club' });
+  }
+  backupFile(label) {
+    const folder = path.join(this.folder, 'club-backups');
+    fs.mkdirSync(folder, { recursive: true });
+    return path.join(folder, label + '-' + Date.now() + '-' + crypto.randomUUID() + '.sfpbackup');
+  }
+  backupSource(store) {
+    if (store.file) {
+      if (!store.expectedIdentity) store.persist(store.data);
+      return { file: store.file, temporary: false };
+    }
+    const file = this.backupFile('temporary-source');
+    require('./sqlite-storage.cjs').write(file, require('./sqlite-storage.cjs').pack(store.data), null);
+    return { file, temporary: true };
+  }
+  backup(store, label) {
+    store.assertIdle();
+    const source = this.backupSource(store),
+      file = this.backupFile(label);
+    try {
+      require('./portable-backup.cjs').exportBackup(source.file, file, {
+        expectedIdentity: JSON.stringify([store.data.id, store.data.revision]),
+        protectedFiles: store.protectedFiles()
+      });
+      this.backupPath = file;
+      return file;
+    } finally {
+      if (source.temporary) fs.unlinkSync(source.file);
+    }
+  }
+  async backupAsync(store, label) {
+    return store.exclusiveFileOperation(async () => {
+      const source = this.backupSource(store),
+        file = this.backupFile(label);
+      try {
+        this.backupJobs ??= new (require('./backup-jobs.cjs').BackupJobs)();
+        await this.backupJobs.run('export', source.file, file, {
+          expectedIdentity: JSON.stringify([store.data.id, store.data.revision]),
+          protectedFiles: store.protectedFiles()
+        });
+        this.backupPath = file;
+        return file;
+      } finally {
+        if (source.temporary) fs.unlinkSync(source.file);
+      }
+    });
+  }
+  async enableAsync(name, password) {
+    this.password(password);
+    M.check(!this.active && !this.main.data.club, 'Open an unshared local collection first.');
+    M.check(typeof name === 'string' && name.trim() && name.length <= 100, 'Enter a computer name.');
+    const revision = this.main.data.revision;
+    await this.backupAsync(this.main, 'before-sharing');
+    M.check(revision === this.main.data.revision, 'The collection changed. Try enabling Dealership Mode again.');
+    return this.enable(name, password, false);
+  }
+  async leaveAsync() {
+    await this.openCache();
+    M.check(!this.busy && !this.sending, 'Wait for the club update to finish.');
+    M.check(this.device.outbox.length === 0, 'Retry the saved proposals before leaving this club.');
+    const revision = this.cache.data.revision;
+    await this.backupAsync(this.cache, 'leaving-club');
+    M.check(revision === this.cache.data.revision, 'The copy changed. Try leaving again.');
+    return this.leave(false);
+  }
+  async disableAsync(input) {
+    const guard = () => {
+      M.check(
+        !this.active && !this.main.data.club?.replica,
+        'Open the original local collection to turn off Dealership Mode. Use Disconnect from dealership for a downloaded copy.'
+      );
+      M.check(!this.busy && !this.sending, 'Wait for the dealership update to finish.');
+      M.check(
+        input?.databaseId === this.main.data.id &&
+          input.clubId === this.main.data.club?.id &&
+          input.revision === this.main.data.revision,
+        'The collection changed. Reopen Turn off Dealership Mode.'
+      );
+      M.check(
+        input.recoveryId === require('./sqlite-storage.cjs').syncState(this.main.file).epoch,
+        'The collection was restored. Reopen Turn off Dealership Mode.'
+      );
+    };
+    guard();
+    await this.backupAsync(this.main, 'before-disabling-dealership');
+    guard();
+    if (this.network.hostingMode === 'dealership' || this.network.starting) await this.network.stop();
+    guard();
+    await require('./domain-tasks.cjs').run(this.main, { kind: 'dealership-disable', input }, guard);
+    clearTimeout(this.signalTimer);
+    this.signalTimer = null;
+    for (const client of this.clients) client.res.end();
+    this.clients.clear();
+    this.snapshots.close();
+    this.journal = [];
+    this.journalBytes = 0;
+    this.last = this.main.data;
+    this.notify({ kind: 'club' });
+    return this.status();
+  }
+  enable(name, password, backup = true) {
+    password = this.password(password);
+    M.check(!this.active, 'Switch to the local collection first.');
+    M.check(!this.main.data.club, 'This collection is already shared.');
+    M.check(typeof name === 'string' && name.trim() && name.length <= 100, 'Enter a computer name.');
+    if (backup) this.backup(this.main, 'before-sharing');
+    this.main.assertIdle();
+    const id = crypto.randomUUID();
+    this.saveDevice({ ...this.device, coordinator: id, name: name.trim(), hostPassword: password });
+    this.main.scopedTransact('@club', db => {
+      db.club = { id, proposals: [] };
+    });
+    this.last = this.main.data;
+    return this.status();
+  }
+  assertHost() {
+    M.check(
+      !this.active && !this.main.data.club?.replica,
+      'A club copy cannot host or serve Timing. Switch to your personal collection, or use the dealership computer.'
+    );
+    M.check(
+      !this.main.data.club || this.coordinator,
+      'This shared collection is not authorised for Dealership Mode on this computer.'
+    );
+  }
+  simulation(action, payload, rebase = true, store = this.main) {
+    if (action === 'catalogue.picture') {
+      const A = require('./catalogue-picture-apply.cjs'),
+        prepared = A.prepare(store, payload),
+        record = A.reviewBudget(store, payload);
+      return {
+        ...prepared,
+        data: prepared.data || store.data,
+        changes: [
+          {
+            field: 'Catalogue picture',
+            before: payload.intent.expected.pictureHash ? 'Existing photograph' : 'No photograph',
+            after: prepared.noop ? 'Unchanged photograph' : 'Selected catalogue photograph'
+          }
+        ]
+      };
+    }
+    const scoped = !!store.deferredState;
+    if (scoped) payload = require('./scoped-write.cjs').compact(store, action, payload);
+    const physical =
+      scoped &&
+      ((action === 'car.save' && payload.stockOverrides !== undefined) ||
+        (action === 'setup.save' && payload.suggestion !== undefined))
+        ? require('./physical-write.cjs').context(store, action, payload)
+        : null;
+    const s = physical?.store || (scoped ? require('./scoped-write.cjs').context(store, action, payload) : new Store());
+    const db = scoped ? s.data : store.data;
+    s.data = db;
+    const p = cloneJSON(payload);
+    if (rebase && action !== 'car.purchase' && Object.hasOwn(p, 'revision')) {
+      let c;
+      if (['car.save', 'car.favourite', 'car.archive'].includes(action)) c = db.cars.find(x => x.id === p.id);
+      if (action === 'document.add') c = db.cars.find(x => x.id === p.carId);
+      if (action === 'document.remove') {
+        const d = db.documents.find(x => x.id === p.id);
+        c = db.cars.find(x => x.id === d?.carId);
+      }
+      p.revision = c ? c.revision : db.revision;
+    }
+    if (rebase && Object.hasOwn(p, 'carRevision') && !(action === 'setup.save' && p.suggestion !== undefined))
+      p.carRevision = db.cars.find(x => x.id === p.carId)?.revision;
+    const r = s.mutate(action, p, { snapshot: false });
+    const targeted = s.lastCommand?.kind === 'car.edit',
+      noop = s.data === db,
+      changes = noop
+        ? []
+        : targeted
+          ? M.summary(
+              { cars: [db.cars.find(c => c.id === p.id)], events: [] },
+              { cars: [s.data.cars.find(c => c.id === p.id)], events: [s.data.events[0]] },
+              action
+            )
+          : M.summary(db, s.data, action);
+    const prepared = scoped
+      ? require('./scoped-write.cjs').prepare(store, db, s.data, r.result, physical?.recordKeys || null)
+      : null;
+    return {
+      data: prepared?.data || s.data,
+      result: r.result,
+      changes,
+      noop,
+      scope: prepared?.scope || s.lastCommand?.scope
+    };
+  }
+  receipt(input) {
+    M.check(this.coordinator, 'This computer is not in Dealership Mode.');
+    M.command(input);
+    M.check(typeof input.id === 'string' && /^[a-zA-Z0-9_-]{1,100}$/.test(input.id), 'Invalid proposal ID.');
+    M.check(
+      input.databaseId === this.main.data.id && input.clubId === this.main.data.club.id,
+      'Wrong club collection.'
+    );
+    if (input.action === 'catalogue.picture') {
+      const A = require('./catalogue-picture-apply.cjs');
+      A.validate(input.payload);
+      M.check(input.id === input.payload.intent.operationId, 'Picture operation identity differs.');
+      require('./catalogue-picture-requests.cjs').withReader(this.main, (_r, a) =>
+        require('./catalogue-picture-requests.cjs').identity(a, input.payload.intent)
+      );
+    }
+    const receiptHash = M.hash(input),
+      old = this.main.data.club.proposals.find(p => p.id === input.id);
+    if (old) {
+      M.check(old.receiptHash === receiptHash, 'This proposal identity has different content.');
+      return {
+        existing: {
+          id: old.id,
+          status: old.status,
+          duplicate: true,
+          ...(old.pictureReceipt ? { result: { ...old.pictureReceipt, duplicate: true } } : {})
+        }
+      };
+    }
+    if (input.action === 'car.purchase')
+      M.check(
+        !this.main.data.club.proposals.some(
+          p => p.status === 'pending' && p.action === 'car.purchase' && p.payload.id === input.payload.id
+        ),
+        'This car already has a purchase awaiting Review.'
+      );
+    if (input.deliveryEpoch !== undefined)
+      M.check(
+        input.deliveryEpoch === Sync.cursor(this.main).epoch,
+        'This operation belongs to an expired Dealership epoch. Review it again before resubmitting.'
+      );
+    M.check(
+      this.main.data.club.proposals.length < 5000,
+      'Club review history is full. Export a backup before maintenance.'
+    );
+    M.check(
+      this.main.data.club.proposals.filter(p => p.status === 'pending').length < 200,
+      'Review the pending club changes before sending more.'
+    );
+    // Only locally produced proposals may reuse the validation just performed
+    // against this exact immutable state. Network submissions still validate.
+    const validated = this.prevalidated.get(input);
+    this.prevalidated.delete(input);
+    if (
+      validated !== this.main.data &&
+      (input.conditions ? !fieldReview.inspect(this.main, input).conflict : input.base === this.comparisonBase(input))
+    )
+      this.simulation(input.action, input.payload);
+    const record = { ...cloneJSON(input), receiptHash, status: 'pending', received: new Date().toISOString() };
+    delete record.acceptedFields;
+    delete record.reviewed;
+    delete record.reviewer;
+    return { record };
+  }
+  receive(input) {
+    const receipt = this.receipt(input);
+    if (receipt.existing) return receipt.existing;
+    transactions.run(
+      this.main,
+      before => this.main.prepareClubChange(before, input.id, club => club.proposals.unshift(receipt.record)),
+      { scoped: !!this.main.deferredState }
+    );
+    return { id: input.id, status: 'pending' };
+  }
+  async receiveAsync(input, authorize = () => {}) {
+    return this.main.withIdle(async () => {
+      authorize();
+      const receipt = this.receipt(input);
+      if (receipt.existing) return receipt.existing;
+      if (input.action === 'catalogue.picture') {
+        M.check(this.decodeCataloguePicture, 'Picture validation is unavailable. Open Paddock and retry.');
+        await this.decodeCataloguePicture(input.payload.picture);
+        authorize();
+        this.simulation(input.action, input.payload);
+      }
+      await this.main.addClubProposal(receipt.record);
+      return { id: input.id, status: 'pending' };
+    });
+  }
+  comparisonBase(proposal) {
+    if (proposal.action === 'catalogue.picture')
+      return require('./catalogue-pictures-contract.cjs').digest(proposal.payload.intent.expected);
+    if (proposal.baselineVersion === 1) return require('./review-baseline.cjs').digest(this.main);
+    if (require('./json-encoding.cjs').byteLength(this.main.data) > 220 * 1024 * 1024)
+      return 'legacy-recheck:' + require('./review-baseline.cjs').digest(this.main);
+    return M.digest(this.main.data);
+  }
+  inspect(id) {
+    M.check(this.coordinator && !this.active, 'Only the dealership computer can review club proposals.');
+    const p = this.main.data.club.proposals.find(p => p.id === id);
+    M.check(p && p.status === 'pending', 'This proposal has already been reviewed.');
+    let simulation,
+      error = '';
+    try {
+      simulation = this.simulation(p.action, p.payload);
+    } catch (e) {
+      error = e.message;
+    }
+    const checked = p.conditions ? fieldReview.inspect(this.main, p) : null,
+      base = checked?.base || this.comparisonBase(p);
+    return {
+      simulation,
+      view: {
+        id,
+        device: p.device,
+        action: p.action,
+        editing: !!p.payload.id,
+        original: p.original,
+        changes: simulation?.changes || [],
+        error,
+        conflict: checked ? checked.conflict : p.base !== base,
+        selectableFields: fieldReview.fields(p.action, p.payload) || null,
+        token: M.hash({
+          base,
+          receipt: p.receiptHash,
+          recoveryId: this.main.file ? Sync.cursor(this.main).epoch : null
+        })
+      }
+    };
+  }
+  preview(id) {
+    const view = this.inspect(id).view,
+      q = this.main.data.club.proposals.find(q => q.id === id);
+    if (q?.action === 'catalogue.picture') {
+      const i = q.payload.intent;
+      let old;
+      try {
+        old = require('./catalogue-picture-apply.cjs').current(this.main, i).record;
+      } catch {}
+      view.pictureComparison = {
+        current: { picture: old?.picture || '' },
+        proposed: { picture: q.payload.picture },
+        name: old?.name || 'Catalogue picture',
+        imageUrl: i.provenance.imageUrl
+      };
+    }
+    return view;
+  }
+  prepareReview(p) {
+    const { view, simulation: originalSimulation } = this.inspect(p.id);
+    let simulation = originalSimulation;
+    const q = this.main.data.club.proposals.find(q => q.id === p.id);
+    M.check(p.token === view.token, 'The collection changed again. Reopen the comparison.');
+    M.check(['accept', 'reject'].includes(p.decision), 'Choose approve or reject.');
+    if (p.decision === 'accept') {
+      if (p.fields !== undefined) {
+        const allowed = fieldReview.fields(q.action, q.payload);
+        M.check(
+          allowed &&
+            Array.isArray(p.fields) &&
+            p.fields.length > 0 &&
+            new Set(p.fields).size === p.fields.length &&
+            p.fields.every(f => allowed.includes(f)),
+          'Choose valid independent fields.'
+        );
+        simulation = this.simulation(q.action, {
+          ...q.payload,
+          data: Object.fromEntries(p.fields.map(f => [f, q.payload.data[f]]))
+        });
+      }
+      M.check(!view.error, view.error);
+      M.check(
+        !view.conflict || p.confirmConflict === true,
+        'Review and confirm the comparison against the current collection.'
+      );
+      return this.main.prepareClubChange(
+        this.main.data,
+        q.id,
+        club =>
+          Object.assign(
+            club.proposals.find(x => x.id === q.id),
+            {
+              ...(q.action === 'catalogue.picture'
+                ? { pictureReceipt: { ...simulation.result, revision: this.main.data.revision + 1 } }
+                : {}),
+              status: 'accepted',
+              reviewed: new Date().toISOString(),
+              reviewer: this.device.name,
+              ...(p.fields ? { acceptedFields: p.fields } : {})
+            }
+          ),
+        simulation.data,
+        simulation.scope,
+        !simulation.noop && !simulation.scope
+      );
+    }
+    return this.main.prepareClubChange(this.main.data, q.id, club =>
+      Object.assign(
+        club.proposals.find(x => x.id === q.id),
+        { status: 'rejected', reviewed: new Date().toISOString(), reviewer: this.device.name }
+      )
+    );
+  }
+  review(p) {
+    transactions.run(this.main, () => this.prepareReview(p), { scoped: !!this.main.deferredState });
+    return this.status();
+  }
+  async reviewAsync(p) {
+    await transactions.runAsync(this.main, () => this.prepareReview(p), { scoped: !!this.main.deferredState });
+    return this.status();
+  }
+  async mutate(action, payload = {}, options = {}) {
+    const store = this.store;
+
+    return store.withIdle(() => {
+      M.check(this.store === store, 'The collection changed while saving. Reopen the editor.');
+      return this.mutateReady(action, payload, options);
+    });
+  }
+  async mutateReady(action, payload = {}, options = {}) {
+    if (!this.store.data.club) return this.store.mutateAsync(action, payload, options);
+    if (this.active && action === 'submission.add' && payload.wishlistImport)
+      M.check(
+        this.device.pair?.wishlistCarFiles === 1,
+        'Update the dealership host and reconnect before importing Wishlist car files.'
+      );
+    if (this.active && action === 'car.purchase')
+      M.check(
+        this.device.pair?.wishlistPurchases === 1,
+        'Update the dealership host and reconnect before marking Wishlist cars purchased.'
+      );
+    if (
+      this.active &&
+      action.startsWith('car.') &&
+      (require('./car-membership.cjs').isWishlist(payload.data) ||
+        (payload.id && require('./car-membership.cjs').isWishlist(this.store.data.cars.find(c => c.id === payload.id))))
+    )
+      M.check(
+        this.device.pair?.wishlist === 1,
+        'Update the dealership host and reconnect before saving Wishlist cars.'
+      );
+    if (action === 'submission.review') {
+      M.check(this.coordinator && !this.active, 'Incoming member cars must be reviewed on the dealership computer.');
+      return this.main.mutateAsync(action, payload, options);
+    }
+    if (!require('./dealership-policy.cjs').requiresReview(action, payload)) {
+      M.check(M.ACTIONS.has(action), 'This operation cannot be saved through Dealership Mode.');
+      if (!this.active) return this.main.mutateAsync(action, payload, options);
+      M.check(this.state === 'connected', 'Reconnect to the dealership before saving shared changes.');
+      M.check(
+        this.device.pair?.routineWrites === 1,
+        'Update the dealership host and reconnect to save routine changes without Review.'
+      );
+      if (
+        action.startsWith('planning.checklist.') ||
+        action === 'planning.shopping.applyRequirements' ||
+        (action === 'planning.shopping.edit' && payload.checklistQuantity !== undefined)
+      )
+        M.check(
+          this.device.pair?.shoppingChecklist === 1,
+          'Update the dealership host and reconnect before using the shopping checklist.'
+        );
+      if (action === 'assembly.photo' || (action === 'assembly.create' && payload.picture))
+        M.check(
+          this.device.pair?.assemblyPhotos === 1,
+          'Update the dealership host and reconnect before saving assembly photographs.'
+        );
+      const compact = this.store.deferredState
+        ? require('./scoped-write.cjs').compact(this.store, action, payload)
+        : M.compactPayload(this.store.data, action, payload);
+      const epoch = require('./sqlite-storage.cjs').syncState(this.cache.file).replica?.epoch;
+      M.check(epoch, 'Refresh this dealership copy before saving.');
+      const completed =
+        options.commandId &&
+        (this.device.directReceipts || []).find(
+          r => r.id === options.commandId && r.databaseId === this.store.data.id && r.deliveryEpoch === epoch
+        );
+      if (completed) {
+        M.check(
+          completed.action === action && completed.requestHash === M.hash(payload),
+          'This save identity was already used with different content.'
+        );
+        await this.catchUp(completed.revision, true);
+        M.check(
+          this.state === 'connected' && this.cache.data.revision >= completed.revision,
+          'Reconnect to refresh the saved change.'
+        );
+        return {
+          result: completed.result,
+          queued: false,
+          data: options.snapshot === false ? undefined : this.store.snapshot(),
+          collection: this.store.metadata(),
+          club: this.status()
+        };
+      }
+      const pending = this.device.outbox.find(
+        p =>
+          p.direct === true &&
+          p.databaseId === this.store.data.id &&
+          p.deliveryEpoch === epoch &&
+          p.action === action &&
+          (options.commandId ? p.id === options.commandId : p.requestHash === M.hash(payload))
+      );
+      M.check(
+        !pending || pending.requestHash === M.hash(payload),
+        'This pending save identity has different content. Retry its original change.'
+      );
+      const input = pending || {
+        id: options.commandId || crypto.randomUUID(),
+        direct: true,
+        requestHash: M.hash(payload),
+        databaseId: this.store.data.id,
+        clubId: this.store.data.club.id,
+        sourceId: this.device.id,
+        device: this.device.name,
+        deliveryEpoch: epoch,
+        action,
+        payload: compact,
+        base: M.hash({}),
+        original: []
+      };
+      if (!pending) this.saveDevice({ ...this.device, outbox: [...this.device.outbox, input] });
+      let receipt;
+      try {
+        receipt = await this.request('/v1/club/commands', input);
+      } catch (e) {
+        if (e.definiteRejection === true)
+          this.saveDevice({ ...this.device, outbox: this.device.outbox.filter(p => p.id !== input.id) });
+        else e.retryable = true;
+        throw e;
+      }
+      M.check(
+        receipt.id === input.id && receipt.status === 'accepted' && Number.isSafeInteger(receipt.revision),
+        'The dealership save acknowledgement is invalid. Retry the same change.'
+      );
+      // Keep the command until the local copy catches up: an interrupted refresh
+      // can retry the same durable receipt and recover generated draft/job IDs.
+      await this.catchUp(receipt.revision, true);
+      M.check(
+        this.state === 'connected' && this.cache.data.revision >= receipt.revision,
+        'The change was saved. Reconnect to refresh this copy before continuing.'
+      );
+      this.saveDevice({ ...this.device, outbox: this.device.outbox.filter(p => p.id !== input.id) });
+      return {
+        result: receipt.result,
+        queued: false,
+        data: options.snapshot === false ? undefined : this.store.snapshot(),
+        collection: this.store.metadata(),
+        club: this.status()
+      };
+    }
+    return this.proposeReady(action, payload, options);
+  }
+  // Retain explicit proposals for already queued work and older peers. Normal
+  // application edits enter through mutate() and the shared review policy.
+  async propose(action, payload = {}, options = {}) {
+    const store = this.store;
+    return store.withIdle(() => {
+      M.check(this.store === store, 'The collection changed.');
+      return this.proposeReady(action, payload, options);
+    });
+  }
+  async proposeReady(action, payload = {}, options = {}) {
+    if (this.active && action === 'submission.add' && payload.wishlistImport)
+      M.check(
+        this.device.pair?.wishlistCarFiles === 1,
+        'Update the dealership host and reconnect before importing Wishlist car files.'
+      );
+    if (this.active && action === 'car.purchase')
+      M.check(
+        this.device.pair?.wishlistPurchases === 1,
+        'Update the dealership host and reconnect before marking Wishlist cars purchased.'
+      );
+    if (
+      this.active &&
+      action.startsWith('car.') &&
+      (require('./car-membership.cjs').isWishlist(payload.data) ||
+        (payload.id && require('./car-membership.cjs').isWishlist(this.store.data.cars.find(c => c.id === payload.id))))
+    )
+      M.check(
+        this.device.pair?.wishlist === 1,
+        'Update the dealership host and reconnect before saving Wishlist cars.'
+      );
+    if (action === 'submission.review') {
+      M.check(this.coordinator && !this.active, 'Review incoming cars on the dealership computer.');
+      return this.main.mutateAsync(action, payload, options);
+    }
+    M.check(
+      !this.active || this.state === 'connected',
+      'This club copy is offline or out of date. Reconnect and update before proposing changes.'
+    );
+    if (
+      action === 'car.purchase' &&
+      [...(this.store.data.club?.proposals || []), ...this.device.outbox].some(
+        p => p.action === action && p.payload?.id === payload.id && (p.status === 'pending' || !p.status)
+      )
+    )
+      return {
+        queued: true,
+        message: 'This car already has a purchase awaiting Review. Open Review to approve or reject it.',
+        data: options.snapshot === false ? undefined : this.store.snapshot(),
+        collection: this.store.metadata(),
+        club: this.status()
+      };
+    const simulation = this.simulation(action, payload, false, this.store);
+    if (simulation.noop)
+      return {
+        queued: false,
+        result: simulation.result,
+        data: options.snapshot === false ? undefined : this.store.snapshot(),
+        collection: this.store.metadata(),
+        club: this.status()
+      };
+    const compact = this.store.deferredState
+        ? require('./scoped-write.cjs').compact(this.store, action, payload)
+        : M.compactPayload(this.store.data, action, payload),
+      epoch = this.active
+        ? this.device.pair?.sync === 2
+          ? require('./sqlite-storage.cjs').syncState(this.cache.file).replica?.epoch
+          : this.device.pair?.fieldReview?.epoch
+        : fieldReview.capability(this.main)?.epoch,
+      conditions = fieldReview.captureStore(this.store, action, compact, epoch);
+    const baselineVersion = !conditions && (!this.active || this.device.pair?.reviewBaseline === 1) ? 1 : undefined;
+    const input = {
+      id: crypto.randomUUID(),
+      ...(baselineVersion ? { baselineVersion } : {}),
+      ...((!this.active || this.device.pair?.sync === 2) && epoch ? { deliveryEpoch: epoch } : {}),
+      databaseId: this.store.data.id,
+      clubId: this.store.data.club.id,
+      sourceId: this.device.id,
+      device: this.device.name,
+      action,
+      payload: compact,
+      base: conditions
+        ? M.hash(conditions)
+        : baselineVersion
+          ? require('./review-baseline.cjs').digest(this.store)
+          : M.digest(this.store.data),
+      ...(conditions ? { conditions } : {}),
+      original: simulation.changes
+    };
+    M.command(input);
+    if (this.active) {
+      this.saveDevice({ ...this.device, outbox: [...this.device.outbox, input] });
+      await this.sendOutbox();
+    } else {
+      this.prevalidated.set(input, this.main.data);
+      await this.receiveAsync(input);
+    }
+    return {
+      queued: true,
+      message: this.device.outbox.length
+        ? 'Proposal saved on this computer; retry delivery in Connections.'
+        : 'Change submitted to club Review. The approved collection is unchanged.',
+      data: options.snapshot === false ? undefined : this.store.snapshot(),
+      collection: this.store.metadata(),
+      club: this.status()
+    };
+  }
+  pictureReceipt(p) {
+    const C = require('./catalogue-pictures-contract.cjs'),
+      P = require('./catalogue-picture-requests.cjs');
+    P.withReader(this.main, (_r, a) => P.identity(a, p));
+    M.check(
+      typeof p.operationId === 'string' &&
+        /^[a-zA-Z0-9_-]{1,100}$/.test(p.operationId) &&
+        /^[a-f0-9]{64}$/.test(p.requestHash),
+      'Invalid picture receipt request.'
+    );
+    const q = this.main.data.club?.proposals.find(q => q.id === p.operationId);
+    if (!q) return { status: 'absent' };
+    M.check(
+      q.action === 'catalogue.picture' && C.digest(q.payload.intent) === p.requestHash,
+      'This picture operation has different content.'
+    );
+    return { status: q.status, ...(q.pictureReceipt ? { result: q.pictureReceipt } : {}) };
+  }
+  async lookupPicture(intent) {
+    if (!this.active)
+      return this.pictureReceipt({
+        ...intent,
+        requestHash: require('./catalogue-pictures-contract.cjs').digest(intent)
+      });
+    M.check(
+      this.state === 'connected' && this.device.pair?.cataloguePictures === 1,
+      'Reconnect to an updated Dealership host before checking picture reviews.'
+    );
+    const q = new URLSearchParams({
+      operationId: intent.operationId,
+      requestHash: require('./catalogue-pictures-contract.cjs').digest(intent),
+      recoveryId: intent.recoveryId
+    });
+    M.check(this.device.pair.databaseId === intent.databaseId, 'Open the original dealership collection.');
+    return this.request('/v1/club/catalogue-picture-receipt?' + q);
+  }
+  async submitPicture(payload) {
+    const C = require('./catalogue-pictures-contract.cjs'),
+      A = require('./catalogue-picture-apply.cjs'),
+      i = A.validate(payload);
+    const prior = await this.lookupPicture(i);
+    if (prior.status !== 'absent') return prior;
+    M.check(this.store.data.club, 'Open the original Dealership collection.');
+    const input = {
+      id: i.operationId,
+      databaseId: i.databaseId,
+      clubId: this.store.data.club.id,
+      sourceId: i.operationId,
+      device: 'Illustrated catalogue',
+      deliveryEpoch: i.recoveryId,
+      action: 'catalogue.picture',
+      payload,
+      base: C.digest(i.expected),
+      original: [
+        {
+          field: 'Catalogue picture',
+          before: i.expected.pictureHash ? 'Existing photograph' : 'No photograph',
+          after: 'Selected original photograph'
+        }
+      ]
+    };
+    M.command(input);
+    A.reviewBudget(this.store, payload);
+    return this.active ? this.request('/v1/club/proposals', input) : this.receiveAsync(input);
+  }
+  rememberDirect(input, receipt) {
+    const saved = {
+      id: input.id,
+      databaseId: input.databaseId,
+      deliveryEpoch: input.deliveryEpoch,
+      requestHash: input.requestHash,
+      action: input.action,
+      result: receipt.result,
+      revision: receipt.revision
+    };
+    this.saveDevice({
+      ...this.device,
+      outbox: this.device.outbox.filter(p => p.id !== input.id),
+      directReceipts: [...(this.device.directReceipts || []).filter(r => r.id !== input.id), saved].slice(-128)
+    });
+  }
+  async receiveRoutine(input, authorize) {
+    return this.main.withIdle(async () => {
+      authorize();
+      M.command(input);
+      M.check(
+        input.direct === true && typeof input.id === 'string' && /^[a-zA-Z0-9_-]{1,100}$/.test(input.id),
+        'Invalid dealership command.'
+      );
+      M.check(
+        input.databaseId === this.main.data.id && input.clubId === this.main.data.club.id,
+        'Wrong dealership collection.'
+      );
+      M.check(
+        !require('./dealership-policy.cjs').requiresReview(input.action, input.payload),
+        'This operation needs Review.'
+      );
+      M.check(
+        typeof input.deliveryEpoch === 'string' && input.deliveryEpoch === Sync.cursor(this.main).epoch,
+        'The dealership was restored. Reconcile this saved change before retrying.'
+      );
+      const saved = await this.main.mutateAsync(input.action, input.payload, {
+        snapshot: false,
+        commandId: 'club-' + M.hash([input.sourceId, input.id]),
+        databaseId: input.databaseId,
+        epoch: input.deliveryEpoch
+      });
+      return {
+        id: input.id,
+        status: 'accepted',
+        result: saved.result,
+        revision: this.main.data.revision,
+        duplicate: !!saved.duplicate
+      };
+    });
+  }
+  async request(route, body, connection) {
+    if (this.closed) throw require('./work-gate.cjs').closingError();
+    const { pair, code } = connection || { pair: this.device.pair, code: this.code };
+    M.check(pair && code, 'Reconnect with the dealership computer’s club password.');
+    const { localAddress } = require('./network.cjs');
+    const response = await fetch(localAddress(pair.address) + route, {
+      method: body ? 'POST' : 'GET',
+      headers: {
+        Authorization: 'Bearer ' + code,
+        'Content-Type': 'application/json',
+        'X-SlotForge-Database': pair.databaseId
+      },
+      body: body ? JSON.stringify(body) : undefined,
+      redirect: 'error',
+      signal: AbortSignal.any([AbortSignal.timeout(60000), this.shutdownAbort.signal])
+    }).catch(e => {
+      e.retryable = true;
+      throw e;
+    });
+    const limit = route.startsWith('/v1/club/sync/') ? 4 * 1024 * 1024 : MAX;
+    M.check(Number(response.headers.get('content-length') || 0) <= limit, 'Club snapshot too large.');
+    let size = 0,
+      chunks = [];
+    try {
+      for await (const c of response.body) {
+        size += c.length;
+        M.check(size <= limit, 'Club snapshot too large.');
+        chunks.push(c);
+      }
+    } catch (e) {
+      if (size <= limit) e.retryable = true;
+      throw e;
+    }
+    const data = JSON.parse(Buffer.concat(chunks).toString());
+    if (!response.ok) {
+      const error = Error(data?.error || 'Club connection failed.');
+      error.code = data?.code;
+      error.retryable = response.status >= 500 || response.status === 429;
+      error.definiteRejection = !error.retryable;
+      throw error;
+    }
+    return data;
+  }
+  async connect(p) {
+    M.check(!this.busy && !this.sending, 'A club connection is already updating.');
+    this.busy = true;
+    try {
+      await this.openCache();
+    } catch (e) {
+      this.busy = false;
+      throw e;
+    }
+    try {
+      p = { ...p, code: p.code || this.device.pair?.password };
+      this.password(p.code);
+      M.check(typeof p.name === 'string' && p.name.trim() && p.name.length <= 100, 'Enter a computer name.');
+      const { localAddress } = require('./network.cjs');
+      const address = localAddress(p.address),
+        code = p.code.trim();
+      const response = await this.network.request(address, code, '/v1/status');
+      M.check(
+        response.permissions?.club && response.capabilities?.club === 1,
+        'Use a dealership computer with Dealership Mode and its shared password.'
+      );
+      M.check(
+        typeof response.id === 'string' &&
+          typeof response.clubId === 'string' &&
+          Number.isSafeInteger(response.revision) &&
+          response.revision >= 0,
+        'Invalid dealership identity or revision.'
+      );
+      M.check(
+        !p.expectedDatabaseId || p.expectedDatabaseId === response.id,
+        'This is not the original public host database. Migration was not applied.'
+      );
+      M.check(response.id !== this.main.data.id, 'This is already your local collection.');
+      M.check(
+        !this.device.pair || this.device.pair.databaseId === response.id,
+        'This computer is paired with another club. Leave that club first.'
+      );
+      const syncStatus = await this.request('/v1/club/status', undefined, {
+        pair: { address, databaseId: response.id },
+        code
+      });
+      M.check(
+        syncStatus.id === response.id && syncStatus.clubId === response.clubId,
+        'Dealership identity changed during connection.'
+      );
+      const pair = {
+        address,
+        databaseId: response.id,
+        clubId: response.clubId,
+        password: code,
+        ...(syncStatus.shoppingChecklist === 1 ? { shoppingChecklist: 1 } : {}),
+        ...(syncStatus.wishlistCarFiles === 1 ? { wishlistCarFiles: 1 } : {}),
+        ...(syncStatus.wishlist === 1 ? { wishlist: 1 } : {}),
+        ...(syncStatus.wishlistPurchases === 1 ? { wishlistPurchases: 1 } : {}),
+        ...(syncStatus.cataloguePictures === 1 ? { cataloguePictures: 1 } : {}),
+        ...(syncStatus.assemblyPhotos === 1 ? { assemblyPhotos: 1 } : {}),
+        ...(syncStatus.routineWrites === 1 ? { routineWrites: 1 } : {}),
+        ...(syncStatus.reviewBaseline === 1 ? { reviewBaseline: 1 } : {}),
+        ...(syncStatus.syncVersion === 2 ? { sync: 2 } : {}),
+        ...(response.capabilities.clubFieldReview === 1 && response.clubFieldReview?.version === 1
+          ? { fieldReview: response.clubFieldReview }
+          : {})
+      };
+      let snapshot;
+      // Verify the initial download before committing a pairing. A network failure
+      // must not leave the user tied to a collection they never received.
+      if (!this.hasCopy()) {
+        if (pair.sync === 2) snapshot = await Sync.snapshot(this, { pair, code });
+        else snapshot = this.verify(await this.request('/v1/club/snapshot', undefined, { pair, code }), pair);
+      }
+      const candidate = snapshot || this.cache.data;
+      M.check(
+        candidate.id === pair.databaseId && candidate.club?.id === pair.clubId,
+        'The dealership computer’s collection identity changed.'
+      );
+      if (snapshot && pair.sync !== 2) await this.backupAsync(this.cache, 'before-joining');
+      // Save the verified copy before committing its pairing/password. A failed
+      // disk write must not remember a new dealership with an unrelated old copy.
+      if (snapshot && pair.sync !== 2) this.cache.replace(snapshot);
+      this.saveDevice({ ...this.device, pair, name: p.name.trim() });
+      this.disconnect();
+      this.code = code;
+      this.latest = snapshot?.revision ?? response.revision;
+      this.active = true;
+      this.lastError = '';
+      this.state = this.cache.data.revision === this.latest ? 'connected' : 'outdated';
+      if (pair.sync === 2) {
+        this.state = 'connected';
+        await this.catchUp(this.latest, true);
+      }
+      if (this.state === 'connected') {
+        this.listen();
+        void this.sendOutbox();
+      }
+      this.notify({ kind: 'club' });
+      return this.status();
+    } finally {
+      this.busy = false;
+      this.notify({ kind: 'club' });
+    }
+  }
+  verify(db, pair = this.device.pair, owned = false, previous = null) {
+    M.check(db?.club?.replica === true && db.timing?.key === null, 'Not a protected club copy.');
+    M.check(
+      db.id === pair.databaseId && db.club?.id === pair.clubId,
+      'The dealership computer is serving a different club collection.'
+    );
+    return migrate(db, { owned, previous });
+  }
+  async update(expected) {
+    M.check(this.active && this.device.pair, 'Open the club copy first.');
+    M.check(!this.busy, 'An update is already in progress.');
+    this.busy = true;
+    this.disconnect();
+    this.state = 'outdated';
+    try {
+      if (this.device.pair.sync === 2) {
+        await Sync.snapshot(this, undefined, expected);
+        this.latest = this.cache.data.revision;
+        this.state = 'connected';
+        this.lastError = '';
+        this.listen();
+        return this.status();
+      }
+      const snapshot = await this.request('/v1/club/snapshot');
+      this.verify(snapshot);
+      this.latest = snapshot.revision;
+      M.check(
+        expected === snapshot.revision,
+        'The club changed while you were reviewing. Check the latest revision and confirm again.'
+      );
+      M.check(
+        snapshot.revision >= this.cache.data.revision,
+        'The dealership computer is behind this copy. Check its backup before continuing.'
+      );
+      await this.backupAsync(this.cache, 'before-update');
+      this.cache.replace(migrate(snapshot));
+      this.state = 'connected';
+      this.lastError = '';
+      this.listen();
+      this.notify({ kind: 'club' });
+      return this.status();
+    } finally {
+      this.busy = false;
+      this.notify({ kind: 'club' });
+    }
+  }
+  async sendOutbox() {
+    if (this.closed) return this.status();
+    if (this.sending) return this.sending;
+    this.sending = this.deliverOutbox();
+    try {
+      return await this.sending;
+    } finally {
+      this.sending = null;
+    }
+  }
+  async deliverOutbox() {
+    for (const input of [...this.device.outbox]) {
+      if (this.closed) break;
+      try {
+        const receipt = await this.request(input.direct ? '/v1/club/commands' : '/v1/club/proposals', input);
+        M.check(
+          receipt?.id === input.id &&
+            (input.direct
+              ? receipt.status === 'accepted' && Number.isSafeInteger(receipt.revision)
+              : ['pending', 'accepted', 'rejected'].includes(receipt.status)),
+          'The dealership did not acknowledge this change. Retry delivery.'
+        );
+        if (input.direct) this.rememberDirect(input, receipt);
+        else this.saveDevice({ ...this.device, outbox: this.device.outbox.filter(p => p.id !== input.id) });
+        this.lastError = '';
+      } catch (e) {
+        this.lastError = e.message;
+        if (e.retryable && !this.closed && this.state === 'connected') {
+          clearTimeout(this.outboxRetry);
+          this.outboxRetry = setTimeout(
+            () => this.sendOutbox(),
+            Math.min(30000, 2000 * 2 ** Math.min(this.outboxFailures || 0, 4))
+          );
+          this.outboxRetry.unref?.();
+          this.outboxFailures = (this.outboxFailures || 0) + 1;
+        }
+        break;
+      }
+    }
+    if (!this.device.outbox.length) {
+      clearTimeout(this.outboxRetry);
+      this.outboxFailures = 0;
+    }
+    this.notify({ kind: 'club' });
+    return this.status();
+  }
+  switch(active) {
+    M.check(!this.busy && !this.sending, 'Wait for the club update to finish.');
+    M.check(!active || this.hasCopy(), 'Join a club first.');
+    this.active = !!active;
+    this.notify({ kind: 'club' });
+    return this.status();
+  }
+  async switchAsync(active) {
+    M.check(!this.busy && !this.sending, 'Wait for the club update to finish.');
+    if (active) await this.openCache();
+    return this.switch(active);
+  }
+  disconnect() {
+    clearTimeout(this.outboxRetry);
+    this.catchUpTarget = 0;
+    this.generation = (this.generation || 0) + 1;
+    this.abort?.abort();
+    clearTimeout(this.retry);
+    clearTimeout(this.watchdog);
+    this.abort = null;
+    this.state = 'offline';
+  }
+  discardOutbox() {
+    M.check(!this.busy && !this.sending, 'Wait for delivery to finish.');
+    const file = path.join(
+      this.folder,
+      'club-backups',
+      'unsent-proposals-' + Date.now() + '-' + crypto.randomUUID() + '.json'
+    );
+    M.write(file, {
+      format: 'slotforge-club-proposals',
+      version: 1,
+      pair: this.device.pair
+        ? {
+            address: this.device.pair.address,
+            databaseId: this.device.pair.databaseId,
+            clubId: this.device.pair.clubId
+          }
+        : null,
+      proposals: this.device.outbox
+    });
+    this.backupPath = file;
+    this.saveDevice({ ...this.device, outbox: [] });
+    this.lastError = '';
+    this.notify({ kind: 'club' });
+    return this.status();
+  }
+  leave(backup = true) {
+    M.check(!this.busy && !this.sending, 'Wait for the club update to finish.');
+    M.check(this.device.outbox.length === 0, 'Retry the saved proposals before leaving this club.');
+    if (backup) this.backup(this.cache, 'leaving-club');
+    this.cache.assertIdle();
+    this.saveDevice({ ...this.device, pair: null });
+    this.disconnect();
+    this.code = null;
+    this.active = false;
+    this.latest = null;
+    this.lastError = '';
+    // Once unpaired, a leftover file is never treated as an active saved copy.
+    // A locked file must not strand the UI or prevent joining another dealership.
+    try {
+      this.cache.replace(new Store().data);
+    } catch (e) {
+      this.lastError = 'Disconnected, but the saved copy could not be cleared: ' + e.message;
+    }
+    this.notify({ kind: 'club' });
+    return this.status();
+  }
+  listen() {
+    if (this.closed) return;
+    this.abort?.abort();
+    clearTimeout(this.retry);
+    const abort = (this.abort = new AbortController());
+    this.stream(abort).catch(e => {
+      if (abort.signal.aborted || this.closed) return;
+      clearTimeout(this.watchdog);
+      this.generation = (this.generation || 0) + 1;
+      this.state = 'offline';
+      this.lastError = e.message;
+      this.notify({ kind: 'club' });
+      this.retry = setTimeout(() => this.reconnect(), Math.min(30000, 2000 * 2 ** Math.min(this.failures || 0, 4)));
+      this.retry.unref?.();
+      this.failures = (this.failures || 0) + 1;
+    });
+  }
+  async reconnect() {
+    if (this.closed || !this.code || !this.device.pair) return;
+    const generation = this.generation;
+    try {
+      const status = await this.request('/v1/club/status');
+      if (this.closed || generation !== this.generation) return;
+      M.check(
+        status.id === this.device.pair.databaseId &&
+          status.clubId === this.device.pair.clubId &&
+          Number.isSafeInteger(status.revision),
+        'The dealership computer is serving a different collection.'
+      );
+      if (this.device.pair.wishlist !== (status.wishlist === 1 ? 1 : undefined)) {
+        const pair = { ...this.device.pair };
+        if (status.wishlist === 1) pair.wishlist = 1;
+        else delete pair.wishlist;
+        this.saveDevice({ ...this.device, pair });
+      }
+      if (this.device.pair.wishlistPurchases !== (status.wishlistPurchases === 1 ? 1 : undefined)) {
+        const pair = { ...this.device.pair };
+        if (status.wishlistPurchases === 1) pair.wishlistPurchases = 1;
+        else delete pair.wishlistPurchases;
+        this.saveDevice({ ...this.device, pair });
+      }
+      if (this.device.pair.wishlistCarFiles !== (status.wishlistCarFiles === 1 ? 1 : undefined)) {
+        const pair = { ...this.device.pair };
+        if (status.wishlistCarFiles === 1) pair.wishlistCarFiles = 1;
+        else delete pair.wishlistCarFiles;
+        this.saveDevice({ ...this.device, pair });
+      }
+      if (this.device.pair.shoppingChecklist !== (status.shoppingChecklist === 1 ? 1 : undefined)) {
+        const pair = { ...this.device.pair };
+        if (status.shoppingChecklist === 1) pair.shoppingChecklist = 1;
+        else delete pair.shoppingChecklist;
+        this.saveDevice({ ...this.device, pair });
+      }
+      this.latest = status.revision;
+      this.lastError = '';
+      if (status.revision !== this.cache.data.revision || this.device.pair.sync === 2) {
+        if (this.device.pair.sync === 2) {
+          this.state = 'connected';
+          await this.catchUp(status.revision, true);
+          if (this.state !== 'connected') return;
+        } else {
+          this.state = 'outdated';
+          this.notify({ kind: 'club' });
+          return;
+        }
+      }
+      this.state = 'connected';
+      this.listen();
+      this.notify({ kind: 'club' });
+    } catch (e) {
+      if (this.closed || generation !== this.generation) return;
+      this.state = 'offline';
+      this.lastError = e.message;
+      this.notify({ kind: 'club' });
+      this.retry = setTimeout(() => this.reconnect(), 30000);
+      this.retry.unref?.();
+    }
+  }
+  async stream(abort) {
+    const pair = this.device.pair,
+      { localAddress } = require('./network.cjs');
+    const response = await fetch(localAddress(pair.address) + '/v1/club/events' + (pair.sync === 2 ? '?sync=2' : ''), {
+      headers: { Authorization: 'Bearer ' + this.code, 'X-SlotForge-Database': pair.databaseId },
+      signal: abort.signal,
+      redirect: 'error'
+    });
+    M.check(response.ok, 'Club connection closed or permission revoked.');
+    let buffer = '',
+      first = true;
+    const reset = () => {
+      clearTimeout(this.watchdog);
+      this.watchdog = setTimeout(() => {
+        if (this.abort === abort) {
+          abort.abort();
+          this.state = 'offline';
+          this.notify({ kind: 'club' });
+          this.generation = (this.generation || 0) + 1;
+          this.retry = setTimeout(() => this.reconnect(), 2000);
+        }
+      }, 45000);
+      this.watchdog.unref?.();
+    };
+    reset();
+    for await (const chunk of response.body) {
+      reset();
+      buffer += Buffer.from(chunk).toString('utf8');
+      M.check(buffer.length < 65536, 'Invalid club event.');
+      let i;
+      while ((i = buffer.indexOf('\n\n')) >= 0) {
+        const frame = buffer.slice(0, i);
+        buffer = buffer.slice(i + 2);
+        if (!frame.startsWith('data: ')) continue;
+        const event = JSON.parse(frame.slice(6));
+        M.check(Number.isSafeInteger(event.revision), 'Invalid club revision.');
+        this.latest = event.revision;
+        if (first && event.revision < this.cache.data.revision) {
+          this.state = 'outdated';
+          this.lastError = 'The dealership computer is behind this saved copy. Check its backup before continuing.';
+          this.notify({ kind: 'club' });
+        }
+        first = false;
+        this.queueCatchUp(event.revision, abort);
+      }
+    }
+    throw Error('Dealership disconnected.');
+  }
+  queueCatchUp(revision, abort) {
+    this.catchUpTarget = Math.max(this.catchUpTarget || 0, revision);
+    if (this.catchUpRunning) return;
+    const generation = this.generation;
+    this.catchUpRunning = (async () => {
+      while (
+        generation === this.generation &&
+        !abort.signal.aborted &&
+        this.state === 'connected' &&
+        this.catchUpTarget > this.cache.data.revision
+      ) {
+        await this.catchUp(this.catchUpTarget);
+      }
+    })()
+      .catch(e => {
+        if (generation !== this.generation || abort.signal.aborted) return;
+        this.state = e.retryable ? 'offline' : 'outdated';
+        if (e.retryable) {
+          this.retry = setTimeout(() => this.reconnect(), Math.min(30000, 2000 * 2 ** Math.min(this.failures || 0, 4)));
+          this.retry.unref?.();
+          this.failures = (this.failures || 0) + 1;
+        }
+        this.lastError = e.message;
+        this.notify({ kind: 'club' });
+      })
+      .finally(() => {
+        this.catchUpRunning = null;
+        if (
+          this.state === 'connected' &&
+          this.abort &&
+          !this.abort.signal.aborted &&
+          this.catchUpTarget > this.cache.data.revision
+        )
+          this.queueCatchUp(this.catchUpTarget, this.abort);
+      });
+  }
+  async catchUp(revision, force = false) {
+    const generation = this.generation,
+      previous = this.catchUpFlight;
+    const run = (previous || Promise.resolve())
+      .catch(() => {})
+      .then(() => {
+        if (generation !== this.generation || this.closed) return;
+        return this.catchUpOnce(revision, force);
+      });
+    this.catchUpFlight = run;
+    try {
+      return await run;
+    } finally {
+      if (this.catchUpFlight === run) this.catchUpFlight = null;
+    }
+  }
+  async catchUpOnce(revision, force = false) {
+    if (this.device.pair?.sync === 2) {
+      const generation = this.generation;
+      while (this.state === 'connected' && (force || revision > this.cache.data.revision)) {
+        force = false;
+        const state = require('./sqlite-storage.cjs').syncState(this.cache.file).replica;
+        if (!state) {
+          this.state = 'outdated';
+          break;
+        }
+        const batch = await this.request('/v1/club/sync/changes?epoch=' + state.epoch + '&after=' + state.after);
+        if (generation !== this.generation || this.closed) return;
+        if (batch.snapshotRequired) {
+          this.state = 'outdated';
+          this.latest = batch.identity[1];
+          this.lastError = 'Retained change history is unavailable. Confirm replacement with the latest verified copy.';
+          break;
+        }
+        await Sync.apply(this, batch, generation);
+        if (!batch.more) break;
+      }
+      if (this.state === 'connected') {
+        this.failures = 0;
+        this.lastError = '';
+      }
+      this.notify({ kind: 'club' });
+      return;
+    }
+    const generation = this.generation;
+    if (this.state !== 'connected' || revision <= this.cache.data.revision) return;
+    const result = await this.request('/v1/club/changes?since=' + this.cache.data.revision);
+    if (generation !== this.generation || this.closed) return;
+    if (result.snapshotRequired) {
+      this.state = 'outdated';
+      this.latest = result.revision;
+      this.notify({ kind: 'club' });
+      return;
+    }
+    let next = this.cache.snapshot();
+    for (const e of result.entries) {
+      M.check(next.revision === e.from, 'Missed club update.');
+      next = M.apply(next, e.changes);
+      this.verify(next);
+      M.check(next.revision === e.to && M.hash(next) === e.digest, 'Club update did not verify.');
+    }
+    if (next.revision > this.cache.data.revision) this.cache.replace(next);
+    this.failures = 0;
+    this.lastError = '';
+    this.notify({ kind: 'club' });
+  }
+  async handle(req, res, url, access, code) {
+    const send = (status, value) => {
+      if (!res.destroyed && !res.writableEnded) {
+        res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+        res.end(JSON.stringify(value));
+      }
+    };
+    if (!this.coordinator || !access.club) {
+      send(403, { error: 'Trusted club access is required.', code: 'CLUB_PERMISSION_REQUIRED' });
+      return;
+    }
+    try {
+      const peer = req.socket.remoteAddress?.replace(/^::ffff:/, '');
+      require('./network.cjs').localAddress(peer === '::1' ? '127.0.0.1' : peer);
+    } catch {
+      send(403, { error: 'Club connections are limited to the local network.', code: 'LAN_REQUIRED' });
+      return;
+    }
+    const databaseId = this.main.data.id,
+      clubId = this.main.data.club.id;
+    if (req.headers['x-slotforge-database'] !== databaseId) {
+      send(409, { error: 'Wrong club database.', code: 'DATABASE_MISMATCH' });
+      return;
+    }
+    try {
+      if (req.method === 'GET' && url.pathname.startsWith('/v1/club/sync/')) {
+        await this.main.withIdle(() => {
+          M.check(
+            this.coordinator && this.network.access(code)?.club && this.main.data.id === databaseId,
+            'Dealership access changed.'
+          );
+          const route = url.pathname.slice('/v1/club/sync/'.length);
+          if (route === 'changes')
+            send(200, Sync.changes(this.main, url.searchParams.get('epoch'), Number(url.searchParams.get('after'))));
+          else if (route === 'snapshot') send(200, this.snapshots.create());
+          else if (route === 'chunk')
+            send(200, this.snapshots.chunk(url.searchParams.get('id'), Number(url.searchParams.get('offset'))));
+          else if (route === 'release') {
+            this.snapshots.release(url.searchParams.get('id'));
+            send(200, { released: true });
+          } else if (route === 'asset') {
+            const hash = url.searchParams.get('hash'),
+              id = url.searchParams.get('id');
+            if (id) M.check(this.snapshots.get(id).hashes.has(hash), 'Attachment is not in this snapshot.');
+            send(
+              200,
+              require('./sqlite-storage.cjs').assetChunk(this.main.file, hash, Number(url.searchParams.get('offset')))
+            );
+          } else send(404, { error: 'Unknown sync operation.' });
+        });
+        return;
+      }
+      if (req.method === 'GET' && url.pathname === '/v1/club/catalogue-picture-receipt') {
+        send(
+          200,
+          await this.main.withIdle(() => {
+            M.check(
+              this.coordinator &&
+                this.network.access(code)?.club &&
+                this.main.data.id === databaseId &&
+                this.main.data.club.id === clubId,
+              'Dealership access changed.'
+            );
+            return this.pictureReceipt({
+              operationId: url.searchParams.get('operationId'),
+              requestHash: url.searchParams.get('requestHash'),
+              databaseId,
+              recoveryId: url.searchParams.get('recoveryId')
+            });
+          })
+        );
+        return;
+      }
+      if (req.method === 'GET' && url.pathname === '/v1/club/status') {
+        send(200, {
+          id: databaseId,
+          clubId,
+          revision: this.main.data.revision,
+          syncVersion: 2,
+          reviewBaseline: 1,
+          routineWrites: 1,
+          assemblyPhotos: 1,
+          cataloguePictures: 1,
+          wishlist: 1,
+          wishlistPurchases: 1,
+          wishlistCarFiles: 1,
+          shoppingChecklist: 1
+        });
+        return;
+      }
+      if (req.method === 'GET' && url.pathname === '/v1/club/snapshot') {
+        const snapshot = M.shared(this.main.data);
+        if (require('./json-encoding.cjs').byteLength(snapshot) > MAX) {
+          send(413, {
+            error: 'This collection requires a Paddock client with Dealership sync v2.',
+            code: 'CLUB_SNAPSHOT_TOO_LARGE'
+          });
+          return;
+        }
+        send(200, snapshot);
+        return;
+      }
+      if (req.method === 'GET' && url.pathname === '/v1/club/changes') {
+        this.main.ensureLoaded();
+        this.legacyRequested = true;
+        const since = Number(url.searchParams.get('since'));
+        M.check(Number.isSafeInteger(since) && since >= 0, 'Invalid revision.');
+        let cursor = since;
+        const entries = [];
+        for (const e of this.journal)
+          if (e.from === cursor) {
+            entries.push(e);
+            cursor = e.to;
+          }
+        send(
+          200,
+          cursor === this.main.data.revision
+            ? { entries }
+            : { snapshotRequired: true, revision: this.main.data.revision }
+        );
+        return;
+      }
+      if (req.method === 'GET' && url.pathname === '/v1/club/events') {
+        M.check(this.clients.size < 10, 'Maximum 10 trusted club connections.');
+        if (url.searchParams.get('sync') !== '2') this.main.ensureLoaded();
+        res.writeHead(200, {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive'
+        });
+        res.write('data: ' + JSON.stringify({ revision: this.main.data.revision }) + '\n\n');
+        const client = { res, sync2: url.searchParams.get('sync') === '2' };
+        this.clients.add(client);
+        const heartbeat = setInterval(() => {
+          if (
+            !this.coordinator ||
+            this.main.data.id !== databaseId ||
+            this.main.data.club.id !== clubId ||
+            !this.network.access(code)?.club
+          ) {
+            res.end();
+            return;
+          }
+          if (res.writableLength > 65536) {
+            res.destroy();
+            return;
+          }
+          res.write(
+            client.sync2 ? 'data: ' + JSON.stringify({ revision: this.main.data.revision }) + '\n\n' : ': heartbeat\n\n'
+          );
+        }, 15000);
+        heartbeat.unref();
+        res.on('close', () => {
+          clearInterval(heartbeat);
+          this.clients.delete(client);
+        });
+        return;
+      }
+      if (req.method === 'POST' && ['/v1/club/proposals', '/v1/club/commands'].includes(url.pathname)) {
+        if (Number(req.headers['content-length']) > 16 * 1024 * 1024) {
+          send(413, { error: 'Club proposal exceeds 16 MiB.' });
+          req.resume();
+          return;
+        }
+        M.check(
+          /^application\/json(?:;\s*charset=utf-8)?$/i.test(req.headers['content-type'] || ''),
+          'Send application/json.'
+        );
+        M.check(
+          !req.headers['content-encoding'] || req.headers['content-encoding'] === 'identity',
+          'Compressed submissions are unsupported.'
+        );
+        let size = 0,
+          chunks = [];
+        for await (const c of req.iterator({ destroyOnReturn: false })) {
+          size += c.length;
+          if (size > 16 * 1024 * 1024) {
+            send(413, { error: 'Club proposal exceeds 16 MiB.' });
+            req.resume();
+            return;
+          }
+          chunks.push(c);
+        }
+        M.check(
+          this.coordinator &&
+            this.main.data.id === databaseId &&
+            this.main.data.club.id === clubId &&
+            this.network.access(code)?.club,
+          'Club permission or identity changed during upload.'
+        );
+        const value = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(chunks)));
+        send(
+          200,
+          await (url.pathname === '/v1/club/commands' ? this.receiveRoutine.bind(this) : this.receiveAsync.bind(this))(
+            value,
+            () =>
+              M.check(
+                this.coordinator &&
+                  this.main.data.id === databaseId &&
+                  this.main.data.club.id === clubId &&
+                  this.network.access(code)?.club,
+                'Club permission or identity changed during upload.'
+              )
+          )
+        );
+        return;
+      }
+      send(404, { error: 'Unknown club operation.' });
+    } catch (e) {
+      send(e.code === 'WRITE_UNCERTAIN' ? 503 : 400, { error: e.message, code: e.code || 'CLUB_REQUEST_FAILED' });
+    }
+  }
+  quiesce() {
+    this.closed = true;
+    this.shutdownAbort.abort();
+    clearTimeout(this.signalTimer);
+    this.disconnect();
+    this.unsubscribe();
+    for (const c of this.clients) c.res.end();
+    this.clients.clear();
+  }
+  async idle() {
+    await Promise.allSettled([this.sending, this.catchUpRunning, this.catchUpFlight, this.openingCache]);
+  }
+  close() {
+    this.quiesce();
+    this.snapshots.close();
+  }
 }
-module.exports={Club};
+module.exports = { Club };

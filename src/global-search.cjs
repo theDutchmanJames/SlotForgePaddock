@@ -14,15 +14,47 @@ const MAX_QUERY = 200;
 const CANDIDATES = 400;
 
 // Car fields that are searched, besides the general search text of the index.
-const CAR_FIELDS = ['name', 'number', 'raceNumber', 'maker', 'marque', 'model', 'reference', 'scale', 'raceClass', 'livery', 'team', 'drivers', 'category', 'edition', 'location'];
+const CAR_FIELDS = [
+  'name',
+  'number',
+  'raceNumber',
+  'maker',
+  'marque',
+  'model',
+  'reference',
+  'scale',
+  'raceClass',
+  'livery',
+  'team',
+  'drivers',
+  'category',
+  'edition',
+  'location'
+];
 const PART_FIELDS = ['name', 'maker', 'reference', 'partType', 'category', 'location', 'compatibility'];
-const SPECIAL = { ø: 'o', Ø: 'o', ł: 'l', Ł: 'l', æ: 'ae', Æ: 'ae', œ: 'oe', Œ: 'oe', ß: 'ss', đ: 'd', Đ: 'd', þ: 'th', Þ: 'th' };
+const SPECIAL = {
+  ø: 'o',
+  Ø: 'o',
+  ł: 'l',
+  Ł: 'l',
+  æ: 'ae',
+  Æ: 'ae',
+  œ: 'oe',
+  Œ: 'oe',
+  ß: 'ss',
+  đ: 'd',
+  Đ: 'd',
+  þ: 'th',
+  Þ: 'th'
+};
 
 /** Lower case without accents: "Citroën" matches "citroen", "Ørsted" matches "orsted". */
 function fold(value) {
   return String(value ?? '')
     .replace(/[øØłŁæÆœŒßđĐþÞ]/g, ch => SPECIAL[ch])
-    .normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase();
+    .normalize('NFKD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase();
 }
 
 function words(query) {
@@ -61,9 +93,12 @@ function carItem(c) {
   return {
     id: c.id,
     label: text(c.name) || 'Unnamed car',
-    detail: [c.maker, c.reference, c.scale, wishlist ? 'Wishlist' : '', c.archived ? 'Archived' : ''].map(text).filter(Boolean).join(' · '),
+    detail: [c.maker, c.reference, c.scale, wishlist ? 'Wishlist' : '', c.archived ? 'Archived' : '']
+      .map(text)
+      .filter(Boolean)
+      .join(' · '),
     wishlist,
-    archived: !!c.archived,
+    archived: !!c.archived
   };
 }
 function partItem(p) {
@@ -71,17 +106,28 @@ function partItem(p) {
   return {
     id: p.id,
     label: text(p.name) || 'Unnamed part',
-    detail: [p.maker, p.reference, p.partType, owned ? `${p.quantity} owned` : 'Catalogue'].map(text).filter(Boolean).join(' · '),
+    detail: [p.maker, p.reference, p.partType, owned ? `${p.quantity} owned` : 'Catalogue']
+      .map(text)
+      .filter(Boolean)
+      .join(' · '),
     category: text(p.category),
-    owned,
+    owned
   };
 }
 const JOB_STATUS = { active: 'Active', completed: 'Completed', cancelled: 'Cancelled' };
 function jobItem(j, car) {
-  return { id: j.id, label: text(j.name) || 'Workshop job', detail: [car, JOB_STATUS[j.status] || ''].filter(Boolean).join(' · ') };
+  return {
+    id: j.id,
+    label: text(j.name) || 'Workshop job',
+    detail: [car, JOB_STATUS[j.status] || ''].filter(Boolean).join(' · ')
+  };
 }
 function guideItem(d, car) {
-  return { id: d.id, label: text(d.title) || text(d.name) || 'Manual', detail: [car || 'General reference', text(d.name)].filter(Boolean).join(' · ') };
+  return {
+    id: d.id,
+    label: text(d.title) || text(d.name) || 'Manual',
+    detail: [car || 'General reference', text(d.name)].filter(Boolean).join(' · ')
+  };
 }
 
 function check(query) {
@@ -94,40 +140,85 @@ const empty = () => ({ total: 0, items: [] });
 /** In-memory search over a plain collection object (older JSON collections, and tests). */
 function search(db, query, { limit = LIMIT } = {}) {
   check(query);
-  const terms = words(query), phrase = terms.join(' ');
+  const terms = words(query),
+    phrase = terms.join(' ');
   if (!terms.length) return { query, cars: empty(), parts: empty(), jobs: empty(), guides: empty() };
   const carNames = new Map((db.cars || []).map(c => [c.id, text(c.name)]));
   const pick = found => {
     const hits = sorted(found.filter(x => x.rank !== null));
     return { total: hits.length, items: hits.slice(0, limit).map(x => x.item) };
   };
-  const cars = pick((db.cars || []).filter(c => !c.merge).map(c => {
-    const item = carItem(c);
-    return { item, label: item.label, order: (c.archived ? 2 : 0) + (item.wishlist ? 1 : 0), rank: rank(c.name, [...CAR_FIELDS.flatMap(k => list(c[k])), ...list(c.tags)], terms, phrase, text(c.reference)) };
-  }));
-  const parts = pick((db.parts || []).filter(p => !p.archived).map(p => {
-    const item = partItem(p);
-    return { item, label: item.label, order: item.owned ? 0 : 1, rank: rank(p.name, PART_FIELDS.map(k => text(p[k])), terms, phrase, text(p.reference)) };
-  }));
-  const jobs = pick((db.jobs || []).map(j => {
-    const car = carNames.get(j.carId) || '';
-    const item = jobItem(j, car);
-    return { item, label: item.label, order: j.status === 'active' ? 0 : 1, rank: rank(j.name, [car, j.notes].map(text), terms, phrase) };
-  }));
-  const guides = pick((db.documents || []).filter(d => d.guide === true).map(d => {
-    const car = d.carId ? carNames.get(d.carId) || '' : '';
-    const item = guideItem(d, car);
-    return { item, label: item.label, order: 0, rank: rank(d.title, [d.name, car].map(text), terms, phrase) };
-  }));
+  const cars = pick(
+    (db.cars || [])
+      .filter(c => !c.merge)
+      .map(c => {
+        const item = carItem(c);
+        return {
+          item,
+          label: item.label,
+          order: (c.archived ? 2 : 0) + (item.wishlist ? 1 : 0),
+          rank: rank(
+            c.name,
+            [...CAR_FIELDS.flatMap(k => list(c[k])), ...list(c.tags)],
+            terms,
+            phrase,
+            text(c.reference)
+          )
+        };
+      })
+  );
+  const parts = pick(
+    (db.parts || [])
+      .filter(p => !p.archived)
+      .map(p => {
+        const item = partItem(p);
+        return {
+          item,
+          label: item.label,
+          order: item.owned ? 0 : 1,
+          rank: rank(
+            p.name,
+            PART_FIELDS.map(k => text(p[k])),
+            terms,
+            phrase,
+            text(p.reference)
+          )
+        };
+      })
+  );
+  const jobs = pick(
+    (db.jobs || []).map(j => {
+      const car = carNames.get(j.carId) || '';
+      const item = jobItem(j, car);
+      return {
+        item,
+        label: item.label,
+        order: j.status === 'active' ? 0 : 1,
+        rank: rank(j.name, [car, j.notes].map(text), terms, phrase)
+      };
+    })
+  );
+  const guides = pick(
+    (db.documents || [])
+      .filter(d => d.guide === true)
+      .map(d => {
+        const car = d.carId ? carNames.get(d.carId) || '' : '';
+        const item = guideItem(d, car);
+        return { item, label: item.label, order: 0, rank: rank(d.title, [d.name, car].map(text), terms, phrase) };
+      })
+  );
   return { query, cars, parts, jobs, guides };
 }
 
 // ---- SQLite collections: search the index, read only what is shown ----
 
-const field = name => `COALESCE((SELECT json_extract(f.json,'$') FROM record_fields f WHERE f.record=r.key AND f.path='${JSON.stringify([name])}'),'')`;
+const field = name =>
+  `COALESCE((SELECT json_extract(f.json,'$') FROM record_fields f WHERE f.record=r.key AND f.path='${JSON.stringify([name])}'),'')`;
 // All searched fields of a record in one lookup (much faster than one lookup per field).
-const fields = names => `COALESCE((SELECT group_concat(json_extract(f.json,'$'),' ') FROM record_fields f WHERE f.record=r.key AND f.path IN (${names.map(n => `'${JSON.stringify([n])}'`).join(',')})),'')`;
-const flag = (name, json) => `EXISTS(SELECT 1 FROM record_fields f WHERE f.record=r.key AND f.path='${JSON.stringify([name])}' AND f.json='${json}')`;
+const fields = names =>
+  `COALESCE((SELECT group_concat(json_extract(f.json,'$'),' ') FROM record_fields f WHERE f.record=r.key AND f.path IN (${names.map(n => `'${JSON.stringify([n])}'`).join(',')})),'')`;
+const flag = (name, json) =>
+  `EXISTS(SELECT 1 FROM record_fields f WHERE f.record=r.key AND f.path='${JSON.stringify([name])}' AND f.json='${json}')`;
 const carName = `COALESCE((SELECT c.name FROM query_records c WHERE c.bucket='["cars"]' AND c.key=json_array('cars','id:'||q.car_id)),'')`;
 
 // For each kind: which records, the searchable text, and the fields needed to rank and order.
@@ -137,29 +228,29 @@ const KINDS = {
     where: `NOT EXISTS(SELECT 1 FROM record_fields f WHERE f.record=r.key AND f.path='["merge"]' AND f.json<>'null')`,
     text: `q.search||' '||${fields(CAR_FIELDS)}`,
     reference: field('reference'),
-    order: `q.archived*2+${flag('collectionStatus', '"wishlist"')}`,
+    order: `q.archived*2+${flag('collectionStatus', '"wishlist"')}`
   },
   parts: {
     bucket: 'parts',
     where: 'q.archived=0',
     text: `q.search||' '||${fields(PART_FIELDS)}`,
     reference: field('reference'),
-    order: `CASE WHEN COALESCE(json_extract(q.aux,'$.quantity'),0)>0 THEN 0 ELSE 1 END`,
+    order: `CASE WHEN COALESCE(json_extract(q.aux,'$.quantity'),0)>0 THEN 0 ELSE 1 END`
   },
   jobs: {
     bucket: 'jobs',
     where: '1',
     text: `${fields(['name', 'notes'])}||' '||${carName}`,
     reference: `''`,
-    order: `CASE WHEN q.status='active' THEN 0 ELSE 1 END`,
+    order: `CASE WHEN q.status='active' THEN 0 ELSE 1 END`
   },
   guides: {
     bucket: 'documents',
     where: flag('guide', 'true'),
     text: `${fields(['title', 'name'])}||' '||${carName}`,
     reference: `''`,
-    order: '0',
-  },
+    order: '0'
+  }
 };
 
 function searchIndex(reader, kind, terms, phrase, limit) {
@@ -168,16 +259,33 @@ function searchIndex(reader, kind, terms, phrase, limit) {
   const sql = `SELECT key,label,reference,ord FROM (SELECT r.key key,${kind === 'guides' ? `COALESCE(NULLIF(${field('title')},''),${field('name')})` : field('name')} label,${k.reference} reference,${k.order} ord,${k.text} text
     FROM records r JOIN query_records q ON q.key=r.key WHERE q.bucket=? AND ${k.where}) WHERE ${conditions}`;
   const rows = reader.db.prepare(`${sql} LIMIT ${CANDIDATES + 1}`).all(JSON.stringify([k.bucket]), ...terms);
-  const total = rows.length > CANDIDATES
-    ? reader.db.prepare(`SELECT count(*) n FROM (${sql})`).get(JSON.stringify([k.bucket]), ...terms).n
-    : rows.length;
-  const ranked = sorted(rows.map(row => ({ key: row.key, label: String(row.label || ''), order: Number(row.ord) || 0, rank: nameRank(fold(row.label), terms, phrase, String(row.reference || '')) })));
+  const total =
+    rows.length > CANDIDATES
+      ? reader.db.prepare(`SELECT count(*) n FROM (${sql})`).get(JSON.stringify([k.bucket]), ...terms).n
+      : rows.length;
+  const ranked = sorted(
+    rows.map(row => ({
+      key: row.key,
+      label: String(row.label || ''),
+      order: Number(row.ord) || 0,
+      rank: nameRank(fold(row.label), terms, phrase, String(row.reference || ''))
+    }))
+  );
   const items = [];
   for (const hit of ranked.slice(0, limit)) {
     const record = reader.record(hit.key, { assetHandle: true });
     if (!record) continue;
-    const car = (kind === 'jobs' || kind === 'guides') && record.carId ? text(reader.one('cars', record.carId)?.name) : '';
-    items.push(kind === 'cars' ? carItem(record) : kind === 'parts' ? partItem(record) : kind === 'jobs' ? jobItem(record, car) : guideItem(record, car));
+    const car =
+      (kind === 'jobs' || kind === 'guides') && record.carId ? text(reader.one('cars', record.carId)?.name) : '';
+    items.push(
+      kind === 'cars'
+        ? carItem(record)
+        : kind === 'parts'
+          ? partItem(record)
+          : kind === 'jobs'
+            ? jobItem(record, car)
+            : guideItem(record, car)
+    );
   }
   return { total, items };
 }
@@ -188,8 +296,10 @@ function searchIndex(reader, kind, terms, phrase, limit) {
  */
 function searchStore(store, query, { limit = LIMIT } = {}) {
   check(query);
-  if (!store.file || store.expectedIdentity === null || !store.deferredState) return search(store.data, query, { limit });
-  const terms = words(query), phrase = terms.join(' ');
+  if (!store.file || store.expectedIdentity === null || !store.deferredState)
+    return search(store.data, query, { limit });
+  const terms = words(query),
+    phrase = terms.join(' ');
   if (!terms.length) return { query, cars: empty(), parts: empty(), jobs: empty(), guides: empty() };
   return require('./sqlite-query.cjs').read(store, null, reader => {
     reader.db.function('sf_fold', { deterministic: true }, value => fold(value));

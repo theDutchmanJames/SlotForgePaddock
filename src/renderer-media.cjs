@@ -1,1 +1,1 @@
-module.exports=require('./media-registry.cjs');
+module.exports = require('./media-registry.cjs');

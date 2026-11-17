@@ -1,474 +1,1869 @@
-let assemblyPhotoDecoder,picturePreviews,picturePreviewError,spreadsheetImports;
-const {app,BrowserWindow,ipcMain,dialog,nativeImage,shell,protocol,Tray,Menu,powerMonitor,net}=require('electron');
-const fs=require('node:fs');
-const path=require('node:path');
-const applicationFrame=require('./application-frame.cjs');
-const {Store,migrate}=require('./store.cjs');
-const {Network}=require('./network.cjs');
-const {Club}=require('./club.cjs');
-const transfer=new (require('./snapshot-transfer.cjs').SnapshotTransfer)();
-const media=new (require('./renderer-media.cjs').RendererMedia)();
-protocol.registerSchemesAsPrivileged([{scheme:'paddock-media',privileges:{standard:true,secure:true}}]);
-const {readJSON,exportJSON,exportBytes}=require('./files.cjs');
-const {timingPackage}=require('./timing-import.cjs');
-const {timingExport}=require('./timing-export.cjs');
-const catalogueImport=require('./catalogue-import.cjs');
-const historyResearch=require('../renderer/history-research-model.js');
-const historyWeb=require('./history-web.cjs');
-let historyWebBusy=false,restoring=false;
-const {TYPES,readDocument,validateDocument}=require('./documents.cjs');
-const reports=require('./reports.cjs');
-const temporaryDocuments=[];
-let pendingCarLink=process.argv.map(reports.parseLink).find(Boolean)||null;
-function acceptCarLink(value){const target=reports.parseLink(value);if(!target)return;pendingCarLink=target;if(win&&!win.isDestroyed()&&store&&rendererReady&&!win.webContents.isLoadingMainFrame()){if(!startupFeedback)backgroundMode?.open();win.webContents.send('sf:open-car',target);pendingCarLink=null;}}
-app.on('open-url',(event,url)=>{event.preventDefault();acceptCarLink(url);});
+let assemblyPhotoDecoder, picturePreviews, picturePreviewError, spreadsheetImports;
+const {
+  app,
+  BrowserWindow,
+  ipcMain,
+  dialog,
+  nativeImage,
+  shell,
+  protocol,
+  Tray,
+  Menu,
+  powerMonitor,
+  net
+} = require('electron');
+const fs = require('node:fs');
+const path = require('node:path');
+const applicationFrame = require('./application-frame.cjs');
+const { Store, migrate } = require('./store.cjs');
+const { Network } = require('./network.cjs');
+const { Club } = require('./club.cjs');
+const transfer = new (require('./snapshot-transfer.cjs').SnapshotTransfer)();
+const media = new (require('./renderer-media.cjs').RendererMedia)();
+protocol.registerSchemesAsPrivileged([{ scheme: 'paddock-media', privileges: { standard: true, secure: true } }]);
+const { readJSON, exportJSON, exportBytes } = require('./files.cjs');
+const { timingPackage } = require('./timing-import.cjs');
+const { timingExport } = require('./timing-export.cjs');
+const catalogueImport = require('./catalogue-import.cjs');
+const historyResearch = require('../renderer/history-research-model.js');
+const historyWeb = require('./history-web.cjs');
+let historyWebBusy = false,
+  restoring = false;
+const { TYPES, readDocument, validateDocument } = require('./documents.cjs');
+const reports = require('./reports.cjs');
+const temporaryDocuments = [];
+let pendingCarLink = process.argv.map(reports.parseLink).find(Boolean) || null;
+function acceptCarLink(value) {
+  const target = reports.parseLink(value);
+  if (!target) return;
+  pendingCarLink = target;
+  if (win && !win.isDestroyed() && store && rendererReady && !win.webContents.isLoadingMainFrame()) {
+    if (!startupFeedback) backgroundMode?.open();
+    win.webContents.send('sf:open-car', target);
+    pendingCarLink = null;
+  }
+}
+app.on('open-url', (event, url) => {
+  event.preventDefault();
+  acceptCarLink(url);
+});
 // Keep the established profile path (including a launcher override) when changing the visible app name.
-const existingUserData=app.getPath('userData');
+const existingUserData = app.getPath('userData');
 app.setName('SlotForge Paddock');
-app.setPath('userData',existingUserData);
-const sharedSmokeArg=!app.isPackaged&&process.argv.find(v=>v.startsWith('--shared-folder-smoke='));
-const sharedSmoke=sharedSmokeArg?path.resolve(sharedSmokeArg.slice('--shared-folder-smoke='.length)):null;
-if(sharedSmoke&&!sharedSmoke.startsWith(path.resolve(__dirname,'..','.qa')+path.sep))throw Error('Shared-library tests require an isolated .qa folder.');
-const smoke=!app.isPackaged&&(process.argv.includes('--smoke')||!!sharedSmoke);
-if(sharedSmoke)app.setPath('userData',path.join(sharedSmoke,'paddock-profile'));
-else if(smoke)app.setPath('userData',path.join(__dirname,'..','.qa','profile'));
-else if(!app.isPackaged&&process.argv.includes('--test-collection')){const profile=path.join(__dirname,'..','.qa','test-collection');fs.mkdirSync(profile,{recursive:true});app.setPath('userData',profile);}
-const launcherModule=require('./local-library-launcher.cjs');
-const launchCommand=launcherModule.command({packaged:app.isPackaged,appPath:path.join(__dirname,'..')});
-let libraryStartup=null,libraryStartupError=null;try{libraryStartup=launcherModule.readStart(process.argv,{folder:require('./local-library.cjs').directory(),command:launchCommand});if(libraryStartup)app.setPath('userData',libraryStartup.profile);}catch(e){libraryStartupError=e;}
-const ownsInstance=!libraryStartupError&&app.requestSingleInstanceLock();
-const quickLinks=new (require('./quick-links.cjs').QuickLinks)(app.getPath('userData'),{openExternal:url=>shell.openExternal(url)});
-if(libraryStartupError){console.error('The registered local library could not be started. Open Paddock normally to check its registration.');app.exit(1);}else if(!ownsInstance)app.quit();
-let sharedObserver,sharedRoot,libraryMoveResult=null,autoBackup,autoBackupTimer,updateCheck,updateTimer;
+app.setPath('userData', existingUserData);
+const sharedSmokeArg = !app.isPackaged && process.argv.find(v => v.startsWith('--shared-folder-smoke='));
+const sharedSmoke = sharedSmokeArg ? path.resolve(sharedSmokeArg.slice('--shared-folder-smoke='.length)) : null;
+if (sharedSmoke && !sharedSmoke.startsWith(path.resolve(__dirname, '..', '.qa') + path.sep))
+  throw Error('Shared-library tests require an isolated .qa folder.');
+const smoke = !app.isPackaged && (process.argv.includes('--smoke') || !!sharedSmoke);
+if (sharedSmoke) app.setPath('userData', path.join(sharedSmoke, 'paddock-profile'));
+else if (smoke) app.setPath('userData', path.join(__dirname, '..', '.qa', 'profile'));
+else if (!app.isPackaged && process.argv.includes('--test-collection')) {
+  const profile = path.join(__dirname, '..', '.qa', 'test-collection');
+  fs.mkdirSync(profile, { recursive: true });
+  app.setPath('userData', profile);
+}
+const launcherModule = require('./local-library-launcher.cjs');
+const launchCommand = launcherModule.command({ packaged: app.isPackaged, appPath: path.join(__dirname, '..') });
+let libraryStartup = null,
+  libraryStartupError = null;
+try {
+  libraryStartup = launcherModule.readStart(process.argv, {
+    folder: require('./local-library.cjs').directory(),
+    command: launchCommand
+  });
+  if (libraryStartup) app.setPath('userData', libraryStartup.profile);
+} catch (e) {
+  libraryStartupError = e;
+}
+const ownsInstance = !libraryStartupError && app.requestSingleInstanceLock();
+const quickLinks = new (require('./quick-links.cjs').QuickLinks)(app.getPath('userData'), {
+  openExternal: url => shell.openExternal(url)
+});
+if (libraryStartupError) {
+  console.error('The registered local library could not be started. Open Paddock normally to check its registration.');
+  app.exit(1);
+} else if (!ownsInstance) app.quit();
+let sharedObserver,
+  sharedRoot,
+  libraryMoveResult = null,
+  autoBackup,
+  autoBackupTimer,
+  updateCheck,
+  updateTimer;
 // The user is working in Paddock right now: its window has focus and there was recent input.
-function userActive(){return !!win&&!win.isDestroyed()&&win.isFocused()&&powerMonitor.getSystemIdleTime()<30;}
-let win,store,network,club,portal,localLibrary,backgroundMode,resultInbox,networkTimer,rendererReady=false,startupFeedback,startupPage,startupClosing=false;
-const ipcWork=new (require('./work-gate.cjs').WorkGate)();
-const backupJobs=new (require('./backup-jobs.cjs').BackupJobs)(value=>{if(win&&!win.isDestroyed())win.webContents.send('sf:file-progress',value);});
-const entry=path.join(__dirname,'..','renderer','index.html');
-const entryURL=applicationFrame.fileURL(entry);
-const sharedEncoder=new (require('./shared-thumbnail-encoder.cjs').SharedThumbnailEncoder)({getWindow:()=>win,url:entryURL});
-const sharedPreviews=new (require('./paddock-thumbnails.cjs').PaddockThumbnails)({getStore:()=>store,available:()=>!!sharedRoot&&!!store&&club?.store===store&&!restoring&&!startupClosing,encoder:sharedEncoder,open:()=>require('../packages/shared-library/index.cjs').open({application:'SlotForge Paddock',installationId:'paddock-desktop',sharedRoot,legacyProfiles:[],thumbnailEncoder:source=>sharedEncoder.encode(source)})});
-const thumbnails=new (require('./thumbnail-cache.cjs').ThumbnailCache)(job=>{if(win&&!win.isDestroyed())win.webContents.send('sf:thumbnail',job);},url=>media.responseAsync(url));
-function mediaSweep(){media.retain([store?.data,club?.loadedCache?.data,network?.cached,...transfer.history.map(x=>x.data)]);}
-function trustedFrame(event){return applicationFrame.owns(win,event,entryURL);}
+function userActive() {
+  return !!win && !win.isDestroyed() && win.isFocused() && powerMonitor.getSystemIdleTime() < 30;
+}
+let win,
+  store,
+  network,
+  club,
+  portal,
+  localLibrary,
+  backgroundMode,
+  resultInbox,
+  networkTimer,
+  rendererReady = false,
+  startupFeedback,
+  startupPage,
+  startupClosing = false;
+const ipcWork = new (require('./work-gate.cjs').WorkGate)();
+const backupJobs = new (require('./backup-jobs.cjs').BackupJobs)(value => {
+  if (win && !win.isDestroyed()) win.webContents.send('sf:file-progress', value);
+});
+const entry = path.join(__dirname, '..', 'renderer', 'index.html');
+const entryURL = applicationFrame.fileURL(entry);
+const sharedEncoder = new (require('./shared-thumbnail-encoder.cjs').SharedThumbnailEncoder)({
+  getWindow: () => win,
+  url: entryURL
+});
+const sharedPreviews = new (require('./paddock-thumbnails.cjs').PaddockThumbnails)({
+  getStore: () => store,
+  available: () => !!sharedRoot && !!store && club?.store === store && !restoring && !startupClosing,
+  encoder: sharedEncoder,
+  open: () =>
+    require('../packages/shared-library/index.cjs').open({
+      application: 'SlotForge Paddock',
+      installationId: 'paddock-desktop',
+      sharedRoot,
+      legacyProfiles: [],
+      thumbnailEncoder: source => sharedEncoder.encode(source)
+    })
+});
+const thumbnails = new (require('./thumbnail-cache.cjs').ThumbnailCache)(
+  job => {
+    if (win && !win.isDestroyed()) win.webContents.send('sf:thumbnail', job);
+  },
+  url => media.responseAsync(url)
+);
+function mediaSweep() {
+  media.retain([store?.data, club?.loadedCache?.data, network?.cached, ...transfer.history.map(x => x.data)]);
+}
+function trustedFrame(event) {
+  return applicationFrame.owns(win, event, entryURL);
+}
 // An automatic backup gives way to the user: a request made while someone is using Paddock
 // stops it first. Background requests while nobody is using it simply wait for the backup.
 // A backup the user started with "Back up now" is never stopped this way (see AutoBackup.yield).
-let userRequests=0;
-function reply(fn){return async(event,...args)=>{let value;userRequests++;try{try{return await ipcWork.run(async()=>{if(!trustedFrame(event))return {error:'Unauthorised application frame.'};if(autoBackup?.running&&userActive())await autoBackup.yield();if(sharedObserver&&!restoring)await sharedObserver.refresh();value=await fn(...media.expand(args));return {ok:true,value:media.project(value)};});}finally{userRequests--;}}catch(e){return {error:e.message,code:value?.commandId?'WRITE_UNCERTAIN':e.code,definiteRejection:e.definiteRejection===true};}};}
-async function files(action,p={}){
-  if(action==='library.move-choose'||action==='library.move-request'){
+let userRequests = 0;
+function reply(fn) {
+  return async (event, ...args) => {
+    let value;
+    userRequests++;
+    try {
+      try {
+        return await ipcWork.run(async () => {
+          if (!trustedFrame(event)) return { error: 'Unauthorised application frame.' };
+          if (autoBackup?.running && userActive()) await autoBackup.yield();
+          if (sharedObserver && !restoring) await sharedObserver.refresh();
+          value = await fn(...media.expand(args));
+          return { ok: true, value: media.project(value) };
+        });
+      } finally {
+        userRequests--;
+      }
+    } catch (e) {
+      return {
+        error: e.message,
+        code: value?.commandId ? 'WRITE_UNCERTAIN' : e.code,
+        definiteRejection: e.definiteRejection === true
+      };
+    }
+  };
+}
+async function files(action, p = {}) {
+  if (action === 'library.move-choose' || action === 'library.move-request') {
     // Always the personal shared library, even while a Dealership copy is selected.
-    const status=network.sharedFileStatus();if(!status.shared||!status.file)throw Error('This session is not using the shared local library.');
-    const M=require('./shared-library-move.cjs'),appFolder=app.isPackaged?(process.platform==='darwin'?path.resolve(process.execPath,'..','..','..'):path.dirname(process.execPath)):null,check=folder=>M.inspect(folder,{file:status.file,appFolder});
-    if(action==='library.move-choose'){const r=await dialog.showOpenDialog(win,{title:'Choose a new folder for the shared library',defaultPath:path.dirname(status.file),properties:['openDirectory','createDirectory','promptToCreate']});if(r.canceled||!r.filePaths[0])return null;return check(r.filePaths[0]);}
+    const status = network.sharedFileStatus();
+    if (!status.shared || !status.file) throw Error('This session is not using the shared local library.');
+    const M = require('./shared-library-move.cjs'),
+      appFolder = app.isPackaged
+        ? process.platform === 'darwin'
+          ? path.resolve(process.execPath, '..', '..', '..')
+          : path.dirname(process.execPath)
+        : null,
+      check = folder => M.inspect(folder, { file: status.file, appFolder });
+    if (action === 'library.move-choose') {
+      const r = await dialog.showOpenDialog(win, {
+        title: 'Choose a new folder for the shared library',
+        defaultPath: path.dirname(status.file),
+        properties: ['openDirectory', 'createDirectory', 'promptToCreate']
+      });
+      if (r.canceled || !r.filePaths[0]) return null;
+      return check(r.filePaths[0]);
+    }
     // A pending submission would stop the quit; resolve it first so the restart really happens.
-    if(network.pending&&!require('./submission-recovery.cjs').saved(network))throw Error('A public car submission is still waiting. Resolve it in Settings → Database before moving the library.');
-    const info=check(p.folder);M.request(app.getPath('userData'),{folder:info.folder,file:status.file,databaseId:status.databaseId});
+    if (network.pending && !require('./submission-recovery.cjs').saved(network))
+      throw Error(
+        'A public car submission is still waiting. Resolve it in Settings → Database before moving the library.'
+      );
+    const info = check(p.folder);
+    M.request(app.getPath('userData'), { folder: info.folder, file: status.file, databaseId: status.databaseId });
     // The move runs on the next start, before the library is opened. Reply first, then restart
     // (without one-off arguments such as car links or background-start flags).
-    setTimeout(()=>{const execPath=process.env.PORTABLE_EXECUTABLE_FILE||process.env.APPIMAGE;app.relaunch(execPath?{execPath,args:[]}:{args:process.argv.slice(1).filter(a=>!a.startsWith(launcherModule.PREFIX)&&!reports.parseLink(a))});if(backgroundMode)backgroundMode.quit();else app.quit();},400);
-    return {restarting:true,target:info.target};
+    setTimeout(() => {
+      const execPath = process.env.PORTABLE_EXECUTABLE_FILE || process.env.APPIMAGE;
+      app.relaunch(
+        execPath
+          ? { execPath, args: [] }
+          : { args: process.argv.slice(1).filter(a => !a.startsWith(launcherModule.PREFIX) && !reports.parseLink(a)) }
+      );
+      if (backgroundMode) backgroundMode.quit();
+      else app.quit();
+    }, 400);
+    return { restarting: true, target: info.target };
   }
-  const store=club.store;
-  if(action.startsWith('spreadsheet.')){
-    if(!spreadsheetImports)throw Error('Spreadsheet imports are not ready');
-    if(action==='spreadsheet.pick'){const collection=spreadsheetImports.active();const choice=await dialog.showOpenDialog(win,{title:'Import cars from a spreadsheet',properties:['openFile'],filters:[{name:'Car spreadsheets',extensions:['csv','xlsx']}]});if(choice.canceled)return null;require('./catalogue-picture-requests.cjs').identity(spreadsheetImports.active(),collection);return spreadsheetImports.pick(choice.filePaths[0]);}
-    const id=p.id;if(action==='spreadsheet.list')return spreadsheetImports.list();
-    if(action==='spreadsheet.view')return spreadsheetImports.view(id,p.offset||0,p.filter||'all');
-    if(action==='spreadsheet.configure')return spreadsheetImports.configure(id,p.config);
-    if(action==='spreadsheet.previewRows')return spreadsheetImports.previewRows(id,p.offset,p.token);
-    if(action==='spreadsheet.preview')return spreadsheetImports.preview(id);
-    if(action==='spreadsheet.bulk')return spreadsheetImports.bulk(id,p.select===true);
-    if(action==='spreadsheet.choose')return spreadsheetImports.choose(id,p.changes);
-    if(action==='spreadsheet.recheck')return spreadsheetImports.recheck(id,p.row);
-    if(action==='spreadsheet.detail')return spreadsheetImports.detail(id,p.row,p.choice);
-    if(action==='spreadsheet.start')return spreadsheetImports.start(id);
-    if(action==='spreadsheet.stop'){await spreadsheetImports.stop();return spreadsheetImports.view(id);}
-    if(action==='spreadsheet.discard')return spreadsheetImports.discard(id);
+  const store = club.store;
+  if (action.startsWith('spreadsheet.')) {
+    if (!spreadsheetImports) throw Error('Spreadsheet imports are not ready');
+    if (action === 'spreadsheet.pick') {
+      const collection = spreadsheetImports.active();
+      const choice = await dialog.showOpenDialog(win, {
+        title: 'Import cars from a spreadsheet',
+        properties: ['openFile'],
+        filters: [{ name: 'Car spreadsheets', extensions: ['csv', 'xlsx'] }]
+      });
+      if (choice.canceled) return null;
+      require('./catalogue-picture-requests.cjs').identity(spreadsheetImports.active(), collection);
+      return spreadsheetImports.pick(choice.filePaths[0]);
+    }
+    const id = p.id;
+    if (action === 'spreadsheet.list') return spreadsheetImports.list();
+    if (action === 'spreadsheet.view') return spreadsheetImports.view(id, p.offset || 0, p.filter || 'all');
+    if (action === 'spreadsheet.configure') return spreadsheetImports.configure(id, p.config);
+    if (action === 'spreadsheet.previewRows') return spreadsheetImports.previewRows(id, p.offset, p.token);
+    if (action === 'spreadsheet.preview') return spreadsheetImports.preview(id);
+    if (action === 'spreadsheet.bulk') return spreadsheetImports.bulk(id, p.select === true);
+    if (action === 'spreadsheet.choose') return spreadsheetImports.choose(id, p.changes);
+    if (action === 'spreadsheet.recheck') return spreadsheetImports.recheck(id, p.row);
+    if (action === 'spreadsheet.detail') return spreadsheetImports.detail(id, p.row, p.choice);
+    if (action === 'spreadsheet.start') return spreadsheetImports.start(id);
+    if (action === 'spreadsheet.stop') {
+      await spreadsheetImports.stop();
+      return spreadsheetImports.view(id);
+    }
+    if (action === 'spreadsheet.discard') return spreadsheetImports.discard(id);
     throw Error('Unknown spreadsheet action');
   }
-  const pictureJournalPath=path.join(app.getPath('userData'),'catalogue-picture-requests.sqlite');
-  const protectedFiles=[...(spreadsheetImports?['','-journal','-wal','-shm'].map(s=>spreadsheetImports.file+s):[]),quickLinks.file,quickLinks.file+'.tmp',...(picturePreviews?.protectedFiles()||[]),pictureJournalPath,pictureJournalPath+'-journal',pictureJournalPath+'-wal',pictureJournalPath+'-shm',...(sharedRoot?['library.json','replacement.json','relocation.json','coordination.sqlite','coordination.sqlite-journal','coordination.sqlite-wal','coordination.sqlite-shm'].map(name=>path.join(sharedRoot,name)):[]),...(backgroundMode?[backgroundMode.file]:[]),...(resultInbox?[resultInbox.file,resultInbox.file+'-journal',resultInbox.file+'-wal',resultInbox.file+'-shm']:[]),...(localLibrary?[...(localLibrary.launcher?[localLibrary.launcher.file]:[]),localLibrary.file,localLibrary.settingsFile,localLibrary.settingsFile+'.tmp']:[]),...club.main.protectedFiles(),...club.protectedFiles(),club.file,club.file+'.previous',club.file+'.tmp',...Array.from(media.byUrl.values(),e=>e.staged).filter(Boolean)];
-  if(action==='database.reset')return require('./collection-reset.cjs').reset({store,club,network,backupJobs,protectedFiles},p);
-  if(action==='restore'&&store.data.club)throw Error('Shared club copies cannot restore or replace the official database. Use Connections to update the club copy.');
-  if(['slotcar.kit','slotcar.pick'].includes(action)){
-    const model=require('../renderer/slotcar-research-model.js'),car=store.data.cars.find(c=>c.id===p.carId);
-    const unchanged=()=>{if(club.store!==store||store.data.id!==p.databaseId||!car||store.data.cars.find(c=>c.id===p.carId)?.revision!==p.revision)throw Error('The car or collection changed. Reopen slotcar research.');};unchanged();
-    if(action==='slotcar.kit'){
-      const content=model.kit(store.data,car),r=await dialog.showSaveDialog(win,{title:'Save slotcar product research template',defaultPath:'SlotForge-slotcar-research.json',filters:[{name:'Slotcar research JSON',extensions:['json']}]});if(r.canceled)return null;unchanged();return exportBytes(r.filePath,JSON.stringify(content,null,2),protectedFiles);
+  const pictureJournalPath = path.join(app.getPath('userData'), 'catalogue-picture-requests.sqlite');
+  const protectedFiles = [
+    ...(spreadsheetImports ? ['', '-journal', '-wal', '-shm'].map(s => spreadsheetImports.file + s) : []),
+    quickLinks.file,
+    quickLinks.file + '.tmp',
+    ...(picturePreviews?.protectedFiles() || []),
+    pictureJournalPath,
+    pictureJournalPath + '-journal',
+    pictureJournalPath + '-wal',
+    pictureJournalPath + '-shm',
+    ...(sharedRoot
+      ? [
+          'library.json',
+          'replacement.json',
+          'relocation.json',
+          'coordination.sqlite',
+          'coordination.sqlite-journal',
+          'coordination.sqlite-wal',
+          'coordination.sqlite-shm'
+        ].map(name => path.join(sharedRoot, name))
+      : []),
+    ...(backgroundMode ? [backgroundMode.file] : []),
+    ...(resultInbox
+      ? [resultInbox.file, resultInbox.file + '-journal', resultInbox.file + '-wal', resultInbox.file + '-shm']
+      : []),
+    ...(localLibrary
+      ? [
+          ...(localLibrary.launcher ? [localLibrary.launcher.file] : []),
+          localLibrary.file,
+          localLibrary.settingsFile,
+          localLibrary.settingsFile + '.tmp'
+        ]
+      : []),
+    ...club.main.protectedFiles(),
+    ...club.protectedFiles(),
+    club.file,
+    club.file + '.previous',
+    club.file + '.tmp',
+    ...Array.from(media.byUrl.values(), e => e.staged).filter(Boolean)
+  ];
+  if (action === 'database.reset')
+    return require('./collection-reset.cjs').reset({ store, club, network, backupJobs, protectedFiles }, p);
+  if (action === 'restore' && store.data.club)
+    throw Error(
+      'Shared club copies cannot restore or replace the official database. Use Connections to update the club copy.'
+    );
+  if (['slotcar.kit', 'slotcar.pick'].includes(action)) {
+    const model = require('../renderer/slotcar-research-model.js'),
+      car = store.data.cars.find(c => c.id === p.carId);
+    const unchanged = () => {
+      if (
+        club.store !== store ||
+        store.data.id !== p.databaseId ||
+        !car ||
+        store.data.cars.find(c => c.id === p.carId)?.revision !== p.revision
+      )
+        throw Error('The car or collection changed. Reopen slotcar research.');
+    };
+    unchanged();
+    if (action === 'slotcar.kit') {
+      const content = model.kit(store.data, car),
+        r = await dialog.showSaveDialog(win, {
+          title: 'Save slotcar product research template',
+          defaultPath: 'SlotForge-slotcar-research.json',
+          filters: [{ name: 'Slotcar research JSON', extensions: ['json'] }]
+        });
+      if (r.canceled) return null;
+      unchanged();
+      return exportBytes(r.filePath, JSON.stringify(content, null, 2), protectedFiles);
     }
-    const r=await dialog.showOpenDialog(win,{title:'Review completed slotcar research',properties:['openFile'],filters:[{name:'Slotcar research JSON',extensions:['json']}]});if(r.canceled)return null;unchanged();
-    return {...model.preview(readJSON(r.filePaths[0],1024*1024),p,car),installedParts:store.data.installations.filter(i=>i.carId===p.carId&&!i.removed).map(i=>({field:i.field,name:store.data.parts.find(p=>p.id===i.partId)?.name||i.name,quantity:i.quantity,assembly:!!i.assemblyId}))};
+    const r = await dialog.showOpenDialog(win, {
+      title: 'Review completed slotcar research',
+      properties: ['openFile'],
+      filters: [{ name: 'Slotcar research JSON', extensions: ['json'] }]
+    });
+    if (r.canceled) return null;
+    unchanged();
+    return {
+      ...model.preview(readJSON(r.filePaths[0], 1024 * 1024), p, car),
+      installedParts: store.data.installations
+        .filter(i => i.carId === p.carId && !i.removed)
+        .map(i => ({
+          field: i.field,
+          name: store.data.parts.find(p => p.id === i.partId)?.name || i.name,
+          quantity: i.quantity,
+          assembly: !!i.assemblyId
+        }))
+    };
   }
-  if(action==='history.source'){const url=require('./real-history.cjs').url(p.url);if(!url)throw Error('Missing source link.');await shell.openExternal(url);return {opened:true};}
-  if(['history.kit','history.pick','history.web'].includes(action)){
-    const car=store.data.cars.find(c=>c.id===p.carId);
-    const unchanged=()=>{if(club.store!==store||store.data.id!==p.databaseId||!car||store.data.cars.find(c=>c.id===p.carId)?.revision!==p.revision)throw Error('The car or collection changed. Reopen its research tools.');};unchanged();
-    if(action==='history.kit'){
-      const content=historyResearch.kit(store.data,car),r=await dialog.showSaveDialog(win,{title:'Save car research template for your AI',defaultPath:'SlotForge-car-research.json',filters:[{name:'Research JSON',extensions:['json']}]});
-      return r.canceled?null:exportBytes(r.filePath,JSON.stringify(content,null,2),protectedFiles);
+  if (action === 'history.source') {
+    const url = require('./real-history.cjs').url(p.url);
+    if (!url) throw Error('Missing source link.');
+    await shell.openExternal(url);
+    return { opened: true };
+  }
+  if (['history.kit', 'history.pick', 'history.web'].includes(action)) {
+    const car = store.data.cars.find(c => c.id === p.carId);
+    const unchanged = () => {
+      if (
+        club.store !== store ||
+        store.data.id !== p.databaseId ||
+        !car ||
+        store.data.cars.find(c => c.id === p.carId)?.revision !== p.revision
+      )
+        throw Error('The car or collection changed. Reopen its research tools.');
+    };
+    unchanged();
+    if (action === 'history.kit') {
+      const content = historyResearch.kit(store.data, car),
+        r = await dialog.showSaveDialog(win, {
+          title: 'Save car research template for your AI',
+          defaultPath: 'SlotForge-car-research.json',
+          filters: [{ name: 'Research JSON', extensions: ['json'] }]
+        });
+      return r.canceled ? null : exportBytes(r.filePath, JSON.stringify(content, null, 2), protectedFiles);
     }
     let preview;
-    if(action==='history.pick'){
-      const r=await dialog.showOpenDialog(win,{title:'Review completed car research',properties:['openFile'],filters:[{name:'Research JSON',extensions:['json']}]});if(r.canceled)return null;unchanged();
-      preview=historyResearch.preview(readJSON(r.filePaths[0],1024*1024),p);
-    }else{
-      if(historyWebBusy)throw Error('A webpage is already being read. Please wait.');historyWebBusy=true;
-      try{preview=await historyWeb.read(p.url);}finally{historyWebBusy=false;}unchanged();
+    if (action === 'history.pick') {
+      const r = await dialog.showOpenDialog(win, {
+        title: 'Review completed car research',
+        properties: ['openFile'],
+        filters: [{ name: 'Research JSON', extensions: ['json'] }]
+      });
+      if (r.canceled) return null;
+      unchanged();
+      preview = historyResearch.preview(readJSON(r.filePaths[0], 1024 * 1024), p);
+    } else {
+      if (historyWebBusy) throw Error('A webpage is already being read. Please wait.');
+      historyWebBusy = true;
+      try {
+        preview = await historyWeb.read(p.url);
+      } finally {
+        historyWebBusy = false;
+      }
+      unchanged();
     }
     return preview;
   }
-  if(action==='report.preview'){const r=reports.render(store.snapshot(),p);return {title:r.title,body:r.body};}
-  if(action==='report.pdf'){
-    const report=reports.render(store.snapshot(),p),result=await dialog.showSaveDialog(win,{title:'Save printable PDF',defaultPath:'SlotForge-'+p.kind+'.pdf',filters:[{name:'PDF document',extensions:['pdf']}]});if(result.canceled)return null;
-    const printWindow=new BrowserWindow({show:false,webPreferences:{sandbox:true,contextIsolation:true,nodeIntegration:false,javascript:false}});
-    printWindow.webContents.setWindowOpenHandler(()=>({action:'deny'}));
-    try{await printWindow.loadURL('data:text/html;charset=utf-8,'+encodeURIComponent(report.html));const bytes=await printWindow.webContents.printToPDF({printBackground:true,pageSize:'A4',preferCSSPageSize:true,displayHeaderFooter:true,headerTemplate:'<span></span>',footerTemplate:report.footerTemplate});return exportBytes(result.filePath,bytes,protectedFiles);}finally{printWindow.destroy();}
+  if (action === 'report.preview') {
+    const r = reports.render(store.snapshot(), p);
+    return { title: r.title, body: r.body };
+  }
+  if (action === 'report.pdf') {
+    const report = reports.render(store.snapshot(), p),
+      result = await dialog.showSaveDialog(win, {
+        title: 'Save printable PDF',
+        defaultPath: 'SlotForge-' + p.kind + '.pdf',
+        filters: [{ name: 'PDF document', extensions: ['pdf'] }]
+      });
+    if (result.canceled) return null;
+    const printWindow = new BrowserWindow({
+      show: false,
+      webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false, javascript: false }
+    });
+    printWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+    try {
+      await printWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(report.html));
+      const bytes = await printWindow.webContents.printToPDF({
+        printBackground: true,
+        pageSize: 'A4',
+        preferCSSPageSize: true,
+        displayHeaderFooter: true,
+        headerTemplate: '<span></span>',
+        footerTemplate: report.footerTemplate
+      });
+      return exportBytes(result.filePath, bytes, protectedFiles);
+    } finally {
+      printWindow.destroy();
+    }
   }
 
-  if(action.startsWith('pictures.')){
-    const pictures=require('./catalogue-picture-requests.cjs'),journal=new pictures.Journal(app.getPath('userData'));
-    if(action==='pictures.browse')return pictures.run(store.file,'browse',p);
-    if(action==='pictures.select')return pictures.run(store.file,'select',p);
-    const active=()=>pictures.withReader(store,(_r,a)=>{if(club.store!==store)throw Error('The collection changed. Reopen Illustrated Catalogue.');pictures.identity(a,p.expected);return a;});
-    if(action==='pictures.requests'){const a=active();return {...a,requests:journal.list()};}
-    if((action==='pictures.discard'||action==='pictures.response.pick'||action.startsWith('pictures.preview.'))&&!picturePreviews)throw Error('Picture previews are unavailable: '+(picturePreviewError||'not ready'));
-    if(action==='pictures.discard'){const a=active();return picturePreviews.batches.discard(p.id,p.requestDatabaseId||a.databaseId);}
-    if(action==='pictures.response.pick'){active();const choice=await dialog.showOpenDialog(win,{title:'Open completed catalogue picture files',properties:['openFile','multiSelections'],filters:[{name:'Picture response JSON',extensions:['json']}]});if(choice.canceled)return null;if(choice.filePaths.length>100)throw Error('Choose up to 100 picture JSON files.');const inputs=[];let totalBytes=0;for(const file of choice.filePaths){try{inputs.push({name:path.basename(file),bytes:await require('./catalogue-picture-previews.cjs').readResponse(file)});totalBytes+=inputs.at(-1).bytes.length;if(totalBytes>16*1024*1024)throw Error('Selected picture JSON files exceed 16 MiB. Choose fewer files.');}catch(e){throw Error(path.basename(file)+': '+e.message);}}active();return picturePreviews.batches.importFiles(inputs);}
-    if(action.startsWith('pictures.preview.')){active();return picturePreviews.batches.command(action.slice('pictures.preview.'.length),p.id,p);}
-    if(action==='pictures.export'||action==='pictures.reexport'){
-      const before=active(),journals=action==='pictures.export'?await pictures.run(store.file,'prepare',p):[journal.get(p.id,before)];
-      const choice=await dialog.showOpenDialog(win,{title:'Choose a folder for your picture-request files',properties:['openDirectory','createDirectory']});if(choice.canceled)return null;
-      const after=active();if(action==='pictures.export'&&after.revision!==before.revision)throw Error('The collection changed while choosing a folder. Refresh the selection before exporting.');
-      if(action==='pictures.export')journal.save(journals);
-      return pictures.exportBundle(choice.filePaths[0],journals,protectedFiles);
+  if (action.startsWith('pictures.')) {
+    const pictures = require('./catalogue-picture-requests.cjs'),
+      journal = new pictures.Journal(app.getPath('userData'));
+    if (action === 'pictures.browse') return pictures.run(store.file, 'browse', p);
+    if (action === 'pictures.select') return pictures.run(store.file, 'select', p);
+    const active = () =>
+      pictures.withReader(store, (_r, a) => {
+        if (club.store !== store) throw Error('The collection changed. Reopen Illustrated Catalogue.');
+        pictures.identity(a, p.expected);
+        return a;
+      });
+    if (action === 'pictures.requests') {
+      const a = active();
+      return { ...a, requests: journal.list() };
+    }
+    if (
+      (action === 'pictures.discard' ||
+        action === 'pictures.response.pick' ||
+        action.startsWith('pictures.preview.')) &&
+      !picturePreviews
+    )
+      throw Error('Picture previews are unavailable: ' + (picturePreviewError || 'not ready'));
+    if (action === 'pictures.discard') {
+      const a = active();
+      return picturePreviews.batches.discard(p.id, p.requestDatabaseId || a.databaseId);
+    }
+    if (action === 'pictures.response.pick') {
+      active();
+      const choice = await dialog.showOpenDialog(win, {
+        title: 'Open completed catalogue picture files',
+        properties: ['openFile', 'multiSelections'],
+        filters: [{ name: 'Picture response JSON', extensions: ['json'] }]
+      });
+      if (choice.canceled) return null;
+      if (choice.filePaths.length > 100) throw Error('Choose up to 100 picture JSON files.');
+      const inputs = [];
+      let totalBytes = 0;
+      for (const file of choice.filePaths) {
+        try {
+          inputs.push({
+            name: path.basename(file),
+            bytes: await require('./catalogue-picture-previews.cjs').readResponse(file)
+          });
+          totalBytes += inputs.at(-1).bytes.length;
+          if (totalBytes > 16 * 1024 * 1024)
+            throw Error('Selected picture JSON files exceed 16 MiB. Choose fewer files.');
+        } catch (e) {
+          throw Error(path.basename(file) + ': ' + e.message);
+        }
+      }
+      active();
+      return picturePreviews.batches.importFiles(inputs);
+    }
+    if (action.startsWith('pictures.preview.')) {
+      active();
+      return picturePreviews.batches.command(action.slice('pictures.preview.'.length), p.id, p);
+    }
+    if (action === 'pictures.export' || action === 'pictures.reexport') {
+      const before = active(),
+        journals =
+          action === 'pictures.export' ? await pictures.run(store.file, 'prepare', p) : [journal.get(p.id, before)];
+      const choice = await dialog.showOpenDialog(win, {
+        title: 'Choose a folder for your picture-request files',
+        properties: ['openDirectory', 'createDirectory']
+      });
+      if (choice.canceled) return null;
+      const after = active();
+      if (action === 'pictures.export' && after.revision !== before.revision)
+        throw Error('The collection changed while choosing a folder. Refresh the selection before exporting.');
+      if (action === 'pictures.export') journal.save(journals);
+      return pictures.exportBundle(choice.filePaths[0], journals, protectedFiles);
     }
     throw Error('Unknown picture-request action.');
   }
-  if(action==='catalogue.groups')return require('./catalogue-research.cjs').groups();
-  if(action==='catalogue.kits'){
-    const currency=require('./catalogue-pricing.cjs').currency(p.currency);
-    const ids=p.groups;const groups=require('./catalogue-research.cjs').groups();
-    if(!Array.isArray(ids)||!ids.length||ids.length>groups.length||new Set(ids).size!==ids.length||ids.some(id=>!groups.some(g=>g.id===id)))throw Error('Choose supported research groups.');
-    const r=await dialog.showOpenDialog(win,{title:'Choose a folder for the research templates',properties:['openDirectory','createDirectory']});if(r.canceled)return null;
-    const directory=await fs.promises.mkdtemp(path.join(r.filePaths[0],'SlotForge-catalogue-kits-'));
-    for(const id of ids)exportJSON(path.join(directory,id+'.json'),catalogueImport.kit(id,currency),protectedFiles);
-    return {directory,count:ids.length};
+  if (action === 'catalogue.groups') return require('./catalogue-research.cjs').groups();
+  if (action === 'catalogue.kits') {
+    const currency = require('./catalogue-pricing.cjs').currency(p.currency);
+    const ids = p.groups;
+    const groups = require('./catalogue-research.cjs').groups();
+    if (
+      !Array.isArray(ids) ||
+      !ids.length ||
+      ids.length > groups.length ||
+      new Set(ids).size !== ids.length ||
+      ids.some(id => !groups.some(g => g.id === id))
+    )
+      throw Error('Choose supported research groups.');
+    const r = await dialog.showOpenDialog(win, {
+      title: 'Choose a folder for the research templates',
+      properties: ['openDirectory', 'createDirectory']
+    });
+    if (r.canceled) return null;
+    const directory = await fs.promises.mkdtemp(path.join(r.filePaths[0], 'SlotForge-catalogue-kits-'));
+    for (const id of ids)
+      exportJSON(path.join(directory, id + '.json'), catalogueImport.kit(id, currency), protectedFiles);
+    return { directory, count: ids.length };
   }
-  if(action==='catalogue.kit'){const currency=require('./catalogue-pricing.cjs').currency(p.currency);const r=await dialog.showSaveDialog(win,{title:'Save manufacturer catalogue import kit',defaultPath:'SlotForge-catalogue-kit.json',filters:[{name:'Catalogue JSON kit',extensions:['json']}]});return r.canceled?null:exportJSON(r.filePath,catalogueImport.kit(undefined,currency),protectedFiles);}
-  if(action==='catalogue.instructions')return catalogueImport.instructions;
-  if(action==='catalogue.pick'){
-    const identity=store.data.id;
-    const r=await dialog.showOpenDialog(win,{title:'Review manufacturer catalogues',properties:['openFile','multiSelections'],filters:[{name:'SlotForge catalogue JSON',extensions:['json']}]});if(r.canceled)return null;
-    const batch=require('./catalogue-batch.cjs'),files=await batch.readFiles(r.filePaths);
-    if(club.store!==store||store.data.id!==identity)throw Error('The collection changed. Import the catalogues again.');
-    if(files.length===1&&files[0].input?.format==='slotforge-catalogue-images'){
-      if(!picturePreviews)throw Error('Picture previews are unavailable: '+picturePreviewError);
-      return {picturePreview:await picturePreviews.batches.importFiles([{name:files[0].name,bytes:Buffer.from(JSON.stringify(files[0].input))}])};
+  if (action === 'catalogue.kit') {
+    const currency = require('./catalogue-pricing.cjs').currency(p.currency);
+    const r = await dialog.showSaveDialog(win, {
+      title: 'Save manufacturer catalogue import kit',
+      defaultPath: 'SlotForge-catalogue-kit.json',
+      filters: [{ name: 'Catalogue JSON kit', extensions: ['json'] }]
+    });
+    return r.canceled ? null : exportJSON(r.filePath, catalogueImport.kit(undefined, currency), protectedFiles);
+  }
+  if (action === 'catalogue.instructions') return catalogueImport.instructions;
+  if (action === 'catalogue.pick') {
+    const identity = store.data.id;
+    const r = await dialog.showOpenDialog(win, {
+      title: 'Review manufacturer catalogues',
+      properties: ['openFile', 'multiSelections'],
+      filters: [{ name: 'SlotForge catalogue JSON', extensions: ['json'] }]
+    });
+    if (r.canceled) return null;
+    const batch = require('./catalogue-batch.cjs'),
+      files = await batch.readFiles(r.filePaths);
+    if (club.store !== store || store.data.id !== identity)
+      throw Error('The collection changed. Import the catalogues again.');
+    if (files.length === 1 && files[0].input?.format === 'slotforge-catalogue-images') {
+      if (!picturePreviews) throw Error('Picture previews are unavailable: ' + picturePreviewError);
+      return {
+        picturePreview: await picturePreviews.batches.importFiles([
+          { name: files[0].name, bytes: Buffer.from(JSON.stringify(files[0].input)) }
+        ])
+      };
     }
-    const result=batch.combine(files);return {...result,preview:store.plan('catalogue.preview',{input:result.input})};
+    const result = batch.combine(files);
+    return { ...result, preview: store.plan('catalogue.preview', { input: result.input }) };
   }
-  if(action==='guide.pick'){
-    const r=await dialog.showOpenDialog(win,{title:'Add a manual or part guide',properties:['openFile'],filters:[{name:'PDF or image',extensions:['pdf','png','jpg','jpeg','webp']}]});if(r.canceled)return null;
-    const document=readDocument(r.filePaths[0]);if(!require('./guides.cjs').allowed.has(document.mime))throw Error('Choose a PDF or supported image.');let picture='';
-    if(document.mime.startsWith('image/')){const image=nativeImage.createFromBuffer(Buffer.from(document.data,'base64'));if(image.isEmpty())throw Error('This image could not be opened.');const {width,height}=image.getSize(),small=image.resize(width>=height?{width:Math.min(480,width)}:{height:Math.min(480,height)});picture='data:image/jpeg;base64,'+small.toJPEG(75).toString('base64');}
-    return {document,picture};
+  if (action === 'guide.pick') {
+    const r = await dialog.showOpenDialog(win, {
+      title: 'Add a manual or part guide',
+      properties: ['openFile'],
+      filters: [{ name: 'PDF or image', extensions: ['pdf', 'png', 'jpg', 'jpeg', 'webp'] }]
+    });
+    if (r.canceled) return null;
+    const document = readDocument(r.filePaths[0]);
+    if (!require('./guides.cjs').allowed.has(document.mime)) throw Error('Choose a PDF or supported image.');
+    let picture = '';
+    if (document.mime.startsWith('image/')) {
+      const image = nativeImage.createFromBuffer(Buffer.from(document.data, 'base64'));
+      if (image.isEmpty()) throw Error('This image could not be opened.');
+      const { width, height } = image.getSize(),
+        small = image.resize(width >= height ? { width: Math.min(480, width) } : { height: Math.min(480, height) });
+      picture = 'data:image/jpeg;base64,' + small.toJPEG(75).toString('base64');
+    }
+    return { document, picture };
   }
-  if(action==='document.pick'){const r=await dialog.showOpenDialog(win,{title:'Attach a private document',properties:['openFile'],filters:[{name:'Supported documents',extensions:Object.keys(TYPES).map(e=>e.slice(1))}]});return r.canceled?null:readDocument(r.filePaths[0]);}
-  if(action==='document.open'||action==='document.export'){
-    const doc=store.data.documents.find(d=>d.id===p.id);if(!doc)throw Error('Document not found.');const bytes=validateDocument(doc);
-    if(action==='document.export'){const r=await dialog.showSaveDialog(win,{title:'Save document copy',defaultPath:doc.name});return r.canceled?null:exportBytes(r.filePath,bytes,protectedFiles);}
-    const directory=fs.mkdtempSync(path.join(app.getPath('temp'),'slotforge-document-')),file=path.join(directory,'attachment-'+doc.id+path.extname(doc.name).toLowerCase());temporaryDocuments.push({directory,file});fs.writeFileSync(file,bytes,{flag:'wx'});const error=await shell.openPath(file);if(error)throw Error(error);return {opened:true};
+  if (action === 'document.pick') {
+    const r = await dialog.showOpenDialog(win, {
+      title: 'Attach a private document',
+      properties: ['openFile'],
+      filters: [{ name: 'Supported documents', extensions: Object.keys(TYPES).map(e => e.slice(1)) }]
+    });
+    return r.canceled ? null : readDocument(r.filePaths[0]);
   }
-  if(action==='assembly-image'){
-    const r=await dialog.showOpenDialog(win,{title:'Choose an assembly photograph',properties:['openFile'],filters:[{name:'Still photographs',extensions:['png','jpg','jpeg','webp']}]});if(r.canceled)return null;
-    const file=await fs.promises.open(r.filePaths[0],'r');let bytes;try{const max=require('./catalogue-pictures-contract.cjs').limits.sourcePhotoBytes;bytes=Buffer.alloc(max+1);let size=0;while(size<bytes.length){const read=await file.read(bytes,size,bytes.length-size,null);if(!read.bytesRead)break;size+=read.bytesRead;}if(size>max)throw Error('This original is too large. Choose a photograph smaller than 9 MiB.');bytes=bytes.subarray(0,size);}finally{await file.close();}
-    const data=require('./photo-import.cjs').originalPhoto(bytes);await assemblyPhotoDecoder.decode(data);return {name:path.basename(r.filePaths[0]),data};
+  if (action === 'document.open' || action === 'document.export') {
+    const doc = store.data.documents.find(d => d.id === p.id);
+    if (!doc) throw Error('Document not found.');
+    const bytes = validateDocument(doc);
+    if (action === 'document.export') {
+      const r = await dialog.showSaveDialog(win, { title: 'Save document copy', defaultPath: doc.name });
+      return r.canceled ? null : exportBytes(r.filePath, bytes, protectedFiles);
+    }
+    const directory = fs.mkdtempSync(path.join(app.getPath('temp'), 'slotforge-document-')),
+      file = path.join(directory, 'attachment-' + doc.id + path.extname(doc.name).toLowerCase());
+    temporaryDocuments.push({ directory, file });
+    fs.writeFileSync(file, bytes, { flag: 'wx' });
+    const error = await shell.openPath(file);
+    if (error) throw Error(error);
+    return { opened: true };
   }
-  if(action==='image'){
-    const r=await dialog.showOpenDialog(win,{title:'Choose a car photo',properties:['openFile'],filters:[{name:'Images',extensions:['png','jpg','jpeg','webp']}]});if(r.canceled)return null;
-    const file=r.filePaths[0];if(fs.statSync(file).size>25*1024*1024)throw new Error('Choose an image smaller than 25 MB.');
-    const bytes=fs.readFileSync(file),input=nativeImage.createFromBuffer(bytes);if(input.isEmpty())throw new Error('This image could not be opened.');
-    try{return {name:path.basename(file),data:require('./photo-import.cjs').originalPhoto(bytes)};}
-    catch(error){if(error.code!=='PHOTO_TOO_LARGE')throw error;const choice=await dialog.showMessageBox(win,{type:'question',title:'Keep the original or use a smaller copy?',message:error.message,detail:'Choose another file to preserve its original bytes, or explicitly import a JPEG copy up to 1,600 pixels. Your source file will not be changed.',buttons:['Cancel','Import smaller copy'],defaultId:0,cancelId:0});if(choice.response!==1)return null;const {width,height}=input.getSize(),scaled=Math.max(width,height)>1600?input.resize(width>=height?{width:1600}:{height:1600}):input;return {name:path.basename(file),data:require('./photo-import.cjs').originalPhoto(scaled.toJPEG(88))};}
+  if (action === 'assembly-image') {
+    const r = await dialog.showOpenDialog(win, {
+      title: 'Choose an assembly photograph',
+      properties: ['openFile'],
+      filters: [{ name: 'Still photographs', extensions: ['png', 'jpg', 'jpeg', 'webp'] }]
+    });
+    if (r.canceled) return null;
+    const file = await fs.promises.open(r.filePaths[0], 'r');
+    let bytes;
+    try {
+      const max = require('./catalogue-pictures-contract.cjs').limits.sourcePhotoBytes;
+      bytes = Buffer.alloc(max + 1);
+      let size = 0;
+      while (size < bytes.length) {
+        const read = await file.read(bytes, size, bytes.length - size, null);
+        if (!read.bytesRead) break;
+        size += read.bytesRead;
+      }
+      if (size > max) throw Error('This original is too large. Choose a photograph smaller than 9 MiB.');
+      bytes = bytes.subarray(0, size);
+    } finally {
+      await file.close();
+    }
+    const data = require('./photo-import.cjs').originalPhoto(bytes);
+    await assemblyPhotoDecoder.decode(data);
+    return { name: path.basename(r.filePaths[0]), data };
   }
-  if(action==='backup'||action==='backup-previous'){
-    const previous=action==='backup-previous',r=await dialog.showSaveDialog(win,{title:previous?'Save previous revision':'Save complete backup',defaultPath:previous?'SlotForge-previous-revision.sfpbackup':'SlotForge-backup.sfpbackup',filters:[{name:'SlotForge portable backup',extensions:['sfpbackup']},{name:'Legacy JSON backup',extensions:['json']}]});if(r.canceled)return null;
-    if(path.extname(r.filePath).toLowerCase()==='.json'){const db=previous?store.previousSnapshot():store.snapshot();if(!db)throw Error('There is no preceding saved revision yet.');return exportJSON(r.filePath,{format:'slotforge-backup',version:1,created:new Date().toISOString(),database:db},protectedFiles);}
-    try{return await store.exclusiveFileOperation(()=>{if(!store.expectedIdentity)store.persist(store.data);return backupJobs.run('export',store.file,r.filePath,{previous,expectedIdentity:store.expectedIdentity,protectedFiles});});}catch(e){if(e.code==='CANCELLED')return null;throw e;}
+  if (action === 'image') {
+    const r = await dialog.showOpenDialog(win, {
+      title: 'Choose a car photo',
+      properties: ['openFile'],
+      filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp'] }]
+    });
+    if (r.canceled) return null;
+    const file = r.filePaths[0];
+    if (fs.statSync(file).size > 25 * 1024 * 1024) throw new Error('Choose an image smaller than 25 MB.');
+    const bytes = fs.readFileSync(file),
+      input = nativeImage.createFromBuffer(bytes);
+    if (input.isEmpty()) throw new Error('This image could not be opened.');
+    try {
+      return { name: path.basename(file), data: require('./photo-import.cjs').originalPhoto(bytes) };
+    } catch (error) {
+      if (error.code !== 'PHOTO_TOO_LARGE') throw error;
+      const choice = await dialog.showMessageBox(win, {
+        type: 'question',
+        title: 'Keep the original or use a smaller copy?',
+        message: error.message,
+        detail:
+          'Choose another file to preserve its original bytes, or explicitly import a JPEG copy up to 1,600 pixels. Your source file will not be changed.',
+        buttons: ['Cancel', 'Import smaller copy'],
+        defaultId: 0,
+        cancelId: 0
+      });
+      if (choice.response !== 1) return null;
+      const { width, height } = input.getSize(),
+        scaled =
+          Math.max(width, height) > 1600 ? input.resize(width >= height ? { width: 1600 } : { height: 1600 }) : input;
+      return { name: path.basename(file), data: require('./photo-import.cjs').originalPhoto(scaled.toJPEG(88)) };
+    }
   }
-  if(action==='export'||action==='export-timing'){
-    const db=store.snapshot();
-    const content=action==='export-timing'?timingExport(db,p.ids||[],p.options||{}):require('./car-file.cjs').write(db,p.ids||[],p.options||{});
-    const r=await dialog.showSaveDialog(win,{title:action==='export-timing'?'Export cars for SlotForge Timing':'Export selected cars',defaultPath:action==='export-timing'?'slotforge-timing-export.json':'SlotForge-cars.json',filters:[{name:'SlotForge JSON',extensions:['json']}]});if(r.canceled)return null;
-    return exportJSON(r.filePath,content,protectedFiles);
+  if (action === 'backup' || action === 'backup-previous') {
+    const previous = action === 'backup-previous',
+      r = await dialog.showSaveDialog(win, {
+        title: previous ? 'Save previous revision' : 'Save complete backup',
+        defaultPath: previous ? 'SlotForge-previous-revision.sfpbackup' : 'SlotForge-backup.sfpbackup',
+        filters: [
+          { name: 'SlotForge portable backup', extensions: ['sfpbackup'] },
+          { name: 'Legacy JSON backup', extensions: ['json'] }
+        ]
+      });
+    if (r.canceled) return null;
+    if (path.extname(r.filePath).toLowerCase() === '.json') {
+      const db = previous ? store.previousSnapshot() : store.snapshot();
+      if (!db) throw Error('There is no preceding saved revision yet.');
+      return exportJSON(
+        r.filePath,
+        { format: 'slotforge-backup', version: 1, created: new Date().toISOString(), database: db },
+        protectedFiles
+      );
+    }
+    try {
+      return await store.exclusiveFileOperation(() => {
+        if (!store.expectedIdentity) store.persist(store.data);
+        return backupJobs.run('export', store.file, r.filePath, {
+          previous,
+          expectedIdentity: store.expectedIdentity,
+          protectedFiles
+        });
+      });
+    } catch (e) {
+      if (e.code === 'CANCELLED') return null;
+      throw e;
+    }
   }
-  if(action==='import'){
-    const r=await dialog.showOpenDialog(win,{title:'Import cars for review',properties:['openFile'],filters:[{name:'SlotForge Paddock or Timing export',extensions:['json']}]});if(r.canceled)return null;const input=readJSON(r.filePaths[0]),timing=input?.format==='slotforge-timing-export',submission=timing?{package:timingPackage(input)}:require('./car-file.cjs').read(input);return {...await club.mutate('submission.add',submission),importKind:timing?'timing':'package',carCount:submission.package.cars.length};
+  if (action === 'export' || action === 'export-timing') {
+    const db = store.snapshot();
+    const content =
+      action === 'export-timing'
+        ? timingExport(db, p.ids || [], p.options || {})
+        : require('./car-file.cjs').write(db, p.ids || [], p.options || {});
+    const r = await dialog.showSaveDialog(win, {
+      title: action === 'export-timing' ? 'Export cars for SlotForge Timing' : 'Export selected cars',
+      defaultPath: action === 'export-timing' ? 'slotforge-timing-export.json' : 'SlotForge-cars.json',
+      filters: [{ name: 'SlotForge JSON', extensions: ['json'] }]
+    });
+    if (r.canceled) return null;
+    return exportJSON(r.filePath, content, protectedFiles);
   }
-  if(action==='restore'){
-    const r=await dialog.showOpenDialog(win,{title:'Choose a complete backup',properties:['openFile'],filters:[{name:'SlotForge backup',extensions:['sfpbackup','json']}]});if(r.canceled)return null;const revision=store.data.revision;
-    const stageFolder=path.join(path.dirname(store.file),'backup-staging');fs.mkdirSync(stageFolder,{recursive:true});const staging=path.join(stageFolder,'stage-'+require('node:crypto').randomUUID()+'.sqlite');
-    const unchanged=()=>{if(club.store!==store||store.data.club||store.data.revision!==revision)throw Error('The collection changed while restoring. Reopen the restore dialog.');if(network.sending)throw Error('Wait for the current submission to finish before restoring.');};
-    try{let validated;
-      if(path.extname(r.filePaths[0]).toLowerCase()==='.json'){const parsed=readJSON(r.filePaths[0]);if(parsed.format!=='slotforge-backup'||parsed.version!==1)throw Error('Choose a complete SlotForge backup.');validated=migrate(parsed.database);}
-      else{await backupJobs.run('stage',r.filePaths[0],staging);validated=new Store(staging).data;}
-      unchanged();store.assertIdle();const confirm=await dialog.showMessageBox(win,{type:'warning',title:'Replace this database?',message:'Restore '+validated.settings.name+' ('+validated.cars.length+' cars)?',detail:'This replaces cars, stock, setups, jobs, history and settings. A verified portable recovery backup will be kept in recovery-backups beside the database before replacement.',buttons:['Cancel','Replace database'],defaultId:0,cancelId:0});if(confirm.response!==1)return null;unchanged();
-      const recoveryFolder=path.join(path.dirname(store.file),'recovery-backups');fs.mkdirSync(recoveryFolder,{recursive:true});const recovery=path.join(recoveryFolder,'before-restore-'+Date.now()+'-'+require('node:crypto').randomUUID()+'.sfpbackup');
-      require('./portable-backup.cjs').space(path.dirname(store.file),(fs.existsSync(staging)?fs.statSync(staging).size:256*1024*1024)*3+(fs.existsSync(store.file)?fs.statSync(store.file).size:0)*2+64*1024*1024);
-      await store.exclusiveFileOperation(()=>{unchanged();if(!store.expectedIdentity)store.persist(store.data);return backupJobs.run('export',store.file,recovery,{expectedIdentity:store.expectedIdentity,protectedFiles});});unchanged();
-      await network.stop();unchanged();
-      backupJobs.notify({id:'commit',phase:'Committing restored collection',done:0,total:1,cancelable:false});
-      const restored=await store.restoreAsync(validated,revision,unchanged);network.disconnect();network.discardSubmission();return restored;
-    }catch(e){if(e.code==='CANCELLED')return null;throw e;}finally{backupJobs.notify(null);for(const file of [staging,staging+'-journal'])if(fs.existsSync(file))try{fs.unlinkSync(file);}catch{/* Reserved staging files are reclaimed at the next start. */}}
+  if (action === 'import') {
+    const r = await dialog.showOpenDialog(win, {
+      title: 'Import cars for review',
+      properties: ['openFile'],
+      filters: [{ name: 'SlotForge Paddock or Timing export', extensions: ['json'] }]
+    });
+    if (r.canceled) return null;
+    const input = readJSON(r.filePaths[0]),
+      timing = input?.format === 'slotforge-timing-export',
+      submission = timing ? { package: timingPackage(input) } : require('./car-file.cjs').read(input);
+    return {
+      ...(await club.mutate('submission.add', submission)),
+      importKind: timing ? 'timing' : 'package',
+      carCount: submission.package.cars.length
+    };
+  }
+  if (action === 'restore') {
+    const r = await dialog.showOpenDialog(win, {
+      title: 'Choose a complete backup',
+      properties: ['openFile'],
+      filters: [{ name: 'SlotForge backup', extensions: ['sfpbackup', 'json'] }]
+    });
+    if (r.canceled) return null;
+    const revision = store.data.revision;
+    const stageFolder = path.join(path.dirname(store.file), 'backup-staging');
+    fs.mkdirSync(stageFolder, { recursive: true });
+    const staging = path.join(stageFolder, 'stage-' + require('node:crypto').randomUUID() + '.sqlite');
+    const unchanged = () => {
+      if (club.store !== store || store.data.club || store.data.revision !== revision)
+        throw Error('The collection changed while restoring. Reopen the restore dialog.');
+      if (network.sending) throw Error('Wait for the current submission to finish before restoring.');
+    };
+    try {
+      let validated;
+      if (path.extname(r.filePaths[0]).toLowerCase() === '.json') {
+        const parsed = readJSON(r.filePaths[0]);
+        if (parsed.format !== 'slotforge-backup' || parsed.version !== 1)
+          throw Error('Choose a complete SlotForge backup.');
+        validated = migrate(parsed.database);
+      } else {
+        await backupJobs.run('stage', r.filePaths[0], staging);
+        validated = new Store(staging).data;
+      }
+      unchanged();
+      store.assertIdle();
+      const confirm = await dialog.showMessageBox(win, {
+        type: 'warning',
+        title: 'Replace this database?',
+        message: 'Restore ' + validated.settings.name + ' (' + validated.cars.length + ' cars)?',
+        detail:
+          'This replaces cars, stock, setups, jobs, history and settings. A verified portable recovery backup will be kept in recovery-backups beside the database before replacement.',
+        buttons: ['Cancel', 'Replace database'],
+        defaultId: 0,
+        cancelId: 0
+      });
+      if (confirm.response !== 1) return null;
+      unchanged();
+      const recoveryFolder = path.join(path.dirname(store.file), 'recovery-backups');
+      fs.mkdirSync(recoveryFolder, { recursive: true });
+      const recovery = path.join(
+        recoveryFolder,
+        'before-restore-' + Date.now() + '-' + require('node:crypto').randomUUID() + '.sfpbackup'
+      );
+      require('./portable-backup.cjs').space(
+        path.dirname(store.file),
+        (fs.existsSync(staging) ? fs.statSync(staging).size : 256 * 1024 * 1024) * 3 +
+          (fs.existsSync(store.file) ? fs.statSync(store.file).size : 0) * 2 +
+          64 * 1024 * 1024
+      );
+      await store.exclusiveFileOperation(() => {
+        unchanged();
+        if (!store.expectedIdentity) store.persist(store.data);
+        return backupJobs.run('export', store.file, recovery, {
+          expectedIdentity: store.expectedIdentity,
+          protectedFiles
+        });
+      });
+      unchanged();
+      await network.stop();
+      unchanged();
+      backupJobs.notify({
+        id: 'commit',
+        phase: 'Committing restored collection',
+        done: 0,
+        total: 1,
+        cancelable: false
+      });
+      const restored = await store.restoreAsync(validated, revision, unchanged);
+      network.disconnect();
+      network.discardSubmission();
+      return restored;
+    } catch (e) {
+      if (e.code === 'CANCELLED') return null;
+      throw e;
+    } finally {
+      backupJobs.notify(null);
+      for (const file of [staging, staging + '-journal'])
+        if (fs.existsSync(file))
+          try {
+            fs.unlinkSync(file);
+          } catch {
+            /* Reserved staging files are reclaimed at the next start. */
+          }
+    }
   }
   throw new Error('Unknown file operation.');
 }
-const startupTask=app.whenReady().then(async()=>{
-  if(!ownsInstance)return;
-  startupFeedback=require('./startup-feedback.cjs').create({BrowserWindow,visible:!smoke&&!libraryStartup,quit:()=>{startupClosing=true;app.quit();}});
-  if(startupClosing||waitingToQuit)return;
-  const backupStaging=path.join(app.getPath('userData'),'backup-staging');
-  if(fs.existsSync(backupStaging))for(const name of fs.readdirSync(backupStaging))if(/^stage-[a-f0-9-]{36}\.sqlite(?:-journal)?$/.test(name)){const file=path.resolve(backupStaging,name);if(path.dirname(file)===path.resolve(backupStaging))try{if(fs.lstatSync(file).isFile())fs.unlinkSync(file);}catch{}}
-  media.folder=path.join(app.getPath('userData'),'media-staging');fs.mkdirSync(media.folder,{recursive:true});
-  // The single-instance lock owns this reserved staging directory. Reclaim
-  // only our UUID-named temporary files; never enumerate or remove user photos.
-  for(const name of fs.readdirSync(media.folder))if(/^[a-f0-9-]{36}\.media$/.test(name)){const file=path.resolve(media.folder,name);if(path.dirname(file)===path.resolve(media.folder))try{if(fs.statSync(file).isFile())fs.unlinkSync(file);}catch{}}
-  protocol.handle('paddock-media',async request=>{
-    if(request.method!=='GET')return new Response(null,{status:405});
-    try{if(request.url.startsWith('paddock-media://catalogue-preview/')){const image=await picturePreviews?.response(request.url);return image?new Response(image.bytes,{headers:{'Content-Type':image.mime,'Cache-Control':'no-store'}}):new Response(null,{status:404});}const found=media.lookup(request.url);if(!found)return new Response(null,{status:404});
-     let image;if(found.thumbnail){image=await sharedPreviews.get(found.entry);if(image===undefined)image=await thumbnails.get(found.entry.meta.hash,request.url.replace('?thumbnail=1',''));}else image=await media.responseAsync(request.url);if(!image)return new Response(null,{status:503});
-     return new Response(image.bytes,{headers:{'Content-Type':image.mime,'Cache-Control':'private, max-age=3600'}});
-    }catch{return new Response(null,{status:500});}
-  });
-  try{let collectionFile=path.join(app.getPath('userData'),'database.json');
-   if((!smoke&&require('./shared-library-activation.json').enabled)||sharedSmoke){const isolated=process.argv.includes('--test-collection');sharedRoot=sharedSmoke?path.join(sharedSmoke,'shared'):isolated?path.join(app.getPath('userData'),'shared-library'):require('./shared-library-location.cjs').directory();
-     // A move requested in Settings runs here, before anything opens the library.
-     if(!sharedSmoke)libraryMoveResult=await require('./shared-library-move.cjs').runPending({profile:app.getPath('userData'),root:sharedRoot,dialog});
-     const library=await require('../packages/shared-library/index.cjs').open({application:'SlotForge Paddock',installationId:'paddock-desktop',legacyPaddockPath:collectionFile,sharedRoot,...(isolated?{legacyProfiles:[]}:{}),appData:sharedSmoke?path.join(sharedSmoke,'profiles'):app.getPath('appData')});try{collectionFile=(await library.status()).file;}finally{await library.close();}}
-   store=await Store.open(collectionFile);
-   // The very first editor also needs a durable generation for retry identity.
-   if(store.expectedIdentity===null)await store.exclusiveFileOperation(()=>store.persistAsync(store.data));
-  }catch(e){if(!startupClosing)dialog.showErrorBox('SlotForge database could not be opened',e.message+'\nYour existing files have not been replaced.');app.quit();return;}
-  if(startupClosing||waitingToQuit){app.quit();return;}
-  if(app.isPackaged)app.setAsDefaultProtocolClient('slotforge-paddock',process.env.PORTABLE_EXECUTABLE_FILE||process.env.APPIMAGE||process.execPath);
-  network=new Network(store,change=>{if(win&&!win.isDestroyed())win.webContents.send('sf:changed',change);},result=>{if(win&&!win.isDestroyed())win.webContents.send('sf:network-state',media.project(result));});
-  try{club=new Club(store,network,app.getPath('userData'),change=>{if(win&&!win.isDestroyed())win.webContents.send('sf:changed',change);});}catch(e){dialog.showErrorBox('Club copy could not be opened',e.message+'\nYour personal database and club files have not been replaced.');app.quit();return;}
-  club.backupJobs=backupJobs;
-  // The standard folder sits in Paddock's profile: never synced to OneDrive/iCloud without the user choosing so.
-  autoBackup=new (require('./auto-backup.cjs').AutoBackup)({
-   profile:app.getPath('userData'),
-   defaultFolder:path.join(app.getPath('userData'),'Automatic backups'),
-   getStore:()=>store,
-   jobs:backupJobs,
-   // Also busy while any request is in progress: it may be waiting on a file dialog that took focus.
-   busy:()=>restoring||startupClosing||userRequests>0||!!network?.retirement?.busy,
-   idleFor:()=>!win||win.isDestroyed()||!win.isVisible()||!win.isFocused()?Infinity:powerMonitor.getSystemIdleTime()*1000,
-   protectedFiles:()=>store.protectedFiles(),
-   onChange:()=>{if(win&&!win.isDestroyed())win.webContents.send('sf:auto-backup');},
-  });
-  network.retirement=new (require('./sharing-retirement.cjs').SharingRetirement)(network,club,app.getPath('userData'));
-  let lastPreviewWrite;store.subscribe(()=>{const change=store.photoPreviewWrites;if(change&&change!==lastPreviewWrite&&change.revision===store.data.revision){lastPreviewWrite=change;sharedPreviews.warm(change.ids);}});
-  try{resultInbox=new (require('./result-inbox.cjs').ResultInbox)(app.getPath('userData'));}catch{resultInbox={file:path.join(app.getPath('userData'),'result-review.sqlite'),read:()=>({total:0,error:'Race-result notices could not be opened. Saved results remain available in each car’s Performance section. Check the profile storage and restart Paddock.'}),seen:()=>{throw Error('Race-result notices are unavailable.');},close:()=>{}};}store.resultInbox=resultInbox;
-  const localModule=require('./local-library.cjs');
-  localLibrary=new localModule.LocalLibrary({store,profile:app.getPath('userData'),launcher:launchCommand,folder:smoke||process.argv.includes('--test-collection')?path.join(app.getPath('userData'),'local-library-v1'):localModule.directory(),available:()=>!restoring&&(!store.data.club||club.coordinator),unavailableReason:()=>restoring?'A database replacement is in progress.':'This copy belongs to another dealership. Connect Timing to its original host.',onStatus:()=>{backgroundMode?.refresh();network.notify();},onChange:change=>{if(win&&!win.isDestroyed())win.webContents.send('sf:changed',change);}});
-  network.localLibrary=localLibrary;
-  network.sharedFileStatus=()=>require('./library-status.cjs').libraryStatus(store,sharedRoot);
-  portal=new (require('./paddock-portal.cjs').PaddockPortal)({getStore:()=>club.store,available:(candidate=store)=>!restoring&&!startupClosing&&club.store===store&&!candidate.data.club?.replica,validatePhoto:bytes=>{require('./portal-photo.cjs').check(bytes);if(nativeImage.createFromBuffer(bytes).isEmpty())throw Object.assign(Error('This photograph could not be opened. Choose another JPEG, PNG or WebP photo.'),{code:'INVALID_PHOTO',httpStatus:400});},makeThumbnail:picture=>{try{if(!picture)return null;const bytes=Buffer.from(picture.split(',')[1],'base64');require('./portal-photo.cjs').check(bytes);const image=nativeImage.createFromBuffer(bytes);if(image.isEmpty())return null;const size=image.getSize(),factor=Math.min(1,160/Math.max(size.width,size.height));return 'data:image/jpeg;base64,'+image.resize({width:Math.max(1,Math.round(size.width*factor)),height:Math.max(1,Math.round(size.height*factor))}).toJPEG(75).toString('base64');}catch{return null;}},onStatus:()=>network.notify(),onChange:change=>{if(win&&!win.isDestroyed())win.webContents.send('sf:changed',change);}});
-  network.portal=portal;
-  if(sharedRoot)sharedObserver=require('./shared-library-observer.cjs').observe(store,()=>{network.notify();if(win&&!win.isDestroyed())win.webContents.send('sf:changed',{kind:'shared-library'});},error=>{if(win&&!win.isDestroyed())win.webContents.send('sf:changed',{kind:'shared-library-error',message:error.message});});
-  backgroundMode=new (require('./background-mode.cjs').BackgroundMode)({profile:app.getPath('userData'),app,Tray,Menu,icon:nativeImage.createFromPath(path.join(__dirname,'..','assets','icon.png')).resize({width:20,height:20}),getWindow:()=>win,getLibrary:()=>localLibrary.status(),onChange:()=>network.notify()});
-  network.backgroundMode=backgroundMode;
-  powerMonitor.on('suspend',()=>{void portal.stop('The computer went to sleep. Enable the Portal again when ready.');localLibrary.suspend();});
-  powerMonitor.on('resume',()=>{void localLibrary.recover().catch(()=>network.notify());});
-  powerMonitor.on('shutdown',event=>{event.preventDefault();backgroundMode.quit();});
-  // Securing discovery must not delay the first screen. Shutdown still drains
-  // LocalLibrary.starting before releasing the profile.
-  void localLibrary.start().then(()=>network.notify()).catch(()=>network.notify());
-  if(!smoke){networkTimer=setInterval(()=>network.poll().catch(()=>{}),5000);networkTimer.unref();}
-  // Checks once a minute whether an automatic backup is due; it starts only while Paddock is not in use.
-  if(!smoke){autoBackupTimer=setInterval(()=>{void autoBackup.tick().catch(()=>{});},60*1000);autoBackupTimer.unref();}
-  // "A new version is available": installed/portable apps check GitHub by themselves (at most every 12 hours);
-  // development copies only check when asked in Settings.
-  updateCheck=new (require('./update-check.cjs').UpdateCheck)({
-   profile:app.getPath('userData'),
-   current:app.getVersion(),
-   homepage:require('../package.json').homepage,
-   fetch:(url,init)=>net.fetch(url,init),
-   automatic:app.isPackaged&&!smoke,
-   onChange:()=>{if(win&&!win.isDestroyed())win.webContents.send('sf:update-check');},
-  });
-  if(!smoke){updateTimer=setTimeout(()=>{void updateCheck.tick();updateTimer=setInterval(()=>{void updateCheck.tick();},60*60*1000);updateTimer.unref();},20*1000);updateTimer.unref();}
-  assemblyPhotoDecoder=new (require('./assembly-photo-decoder.cjs').AssemblyPhotoDecoder)({getWindow:()=>win,url:entryURL});
-  spreadsheetImports=new (require('./spreadsheet-import.cjs').SpreadsheetImports)({profile:app.getPath('userData'),getStore:()=>club.store,club});
-  try{picturePreviews=new (require('./catalogue-picture-previews.cjs').PicturePreviews)({profile:app.getPath('userData'),getStore:()=>club.store,decode:(picture,options)=>assemblyPhotoDecoder.decode(picture,options)});new (require('./catalogue-picture-application.cjs').PictureApplication)(picturePreviews,club);new (require('./catalogue-picture-batches.cjs').PictureBatches)(picturePreviews);club.decodeCataloguePicture=picture=>picturePreviews.serialDecode(picture,new AbortController().signal);}catch(error){picturePreviewError=error.message;}
-  win=new BrowserWindow({width:1440,height:980,minWidth:960,minHeight:700,show:false,backgroundColor:'#171b21',icon:path.join(__dirname,'..','assets','icon.png'),title:'SlotForge Paddock',autoHideMenuBar:true,webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
-  backgroundMode.attach(win);
-  win.webContents.setWindowOpenHandler(()=>({action:'deny'}));win.webContents.on('will-navigate',event=>event.preventDefault());
-  win.webContents.on('did-start-loading',()=>{rendererReady=false;void picturePreviews?.stop();assemblyPhotoDecoder.reset();sharedEncoder.reset();transfer.clear();media.clear();thumbnails.clear();});
-  win.webContents.on('render-process-gone',()=>{void picturePreviews?.stop();assemblyPhotoDecoder.reset();sharedEncoder.reset();});
-  win.webContents.session.setPermissionRequestHandler((wc,permission,callback)=>callback(permission==='fullscreen'&&wc===win.webContents&&wc.getURL()===entryURL));
-  ipcMain.on('sf:media-lease',(event,active)=>{if(trustedFrame(event)&&typeof active==='boolean'){media.leaseOpen(active);mediaSweep();}});
-  ipcMain.on('sf:assembly-photo-result',(event,id,result)=>assemblyPhotoDecoder.receive(event,id,result));
-  ipcMain.on('sf:thumbnail-result',(event,id,result)=>{if(trustedFrame(event)&&typeof id==='string')thumbnails.receive(id,result);});
-  ipcMain.on('sf:shared-thumbnail-ready',event=>sharedEncoder.markReady(event));
-  ipcMain.on('sf:shared-thumbnail-result',(event,id,result)=>sharedEncoder.receive(event,id,result));
-  ipcMain.on('sf:shared-thumbnail-failed',event=>{if(sharedEncoder.owns(event))sharedEncoder.reset();});
-  const mediaTimer=setInterval(()=>{try{mediaSweep();}catch{}},30000);mediaTimer.unref();win.on('closed',()=>{clearInterval(mediaTimer);void picturePreviews?.stop();assemblyPhotoDecoder.reset();sharedEncoder.reset();thumbnails.clear();media.clear();});
-  ipcMain.handle('sf:read',reply(known=>club.store.withIdle(()=>{rendererReady=true;const openCar=pendingCarLink;pendingCarLink=null;const current=club.store,unchanged=known?.databaseId===current.data.id&&known?.revision===current.data.revision&&known?.dataPath===current.file;const result={openCar,data:unchanged?null:known?.queryView?require('./view-query.cjs').view(current,known.queryView):current.snapshot(),club:club.status(),network:network.status(),remote:known?.databaseId?undefined:network.cached,collection:current.metadata(),version:app.getVersion(),features:{wishlist:require('./wishlist-activation.json').enabled===true},dataPath:current.file};return known?.queryView?result:transfer.encode(result,known,current.file);})));
-  ipcMain.handle('sf:mutate',reply(async(action,payload,known)=>{
-   if(restoring)throw Error('Wait for the database replacement to finish.');
-   const current=club.store;if(known?.databaseId&&known.databaseId!==current.data.id||known?.dataPath&&known.dataPath!==current.file)throw Error('The selected collection changed. Reopen the editor.');
-   const result=await club.mutate(action,payload,{snapshot:!known?.queryView,commandId:known?.commandId,databaseId:known?.databaseId,epoch:known?.epoch});
-   try{if(known?.queryView){try{return {...result,data:require('./view-query.cjs').view(current,known.queryView)};}catch{return {...result,data:require('./view-query.cjs').view(current,{page:'Overview'})};}}return transfer.encode(result,known,current.file);}
-   catch(error){if(result.commandId)error.code='WRITE_UNCERTAIN';throw error;}
-  }));
-  ipcMain.handle('sf:portal',reply(async(action,p={})=>{if(action==='stop'){await portal.stop();return network.status();}if(action==='start'){if(p.databaseId!==club.store.data.id)throw Error('The collection changed. Reopen Connections.');await portal.start();return network.status();}throw Error('Unknown Portal action.');}));
-  ipcMain.handle('sf:plan',reply((action,payload)=>club.store.plan(action,payload)));
-  // Personal shortcuts do not read, refresh or mutate any collection.
-  ipcMain.handle('sf:car-search',async(event,fields)=>{
-    if(!trustedFrame(event))return {error:'Unauthorised application frame.'};
-    try{await shell.openExternal(require('./car-search.cjs').googleUrl(fields));return {ok:true,value:{opened:true}};}
-    catch(e){return {error:e.message};}
-  });
-  ipcMain.handle('sf:quick-links',async(event,action,payload)=>{
-    if(!trustedFrame(event))return {error:'Unauthorised application frame.'};
-    try{return await ipcWork.run(async()=>{
-      if(action==='read')return {ok:true,value:quickLinks.read()};
-      if(action==='save')return {ok:true,value:quickLinks.save(payload)};
-      if(action==='open')return {ok:true,value:await quickLinks.open(payload?.id)};
-      throw Error('Unknown Quick Links operation.');
-    });}catch(e){return {error:e.message};}
-  });
-  ipcMain.handle('sf:history-view',reply(async payload=>{
-   const current=club.store;
-   const guard=()=>{if(restoring||club.store!==current||payload?.databaseId!==current.data.id)throw Error('The collection changed. Reopen its history.');};
-   guard();return require('./domain-tasks.cjs').run(current,{kind:'history-view',input:payload},guard);
-  }));
-  ipcMain.handle('sf:timing-collection-review',reply(async payload=>{
-   const current=club.store;
-   const guard=()=>{if(restoring||club.store!==current||current!==store||current.data.club?.replica)throw Error('Review the Timing collection on its original library computer.');};
-   guard();const revision=current.data.revision;
-   try{return await require('./domain-tasks.cjs').run(current,{kind:'timing-collection-review',input:payload},guard);}
-   finally{if(club.store===current&&current.data.revision!==revision&&win&&!win.isDestroyed())win.webContents.send('sf:changed',{kind:'local-import'});}
-  }));
-  ipcMain.handle('sf:car-merge',reply(payload=>{
-   const current=club.store;
-   if(payload?.action==='status'&&(restoring||current!==store))return {enabled:false};
-   const guard=()=>{if(restoring||club.store!==current||current!==store)throw Object.assign(Error('Open the original collection on its authority computer to review car merges.'),{code:'MERGE_AUTHORITY_REQUIRED'});};
-   return require('./car-merge-review-service.cjs').dispatch(payload,current,guard);
-  }));
-  ipcMain.handle('sf:history-import',reply(async payload=>{
-   const current=club.store;
-   const guard=()=>{if(restoring||club.store!==current||current!==store||current.data.club?.replica)throw Error('Open the original local library to review historical imports.');};
-   guard();const revision=current.data.revision;
-   try{return await require('./domain-tasks.cjs').run(current,{kind:'history-import',action:'review',input:payload},guard);}
-   finally{
-    // The worker can recover a durable commit even when its acknowledgement
-    // fails. Refresh the owner UI as well as clients observing the change feed.
-    if(club.store===current&&current.data.revision!==revision&&win&&!win.isDestroyed())win.webContents.send('sf:changed',{kind:'history-import'});
-   }
-  }));
-  ipcMain.handle('sf:query',reply((operation,payload={})=>club.store.withIdle(()=>{
-   if(operation==='result-seen'){
-    if(club.store!==store||payload.databaseId!==store.data.id)throw Error('Open the original local library to acknowledge these results.');
-    resultInbox.seen(store.data.id,payload);return {ok:true};
-   }
-   if(operation==='session')return require('./sqlite-query.cjs').read(club.store,payload.token,r=>require('./query-timing.cjs').session(r,payload.sourceId,payload.sessionId,payload.carId,payload.offset)).value;
-   throw Error('Unknown page query.');
-  })));
-  // Search everything (Ctrl+K): reads the open collection in memory; never writes.
-  ipcMain.handle('sf:search',reply(query=>{if(restoring)throw Error('Wait for the restore to finish.');return require('./global-search.cjs').searchStore(club.store,query);}));
-  ipcMain.handle('sf:update-check',async(event,action,payload)=>{
-   if(!trustedFrame(event))return {error:'Unauthorised application frame.'};
-   try{return {ok:true,value:await (async()=>{
-    if(action==='status')return updateCheck.status();
-    if(action==='check')return await updateCheck.check();
-    if(action==='enable')return updateCheck.setEnabled(payload?.enabled);
-    if(action==='skip')return updateCheck.skip(payload?.version);
-    if(action==='open'){await shell.openExternal(updateCheck.releaseUrl());return {opened:true};}
-    throw Error('Unknown update action.');
-   })()};}catch(e){return {error:e.message,code:e.code};}
-  });
-  ipcMain.handle('sf:auto-backup',async(event,action,payload)=>{
-   if(!trustedFrame(event))return {error:'Unauthorised application frame.'};
-   userRequests++;
-   try{return {ok:true,value:await ipcWork.run(async()=>{
-    if(action==='status')return autoBackup.status();
-    if(action==='save')return autoBackup.save(payload||{});
-    if(action==='default-folder')return autoBackup.save({folder:null});
-    if(action==='choose'){
-     const r=await dialog.showOpenDialog(win,{title:'Choose a folder for automatic backups',defaultPath:autoBackup.folder(),properties:['openDirectory','createDirectory','promptToCreate']});
-     if(r.canceled||!r.filePaths[0])return null;
-     return autoBackup.save({folder:r.filePaths[0]});
+const startupTask = app
+  .whenReady()
+  .then(async () => {
+    if (!ownsInstance) return;
+    startupFeedback = require('./startup-feedback.cjs').create({
+      BrowserWindow,
+      visible: !smoke && !libraryStartup,
+      quit: () => {
+        startupClosing = true;
+        app.quit();
+      }
+    });
+    if (startupClosing || waitingToQuit) return;
+    const backupStaging = path.join(app.getPath('userData'), 'backup-staging');
+    if (fs.existsSync(backupStaging))
+      for (const name of fs.readdirSync(backupStaging))
+        if (/^stage-[a-f0-9-]{36}\.sqlite(?:-journal)?$/.test(name)) {
+          const file = path.resolve(backupStaging, name);
+          if (path.dirname(file) === path.resolve(backupStaging))
+            try {
+              if (fs.lstatSync(file).isFile()) fs.unlinkSync(file);
+            } catch {}
+        }
+    media.folder = path.join(app.getPath('userData'), 'media-staging');
+    fs.mkdirSync(media.folder, { recursive: true });
+    // The single-instance lock owns this reserved staging directory. Reclaim
+    // only our UUID-named temporary files; never enumerate or remove user photos.
+    for (const name of fs.readdirSync(media.folder))
+      if (/^[a-f0-9-]{36}\.media$/.test(name)) {
+        const file = path.resolve(media.folder, name);
+        if (path.dirname(file) === path.resolve(media.folder))
+          try {
+            if (fs.statSync(file).isFile()) fs.unlinkSync(file);
+          } catch {}
+      }
+    protocol.handle('paddock-media', async request => {
+      if (request.method !== 'GET') return new Response(null, { status: 405 });
+      try {
+        if (request.url.startsWith('paddock-media://catalogue-preview/')) {
+          const image = await picturePreviews?.response(request.url);
+          return image
+            ? new Response(image.bytes, { headers: { 'Content-Type': image.mime, 'Cache-Control': 'no-store' } })
+            : new Response(null, { status: 404 });
+        }
+        const found = media.lookup(request.url);
+        if (!found) return new Response(null, { status: 404 });
+        let image;
+        if (found.thumbnail) {
+          image = await sharedPreviews.get(found.entry);
+          if (image === undefined)
+            image = await thumbnails.get(found.entry.meta.hash, request.url.replace('?thumbnail=1', ''));
+        } else image = await media.responseAsync(request.url);
+        if (!image) return new Response(null, { status: 503 });
+        return new Response(image.bytes, {
+          headers: { 'Content-Type': image.mime, 'Cache-Control': 'private, max-age=3600' }
+        });
+      } catch {
+        return new Response(null, { status: 500 });
+      }
+    });
+    try {
+      let collectionFile = path.join(app.getPath('userData'), 'database.json');
+      if ((!smoke && require('./shared-library-activation.json').enabled) || sharedSmoke) {
+        const isolated = process.argv.includes('--test-collection');
+        sharedRoot = sharedSmoke
+          ? path.join(sharedSmoke, 'shared')
+          : isolated
+            ? path.join(app.getPath('userData'), 'shared-library')
+            : require('./shared-library-location.cjs').directory();
+        // A move requested in Settings runs here, before anything opens the library.
+        if (!sharedSmoke)
+          libraryMoveResult = await require('./shared-library-move.cjs').runPending({
+            profile: app.getPath('userData'),
+            root: sharedRoot,
+            dialog
+          });
+        const library = await require('../packages/shared-library/index.cjs').open({
+          application: 'SlotForge Paddock',
+          installationId: 'paddock-desktop',
+          legacyPaddockPath: collectionFile,
+          sharedRoot,
+          ...(isolated ? { legacyProfiles: [] } : {}),
+          appData: sharedSmoke ? path.join(sharedSmoke, 'profiles') : app.getPath('appData')
+        });
+        try {
+          collectionFile = (await library.status()).file;
+        } finally {
+          await library.close();
+        }
+      }
+      store = await Store.open(collectionFile);
+      // The very first editor also needs a durable generation for retry identity.
+      if (store.expectedIdentity === null) await store.exclusiveFileOperation(() => store.persistAsync(store.data));
+    } catch (e) {
+      if (!startupClosing)
+        dialog.showErrorBox(
+          'SlotForge database could not be opened',
+          e.message + '\nYour existing files have not been replaced.'
+        );
+      app.quit();
+      return;
     }
-    if(action==='run'){
-     if(restoring)throw Error('Wait for the restore to finish.');
-     try{const result=await autoBackup.run({manual:true});return {...autoBackup.status(),result};}
-     catch(e){if(e.code==='CANCELLED')return autoBackup.status();throw e;}
+    if (startupClosing || waitingToQuit) {
+      app.quit();
+      return;
     }
-    if(action==='open'){
-     const folder=autoBackup.folder();
-     if(!fs.existsSync(folder))throw Error('This folder does not exist yet. Paddock creates it with the first backup.');
-     const error=await shell.openPath(folder);if(error)throw Error(error);return {opened:true};
+    if (app.isPackaged)
+      app.setAsDefaultProtocolClient(
+        'slotforge-paddock',
+        process.env.PORTABLE_EXECUTABLE_FILE || process.env.APPIMAGE || process.execPath
+      );
+    network = new Network(
+      store,
+      change => {
+        if (win && !win.isDestroyed()) win.webContents.send('sf:changed', change);
+      },
+      result => {
+        if (win && !win.isDestroyed()) win.webContents.send('sf:network-state', media.project(result));
+      }
+    );
+    try {
+      club = new Club(store, network, app.getPath('userData'), change => {
+        if (win && !win.isDestroyed()) win.webContents.send('sf:changed', change);
+      });
+    } catch (e) {
+      dialog.showErrorBox(
+        'Club copy could not be opened',
+        e.message + '\nYour personal database and club files have not been replaced.'
+      );
+      app.quit();
+      return;
     }
-    throw Error('Unknown automatic backup action.');
-   })};}catch(e){return {error:e.message,code:e.code};}finally{userRequests--;}
+    club.backupJobs = backupJobs;
+    // The standard folder sits in Paddock's profile: never synced to OneDrive/iCloud without the user choosing so.
+    autoBackup = new (require('./auto-backup.cjs').AutoBackup)({
+      profile: app.getPath('userData'),
+      defaultFolder: path.join(app.getPath('userData'), 'Automatic backups'),
+      getStore: () => store,
+      jobs: backupJobs,
+      // Also busy while any request is in progress: it may be waiting on a file dialog that took focus.
+      busy: () => restoring || startupClosing || userRequests > 0 || !!network?.retirement?.busy,
+      idleFor: () =>
+        !win || win.isDestroyed() || !win.isVisible() || !win.isFocused()
+          ? Infinity
+          : powerMonitor.getSystemIdleTime() * 1000,
+      protectedFiles: () => store.protectedFiles(),
+      onChange: () => {
+        if (win && !win.isDestroyed()) win.webContents.send('sf:auto-backup');
+      }
+    });
+    network.retirement = new (require('./sharing-retirement.cjs').SharingRetirement)(
+      network,
+      club,
+      app.getPath('userData')
+    );
+    let lastPreviewWrite;
+    store.subscribe(() => {
+      const change = store.photoPreviewWrites;
+      if (change && change !== lastPreviewWrite && change.revision === store.data.revision) {
+        lastPreviewWrite = change;
+        sharedPreviews.warm(change.ids);
+      }
+    });
+    try {
+      resultInbox = new (require('./result-inbox.cjs').ResultInbox)(app.getPath('userData'));
+    } catch {
+      resultInbox = {
+        file: path.join(app.getPath('userData'), 'result-review.sqlite'),
+        read: () => ({
+          total: 0,
+          error:
+            'Race-result notices could not be opened. Saved results remain available in each car’s Performance section. Check the profile storage and restart Paddock.'
+        }),
+        seen: () => {
+          throw Error('Race-result notices are unavailable.');
+        },
+        close: () => {}
+      };
+    }
+    store.resultInbox = resultInbox;
+    const localModule = require('./local-library.cjs');
+    localLibrary = new localModule.LocalLibrary({
+      store,
+      profile: app.getPath('userData'),
+      launcher: launchCommand,
+      folder:
+        smoke || process.argv.includes('--test-collection')
+          ? path.join(app.getPath('userData'), 'local-library-v1')
+          : localModule.directory(),
+      available: () => !restoring && (!store.data.club || club.coordinator),
+      unavailableReason: () =>
+        restoring
+          ? 'A database replacement is in progress.'
+          : 'This copy belongs to another dealership. Connect Timing to its original host.',
+      onStatus: () => {
+        backgroundMode?.refresh();
+        network.notify();
+      },
+      onChange: change => {
+        if (win && !win.isDestroyed()) win.webContents.send('sf:changed', change);
+      }
+    });
+    network.localLibrary = localLibrary;
+    network.sharedFileStatus = () => require('./library-status.cjs').libraryStatus(store, sharedRoot);
+    portal = new (require('./paddock-portal.cjs').PaddockPortal)({
+      getStore: () => club.store,
+      available: (candidate = store) =>
+        !restoring && !startupClosing && club.store === store && !candidate.data.club?.replica,
+      validatePhoto: bytes => {
+        require('./portal-photo.cjs').check(bytes);
+        if (nativeImage.createFromBuffer(bytes).isEmpty())
+          throw Object.assign(Error('This photograph could not be opened. Choose another JPEG, PNG or WebP photo.'), {
+            code: 'INVALID_PHOTO',
+            httpStatus: 400
+          });
+      },
+      makeThumbnail: picture => {
+        try {
+          if (!picture) return null;
+          const bytes = Buffer.from(picture.split(',')[1], 'base64');
+          require('./portal-photo.cjs').check(bytes);
+          const image = nativeImage.createFromBuffer(bytes);
+          if (image.isEmpty()) return null;
+          const size = image.getSize(),
+            factor = Math.min(1, 160 / Math.max(size.width, size.height));
+          return (
+            'data:image/jpeg;base64,' +
+            image
+              .resize({
+                width: Math.max(1, Math.round(size.width * factor)),
+                height: Math.max(1, Math.round(size.height * factor))
+              })
+              .toJPEG(75)
+              .toString('base64')
+          );
+        } catch {
+          return null;
+        }
+      },
+      onStatus: () => network.notify(),
+      onChange: change => {
+        if (win && !win.isDestroyed()) win.webContents.send('sf:changed', change);
+      }
+    });
+    network.portal = portal;
+    if (sharedRoot)
+      sharedObserver = require('./shared-library-observer.cjs').observe(
+        store,
+        () => {
+          network.notify();
+          if (win && !win.isDestroyed()) win.webContents.send('sf:changed', { kind: 'shared-library' });
+        },
+        error => {
+          if (win && !win.isDestroyed())
+            win.webContents.send('sf:changed', { kind: 'shared-library-error', message: error.message });
+        }
+      );
+    backgroundMode = new (require('./background-mode.cjs').BackgroundMode)({
+      profile: app.getPath('userData'),
+      app,
+      Tray,
+      Menu,
+      icon: nativeImage
+        .createFromPath(path.join(__dirname, '..', 'assets', 'icon.png'))
+        .resize({ width: 20, height: 20 }),
+      getWindow: () => win,
+      getLibrary: () => localLibrary.status(),
+      onChange: () => network.notify()
+    });
+    network.backgroundMode = backgroundMode;
+    powerMonitor.on('suspend', () => {
+      void portal.stop('The computer went to sleep. Enable the Portal again when ready.');
+      localLibrary.suspend();
+    });
+    powerMonitor.on('resume', () => {
+      void localLibrary.recover().catch(() => network.notify());
+    });
+    powerMonitor.on('shutdown', event => {
+      event.preventDefault();
+      backgroundMode.quit();
+    });
+    // Securing discovery must not delay the first screen. Shutdown still drains
+    // LocalLibrary.starting before releasing the profile.
+    void localLibrary
+      .start()
+      .then(() => network.notify())
+      .catch(() => network.notify());
+    if (!smoke) {
+      networkTimer = setInterval(() => network.poll().catch(() => {}), 5000);
+      networkTimer.unref();
+    }
+    // Checks once a minute whether an automatic backup is due; it starts only while Paddock is not in use.
+    if (!smoke) {
+      autoBackupTimer = setInterval(() => {
+        void autoBackup.tick().catch(() => {});
+      }, 60 * 1000);
+      autoBackupTimer.unref();
+    }
+    // "A new version is available": installed/portable apps check GitHub by themselves (at most every 12 hours);
+    // development copies only check when asked in Settings.
+    updateCheck = new (require('./update-check.cjs').UpdateCheck)({
+      profile: app.getPath('userData'),
+      current: app.getVersion(),
+      homepage: require('../package.json').homepage,
+      fetch: (url, init) => net.fetch(url, init),
+      automatic: app.isPackaged && !smoke,
+      onChange: () => {
+        if (win && !win.isDestroyed()) win.webContents.send('sf:update-check');
+      }
+    });
+    if (!smoke) {
+      updateTimer = setTimeout(() => {
+        void updateCheck.tick();
+        updateTimer = setInterval(
+          () => {
+            void updateCheck.tick();
+          },
+          60 * 60 * 1000
+        );
+        updateTimer.unref();
+      }, 20 * 1000);
+      updateTimer.unref();
+    }
+    assemblyPhotoDecoder = new (require('./assembly-photo-decoder.cjs').AssemblyPhotoDecoder)({
+      getWindow: () => win,
+      url: entryURL
+    });
+    spreadsheetImports = new (require('./spreadsheet-import.cjs').SpreadsheetImports)({
+      profile: app.getPath('userData'),
+      getStore: () => club.store,
+      club
+    });
+    try {
+      picturePreviews = new (require('./catalogue-picture-previews.cjs').PicturePreviews)({
+        profile: app.getPath('userData'),
+        getStore: () => club.store,
+        decode: (picture, options) => assemblyPhotoDecoder.decode(picture, options)
+      });
+      new (require('./catalogue-picture-application.cjs').PictureApplication)(picturePreviews, club);
+      new (require('./catalogue-picture-batches.cjs').PictureBatches)(picturePreviews);
+      club.decodeCataloguePicture = picture => picturePreviews.serialDecode(picture, new AbortController().signal);
+    } catch (error) {
+      picturePreviewError = error.message;
+    }
+    win = new BrowserWindow({
+      width: 1440,
+      height: 980,
+      minWidth: 960,
+      minHeight: 700,
+      show: false,
+      backgroundColor: '#171b21',
+      icon: path.join(__dirname, '..', 'assets', 'icon.png'),
+      title: 'SlotForge Paddock',
+      autoHideMenuBar: true,
+      webPreferences: {
+        preload: path.join(__dirname, 'preload.cjs'),
+        contextIsolation: true,
+        nodeIntegration: false,
+        sandbox: true
+      }
+    });
+    backgroundMode.attach(win);
+    win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+    win.webContents.on('will-navigate', event => event.preventDefault());
+    win.webContents.on('did-start-loading', () => {
+      rendererReady = false;
+      void picturePreviews?.stop();
+      assemblyPhotoDecoder.reset();
+      sharedEncoder.reset();
+      transfer.clear();
+      media.clear();
+      thumbnails.clear();
+    });
+    win.webContents.on('render-process-gone', () => {
+      void picturePreviews?.stop();
+      assemblyPhotoDecoder.reset();
+      sharedEncoder.reset();
+    });
+    win.webContents.session.setPermissionRequestHandler((wc, permission, callback) =>
+      callback(permission === 'fullscreen' && wc === win.webContents && wc.getURL() === entryURL)
+    );
+    ipcMain.on('sf:media-lease', (event, active) => {
+      if (trustedFrame(event) && typeof active === 'boolean') {
+        media.leaseOpen(active);
+        mediaSweep();
+      }
+    });
+    ipcMain.on('sf:assembly-photo-result', (event, id, result) => assemblyPhotoDecoder.receive(event, id, result));
+    ipcMain.on('sf:thumbnail-result', (event, id, result) => {
+      if (trustedFrame(event) && typeof id === 'string') thumbnails.receive(id, result);
+    });
+    ipcMain.on('sf:shared-thumbnail-ready', event => sharedEncoder.markReady(event));
+    ipcMain.on('sf:shared-thumbnail-result', (event, id, result) => sharedEncoder.receive(event, id, result));
+    ipcMain.on('sf:shared-thumbnail-failed', event => {
+      if (sharedEncoder.owns(event)) sharedEncoder.reset();
+    });
+    const mediaTimer = setInterval(() => {
+      try {
+        mediaSweep();
+      } catch {}
+    }, 30000);
+    mediaTimer.unref();
+    win.on('closed', () => {
+      clearInterval(mediaTimer);
+      void picturePreviews?.stop();
+      assemblyPhotoDecoder.reset();
+      sharedEncoder.reset();
+      thumbnails.clear();
+      media.clear();
+    });
+    ipcMain.handle(
+      'sf:read',
+      reply(known =>
+        club.store.withIdle(() => {
+          rendererReady = true;
+          const openCar = pendingCarLink;
+          pendingCarLink = null;
+          const current = club.store,
+            unchanged =
+              known?.databaseId === current.data.id &&
+              known?.revision === current.data.revision &&
+              known?.dataPath === current.file;
+          const result = {
+            openCar,
+            data: unchanged
+              ? null
+              : known?.queryView
+                ? require('./view-query.cjs').view(current, known.queryView)
+                : current.snapshot(),
+            club: club.status(),
+            network: network.status(),
+            remote: known?.databaseId ? undefined : network.cached,
+            collection: current.metadata(),
+            version: app.getVersion(),
+            features: { wishlist: require('./wishlist-activation.json').enabled === true },
+            dataPath: current.file
+          };
+          return known?.queryView ? result : transfer.encode(result, known, current.file);
+        })
+      )
+    );
+    ipcMain.handle(
+      'sf:mutate',
+      reply(async (action, payload, known) => {
+        if (restoring) throw Error('Wait for the database replacement to finish.');
+        const current = club.store;
+        if (
+          (known?.databaseId && known.databaseId !== current.data.id) ||
+          (known?.dataPath && known.dataPath !== current.file)
+        )
+          throw Error('The selected collection changed. Reopen the editor.');
+        const result = await club.mutate(action, payload, {
+          snapshot: !known?.queryView,
+          commandId: known?.commandId,
+          databaseId: known?.databaseId,
+          epoch: known?.epoch
+        });
+        try {
+          if (known?.queryView) {
+            try {
+              return { ...result, data: require('./view-query.cjs').view(current, known.queryView) };
+            } catch {
+              return { ...result, data: require('./view-query.cjs').view(current, { page: 'Overview' }) };
+            }
+          }
+          return transfer.encode(result, known, current.file);
+        } catch (error) {
+          if (result.commandId) error.code = 'WRITE_UNCERTAIN';
+          throw error;
+        }
+      })
+    );
+    ipcMain.handle(
+      'sf:portal',
+      reply(async (action, p = {}) => {
+        if (action === 'stop') {
+          await portal.stop();
+          return network.status();
+        }
+        if (action === 'start') {
+          if (p.databaseId !== club.store.data.id) throw Error('The collection changed. Reopen Connections.');
+          await portal.start();
+          return network.status();
+        }
+        throw Error('Unknown Portal action.');
+      })
+    );
+    ipcMain.handle(
+      'sf:plan',
+      reply((action, payload) => club.store.plan(action, payload))
+    );
+    // Personal shortcuts do not read, refresh or mutate any collection.
+    ipcMain.handle('sf:car-search', async (event, fields) => {
+      if (!trustedFrame(event)) return { error: 'Unauthorised application frame.' };
+      try {
+        await shell.openExternal(require('./car-search.cjs').googleUrl(fields));
+        return { ok: true, value: { opened: true } };
+      } catch (e) {
+        return { error: e.message };
+      }
+    });
+    ipcMain.handle('sf:quick-links', async (event, action, payload) => {
+      if (!trustedFrame(event)) return { error: 'Unauthorised application frame.' };
+      try {
+        return await ipcWork.run(async () => {
+          if (action === 'read') return { ok: true, value: quickLinks.read() };
+          if (action === 'save') return { ok: true, value: quickLinks.save(payload) };
+          if (action === 'open') return { ok: true, value: await quickLinks.open(payload?.id) };
+          throw Error('Unknown Quick Links operation.');
+        });
+      } catch (e) {
+        return { error: e.message };
+      }
+    });
+    ipcMain.handle(
+      'sf:history-view',
+      reply(async payload => {
+        const current = club.store;
+        const guard = () => {
+          if (restoring || club.store !== current || payload?.databaseId !== current.data.id)
+            throw Error('The collection changed. Reopen its history.');
+        };
+        guard();
+        return require('./domain-tasks.cjs').run(current, { kind: 'history-view', input: payload }, guard);
+      })
+    );
+    ipcMain.handle(
+      'sf:timing-collection-review',
+      reply(async payload => {
+        const current = club.store;
+        const guard = () => {
+          if (restoring || club.store !== current || current !== store || current.data.club?.replica)
+            throw Error('Review the Timing collection on its original library computer.');
+        };
+        guard();
+        const revision = current.data.revision;
+        try {
+          return await require('./domain-tasks.cjs').run(
+            current,
+            { kind: 'timing-collection-review', input: payload },
+            guard
+          );
+        } finally {
+          if (club.store === current && current.data.revision !== revision && win && !win.isDestroyed())
+            win.webContents.send('sf:changed', { kind: 'local-import' });
+        }
+      })
+    );
+    ipcMain.handle(
+      'sf:car-merge',
+      reply(payload => {
+        const current = club.store;
+        if (payload?.action === 'status' && (restoring || current !== store)) return { enabled: false };
+        const guard = () => {
+          if (restoring || club.store !== current || current !== store)
+            throw Object.assign(Error('Open the original collection on its authority computer to review car merges.'), {
+              code: 'MERGE_AUTHORITY_REQUIRED'
+            });
+        };
+        return require('./car-merge-review-service.cjs').dispatch(payload, current, guard);
+      })
+    );
+    ipcMain.handle(
+      'sf:history-import',
+      reply(async payload => {
+        const current = club.store;
+        const guard = () => {
+          if (restoring || club.store !== current || current !== store || current.data.club?.replica)
+            throw Error('Open the original local library to review historical imports.');
+        };
+        guard();
+        const revision = current.data.revision;
+        try {
+          return await require('./domain-tasks.cjs').run(
+            current,
+            { kind: 'history-import', action: 'review', input: payload },
+            guard
+          );
+        } finally {
+          // The worker can recover a durable commit even when its acknowledgement
+          // fails. Refresh the owner UI as well as clients observing the change feed.
+          if (club.store === current && current.data.revision !== revision && win && !win.isDestroyed())
+            win.webContents.send('sf:changed', { kind: 'history-import' });
+        }
+      })
+    );
+    ipcMain.handle(
+      'sf:query',
+      reply((operation, payload = {}) =>
+        club.store.withIdle(() => {
+          if (operation === 'result-seen') {
+            if (club.store !== store || payload.databaseId !== store.data.id)
+              throw Error('Open the original local library to acknowledge these results.');
+            resultInbox.seen(store.data.id, payload);
+            return { ok: true };
+          }
+          if (operation === 'session')
+            return require('./sqlite-query.cjs').read(club.store, payload.token, r =>
+              require('./query-timing.cjs').session(
+                r,
+                payload.sourceId,
+                payload.sessionId,
+                payload.carId,
+                payload.offset
+              )
+            ).value;
+          throw Error('Unknown page query.');
+        })
+      )
+    );
+    // Search everything (Ctrl+K): reads the open collection in memory; never writes.
+    ipcMain.handle(
+      'sf:search',
+      reply(query => {
+        if (restoring) throw Error('Wait for the restore to finish.');
+        return require('./global-search.cjs').searchStore(club.store, query);
+      })
+    );
+    ipcMain.handle('sf:update-check', async (event, action, payload) => {
+      if (!trustedFrame(event)) return { error: 'Unauthorised application frame.' };
+      try {
+        return {
+          ok: true,
+          value: await (async () => {
+            if (action === 'status') return updateCheck.status();
+            if (action === 'check') return await updateCheck.check();
+            if (action === 'enable') return updateCheck.setEnabled(payload?.enabled);
+            if (action === 'skip') return updateCheck.skip(payload?.version);
+            if (action === 'open') {
+              await shell.openExternal(updateCheck.releaseUrl());
+              return { opened: true };
+            }
+            throw Error('Unknown update action.');
+          })()
+        };
+      } catch (e) {
+        return { error: e.message, code: e.code };
+      }
+    });
+    ipcMain.handle('sf:auto-backup', async (event, action, payload) => {
+      if (!trustedFrame(event)) return { error: 'Unauthorised application frame.' };
+      userRequests++;
+      try {
+        return {
+          ok: true,
+          value: await ipcWork.run(async () => {
+            if (action === 'status') return autoBackup.status();
+            if (action === 'save') return autoBackup.save(payload || {});
+            if (action === 'default-folder') return autoBackup.save({ folder: null });
+            if (action === 'choose') {
+              const r = await dialog.showOpenDialog(win, {
+                title: 'Choose a folder for automatic backups',
+                defaultPath: autoBackup.folder(),
+                properties: ['openDirectory', 'createDirectory', 'promptToCreate']
+              });
+              if (r.canceled || !r.filePaths[0]) return null;
+              return autoBackup.save({ folder: r.filePaths[0] });
+            }
+            if (action === 'run') {
+              if (restoring) throw Error('Wait for the restore to finish.');
+              try {
+                const result = await autoBackup.run({ manual: true });
+                return { ...autoBackup.status(), result };
+              } catch (e) {
+                if (e.code === 'CANCELLED') return autoBackup.status();
+                throw e;
+              }
+            }
+            if (action === 'open') {
+              const folder = autoBackup.folder();
+              if (!fs.existsSync(folder))
+                throw Error('This folder does not exist yet. Paddock creates it with the first backup.');
+              const error = await shell.openPath(folder);
+              if (error) throw Error(error);
+              return { opened: true };
+            }
+            throw Error('Unknown automatic backup action.');
+          })
+        };
+      } catch (e) {
+        return { error: e.message, code: e.code };
+      } finally {
+        userRequests--;
+      }
+    });
+    ipcMain.handle(
+      'sf:file-cancel',
+      reply(id => backupJobs.cancel(id))
+    );
+    ipcMain.handle(
+      'sf:file',
+      reply(async (action, p, known) => {
+        if (restoring) throw Error('Wait for the restore to finish.');
+        network.retirement.assertIdle();
+        if (['restore', 'database.reset'].includes(action))
+          require('./submission-recovery.cjs').assertPreserved(network);
+        let result;
+        if (['restore', 'database.reset'].includes(action)) restoring = true;
+        let replacement;
+        try {
+          if (['restore', 'database.reset'].includes(action)) await spreadsheetImports?.stop();
+          if (['restore', 'database.reset'].includes(action))
+            await portal.stop('Paddock Portal was turned off for database replacement.');
+          if (sharedRoot && ['restore', 'database.reset'].includes(action))
+            replacement = await require('./shared-library-location.cjs').beginReplacement(
+              sharedRoot,
+              store.file,
+              store.data.id
+            );
+          result = await files(action, p);
+        } finally {
+          try {
+            if (replacement) await require('./shared-library-location.cjs').finishReplacement(sharedRoot, replacement);
+          } finally {
+            if (['restore', 'database.reset'].includes(action)) restoring = false;
+          }
+        }
+        if (!result || !known?.queryView) return result;
+        return club.store.withIdle(() => {
+          if (action === 'restore') return require('./view-query.cjs').view(club.store, { page: 'Overview' });
+          if (result.data?.schema)
+            return {
+              ...result,
+              data: require('./view-query.cjs').view(
+                club.store,
+                action === 'database.reset' ? { page: 'Overview' } : known.queryView
+              )
+            };
+          return result;
+        });
+      })
+    );
+    ipcMain.handle(
+      'sf:club',
+      reply(async (action, p = {}) => {
+        network.retirement.assertIdle();
+        if (['enable', 'join', 'disable', 'leave'].includes(action))
+          require('./submission-recovery.cjs').assertPreserved(network);
+        if (['switch', 'join', 'leave', 'update'].includes(action))
+          await portal.stop('The collection changed; Paddock Portal was turned off.');
+        if (restoring) throw Error('Wait for the restore to finish.');
+        const current = club.store;
+        return current.withIdle(async () => {
+          if (club.store !== current) throw Error('The collection changed. Reopen this action.');
+          switch (action) {
+            case 'enable':
+              if (network.hostingMode === 'legacy' && network.server)
+                throw Error('Use Migrate to Dealership Mode to preserve the existing host.');
+              await club.enableAsync(p.name, p.password);
+              await network.stop();
+              await network.start();
+              return club.status();
+            case 'disable':
+              return club.disableAsync(p);
+            case 'password':
+              return club.setPassword(p.password);
+            case 'start':
+              if (!club.coordinator) throw Error('Enable Dealership Mode first.');
+              return network.start();
+            case 'stop':
+              if (!club.coordinator) throw Error('This is not the dealership computer.');
+              return network.stop();
+            case 'join':
+              return club.connect(p);
+            case 'switch':
+              return club.switchAsync(p.active);
+            case 'update':
+              return club.update(p.revision);
+            case 'preview':
+              return club.preview(p.id);
+            case 'review':
+              return club.reviewAsync(p);
+            case 'retry':
+              return club.sendOutbox();
+            case 'discard':
+              return club.discardOutbox();
+            case 'leave':
+              return club.leaveAsync();
+            default:
+              throw Error('Unknown club operation.');
+          }
+        });
+      })
+    );
+    ipcMain.handle(
+      'sf:network',
+      reply(async (action, p = {}) => {
+        if (restoring) throw Error('Wait for the restore to finish.');
+        network.retirement.assertIdle();
+        if (action === 'migrate-host') return network.retirement.host(p);
+        if (action === 'migrate-browser') {
+          await portal.stop('The collection changed; Paddock Portal was turned off.');
+          return network.retirement.browser(p);
+        }
+        if (action === 'migration-ack') return network.retirement.acknowledge(p);
+        if (action === 'recovery-export' || action === 'recovery-import') return submissionRecoveryFile(action);
+        if (club.active && ['submit', 'retry'].includes(action))
+          throw Error('Open your personal collection before sending a public car package. Club edits use Review.');
+        switch (action) {
+          case 'background-mode':
+            backgroundMode.setEnabled(p.enabled);
+            return network.status();
+          case 'local-retry':
+            await localLibrary.recover();
+            return network.status();
+          case 'local-access':
+            await localLibrary.setEnabled(p.enabled);
+            return network.status();
+          case 'discover':
+            return network.discover();
+          case 'controls':
+            return network.controls(p);
+          case 'auto':
+            return network.autoRefresh(p.enabled);
+          case 'retry':
+            return network.retrySubmission();
+          case 'discard':
+            return network.discardSubmission();
+          case 'start':
+            return network.start();
+          case 'stop':
+            return network.stop();
+          case 'connect':
+            return network.connect(p.address, p.code);
+          case 'refresh':
+            return network.refresh();
+          case 'disconnect':
+            return network.disconnect();
+          case 'submit':
+            return network.submit(p.ids, p.options);
+          default:
+            throw new Error('Unknown network operation.');
+        }
+      })
+    );
+    startupPage = require('./startup-feedback.cjs').waitForPage({ ipcMain, window: win, trusted: trustedFrame });
+    try {
+      await win.loadFile(entry);
+    } catch (e) {
+      startupPage.cancel();
+      if (!startupClosing) dialog.showErrorBox('SlotForge could not be displayed', e.message);
+      app.quit();
+      return;
+    }
+    const pageStatus = await startupPage.ready;
+    if (startupClosing || win.isDestroyed()) return;
+    if (pageStatus !== 'ready' && pageStatus !== 'timeout') {
+      dialog.showErrorBox(
+        'Paddock could not finish opening',
+        'The first page could not be prepared. Please try opening Paddock again. Your saved collection has not been replaced.'
+      );
+      app.quit();
+      return;
+    }
+    if (smoke) {
+      try {
+        await localLibrary.start();
+        if (sharedSmoke)
+          await require('../tests/shared-library-smoke.cjs')(win, store, sharedSmoke, {
+            sharedPreviews,
+            sharedEncoder,
+            media,
+            network,
+            localLibrary
+          });
+        else
+          await require('../tests/smoke.cjs')(win, store, network, media, {
+            picturePreviews,
+            assemblyPhotoDecoder,
+            spreadsheetImports
+          });
+        localLibrary?.close();
+        app.exit(0);
+      } catch (e) {
+        const ui = await win.webContents.executeJavaScript('document.body.innerText').catch(() => null);
+        fs.writeFileSync(
+          path.join(__dirname, '..', '.qa', 'smoke-result.json'),
+          JSON.stringify({ passed: false, error: e.stack, ui }, null, 2)
+        );
+        console.error(e.stack);
+        localLibrary?.close();
+        app.exit(1);
+      }
+    } else if (libraryStartup) {
+      await localLibrary.start();
+      backgroundMode.startHidden();
+    } else backgroundMode.open();
+    if (libraryMoveResult && !smoke) {
+      const r = libraryMoveResult;
+      libraryMoveResult = null;
+      void dialog
+        .showMessageBox(
+          win,
+          r.status === 'moved'
+            ? {
+                type: 'info',
+                title: 'Library moved',
+                message: 'The shared library has moved.',
+                detail: `Paddock and SlotForge Timing now use:\n${r.file}\n\nThe old copy was left in place, locked against changes:\n${r.from}\n\nYou can delete it once you have checked Paddock and Timing.`,
+                noLink: true
+              }
+            : r.status === 'cancelled'
+              ? {
+                  type: 'info',
+                  title: 'Library not moved',
+                  message: 'The move was cancelled.',
+                  detail: 'The library is still in its original folder.',
+                  noLink: true
+                }
+              : {
+                  type: 'warning',
+                  title: 'Library not moved',
+                  message: 'The library could not be moved.',
+                  detail: r.error + '\n\nThe library is still in its original folder. Nothing was lost.',
+                  noLink: true
+                }
+        )
+        .catch(() => {});
+    }
+    startupFeedback?.dispose();
+    startupFeedback = null;
+  })
+  .catch(error => {
+    if (!startupClosing) dialog.showErrorBox('Paddock could not finish opening', error.message);
+    app.quit();
   });
-  ipcMain.handle('sf:file-cancel',reply(id=>backupJobs.cancel(id)));
-  ipcMain.handle('sf:file',reply(async(action,p,known)=>{if(restoring)throw Error('Wait for the restore to finish.');network.retirement.assertIdle();if(['restore','database.reset'].includes(action))require('./submission-recovery.cjs').assertPreserved(network);let result;if(['restore','database.reset'].includes(action))restoring=true;let replacement;try{if(['restore','database.reset'].includes(action))await spreadsheetImports?.stop();if(['restore','database.reset'].includes(action))await portal.stop('Paddock Portal was turned off for database replacement.');if(sharedRoot&&['restore','database.reset'].includes(action))replacement=await require('./shared-library-location.cjs').beginReplacement(sharedRoot,store.file,store.data.id);result=await files(action,p);}finally{try{if(replacement)await require('./shared-library-location.cjs').finishReplacement(sharedRoot,replacement);}finally{if(['restore','database.reset'].includes(action))restoring=false;}}if(!result||!known?.queryView)return result;return club.store.withIdle(()=>{if(action==='restore')return require('./view-query.cjs').view(club.store,{page:'Overview'});if(result.data?.schema)return {...result,data:require('./view-query.cjs').view(club.store,action==='database.reset'?{page:'Overview'}:known.queryView)};return result;});}));
-  ipcMain.handle('sf:club',reply(async(action,p={})=>{network.retirement.assertIdle();if(['enable','join','disable','leave'].includes(action))require('./submission-recovery.cjs').assertPreserved(network);if(['switch','join','leave','update'].includes(action))await portal.stop('The collection changed; Paddock Portal was turned off.');if(restoring)throw Error('Wait for the restore to finish.');const current=club.store;return current.withIdle(async()=>{if(club.store!==current)throw Error('The collection changed. Reopen this action.');switch(action){case 'enable':if(network.hostingMode==='legacy'&&network.server)throw Error('Use Migrate to Dealership Mode to preserve the existing host.');await club.enableAsync(p.name,p.password);await network.stop();await network.start();return club.status();case 'disable':return club.disableAsync(p);case 'password':return club.setPassword(p.password);case 'start':if(!club.coordinator)throw Error('Enable Dealership Mode first.');return network.start();case 'stop':if(!club.coordinator)throw Error('This is not the dealership computer.');return network.stop();case 'join':return club.connect(p);case 'switch':return club.switchAsync(p.active);case 'update':return club.update(p.revision);case 'preview':return club.preview(p.id);case 'review':return club.reviewAsync(p);case 'retry':return club.sendOutbox();case 'discard':return club.discardOutbox();case 'leave':return club.leaveAsync();default:throw Error('Unknown club operation.');}});}));
-  ipcMain.handle('sf:network',reply(async(action,p={})=>{if(restoring)throw Error('Wait for the restore to finish.');network.retirement.assertIdle();if(action==='migrate-host')return network.retirement.host(p);if(action==='migrate-browser'){await portal.stop('The collection changed; Paddock Portal was turned off.');return network.retirement.browser(p);}if(action==='migration-ack')return network.retirement.acknowledge(p);if(action==='recovery-export'||action==='recovery-import')return submissionRecoveryFile(action);if(club.active&&['submit','retry'].includes(action))throw Error('Open your personal collection before sending a public car package. Club edits use Review.');switch(action){case'background-mode':backgroundMode.setEnabled(p.enabled);return network.status();case'local-retry':await localLibrary.recover();return network.status();case'local-access':await localLibrary.setEnabled(p.enabled);return network.status();case'discover':return network.discover();case'controls':return network.controls(p);case'auto':return network.autoRefresh(p.enabled);case'retry':return network.retrySubmission();case'discard':return network.discardSubmission();case'start':return network.start();case'stop':return network.stop();case'connect':return network.connect(p.address,p.code);case'refresh':return network.refresh();case'disconnect':return network.disconnect();case'submit':return network.submit(p.ids,p.options);default:throw new Error('Unknown network operation.');}}));
-  startupPage=require('./startup-feedback.cjs').waitForPage({ipcMain,window:win,trusted:trustedFrame});
-  try{await win.loadFile(entry);}catch(e){startupPage.cancel();if(!startupClosing)dialog.showErrorBox('SlotForge could not be displayed',e.message);app.quit();return;}
-  const pageStatus=await startupPage.ready;
-  if(startupClosing||win.isDestroyed())return;
-  if(pageStatus!=='ready'&&pageStatus!=='timeout'){dialog.showErrorBox('Paddock could not finish opening','The first page could not be prepared. Please try opening Paddock again. Your saved collection has not been replaced.');app.quit();return;}
-  if(smoke){try{await localLibrary.start();if(sharedSmoke)await require('../tests/shared-library-smoke.cjs')(win,store,sharedSmoke,{sharedPreviews,sharedEncoder,media,network,localLibrary});else await require('../tests/smoke.cjs')(win,store,network,media,{picturePreviews,assemblyPhotoDecoder,spreadsheetImports});localLibrary?.close();app.exit(0);}catch(e){const ui=await win.webContents.executeJavaScript('document.body.innerText').catch(()=>null);fs.writeFileSync(path.join(__dirname,'..','.qa','smoke-result.json'),JSON.stringify({passed:false,error:e.stack,ui},null,2));console.error(e.stack);localLibrary?.close();app.exit(1);}}
-  else if(libraryStartup){await localLibrary.start();backgroundMode.startHidden();}else backgroundMode.open();
-  if(libraryMoveResult&&!smoke){const r=libraryMoveResult;libraryMoveResult=null;void dialog.showMessageBox(win,r.status==='moved'?{type:'info',title:'Library moved',message:'The shared library has moved.',detail:`Paddock and SlotForge Timing now use:\n${r.file}\n\nThe old copy was left in place, locked against changes:\n${r.from}\n\nYou can delete it once you have checked Paddock and Timing.`,noLink:true}:r.status==='cancelled'?{type:'info',title:'Library not moved',message:'The move was cancelled.',detail:'The library is still in its original folder.',noLink:true}:{type:'warning',title:'Library not moved',message:'The library could not be moved.',detail:r.error+'\n\nThe library is still in its original folder. Nothing was lost.',noLink:true}).catch(()=>{});}
-  startupFeedback?.dispose();startupFeedback=null;
-}).catch(error=>{if(!startupClosing)dialog.showErrorBox('Paddock could not finish opening',error.message);app.quit();});
-app.on('activate',()=>startupFeedback?startupFeedback.focus():backgroundMode?.open());
-app.on('window-all-closed',()=>app.quit());
-app.on('second-instance',(_event,argv)=>{if(argv.some(a=>a.startsWith(launcherModule.PREFIX)))return;for(const arg of argv)acceptCarLink(arg);if(startupFeedback)startupFeedback.focus();else if(win&&!win.isDestroyed())backgroundMode?.open();});
-async function submissionRecoveryFile(action){
- const R=require('./submission-recovery.cjs');network.retirement.assertIdle();if(network.sending)throw Error('Wait for the submission to finish.');
- if(action==='recovery-export'){
-  if(!network.pending)throw Error('There is no pending submission.');const pending=network.pending,bytes=R.encode(pending),proof=R.fingerprint(pending);
-  const r=await dialog.showSaveDialog(win,{title:'Save pending submission recovery',defaultPath:'SlotForge-pending-submission.json',filters:[{name:'Submission recovery JSON',extensions:['json']}]});if(r.canceled)return null;
-  if(network.pending!==pending||R.fingerprint(network.pending)!==proof)throw Error('The pending submission changed. Reopen recovery.');
-  const protectedFiles=[...store.protectedFiles(),club.file,network.retirement.file,...(club.loadedCache?club.loadedCache.protectedFiles():[])];exportBytes(r.filePath,bytes,protectedFiles);network.recoveryProof=proof;network.recoveryPending=pending;network.notify();return {saved:true};
- }
- const r=await dialog.showOpenDialog(win,{title:'Open pending submission recovery',properties:['openFile'],filters:[{name:'Submission recovery JSON',extensions:['json']}]});if(r.canceled)return null;
- network.retirement.assertIdle();return R.restore(network,readJSON(r.filePaths[0],R.FILE_MAX));
-}
-let recoveryQuitPrompt=false;
-let waitingToQuit=false,quitReady=false;
-app.on('before-quit',event=>{
- if(quitReady)return;
- if(network?.pending&&!require('./submission-recovery.cjs').saved(network)){
-  event.preventDefault();if(recoveryQuitPrompt)return;recoveryQuitPrompt=true;
-  void (async()=>{const r=await dialog.showMessageBox(win,{type:'warning',title:'Pending submission',message:'Save the pending submission before quitting.',detail:'The host may already have received it. A recovery file keeps the same package for safe retry. You can also keep Paddock open and retry or explicitly discard it in Settings → Database.',buttons:['Keep Paddock open','Save recovery and quit'],defaultId:0,cancelId:0});if(r.response===1&&await submissionRecoveryFile('recovery-export')){recoveryQuitPrompt=false;app.quit();}})().catch(e=>dialog.showErrorBox('Recovery was not saved',e.message)).finally(()=>{recoveryQuitPrompt=false;});return;
- }
- event.preventDefault();if(spreadsheetImports?.work)spreadsheetImports.work.stopped=true;backgroundMode?.beginQuit();startupClosing=true;startupPage?.cancel();void autoBackup?.stop();clearInterval(autoBackupTimer);clearTimeout(updateTimer);clearInterval(updateTimer);updateCheck?.stop();ipcWork.stop();clearInterval(networkTimer);network?.quiesce();club?.quiesce();localLibrary?.quiesce();
- if(waitingToQuit)return;waitingToQuit=true;
- void (async()=>{
-  // Startup may still be creating the first store. Wait for the whole bootstrap,
-  // then recheck producers before draining every accepted IPC/HTTP operation.
-  await Promise.allSettled([startupTask]);network?.quiesce();club?.quiesce();localLibrary?.quiesce();
-  await autoBackup?.stop();
-  await Promise.all([ipcWork.idle(),network?.idle(),club?.idle(),localLibrary?.idle()]);
-  await portal?.stop();
-  await spreadsheetImports?.close();
-  await picturePreviews?.close();
-  await sharedObserver?.close();
-  await sharedPreviews.close();
-  await Promise.all([store?.whenIdle(),club?.loadedCache?.whenIdle(),require('./collection-open.cjs').whenIdle()]);
-  startupFeedback?.dispose();startupFeedback=null;club?.close();network?.close();localLibrary?.close();backgroundMode?.close();resultInbox?.close();
-  quitReady=true;app.quit();
- })().catch(error=>{waitingToQuit=false;dialog.showErrorBox('Paddock could not finish closing',error.message+'\nPending work has not been forcibly stopped. Try closing again.');});
+app.on('activate', () => (startupFeedback ? startupFeedback.focus() : backgroundMode?.open()));
+app.on('window-all-closed', () => app.quit());
+app.on('second-instance', (_event, argv) => {
+  if (argv.some(a => a.startsWith(launcherModule.PREFIX))) return;
+  for (const arg of argv) acceptCarLink(arg);
+  if (startupFeedback) startupFeedback.focus();
+  else if (win && !win.isDestroyed()) backgroundMode?.open();
 });
-app.on('will-quit',()=>{for(const {file,directory}of temporaryDocuments){try{fs.unlinkSync(file);fs.rmdirSync(directory);}catch{/* An external viewer may still hold its temporary copy open. */}}});
+async function submissionRecoveryFile(action) {
+  const R = require('./submission-recovery.cjs');
+  network.retirement.assertIdle();
+  if (network.sending) throw Error('Wait for the submission to finish.');
+  if (action === 'recovery-export') {
+    if (!network.pending) throw Error('There is no pending submission.');
+    const pending = network.pending,
+      bytes = R.encode(pending),
+      proof = R.fingerprint(pending);
+    const r = await dialog.showSaveDialog(win, {
+      title: 'Save pending submission recovery',
+      defaultPath: 'SlotForge-pending-submission.json',
+      filters: [{ name: 'Submission recovery JSON', extensions: ['json'] }]
+    });
+    if (r.canceled) return null;
+    if (network.pending !== pending || R.fingerprint(network.pending) !== proof)
+      throw Error('The pending submission changed. Reopen recovery.');
+    const protectedFiles = [
+      ...store.protectedFiles(),
+      club.file,
+      network.retirement.file,
+      ...(club.loadedCache ? club.loadedCache.protectedFiles() : [])
+    ];
+    exportBytes(r.filePath, bytes, protectedFiles);
+    network.recoveryProof = proof;
+    network.recoveryPending = pending;
+    network.notify();
+    return { saved: true };
+  }
+  const r = await dialog.showOpenDialog(win, {
+    title: 'Open pending submission recovery',
+    properties: ['openFile'],
+    filters: [{ name: 'Submission recovery JSON', extensions: ['json'] }]
+  });
+  if (r.canceled) return null;
+  network.retirement.assertIdle();
+  return R.restore(network, readJSON(r.filePaths[0], R.FILE_MAX));
+}
+let recoveryQuitPrompt = false;
+let waitingToQuit = false,
+  quitReady = false;
+app.on('before-quit', event => {
+  if (quitReady) return;
+  if (network?.pending && !require('./submission-recovery.cjs').saved(network)) {
+    event.preventDefault();
+    if (recoveryQuitPrompt) return;
+    recoveryQuitPrompt = true;
+    void (async () => {
+      const r = await dialog.showMessageBox(win, {
+        type: 'warning',
+        title: 'Pending submission',
+        message: 'Save the pending submission before quitting.',
+        detail:
+          'The host may already have received it. A recovery file keeps the same package for safe retry. You can also keep Paddock open and retry or explicitly discard it in Settings → Database.',
+        buttons: ['Keep Paddock open', 'Save recovery and quit'],
+        defaultId: 0,
+        cancelId: 0
+      });
+      if (r.response === 1 && (await submissionRecoveryFile('recovery-export'))) {
+        recoveryQuitPrompt = false;
+        app.quit();
+      }
+    })()
+      .catch(e => dialog.showErrorBox('Recovery was not saved', e.message))
+      .finally(() => {
+        recoveryQuitPrompt = false;
+      });
+    return;
+  }
+  event.preventDefault();
+  if (spreadsheetImports?.work) spreadsheetImports.work.stopped = true;
+  backgroundMode?.beginQuit();
+  startupClosing = true;
+  startupPage?.cancel();
+  void autoBackup?.stop();
+  clearInterval(autoBackupTimer);
+  clearTimeout(updateTimer);
+  clearInterval(updateTimer);
+  updateCheck?.stop();
+  ipcWork.stop();
+  clearInterval(networkTimer);
+  network?.quiesce();
+  club?.quiesce();
+  localLibrary?.quiesce();
+  if (waitingToQuit) return;
+  waitingToQuit = true;
+  void (async () => {
+    // Startup may still be creating the first store. Wait for the whole bootstrap,
+    // then recheck producers before draining every accepted IPC/HTTP operation.
+    await Promise.allSettled([startupTask]);
+    network?.quiesce();
+    club?.quiesce();
+    localLibrary?.quiesce();
+    await autoBackup?.stop();
+    await Promise.all([ipcWork.idle(), network?.idle(), club?.idle(), localLibrary?.idle()]);
+    await portal?.stop();
+    await spreadsheetImports?.close();
+    await picturePreviews?.close();
+    await sharedObserver?.close();
+    await sharedPreviews.close();
+    await Promise.all([store?.whenIdle(), club?.loadedCache?.whenIdle(), require('./collection-open.cjs').whenIdle()]);
+    startupFeedback?.dispose();
+    startupFeedback = null;
+    club?.close();
+    network?.close();
+    localLibrary?.close();
+    backgroundMode?.close();
+    resultInbox?.close();
+    quitReady = true;
+    app.quit();
+  })().catch(error => {
+    waitingToQuit = false;
+    dialog.showErrorBox(
+      'Paddock could not finish closing',
+      error.message + '\nPending work has not been forcibly stopped. Try closing again.'
+    );
+  });
+});
+app.on('will-quit', () => {
+  for (const { file, directory } of temporaryDocuments) {
+    try {
+      fs.unlinkSync(file);
+      fs.rmdirSync(directory);
+    } catch {
+      /* An external viewer may still hold its temporary copy open. */
+    }
+  }
+});

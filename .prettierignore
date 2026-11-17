@@ -1,0 +1,10 @@
+# Readability cleanup is done file by file; only formatted files are checked.
+node_modules/
+dist/
+release/
+.qa/
+# Third-party code stays exactly as its authors published it.
+src/vendor/
+# Generated drawing data, not meant to be read.
+renderer/icon-art.js
+renderer/build-art.js

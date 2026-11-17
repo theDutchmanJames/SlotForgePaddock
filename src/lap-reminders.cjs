@@ -17,7 +17,9 @@ function interval(value) {
   if (value === undefined || value === null || value === '') return undefined;
   const n = typeof value === 'string' && /^\s*\d+\s*$/.test(value) ? Number(value) : value;
   if (!Number.isSafeInteger(n) || n < 1 || n > MAX_LAPS) {
-    throw Object.assign(Error(`Enter the laps as a whole number from 1 to ${MAX_LAPS.toLocaleString('en')}.`), { code: 'INVALID_FIELD' });
+    throw Object.assign(Error(`Enter the laps as a whole number from 1 to ${MAX_LAPS.toLocaleString('en')}.`), {
+      code: 'INVALID_FIELD'
+    });
   }
   return n;
 }
@@ -45,11 +47,15 @@ function manualLaps(reader, wanted) {
   const counts = new Map(wanted.map(w => [w.key, 0]));
   const cars = [...new Set(wanted.map(w => w.carId))];
   if (!cars.length) return counts;
-  const rows = reader.db.prepare(`SELECT q.car_id carId,json_extract(l.json,'$') laps,json_extract(d.json,'$') date
+  const rows = reader.db
+    .prepare(
+      `SELECT q.car_id carId,json_extract(l.json,'$') laps,json_extract(d.json,'$') date
     FROM query_records q
     JOIN record_fields l ON l.record=q.key AND l.path='["laps"]'
     JOIN record_fields d ON d.record=q.key AND d.path='["date"]'
-    WHERE q.bucket='["tests"]' AND q.car_id IN (SELECT value FROM json_each(?))`).all(JSON.stringify(cars));
+    WHERE q.bucket='["tests"]' AND q.car_id IN (SELECT value FROM json_each(?))`
+    )
+    .all(JSON.stringify(cars));
   for (const w of wanted) {
     const start = w.from ? Date.parse(w.from) : -Infinity;
     for (const row of rows) {
@@ -84,21 +90,27 @@ function count(reader, wanted) {
 function attach(reader, rows, day = domain.today(), { counter = count } = {}) {
   const wanted = [];
   for (const row of rows) {
-    if (row.laps === null || row.laps === undefined) { row.laps = null; continue; }
+    if (row.laps === null || row.laps === undefined) {
+      row.laps = null;
+      continue;
+    }
     const event = reader.record(row.key, { assetHandle: true });
     if (event) wanted.push({ key: row.key, carId: event.carId, from: since(event) });
   }
   const counts = wanted.length ? counter(reader, wanted) : new Map();
   for (const row of rows) {
     if (row.laps === null) continue;
-    const every = Number(row.laps), laps = counts.get(row.key) || 0;
+    const every = Number(row.laps),
+      laps = counts.get(row.key) || 0;
     row.laps = { driven: laps, interval: every, reached: laps >= every };
   }
-  return rows.sort((a, b) =>
-    Number(due(b, day)) - Number(due(a, day)) ||
-    (a.due || '9999-12-31').localeCompare(b.due || '9999-12-31') ||
-    left(a) - left(b) ||
-    a.key.localeCompare(b.key));
+  return rows.sort(
+    (a, b) =>
+      Number(due(b, day)) - Number(due(a, day)) ||
+      (a.due || '9999-12-31').localeCompare(b.due || '9999-12-31') ||
+      left(a) - left(b) ||
+      a.key.localeCompare(b.key)
+  );
 }
 const left = row => (row.laps ? row.laps.interval - row.laps.driven : Number.MAX_SAFE_INTEGER);
 

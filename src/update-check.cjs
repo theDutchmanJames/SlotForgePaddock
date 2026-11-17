@@ -34,7 +34,8 @@ function parse(version) {
 }
 
 function compare(a, b) {
-  const x = parse(a), y = parse(b);
+  const x = parse(a),
+    y = parse(b);
   if (!x || !y) return 0;
   for (let i = 0; i < 3; i++) if (x[i] !== y[i]) return x[i] > y[i] ? 1 : -1;
   return 0;
@@ -42,7 +43,9 @@ function compare(a, b) {
 
 /** "https://github.com/owner/repo" (package.json homepage, optionally .git or #readme) → "owner/repo". */
 function repository(homepage) {
-  const m = /^https:\/\/github\.com\/([A-Za-z0-9-]+)\/([A-Za-z0-9._-]+?)(?:\.git)?\/?(?:#.*)?$/.exec(String(homepage || ''));
+  const m = /^https:\/\/github\.com\/([A-Za-z0-9-]+)\/([A-Za-z0-9._-]+?)(?:\.git)?\/?(?:#.*)?$/.exec(
+    String(homepage || '')
+  );
   if (!m) throw fault('Paddock does not know where its releases are published.', 'NO_REPOSITORY');
   return `${m[1]}/${m[2]}`;
 }
@@ -61,7 +64,7 @@ function release(json) {
   return {
     version: tag.replace(/^v/, ''),
     tag,
-    publishedAt: Number.isFinite(published) ? published : null,
+    publishedAt: Number.isFinite(published) ? published : null
   };
 }
 
@@ -105,7 +108,13 @@ class UpdateCheck {
     if (saved?.version !== VERSION) saved = {};
     let latest = null;
     try {
-      if (saved.latest) latest = release({ tag_name: saved.latest.tag, published_at: Number.isFinite(saved.latest.publishedAt) ? new Date(saved.latest.publishedAt).toISOString() : '' });
+      if (saved.latest)
+        latest = release({
+          tag_name: saved.latest.tag,
+          published_at: Number.isFinite(saved.latest.publishedAt)
+            ? new Date(saved.latest.publishedAt).toISOString()
+            : ''
+        });
     } catch {
       latest = null;
     }
@@ -115,7 +124,7 @@ class UpdateCheck {
       lastAttempt: Number.isFinite(saved.lastAttempt) ? saved.lastAttempt : null,
       latest,
       skipped: parse(saved.skipped) ? String(saved.skipped) : null,
-      lastError: typeof saved.lastError === 'string' ? saved.lastError : null,
+      lastError: typeof saved.lastError === 'string' ? saved.lastError : null
     };
   }
 
@@ -141,7 +150,7 @@ class UpdateCheck {
       notify: enabled && newer && settled && (!skipped || compare(latest.version, skipped) > 0),
       lastCheck,
       lastError: this.unavailable || lastError,
-      checking: !!this.checking,
+      checking: !!this.checking
     };
   }
 
@@ -185,7 +194,7 @@ class UpdateCheck {
         // Redirects are followed: GitHub answers a renamed repository with a redirect.
         response = await this.fetch(`https://api.github.com/repos/${this.repo}/releases/latest`, {
           headers: { Accept: 'application/vnd.github+json', 'User-Agent': `SlotForge-Paddock/${this.current}` },
-          signal: controller.signal,
+          signal: controller.signal
         });
       } catch {
         throw controller.signal.aborted && !this.stopped
@@ -193,10 +202,13 @@ class UpdateCheck {
           : fault('Paddock could not reach GitHub. Check the internet connection and try again.', 'OFFLINE');
       }
       if (response.status === 404) throw fault('No published release was found yet.', 'NO_RELEASE');
-      if (response.status === 403 || response.status === 429) throw fault('GitHub asked Paddock to wait before checking again. Try again later.', 'RATE_LIMITED');
-      if (!response.ok) throw fault(`GitHub answered with an error (${response.status}). Try again later.`, 'BAD_RESPONSE');
+      if (response.status === 403 || response.status === 429)
+        throw fault('GitHub asked Paddock to wait before checking again. Try again later.', 'RATE_LIMITED');
+      if (!response.ok)
+        throw fault(`GitHub answered with an error (${response.status}). Try again later.`, 'BAD_RESPONSE');
       const length = Number(response.headers?.get?.('content-length'));
-      if (Number.isFinite(length) && length > MAX_BYTES) throw fault('GitHub sent an unexpectedly large answer.', 'BAD_RESPONSE');
+      if (Number.isFinite(length) && length > MAX_BYTES)
+        throw fault('GitHub sent an unexpectedly large answer.', 'BAD_RESPONSE');
       let text;
       try {
         text = await response.text();
@@ -205,11 +217,19 @@ class UpdateCheck {
       }
       if (Buffer.byteLength(text) > MAX_BYTES) throw fault('GitHub sent an unexpectedly large answer.', 'BAD_RESPONSE');
       let json;
-      try { json = JSON.parse(text); } catch { throw fault('GitHub sent an unexpected answer.', 'BAD_RESPONSE'); }
+      try {
+        json = JSON.parse(text);
+      } catch {
+        throw fault('GitHub sent an unexpected answer.', 'BAD_RESPONSE');
+      }
       found = release(json);
     } catch (e) {
       this.state.lastError = e.message;
-      try { this.persist(); } catch { /* The error still reaches the caller. */ }
+      try {
+        this.persist();
+      } catch {
+        /* The error still reaches the caller. */
+      }
       throw e;
     } finally {
       clearTimeout(timer);
@@ -219,7 +239,11 @@ class UpdateCheck {
     this.state.latest = found;
     this.state.lastCheck = this.state.lastAttempt;
     this.state.lastError = null;
-    try { this.persist(); } catch { /* Kept in memory for this session. */ }
+    try {
+      this.persist();
+    } catch {
+      /* Kept in memory for this session. */
+    }
     return this.status();
   }
 
@@ -233,7 +257,8 @@ class UpdateCheck {
 
   /** "Not now": hides the notice until a version newer than this one appears. */
   skip(version) {
-    if (!this.state.latest || version !== this.state.latest.version) throw fault('This version is no longer the latest.');
+    if (!this.state.latest || version !== this.state.latest.version)
+      throw fault('This version is no longer the latest.');
     this.state.skipped = version;
     this.persist();
     this.onChange();
