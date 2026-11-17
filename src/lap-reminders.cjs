@@ -7,7 +7,7 @@
 //   index as Timing's own counters (withdrawn and uncorrected sessions excluded, merged cars
 //   included). Sessions without a known date are left out. This is Paddock's own count per
 //   task; it is separate from Timing's single "laps since service" counter, and
-// - the lap count of manual track tests.
+// - the lap count of manual track tests (see manualSince for which ones count).
 const domain = require('../renderer/domain.js');
 
 const MAX_LAPS = 1000000;
@@ -36,6 +36,20 @@ function since(event) {
   return Number.isFinite(start.getTime()) ? start.toISOString() : null;
 }
 
+/**
+ * Manual tests are logged in Paddock itself, so their order against the work record is known
+ * when the work was logged on the day it was done: only tests recorded after it count. So
+ * "tested, serviced, logged it" starts at 0 instead of being due again at once. Work logged
+ * later for an earlier day keeps the whole-day rule, as the order can't be known then.
+ */
+function manualSince(event) {
+  const recorded = Date.parse(event.date);
+  if (!Number.isFinite(recorded)) return since(event);
+  const loggedOn = domain.today(new Date(recorded));
+  if (event.performedDate && event.performedDate !== loggedOn) return since(event);
+  return new Date(recorded).toISOString();
+}
+
 /** A manual test's lap count, read exactly as "Record test" validated it (text such as "25"). */
 function testLaps(value) {
   const n = Number(value);
@@ -57,7 +71,8 @@ function manualLaps(reader, wanted) {
     )
     .all(JSON.stringify(cars));
   for (const w of wanted) {
-    const start = w.from ? Date.parse(w.from) : -Infinity;
+    const from = w.manualFrom || w.from;
+    const start = from ? Date.parse(from) : -Infinity;
     for (const row of rows) {
       if (row.carId !== w.carId) continue;
       const at = Date.parse(row.date);
@@ -95,7 +110,7 @@ function attach(reader, rows, day = domain.today(), { counter = count } = {}) {
       continue;
     }
     const event = reader.record(row.key, { assetHandle: true });
-    if (event) wanted.push({ key: row.key, carId: event.carId, from: since(event) });
+    if (event) wanted.push({ key: row.key, carId: event.carId, from: since(event), manualFrom: manualSince(event) });
   }
   const counts = wanted.length ? counter(reader, wanted) : new Map();
   for (const row of rows) {
@@ -128,4 +143,4 @@ function due(row, day = domain.today()) {
   return !!(row.laps?.reached || (row.due && row.due <= day));
 }
 
-module.exports = { interval, since, testLaps, manualLaps, count, attach, decorate, due, MAX_LAPS };
+module.exports = { interval, since, manualSince, testLaps, manualLaps, count, attach, decorate, due, MAX_LAPS };

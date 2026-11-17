@@ -179,6 +179,27 @@ test('manual test laps are read exactly as Record test accepted them', () => {
   assert.equal(L.testLaps('2.5'), 0);
 });
 
+test('tested, then serviced and logged the same day: the earlier test does not count', t => {
+  const { s, reminders } = setup(t);
+  const today = domain.today();
+  act(s, 'test.add', { carId: 'car-a', track: 'Home', laps: '60' }); // Earlier today, before the work.
+  s.transact(d => { d.tests[d.tests.length - 1].date = new Date(Date.now() - 3600e3).toISOString(); });
+  record(s, { performedDate: today, nextDueLaps: 50 });
+  assert.equal(reminders().find(r => r.carId === 'car-a').laps.driven, 0, 'a fresh start, not due again at once');
+  act(s, 'test.add', { carId: 'car-a', track: 'Home', laps: '20' }); // After the work.
+  assert.deepEqual(reminders().find(r => r.carId === 'car-a').laps, { driven: 20, interval: 50, reached: false });
+});
+
+test('work logged later for an earlier day keeps the whole-day rule for manual tests', () => {
+  const at = new Date(2026, 10, 17, 18, 0, 0); // Logged on 17 November in the evening.
+  const loggedToday = { date: at.toISOString(), performedDate: '2026-11-17' };
+  assert.equal(L.manualSince(loggedToday), at.toISOString(), 'same day: from the moment it was logged');
+  assert.equal(L.manualSince({ date: at.toISOString() }), at.toISOString(), 'no work date: same as logged today');
+  const loggedLater = { date: at.toISOString(), performedDate: '2026-11-15' };
+  assert.equal(L.manualSince(loggedLater), new Date('2026-11-15T00:00:00').toISOString(), 'earlier day: whole day');
+  assert.equal(L.since(loggedToday), new Date('2026-11-17T00:00:00').toISOString(), 'Timing races keep the whole day');
+});
+
 test('Workshop and Review get the same lap progress from one count per read', t => {
   const { s } = setup(t);
   record(s, { nextDueLaps: 50 });
