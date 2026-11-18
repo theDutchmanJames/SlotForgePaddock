@@ -20,7 +20,7 @@ const QuickLinksUI = (() => {
       !(page === 'Library' && libraryTab === 'parts')
     )
       return '';
-    return '<button type="button" class="btn quick-links-trigger" data-quick-toggle aria-haspopup="dialog" aria-expanded="false">Quick Links <span aria-hidden="true">↗ ▾</span></button>';
+    return '<button type="button" class="btn outline quick-links-trigger" data-quick-toggle aria-haspopup="dialog" aria-expanded="false">Quick Links <span aria-hidden="true">↗ ▾</span></button>';
   }
   function close(restore = false) {
     ++request;
