@@ -64,7 +64,7 @@ function renderSharedHistory(car) {
 }
 function historyCarHtml(state) {
   const result = state.result;
-  return `<div class="page-head"><div><h2>Shared racing history</h2><p class="muted">Accepted Timing results and historical evidence, attached to the car that raced.</p></div>${btn('Refresh', 'history-view-refresh', 'small')}</div>${state.error ? `<p class="note warning" role="alert">${esc(state.error)}</p>` : ''}${
+  return `<div class="page-head"><div><h2>Shared racing history</h2><p class="muted">Accepted Timing results and historical evidence, attached to the car that raced.</p></div>${btn('Refresh', 'history-view-refresh', 'small outline')}</div>${state.error ? `<p class="note warning" role="alert">${esc(state.error)}</p>` : ''}${
     !result
       ? '<p class="muted" role="status">' +
         (state.error ? 'Use Refresh to try again.' : 'Loading racing history…') +
@@ -89,11 +89,11 @@ function historyCarHtml(state) {
                 })
                 .join('')
             : '<p class="muted">No accepted racing history for this car yet.</p>'
-        }</div><div class="actions mt">${state.index ? btn('Previous sessions', 'history-view-prev') : ''}<span>Page ${state.index + 1}</span>${result.nextPage ? btn('Next sessions', 'history-view-next') : ''}</div>`
+        }</div><div class="actions mt">${state.index ? pagerBtn('prev', 'Previous sessions', 'history-view-prev') : ''}<span>Page ${state.index + 1}</span>${result.nextPage ? pagerBtn('next', 'Next sessions', 'history-view-next') : ''}</div>`
   }`;
 }
 function historyLaneRecords(info) {
-  return `<section class="panel history-lane-records"><h3>Measured track and lane records</h3><p class="tiny muted">Fastest track-eligible lap for this car on each source, track and lane. Personal-only eligibility does not set these records. Corrections and withdrawals are reflected here.</p>${info.rows.length ? `<div class="table-wrap"><table><thead><tr><th>Track / source</th><th>Lane</th><th>Best lap</th><th>Driver</th><th>Race date</th><th></th></tr></thead><tbody>${info.rows.map((r, i) => `<tr><td>${esc(r.track)}<small class="muted">${esc(r.source)}</small></td><td>${r.lane}</td><td><strong>${HistoryViewModel.seconds(r.durationMs)}</strong></td><td>${esc(r.driver || 'Unknown')}</td><td>${esc(historySessionDate(r.startedAt, r.savedAt))}</td><td>${btn('View session', 'history-view-record', 'small', String(i))}</td></tr>`).join('')}</tbody></table></div><div class="actions mt">${info.offset ? btn('Previous records', 'history-view-records-prev') : ''}<span>${info.offset + 1}–${info.offset + info.rows.length} of ${info.total}</span>${info.nextOffset !== null ? btn('Next records', 'history-view-records-next') : ''}</div>` : '<p class="muted">No eligible measured lane records yet.</p>'}</section>`;
+  return `<section class="panel history-lane-records"><h3>Measured track and lane records</h3><p class="tiny muted">Fastest track-eligible lap for this car on each source, track and lane. Personal-only eligibility does not set these records. Corrections and withdrawals are reflected here.</p>${info.rows.length ? `<div class="table-wrap"><table><thead><tr><th>Track / source</th><th>Lane</th><th>Best lap</th><th>Driver</th><th>Race date</th><th></th></tr></thead><tbody>${info.rows.map((r, i) => `<tr><td>${esc(r.track)}<small class="muted">${esc(r.source)}</small></td><td>${r.lane}</td><td><strong>${HistoryViewModel.seconds(r.durationMs)}</strong></td><td>${esc(r.driver || 'Unknown')}</td><td>${esc(historySessionDate(r.startedAt, r.savedAt))}</td><td>${btn('View session', 'history-view-record', 'small', String(i))}</td></tr>`).join('')}</tbody></table></div><div class="actions mt">${info.offset ? pagerBtn('prev', 'Previous records', 'history-view-records-prev') : ''}<span>${info.offset + 1}–${info.offset + info.rows.length} of ${info.total}</span>${info.nextOffset !== null ? pagerBtn('next', 'Next records', 'history-view-records-next') : ''}</div>` : '<p class="muted">No eligible measured lane records yet.</p>'}</section>`;
 }
 async function loadHistoryCar() {
   const state = historyCarState;
@@ -238,7 +238,7 @@ function historyRowsPage(headers, rows, s) {
   return rows.length
     ? historyTable(headers, rows.slice(start, start + 50)) +
         (rows.length > 50
-          ? `<div class="actions mt">${start ? btn('Previous rows', 'history-view-rows-prev') : ''}<span>${start + 1}–${Math.min(start + 50, rows.length)} of ${rows.length}</span>${start + 50 < rows.length ? btn('Next rows', 'history-view-rows-next') : ''}</div>`
+          ? `<div class="actions mt">${start ? pagerBtn('prev', 'Previous rows', 'history-view-rows-prev') : ''}<span>${start + 1}–${Math.min(start + 50, rows.length)} of ${rows.length}</span>${start + 50 < rows.length ? pagerBtn('next', 'Next rows', 'history-view-rows-next') : ''}</div>`
           : '')
     : '<p class="muted">Not recorded.</p>';
 }
@@ -298,7 +298,7 @@ function paintHistorySession() {
             'Flags / reason'
           ],
           s.laps.laps.map(l => HistoryViewModel.lap(l, p, race, m.rich))
-        )}<div class="actions mt">${s.offset ? btn('Previous laps', 'history-view-laps-prev') : ''}${s.laps.nextOffset !== null ? btn('Next laps', 'history-view-laps-next') : ''}</div>`
+        )}<div class="actions mt">${s.offset ? pagerBtn('prev', 'Previous laps', 'history-view-laps-prev') : ''}${s.laps.nextOffset !== null ? pagerBtn('next', 'Next laps', 'history-view-laps-next') : ''}</div>`
       : '<p role="status">Loading laps…</p>';
   if (s.tab === 'Classification') {
     const table = HistoryViewModel.classification(race, m.context);

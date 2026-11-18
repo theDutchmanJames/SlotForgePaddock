@@ -229,7 +229,8 @@ function renderStock(tabs = '') {
     heading(
       'Parts',
       'Owned stock and catalogue references, organised into main groups',
-      btn(icon('plus') + ' Add parts', 'add-part', 'primary') + btn('Import Parts List', 'nav', '', 'Import & Export')
+      btn(icon('plus') + ' Add parts', 'add-part', 'primary') +
+        btn('Import Parts List', 'nav', 'outline', 'Import & Export')
     ) +
     tabs +
     stockTabs();
@@ -459,7 +460,7 @@ function supplyCards() {
               '</p><div class="actions">' +
               btn(s.kind === 'Consumable' ? 'Update amount / edit' : 'Edit item', 'edit-supply', 'small', s.id) +
               btn(s.archived ? 'Restore' : 'Archive…', 'archive-supply', 'small', s.id) +
-              btn('Delete…', 'delete-supply', 'small danger', s.id) +
+              binBtn('Delete supply…', 'delete-supply', s.id) +
               '</div>' +
               (s.history.length
                 ? '<details class="mt"><summary>Amount history (' +

@@ -107,7 +107,7 @@ function renderLibrary() {
     heading(
       'Library',
       'Correct spellings and merge duplicates while preserving historical snapshots.',
-      btn('Add option', 'add-choice', 'primary') + btn('Refresh', 'reload-choices')
+      btn('Add option', 'add-choice', 'primary') + btn('Refresh', 'reload-choices', 'outline')
     ) +
     libraryTabs() +
     `<div class="library-layout">${libraryRail()}<div class="library-content"><div class="toolbar"><label class="field">Field<select id="library-field">${choiceCatalogue.choices.map(f => `<option value="${f.key}" ${f.key === choiceField ? 'selected' : ''}>${esc(f.group + ' · ' + (f.key.startsWith('tech_') ? columnLabel(f.key) : f.label))}</option>`).join('')}</select></label><label class="search">${icon('search')}<input id="choice-search" placeholder="Find a value or previous spelling…" value="${esc(choiceQuery)}" aria-label="Find reusable choices"></label></div><div class="note info">Renames update suggestions. You can also correct matching current car values after reviewing the changes. Saved setups, test records, factory references and previous history stay unchanged. Inventory component names are managed in Parts.</div><div id="choice-results">${renderChoiceRows()}</div></div></div>`

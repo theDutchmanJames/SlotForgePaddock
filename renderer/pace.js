@@ -128,7 +128,7 @@ function paceEvidence(id) {
       ['Median', timingSeconds(run.median)],
       ['Best 5-lap average', timingSeconds(run.sustained5)],
       ['Best 10-lap average', timingSeconds(run.sustained10)]
-    ])}<h3 class="mt">Captured specifications</h3>${dl(Object.entries(run.technical || {}).map(([k, v]) => [techLabels[k] || k, v]))}<p class="tiny muted">This is the configuration saved with the run, not the car’s current setup. Missing conditions stay unknown.</p><div class="actions">${btn('Back to comparison', 'pace-back')}</div>`,
+    ])}<h3 class="mt">Captured specifications</h3>${dl(Object.entries(run.technical || {}).map(([k, v]) => [techLabels[k] || k, v]))}<p class="tiny muted">This is the configuration saved with the run, not the car’s current setup. Missing conditions stay unknown.</p><div class="actions">${btn('Back to comparison', 'pace-back', 'outline')}</div>`,
     null
   );
 }

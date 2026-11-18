@@ -208,7 +208,7 @@ function renderBuild(tabs = '') {
     heading(
       'Build from Scratch',
       'Plan a car using stock or catalogue parts. Buy what is missing, then build.',
-      btn('Refresh stock', 'build-refresh-stock') +
+      btn('Refresh stock', 'build-refresh-stock', 'outline') +
         btn('Saved drafts (' + db.buildDrafts.length + ')', 'build-drafts') +
         btn('New build', 'build-new') +
         btn('Rebuild an existing car…', 'rebuild-start')
@@ -441,7 +441,7 @@ async function buildAction(action, id) {
   if (action === 'build-drafts')
     modal(
       'Saved builds',
-      `<p class="muted">Drafts are plans with linked shopping items. They do not reserve stock and are included in complete backups.</p>${db.buildDrafts.map(d => `<div class="list-row"><div><strong>${esc(d.data.name || 'Untitled build')}</strong><div class="tiny muted">${date(d.updated)} · ${d.data.parts.length} part assignments · ${d.data.assemblies.length} assemblies</div></div><div class="actions">${btn('Open', 'build-load-draft', 'small', d.id)}${d.rebuildJobId || d.data.rebuild ? '<span class="tiny muted">Cancel in Workshop</span>' : btn('Delete', 'build-delete-draft', 'small danger', d.id)}</div></div>`).join('') || '<p class="muted">No saved drafts yet.</p>'}`,
+      `<p class="muted">Drafts are plans with linked shopping items. They do not reserve stock and are included in complete backups.</p>${db.buildDrafts.map(d => `<div class="list-row"><div><strong>${esc(d.data.name || 'Untitled build')}</strong><div class="tiny muted">${date(d.updated)} · ${d.data.parts.length} part assignments · ${d.data.assemblies.length} assemblies</div></div><div class="actions">${btn('Open', 'build-load-draft', 'small', d.id)}${d.rebuildJobId || d.data.rebuild ? '<span class="tiny muted">Cancel in Workshop</span>' : binBtn('Delete draft', 'build-delete-draft', d.id)}</div></div>`).join('') || '<p class="muted">No saved drafts yet.</p>'}`,
       null
     );
   if (action === 'build-load-draft') {

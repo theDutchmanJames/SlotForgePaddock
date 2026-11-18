@@ -122,7 +122,7 @@ function renderReviewHub() {
     'Review',
     'Incoming cars, race results, planned work and maintenance for ' + db.settings.name,
     reviewTab === 'Incoming cars'
-      ? btn('Refresh inbox', 'refresh-inbox')
+      ? btn('Refresh inbox', 'refresh-inbox', 'outline')
       : reviewTab === 'Workshop jobs'
         ? btn(icon('plus') + ' New workshop job', 'new-job', 'primary')
         : ''

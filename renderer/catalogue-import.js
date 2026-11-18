@@ -190,8 +190,8 @@ function renderCatalogueReview() {
     heading(
       'Review manufacturer catalogue',
       catalogueReview.name,
-      btn('Back to Import & Export', 'catalogue-back') +
-        btn('Refresh matches', 'catalogue-refresh') +
+      btn('Back to Import & Export', 'catalogue-back', 'outline') +
+        btn('Refresh matches', 'catalogue-refresh', 'outline') +
         btn('Discard review', 'catalogue-discard', 'danger')
     ) +
     `<div class="note info">Nothing has been imported yet. New products start at <strong>zero owned quantity</strong>. Updates change manufacturer catalogue information only; local names, stock quantities, fitted parts, photographs, notes and history stay intact. Source accuracy and physical compatibility need your review.</div>${catalogueReview.files ? `<p class="tiny muted">${catalogueReview.files.length} file(s) · ${catalogueReview.originalRows} source rows · ${catalogueReview.collapsed} identical duplicates combined. Conflicting versions require an explicit choice.</p>${catalogueReview.coverage?.length ? `<details class="note info"><summary>Research coverage notes</summary>${catalogueReview.coverage.map(c => `<p><strong>${esc(c.name)}</strong><br>${esc(c.notes)}</p>`).join('')}</details>` : ''}` : ''}<div class="toolbar"><label class="search">${icon('search')}<input id="catalogue-search" placeholder="Find products, references or categories…" value="${esc(catalogueQuery)}" aria-label="Search catalogue"></label><select id="catalogue-status" aria-label="Filter product status"><option value="">All statuses</option>${Object.entries(

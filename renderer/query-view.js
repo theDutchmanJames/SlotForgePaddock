@@ -203,7 +203,7 @@ function scheduleView() {
 }
 function viewPager(info) {
   if (!info || info.total <= info.limit) return '';
-  return `<div class="actions mt query-pagination"><button class="btn" data-action="query-prev" data-id="${info.pager || ''}" ${info.offset ? '' : 'disabled'}>Previous</button><span>${info.offset + 1}–${Math.min(info.total, info.offset + info.limit)} of ${info.total}</span><button class="btn" data-action="query-next" data-id="${info.pager || ''}" ${info.nextOffset === null ? 'disabled' : ''}>Next</button></div>`;
+  return `<div class="actions mt query-pagination">${pagerBtn('prev', 'Previous page', 'query-prev', info.pager || '', !info.offset)}<span>${info.offset + 1}–${Math.min(info.total, info.offset + info.limit)} of ${info.total}</span>${pagerBtn('next', 'Next page', 'query-next', info.pager || '', info.nextOffset === null)}</div>`;
 }
 async function queryAction(action, id) {
   if (action.startsWith('original-history-')) return false;

@@ -97,7 +97,7 @@ function renderJob() {
     j.name,
     `${m.carName} · ${JobTypes.get(j.category).label} · ${j.status}`,
     (j.status === 'active' ? btn(icon('edit') + ' Edit details', 'edit-job', '', j.id) : '') +
-      btn('All workshop jobs', 'jobs-back')
+      btn('All workshop jobs', 'jobs-back', 'outline')
   );
   if (m.revision !== db.revision)
     return (

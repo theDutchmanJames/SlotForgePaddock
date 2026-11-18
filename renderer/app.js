@@ -26,6 +26,11 @@ const icon = name =>
   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name] || uiIcons[name] || icons.car}</svg>`;
 const btn = (label, action, cls = '', id = '') =>
   `<button type="button" class="btn ${cls}" data-action="${action}"${id ? ` data-id="${esc(id)}"` : ''}>${label}</button>`;
+const iconBtn = (name, label, action, cls = '', id = '', disabled = false) =>
+  `<button type="button" class="btn small icon ${cls}" data-action="${action}"${id ? ` data-id="${esc(id)}"` : ''} aria-label="${esc(label)}" title="${esc(label)}"${disabled ? ' disabled' : ''}>${icon(name)}</button>`;
+const pagerBtn = (direction, label, action, id = '', disabled = false) =>
+  iconBtn(direction === 'prev' ? 'arrow' : 'next', label, action, 'outline', id, disabled);
+const binBtn = (label, action, id = '') => iconBtn('trash', label, action, 'danger', id);
 const badge = (text, cls = '') =>
   `<span class="badge ${cls}${cls === 'usage' ? (/collection|display/i.test(text) ? ' collecting' : /home/i.test(text) ? ' home-use' : '') : ''}">${esc(text)}</span>`;
 const date = slotforgeDomain.displayDate;
@@ -380,8 +385,8 @@ function renderProfile() {
       c.name,
       [c.number, c.maker, c.scale].filter(Boolean).join(' · '),
       local()
-        ? btn('Compare', 'car-compare', '', c.id) +
-            btn(icon('search') + ' Google', 'google-car', '', c.id) +
+        ? btn('Compare', 'car-compare', 'outline', c.id) +
+            btn(icon('search') + ' Google', 'google-car', 'outline', c.id) +
             btn('Edit details', 'edit-car', '', c.id) +
             (wish && wishlistUi && !c.archived
               ? db._view?.wishlistPurchasePending
@@ -391,7 +396,7 @@ function renderProfile() {
             btn('Add setup', 'save-setup', '', c.id) +
             (wish ? '' : btn(icon('tool') + ' Record work', 'add-work', 'primary', c.id)) +
             (!wish && !c.archived && !c.rebuild?.to ? btn('Start a Rebuild', 'rebuild-start', '', c.id) : '') +
-            btn('More', 'car-more', '', c.id)
+            btn('More', 'car-more', 'outline', c.id)
         : badge('Shared · Read only')
     ) +
     (wish
@@ -1224,7 +1229,7 @@ document.addEventListener('click', async event => {
         const c = db.cars.find(c => c.id === id);
         modal(
           'More · ' + c.name,
-          `<div class="stack">${!slotforgeDomain.isWishlist(c) && !c.archived && !c.rebuild?.to ? btn('Start rebuild…', 'rebuild-start', '', id) : ''}${mergeReviewAvailable ? btn('Merge duplicate car…', 'merge-start', '', id) : ''}${btn(slotforgeDomain.isWishlist(c) ? 'Duplicate Wishlist entry' : 'Duplicate as another physical car', 'duplicate-car', '', id)}${btn('Export this car', 'export-car', '', id)}${btn('Print / PDF…', 'reports', '', id)}${btn('Photo framing…', 'photo-focus', '', id)}${!slotforgeDomain.isWishlist(c) && canSubmit() ? btn('Send to ' + esc(net.remote.name), 'send-car', '', id) : ''}${!c.rebuild?.to ? btn(c.archived ? 'Restore from archive' : 'Archive car', 'archive-car', '', id) : ''}${btn('Research slotcar…', 'slotcar-research', '', id)}${btn('Permanently delete car…', 'car-delete', 'danger', id)}</div>`,
+          `<div class="stack">${!slotforgeDomain.isWishlist(c) && !c.archived && !c.rebuild?.to ? btn('Start rebuild…', 'rebuild-start', '', id) : ''}${mergeReviewAvailable ? btn('Merge duplicate car…', 'merge-start', '', id) : ''}${btn(slotforgeDomain.isWishlist(c) ? 'Duplicate Wishlist entry' : 'Duplicate as another physical car', 'duplicate-car', '', id)}${btn('Export this car', 'export-car', 'outline', id)}${btn('Print / PDF…', 'reports', 'outline', id)}${btn('Photo framing…', 'photo-focus', '', id)}${!slotforgeDomain.isWishlist(c) && canSubmit() ? btn('Send to ' + esc(net.remote.name), 'send-car', '', id) : ''}${!c.rebuild?.to ? btn(c.archived ? 'Restore from archive' : 'Archive car', 'archive-car', '', id) : ''}${btn('Research slotcar…', 'slotcar-research', '', id)}${btn('Permanently delete car…', 'car-delete', 'danger', id)}</div>`,
           null
         );
         return;

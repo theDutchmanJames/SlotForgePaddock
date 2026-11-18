@@ -104,7 +104,7 @@ function renderParts() {
       'Assemblies',
       'Combine components into a physical unit, ready to install.',
       btn(icon('plus') + ' Build assembly', 'add-assembly', 'primary') +
-        btn('Import Parts List', 'nav', '', 'Import & Export')
+        btn('Import Parts List', 'nav', 'outline', 'Import & Export')
     ) +
     tabs +
     `<div class="note info">Assembly components are reserved from your stock. Install, transfer or remove the whole group, or dismantle it to work with its parts separately.</div>` +

@@ -67,7 +67,7 @@ function renderAutoBackupSettings() {
     `<div class="actions mt">${btn(icon('edit') + ' Change schedule…', 'auto-backup-edit', s.enabled ? '' : 'primary')}` +
     `${btn('Choose folder…', 'auto-backup-folder')}` +
     `${s.customFolder ? btn('Use standard folder', 'auto-backup-default-folder') : ''}` +
-    `${btn('Open folder', 'auto-backup-open')}` +
+    `${btn('Open folder', 'auto-backup-open', 'outline')}` +
     `${btn(icon('database') + ' Back up now', 'auto-backup-run')}</div>` +
     '<p class="tiny muted mt">Only automatic backups of this collection are removed when there are more than you keep. Your own backups and other files in the folder are never touched. Settings here apply to this computer only.</p>';
   return panel('Automatic backups', body);

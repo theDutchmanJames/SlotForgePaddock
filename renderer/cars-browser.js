@@ -41,15 +41,13 @@ function carPagination(position) {
       ...new Set([1, pages, pageNumber - 1, pageNumber, pageNumber + 1].filter(n => n >= 1 && n <= pages))
     ].sort((a, b) => a - b);
   let previous = 0;
-  return `<nav class="cars-pagination" aria-label="Car pages ${position}"><button type="button" class="btn" data-action="query-prev" ${i.offset ? '' : 'disabled'} aria-label="Previous page">${icon('arrow')} Previous</button>${numbers
+  return `<nav class="cars-pagination" aria-label="Car pages ${position}">${pagerBtn('prev', 'Previous page', 'query-prev', '', !i.offset)}${numbers
     .map(n => {
       const gap = previous && n - previous > 1;
       previous = n;
       return `${gap ? '<span class="muted" aria-hidden="true">…</span>' : ''}<button type="button" class="btn ${n === pageNumber ? 'primary' : ''}" data-action="cars-page" data-id="${(n - 1) * i.limit}" aria-label="Page ${n}" ${n === pageNumber ? 'aria-current="page"' : ''}>${n}</button>`;
     })
-    .join(
-      ''
-    )}<button type="button" class="btn" data-action="query-next" ${i.nextOffset === null ? 'disabled' : ''} aria-label="Next page">Next ${icon('next')}</button></nav>`;
+    .join('')}${pagerBtn('next', 'Next page', 'query-next', '', i.nextOffset === null)}</nav>`;
 }
 function carFilterChips() {
   return `${query ? btn('Search: ' + esc(query) + ' ×', 'cars-clear-query', 'small') : ''}${usage.map(u => btn(esc(u) + ' ×', 'usage', 'small', u)).join('')}${archived ? btn((wishlistTab() ? 'Archived' : 'Archived / rebuilt') + ' ×', 'cars-clear-archived', 'small') : ''}${query || usage.length || archived ? btn('Clear filters', 'cars-clear-filters', 'small ghost') : ''}`;

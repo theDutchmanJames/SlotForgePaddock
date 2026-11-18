@@ -78,7 +78,7 @@ function historicalEvidenceHtml(s) {
             'Flags / reason'
           ],
           p.laps.map(l => HistoryViewModel.lap(l, p, race, true))
-        )}<div class="actions mt">${s.offset ? btn('Previous evidence laps', 'history-evidence-prev') : ''}${p.lapPage.nextOffset !== null ? btn('Next evidence laps', 'history-evidence-next') : ''}</div>`
+        )}<div class="actions mt">${s.offset ? pagerBtn('prev', 'Previous evidence laps', 'history-evidence-prev') : ''}${p.lapPage.nextOffset !== null ? pagerBtn('next', 'Next evidence laps', 'history-evidence-next') : ''}</div>`
       : '<p>No participant.</p>';
   if (s.tab === 'Classification') {
     const table = HistoryViewModel.classification(race, b.context);

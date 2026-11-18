@@ -271,7 +271,7 @@ function renderSettingsSection() {
           ['Autosave', 'After every change']
         ]) +
           storageInfo +
-          `<div class="actions mt">${btn(icon('edit') + ' Edit preferences', 'preferences', 'primary')}${btn(icon('database') + ' Back up database', 'backup')}${btn('Export previous revision', 'backup-previous')}${btn('Reset database…', 'database-reset', 'danger')}</div><h3 class="mt">Data location</h3><div class="settings-path">${esc(dataPath)}</div><p class="tiny muted mt">Portable .sfpbackup files stream records and original media separately. Legacy JSON backups remain supported. SQLite keeps the preceding committed revision internally. Original JSON collections remain untouched after migration; restoring a backup also creates a separate recovery backup.</p>`
+          `<div class="actions mt">${btn(icon('edit') + ' Edit preferences', 'preferences', 'primary')}${btn(icon('database') + ' Back up database', 'backup')}${btn('Export previous revision', 'backup-previous', 'outline')}${btn('Reset database…', 'database-reset', 'danger')}</div><h3 class="mt">Data location</h3><div class="settings-path">${esc(dataPath)}</div><p class="tiny muted mt">Portable .sfpbackup files stream records and original media separately. Legacy JSON backups remain supported. SQLite keeps the preceding committed revision internally. Original JSON collections remain untouched after migration; restoring a backup also creates a separate recovery backup.</p>`
       )
     );
   if (settingsSection === 'Custom fields')
@@ -284,7 +284,7 @@ function renderSettingsSection() {
     db.views
       .map(
         v =>
-          `<div class="list-row"><div><strong>${esc(v.name)}</strong><div class="tiny muted">${esc(v.query || 'All cars')} · ${esc(v.mode)}</div></div><div class="actions">${btn('Open', 'open-saved-view', 'small', v.id)}${btn('Remove', 'delete-view', 'small danger', v.id)}</div></div>`
+          `<div class="list-row"><div><strong>${esc(v.name)}</strong><div class="tiny muted">${esc(v.query || 'All cars')} · ${esc(v.mode)}</div></div><div class="actions">${btn('Open', 'open-saved-view', 'small', v.id)}${binBtn('Remove saved view', 'delete-view', v.id)}</div></div>`
       )
       .join('') ||
       '<p class="muted">Save a view from Cars to remember your search, usage filters, columns and layout.</p>'

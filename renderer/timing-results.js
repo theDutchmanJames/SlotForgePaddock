@@ -26,7 +26,7 @@ async function openOriginalHistory(id, originId = null, offset = 0) {
   )
     return;
   state.result = result;
-  const nav = `<div class="actions mt">${offset ? btn('Previous', 'original-history-prev') : ''}${result.nextOffset !== null ? btn('Next', 'original-history-next') : ''}${originId ? btn('Back to sessions', 'original-history-list', '', id) : ''}</div>`;
+  const nav = `<div class="actions mt">${offset ? btn('Previous', 'original-history-prev') : ''}${result.nextOffset !== null ? btn('Next', 'original-history-next') : ''}${originId ? btn('Back to sessions', 'original-history-list', 'outline', id) : ''}</div>`;
   const status = o =>
     o.state === 'withdrawn'
       ? `<p class="note">Withdrawn · original evidence retained. ${esc(o.changeReason || '')}</p>`
