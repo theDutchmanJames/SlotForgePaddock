@@ -269,7 +269,7 @@ Download the **English catalogue research templates** as one complete kit or sep
 
 Import several completed JSON files into **one combined review**. Identical products are combined; conflicting versions require your choice. Select the categories or products you want and confirm once. New references start at **zero owned stock**; existing quantities, photos, installations and personal details stay intact. You still check product facts and compatibility—Paddock does not scrape a manufacturer's entire website automatically. [Catalogue import guide](docs/CATALOGUE-IMPORT.md).
 
-**Ready-made parts lists** for NSR, ScaleAuto and Slot.it are in the [parts-lists folder](parts-lists/README.md) and are attached to every release. They are optional and supplied separately from the app.
+**Ready-made parts lists** for 15 manufacturers (Avant Slot, BRM, Carrera, Fly, NSR, PCS, Policar, Racer Sideways, Revoslot, ScaleAuto, Scalextric, Sloting Plus, Slot.it, Staffs and Thunderslot) are in the [parts-lists folder](parts-lists/README.md) and are attached to every release. They are optional and supplied separately from the app.
 
 ### Paddock Portal: add cars from your phone or tablet
 
