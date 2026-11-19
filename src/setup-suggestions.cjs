@@ -192,7 +192,21 @@ function plan(store, p) {
 }
 function save(db, car, p) {
   const proposal = p.suggestion,
-    technical = sourceMap(car, proposal?.source);
+    fields = require('./store.cjs').TECH_FIELDS,
+    own = proposal?.specifications ?? {};
+  // Values typed in Add setup replace the source's value for that position; an empty one clears it.
+  check(
+    own &&
+      typeof own === 'object' &&
+      !Array.isArray(own) &&
+      Object.entries(own).every(([k, v]) => fields.includes(k) && typeof v === 'string' && v.length <= 2000),
+    'Invalid setup specifications.'
+  );
+  const technical = { ...sourceMap(car, proposal?.source) };
+  for (const [k, v] of Object.entries(own)) {
+    if (v.trim()) technical[k] = v.trim();
+    else delete technical[k];
+  }
   check(p.carRevision === car.revision, 'The car changed. Reopen the setup suggestions.');
   check(
     Object.values(technical).some(v => typeof v === 'string' && v.trim()),
@@ -210,7 +224,9 @@ function save(db, car, p) {
       part && slot.types.includes(part.partType),
       'The selected catalogue part is missing or has changed type. Reopen suggestions.'
     );
-    check(fingerprint(part) === row.signature, 'A selected catalogue part changed. Reopen suggestions.');
+    // A suggested part carries the fingerprint it was offered with; a part found by search is checked by type only.
+    if (row.signature !== undefined)
+      check(fingerprint(part) === row.signature, 'A selected catalogue part changed. Reopen suggestions.');
     check(
       Number.isSafeInteger(row.quantity) && row.quantity > 0 && row.quantity <= 1000,
       'Enter a whole quantity from 1 to 1000.'

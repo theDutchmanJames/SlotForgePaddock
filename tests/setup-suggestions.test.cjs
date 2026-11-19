@@ -87,3 +87,12 @@ test('large manufacturer catalogues find late exact matches with bounded suggest
  const f=fixture(t);f.s.transact(db=>{const base=db.parts.find(p=>p.id===f.motor);for(let i=0;i<2100;i++)db.parts.push({...base,id:'catalogue-'+String(i).padStart(5,'0'),name:'King motor '+i});db.parts.push({...base,id:'zz-exact',name:'Late exact motor',reference:'LAST'});db.cars.find(c=>c.id===f.car).factory.motor='Late exact motor';});
  const s=new Store(f.s.file,{deferred:true}),m=s.plan('setup.suggest',{carId:f.car}),row=m.rows.find(r=>r.slot==='motor');assert.equal(row.candidates[0].id,'zz-exact');assert.ok(row.candidateCount>2000);assert.equal(row.candidates.length,8);assert.ok(!s.deferredState.stats.loadedSections.includes('parts'));assert.ok(!s.deferredState.stats.loadedSections.includes('installations'));
 });
+test('your own specifications replace or clear source values and searched parts save without a fingerprint',t=>{
+ const f=fixture(t),m=f.s.plan('setup.suggest',{carId:f.car});
+ f.s.mutate('setup.save',{carId:m.carId,carRevision:m.carRevision,name:'Own values',suggestion:{source:'factory',rows:[{slot:'rearTyres',partId:f.tyres,quantity:2}],specifications:{pinionPart:'Slot.it 12T brass',weight:'',braids:'  Copper, 2 pairs  '}}});
+ const setup=f.s.data.setups[0];
+ assert.equal(setup.technical.pinionPart,'Slot.it 12T brass');assert.equal(setup.technical.braids,'Copper, 2 pairs');assert.equal(setup.technical.weight,undefined);assert.equal(setup.technical.motor,'King Evo');assert.equal(setup.technical.rearTyres,'Supergrip');assert.equal(setup.installations[0].partId,f.tyres);
+ for(const bad of [{notAField:'x'},{motor:5},['motor'],{motor:'x'.repeat(2001)}])assert.throws(()=>f.s.mutate('setup.save',{carId:m.carId,carRevision:f.s.data.cars.find(c=>c.id===f.car).revision,name:'Bad',suggestion:{source:'factory',rows:[],specifications:bad}}),/Invalid setup specifications/);
+ const blank=f.act('car.save',{data:{name:'Blank racer',maker:'NSR'}});const b=f.s.plan('setup.suggest',{carId:blank});
+ f.s.mutate('setup.save',{carId:blank,carRevision:b.carRevision,name:'Typed only',suggestion:{source:'factory',rows:[],specifications:{motor:'Shark 25K'}}});assert.equal(f.s.data.setups[0].technical.motor,'Shark 25K');
+});

@@ -1,0 +1,114 @@
+/* Add setup, after docs/ui-reference/add-setup-2026-11 option D: a compact starting-point switch, grouped
+   position rows with specifications you can type over, part links from a popover, and a live setup sheet. */
+#dialog:has(.setup-sheet){width:min(1300px,96vw);max-width:96vw;height:min(900px,92vh);max-height:92vh;overflow:hidden}
+#dialog:has(.setup-sheet)>form{display:flex;flex-direction:column;height:100%}
+#dialog:has(.setup-sheet)>form>.dialog-head,#dialog:has(.setup-sheet)>form>.dialog-footer{flex:none}
+#dialog:has(.setup-sheet)>form>.dialog-body{display:flex;flex-direction:column;flex:1;min-height:0;max-height:none;padding:0;overflow:hidden}
+#dialog:has(.setup-sheet) #form-error{flex:none;margin:6px 24px}
+#dialog:has(.setup-sheet) .dialog-head{gap:12px}
+.ss-car{flex:none;width:64px;height:40px;border-radius:7px;overflow:hidden;border:1px solid color-mix(in srgb,var(--line) 70%,transparent);background:color-mix(in srgb,var(--ink) 6%,var(--panel))}
+.ss-car img{display:block;width:100%;height:100%;object-fit:cover}
+.ss-car .placeholder,.ss-card-pic .placeholder{min-height:0;height:100%;gap:0}.ss-car .placeholder svg,.ss-card-pic .placeholder svg{width:26px;height:18px}.ss-car .placeholder span,.ss-card-pic .placeholder span{display:none}
+.ss-car-name{font-size:12.5px;color:var(--muted)}
+#dialog:has(.setup-sheet) .dialog-head [data-action="close-modal"]{margin-left:auto}
+#dialog:has(.setup-sheet) .dialog-footer{align-items:center}
+.ss-summary{margin-right:auto;font-size:12.5px;color:var(--muted)}.ss-summary b{color:var(--ink);font-family:var(--font-mono)}
+.setup-sheet{display:flex;flex-direction:column;flex:1;min-height:0}
+.setup-sheet .eye{font:600 10px "Segoe UI",system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+
+/* top: start from, name, notes */
+.ss-top{display:grid;grid-template-columns:auto minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:end;flex:none;padding:12px 22px;border-bottom:1px solid color-mix(in srgb,var(--line) 70%,transparent)}
+.ss-start .eye{margin-bottom:6px}
+.ss-src{display:inline-flex;gap:2px;padding:3px;border:1px solid var(--line);border-radius:10px;background:color-mix(in srgb,var(--bg) 60%,var(--panel))}
+.ss-src>button{display:flex;flex-direction:column;align-items:flex-start;min-width:140px;padding:5px 12px;border:0;border-radius:7px;background:transparent;box-shadow:none;color:var(--muted);font-size:12.5px;text-align:left;line-height:1.25}
+.ss-src>button small{font:500 10.5px var(--font-mono);color:var(--muted)}
+.ss-src>button:hover{background:color-mix(in srgb,var(--ink) 6%,transparent);color:var(--ink)}
+.ss-src>button.on{background:color-mix(in srgb,var(--ink) 12%,var(--panel));color:var(--ink);font-weight:600}
+.ss-src>button.on small{color:var(--green)}
+.ss-top .field{display:grid;gap:5px;margin:0}
+.ss-top .field input{min-height:34px}
+
+/* left: positions */
+.ss-body{display:flex;flex:1;min-height:0}
+.ss-main{flex:1;min-width:0;overflow:auto;padding:2px 22px 18px}
+.ss-loading{padding:20px 8px;color:var(--muted)}
+.ss-grp{display:flex;align-items:center;gap:10px;margin:14px 0 4px;font:600 9.5px "Segoe UI",system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.ss-grp::after{content:'';flex:1;height:1px;background:color-mix(in srgb,var(--line) 70%,transparent)}
+.ss-group:not(:has(.ss-row:not([hidden]))){display:none}
+.ss-row{display:grid;grid-template-columns:150px minmax(0,1fr) minmax(0,300px) 92px;gap:12px;align-items:center;padding:5px 8px;border-radius:9px}
+.ss-row[hidden]{display:none}
+.ss-row:hover{background:color-mix(in srgb,var(--ink) 3%,transparent)}
+.ss-pos{font-size:13px;font-weight:600}
+.ss-spec{position:relative}
+#dialog .ss-spec input{width:100%;min-height:32px;padding:4px 74px 4px 10px;border:1px solid transparent;border-radius:7px;background:color-mix(in srgb,var(--bg) 55%,var(--panel));font:500 12.5px var(--font-mono);color:var(--ink)}
+#dialog .ss-spec input:hover{border-color:var(--line)}
+#dialog .ss-spec input:focus{border-color:var(--blue);outline:none}
+.ss-own{position:absolute;right:9px;top:50%;transform:translateY(-50%);display:none;font-size:10.5px;font-weight:700;color:var(--amber);pointer-events:none}
+.ss-row.own .ss-own{display:block}
+#dialog .ss-row.own .ss-spec input{border-color:color-mix(in srgb,var(--amber) 55%,var(--line));background:color-mix(in srgb,var(--amber) 7%,var(--panel))}
+.ss-link-cell{min-width:0}
+.ss-link{display:flex;align-items:center;gap:8px;width:100%;min-height:32px;padding:3px 12px;border:1px solid var(--line);border-radius:999px;background:var(--panel);box-shadow:none;color:var(--ink);font-size:12px;text-align:left;overflow:hidden}
+.ss-link>*{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ss-link-ref{flex:none;margin-left:auto;font-size:10.5px;color:var(--blue)}
+.ss-link.empty{border-style:dashed;color:var(--muted)}
+.ss-link.empty b{flex:none;color:var(--blue);font-weight:600}
+.ss-link.open{border-color:var(--blue);box-shadow:0 0 0 3px color-mix(in srgb,var(--blue) 22%,transparent)}
+.ss-row.linked .ss-link{border-color:color-mix(in srgb,var(--blue) 45%,var(--line));background:color-mix(in srgb,var(--blue) 8%,var(--panel))}
+.ss-why{display:block;margin:2px 12px 0;font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ss-why:empty{display:none}
+.ss-q{display:flex;align-items:center;justify-content:flex-end;gap:3px;visibility:hidden}
+.ss-row.linked .ss-q{visibility:visible}
+.ss-q button{width:22px;height:22px;padding:0;border:1px solid var(--line);border-radius:6px;background:var(--panel);font-size:12px;line-height:1}
+#dialog .ss-q input{width:34px;min-height:22px;padding:0;border:0;background:transparent;text-align:center;font:600 12.5px var(--font-mono);-moz-appearance:textfield}
+.ss-q input::-webkit-inner-spin-button,.ss-q input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.ss-more{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin:16px 8px 0}
+.ss-more>span{margin-right:4px;font-size:12px;color:var(--muted)}
+.ss-more>button{min-height:24px;padding:1px 10px;border:1px dashed var(--line);border-radius:999px;background:transparent;font-size:11.5px;color:color-mix(in srgb,var(--ink) 85%,var(--muted))}
+.ss-more>button:hover{border-color:var(--blue);color:var(--blue)}
+.ss-help{margin:14px 8px 0;font-size:12px;color:var(--muted)}
+.ss-snapshot{max-width:620px;margin:22px 8px;padding:18px 20px;border:1px solid var(--line);border-radius:12px;background:color-mix(in srgb,var(--bg) 22%,var(--panel))}
+#dialog .ss-snapshot h3{margin:0 0 6px;font-size:20px}
+.ss-snapshot p{margin:0 0 6px;font-size:13px}
+
+/* the part search popover */
+.ss-pop{position:fixed;z-index:20;display:flex;flex-direction:column;width:380px;max-height:min(440px,70vh);border:1px solid color-mix(in srgb,var(--ink) 18%,var(--line));border-radius:12px;background:var(--panel);box-shadow:0 20px 50px rgba(0,0,0,.45);overflow:hidden}
+.ss-pop>input{flex:none;width:100%;min-height:40px;padding:0 12px;border:0;border-bottom:1px solid var(--line);border-radius:0;background:transparent;box-shadow:none;outline:none}
+.ss-pop-list{flex:1;min-height:0;overflow:auto;padding-bottom:4px}
+.ss-pop-g{padding:8px 12px 3px;font:600 9.5px "Segoe UI",system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.ss-opt{display:grid;grid-template-columns:42px minmax(0,1fr);gap:9px;align-items:center;width:100%;padding:6px 12px;border:0;border-radius:0;background:transparent;box-shadow:none;color:var(--ink);text-align:left;font-size:12px}
+.ss-opt:hover,.ss-opt:focus-visible{background:color-mix(in srgb,var(--ink) 8%,var(--panel));outline:none;box-shadow:inset 3px 0 0 var(--accent)}
+.ss-opt-pic{display:grid;place-items:center;width:42px;height:32px;border-radius:6px;overflow:hidden;background:color-mix(in srgb,var(--ink) 7%,var(--panel));color:var(--muted)}
+.ss-opt-pic img{width:100%;height:100%;object-fit:contain;background:#f4f4f2}
+.ss-opt-pic svg{width:20px;height:20px}
+.ss-opt b{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ss-opt small{display:block;font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ss-pop-none{margin:0;padding:12px;font-size:12.5px;color:var(--muted)}
+.ss-pop-foot{flex:none;display:flex;padding:8px 10px;border-top:1px solid var(--line);background:color-mix(in srgb,var(--bg) 35%,var(--panel))}
+
+/* right: the setup sheet */
+.ss-side{display:flex;flex-direction:column;flex:none;width:340px;min-height:0;border-left:1px solid var(--line);background:color-mix(in srgb,var(--bg) 22%,var(--panel))}
+.ss-sh{flex:none;padding:14px 18px 10px;border-bottom:1px solid color-mix(in srgb,var(--line) 70%,transparent)}
+#dialog .ss-sh h3{margin:2px 0 0;font-size:20px;line-height:1.05}
+.ss-sb{flex:1;min-height:0;overflow:auto;padding:12px 18px}
+.ss-card{border:1px solid var(--line);border-radius:12px;background:var(--panel);overflow:hidden}
+.ss-card-top{display:flex;gap:10px;align-items:center;padding:10px 12px;border-bottom:1px solid color-mix(in srgb,var(--line) 60%,transparent)}
+.ss-card-pic{flex:none;width:64px;height:40px;border-radius:6px;overflow:hidden;background:color-mix(in srgb,var(--ink) 6%,var(--panel))}
+.ss-card-pic img{display:block;width:100%;height:100%;object-fit:cover}
+#dialog .ss-card-top h4{margin:0;font:italic 700 17px/1.05 var(--font-cond);text-transform:uppercase;letter-spacing:.02em;overflow-wrap:anywhere}
+.ss-card-top small{font-size:11px;color:var(--muted)}
+.ss-card .g{padding:8px 12px 2px;font:600 9px "Segoe UI",system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.ss-card .r{display:grid;grid-template-columns:96px minmax(0,1fr) auto;gap:8px;align-items:center;padding:4px 12px;font-size:12px}
+.ss-card .r span{color:var(--muted)}
+.ss-card .r b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:500 12px var(--font-mono)}
+.ss-card .r i{font-style:normal;font-size:10px;font-weight:700;padding:0 6px;border-radius:999px}
+.ss-card .r i.p{color:var(--blue);background:color-mix(in srgb,var(--blue) 14%,transparent)}
+.ss-card .r i.e{color:var(--amber);background:color-mix(in srgb,var(--amber) 14%,transparent)}
+.ss-also{display:flex;flex-wrap:wrap;gap:4px;padding:3px 12px 4px}
+.ss-also span{padding:1px 8px;border-radius:999px;background:color-mix(in srgb,var(--ink) 6%,var(--panel));font-size:11px;color:var(--muted)}
+.ss-also b{font:500 11px var(--font-mono);color:var(--ink)}
+.ss-card-empty{margin:0;padding:12px;font-size:12.5px;color:var(--muted)}
+.ss-card .foot{margin-top:6px;padding:8px 12px 10px;border-top:1px solid color-mix(in srgb,var(--line) 60%,transparent);font-size:11.5px;color:var(--muted)}
+@media(max-width:1100px){.ss-side{width:300px}.ss-row{grid-template-columns:120px minmax(0,1fr) minmax(0,220px) 84px}.ss-src>button{min-width:0}}
+@media(max-width:900px){.ss-top{grid-template-columns:1fr 1fr}.ss-start{grid-column:1/-1}.ss-body{flex-direction:column;overflow:auto}.ss-main{overflow:visible}.ss-side{width:auto;border-left:0;border-top:1px solid var(--line)}.ss-row{grid-template-columns:110px minmax(0,1fr);gap:6px 10px}.ss-link-cell{grid-column:2}.ss-q{grid-column:2;justify-content:flex-start}}
+/* smaller windows: the part link goes under the specification, so neither gets squeezed */
+@media(max-width:1100px) and (min-width:901px){.ss-row{grid-template-columns:110px minmax(0,1fr) 84px;gap:4px 10px}.ss-link-cell{grid-column:2;grid-row:2}.ss-q{grid-column:3;grid-row:1/span 2}}
