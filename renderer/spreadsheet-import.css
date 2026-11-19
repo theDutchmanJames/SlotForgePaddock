@@ -61,3 +61,55 @@
 .sheet-field-option{width:100%;display:flex;justify-content:space-between;gap:10px;align-items:center;text-align:left;padding:10px;border:1px solid transparent;border-radius:6px;background:var(--panel);color:var(--ink);font:inherit;cursor:pointer}.sheet-field-option small{display:block;font-size:11px;color:var(--muted)}.sheet-field-option:hover{background:var(--raised)}.sheet-field-option[aria-pressed=true]{border-color:var(--blue);background:color-mix(in srgb,var(--blue) 10%,var(--panel))}
 @media(max-width:650px){.sheet-steps{gap:8px}.sheet-steps>span{font-size:11px}.sheet-steps .sheet-step-arrow{display:none}.sheet-picker-search{grid-template-columns:1fr}#dialog:has(.sheet-import) .dialog-body{padding:16px}.sheet-field-table{table-layout:auto;min-width:480px}.sheet-footer-summary{width:100%}#dialog:has(.sheet-import) .dialog-footer>.actions{justify-content:flex-end;width:100%}}
 
+
+/* Fit the sheet to the window (after SlotForgeRestyle.md's Workshop Window): while a step shows the
+   spreadsheet, the window takes almost the whole screen and only the sheet scrolls. Steps and file share
+   one line, the sheet's rows are a compact 40px (SHEET_ROW in spreadsheet-import.js). */
+.sheet-topbar{display:flex;align-items:center;justify-content:space-between;gap:10px 24px;flex-wrap:wrap;padding-bottom:12px;margin-bottom:14px;border-bottom:1px solid var(--line)}
+.sheet-topbar .sheet-steps{margin:0}
+.sheet-topbar .sheet-steps>span{padding-bottom:0;border-bottom:0}
+.sheet-topbar .sheet-steps [aria-current=step]{border-bottom:0}
+.sheet-topbar .sheet-file-line{margin:0;justify-content:flex-end;gap:4px 12px;font-size:12px}
+.sheet-topbar .sheet-file-line strong{font:500 12px var(--font-mono)}
+.sheet-intro{display:flex;align-items:baseline;gap:4px 16px;flex-wrap:wrap;margin:0 0 12px}
+.sheet-intro h3{margin:0;font-size:19px}
+.sheet-intro p{margin:0;color:var(--muted);font-size:13px}
+.sheet-intro p strong{color:var(--ink)}
+#dialog:has(.sheet-grid){width:min(1560px,97vw);max-width:97vw;max-height:96vh;overflow:hidden}
+#dialog:has(.sheet-grid)>form{max-height:calc(96vh - 4px)}
+#dialog:has(.sheet-grid)>form>.dialog-body{display:flex;flex-direction:column;flex:0 1 auto;min-height:0;overflow:hidden;padding:14px 22px 12px}
+#dialog:has(.sheet-grid) .sheet-import{display:flex;flex-direction:column;flex:0 1 auto;min-height:0}
+#dialog:has(.sheet-grid) .sheet-import>*{flex:none}
+#dialog:has(.sheet-grid) .sheet-import>.sheet-file-options,#dialog:has(.sheet-grid) .sheet-import>.sheet-format-options{margin:0 0 12px}
+#dialog:has(.sheet-grid) .sheet-import>.sheet-grid-frame{display:flex;flex-direction:column;flex:0 1 auto;min-height:180px}
+#dialog:has(.sheet-grid) .sheet-grid-scroll{flex:0 1 auto;min-height:0;max-height:none;scroll-padding-left:56px;scroll-padding-top:100px}
+#dialog:has(.sheet-grid) #sheet-mapping-status:empty,#dialog:has(.sheet-grid) #sheet-scroll-status:empty{display:none}
+#dialog:has(.sheet-grid) #sheet-scroll-status{margin:6px 0 0}
+#dialog:has(.sheet-grid) .sheet-blockers{max-height:28vh;overflow:auto}
+/* compact cells */
+.sheet-grid .sheet-data-row{height:40px}
+.sheet-cell-text{height:39px;max-height:39px;padding:0 12px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;line-height:39px}
+.sheet-grid thead th{padding:8px 12px}
+.sheet-grid .sheet-map-cell{padding:6px 8px}
+.sheet-grid .sheet-map-cell>small{display:none}
+.sheet-map-button{min-height:40px;padding:5px 9px;border-radius:7px}
+.sheet-map-button strong{display:block;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sheet-map-button small{margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sheet-map-button>span:first-child{min-width:0}
+.sheet-grid .sheet-row-number{vertical-align:middle;font-family:var(--font-mono);font-size:11px}
+.sheet-grid thead .sheet-row-number{font:600 9.5px "Segoe UI",system-ui,sans-serif;letter-spacing:.1em;text-transform:uppercase}
+.sheet-grid thead tr:first-child>*{background:var(--raised)}
+.sheet-grid-note{padding:7px 12px;border-top:1px solid var(--line)}
+@media(max-width:650px){#dialog:has(.sheet-grid)>form>.dialog-body{padding:12px 14px}.sheet-topbar .sheet-file-line{justify-content:flex-start}}
+/* review step: the filters as a quiet switch, the page line joined to the table */
+.sheet-review-toolbar{margin:0 0 12px}
+.sheet-review-toolbar>.actions:first-child{gap:2px;padding:3px;border:1px solid var(--line);border-radius:10px;background:color-mix(in srgb,var(--bg) 60%,var(--panel))}
+.sheet-review-toolbar>.actions:first-child>.btn{min-height:28px;border:0;border-radius:7px;background:transparent;box-shadow:none;color:var(--muted);font-weight:400}
+.sheet-review-toolbar>.actions:first-child>.btn:hover{background:color-mix(in srgb,var(--ink) 6%,transparent);color:var(--ink)}
+.sheet-review-toolbar>.actions:first-child>.btn.sheet-tab-selected{border:0;background:color-mix(in srgb,var(--ink) 12%,var(--panel));color:var(--ink);font-weight:600}
+.sheet-review-wrap{border-bottom-left-radius:0;border-bottom-right-radius:0}
+.sheet-review-wrap+.sheet-grid-note{border:1px solid var(--line);border-top:0;border-radius:0 0 10px 10px}
+/* "Before you can continue": a quiet sheet with an accent rule, the problems as slim rows */
+.sheet-blockers{margin:0 0 12px;padding:12px 14px;border:1px solid var(--line);border-left:2px solid var(--accent);border-radius:10px;background:color-mix(in srgb,var(--accent) 5%,var(--panel))}
+.sheet-blockers h4{font-size:14px}
+.sheet-blockers li{padding:8px 12px;border-radius:8px;background:color-mix(in srgb,var(--bg) 30%,var(--panel))}

@@ -6,6 +6,8 @@ let spreadsheetView = null,
   sheetDetail = null,
   sheetChanging = false;
 const sheetCall = (action, p = {}) => api('file', 'spreadsheet.' + action, p);
+// one spreadsheet row in the preview grid, in px (spreadsheet-import.css keeps the same height)
+const SHEET_ROW = 40;
 function sheetOptions(items, value) {
   return items
     .map(
@@ -67,7 +69,7 @@ function sheetGridRows(v, rows, offset, mapping) {
     rows
       .map(
         r =>
-          `<tr class="sheet-data-row" data-source-row="${r.row}"><th scope="row" class="sheet-row-number">${r.row}</th>${r.cells.map((value, i) => `<td data-sheet-column="${i}" class="${mapping && !v.config.mapping[i] ? 'sheet-ignored' : ''}"><div class="sheet-cell-text">${esc(value)}</div></td>`).join('')}</tr>`
+          `<tr class="sheet-data-row" data-source-row="${r.row}"><th scope="row" class="sheet-row-number">${r.row}</th>${r.cells.map((value, i) => `<td data-sheet-column="${i}" class="${mapping && !v.config.mapping[i] ? 'sheet-ignored' : ''}"><div class="sheet-cell-text" title="${esc(value)}">${esc(value)}</div></td>`).join('')}</tr>`
       )
       .join('') +
     spacer(Math.max(0, v.previewTotal - offset - rows.length))
@@ -75,7 +77,7 @@ function sheetGridRows(v, rows, offset, mapping) {
 }
 function sheetSizeSpacers(root) {
   root.querySelectorAll('[data-sheet-space]').forEach(e => {
-    e.style.height = Number(e.dataset.sheetSpace) * 64 + 'px';
+    e.style.height = Number(e.dataset.sheetSpace) * SHEET_ROW + 'px';
   });
 }
 function sheetBindGrid(v, mapping) {
@@ -119,7 +121,7 @@ function sheetBindGrid(v, mapping) {
       scheduled = true;
       requestAnimationFrame(() => {
         scheduled = false;
-        const index = Math.floor(scroller.scrollTop / 64);
+        const index = Math.floor(scroller.scrollTop / SHEET_ROW);
         wanted = Math.min(
           Math.max(0, Math.floor((index - 10) / 40) * 40),
           Math.max(0, Math.floor((v.previewTotal - 1) / 40) * 40)
@@ -309,7 +311,7 @@ function showSpreadsheet(v, step) {
   if (v.state === 'mapping') {
     modal(
       'Import your cars',
-      `<div data-spreadsheet="${esc(v.id)}" class="sheet-import">${sheetSteps(sheetStep)}${warning}<h3>${sheetStep === 1 ? 'Check your file' : 'Where should each column go?'}</h3><p>${sheetStep === 1 ? 'One car per row. Your column names can stay exactly as they are.' : 'Read down each column: <strong>your heading → Paddock field → your data.</strong> Click an assignment to change it.'}</p>${fileline}${sheetStep === 1 ? sheetFileOptions(v) : '<div id="sheet-blockers" class="sheet-blockers" role="region" aria-labelledby="sheet-blockers-title" tabindex="-1" hidden></div><p id="sheet-mapping-status" class="tiny" role="status"></p>'}${sheetGrid(v, sheetStep === 2)}<p class="tiny muted" id="sheet-scroll-status" role="status"></p></div>`,
+      `<div data-spreadsheet="${esc(v.id)}" class="sheet-import"><div class="sheet-topbar">${sheetSteps(sheetStep)}${fileline}</div>${warning}<div class="sheet-intro"><h3>${sheetStep === 1 ? 'Check your file' : 'Where should each column go?'}</h3><p>${sheetStep === 1 ? 'One car per row. Your column names can stay exactly as they are.' : 'Read down each column: <strong>your heading → Paddock field → your data.</strong> Click an assignment to change it.'}</p></div>${sheetStep === 1 ? sheetFileOptions(v) : '<div id="sheet-blockers" class="sheet-blockers" role="region" aria-labelledby="sheet-blockers-title" tabindex="-1" hidden></div><p id="sheet-mapping-status" class="tiny" role="status"></p>'}${sheetGrid(v, sheetStep === 2)}<p class="tiny muted" id="sheet-scroll-status" role="status"></p></div>`,
       null
     );
     if (readOnly)
@@ -334,7 +336,7 @@ function showSpreadsheet(v, step) {
     controls = !v.work && !readOnly;
   modal(
     v.state === 'complete' ? 'Spreadsheet import complete' : 'Import your cars',
-    `<div data-spreadsheet="${esc(v.id)}" class="sheet-import">${sheetSteps(3)}${warning}<h3>${v.work ? 'Importing your cars…' : v.state === 'complete' ? 'Your selected cars have been processed' : 'Choose the cars to import'}</h3><p>${v.work ? 'Progress is saved after each car. Closing this window keeps your progress in Review → Spreadsheet imports.' : v.state === 'complete' ? `${c.imported} imported · ${c.submitted} submitted for Dealership approval · ${c.skipped} left out. Submitted cars still need approval.` : 'Ticked rows will be imported. Review possible matches before choosing to update an existing car or add a separate one.'}</p>${fileline}${v.work ? `<progress aria-label="Import progress" max="${v.total || 1}" value="${v.done}"></progress>` : ''}${v.error ? `<p class="note warning">${esc(v.error)}</p>` : ''}<div class="sheet-review-toolbar"><div class="actions">${[
+    `<div data-spreadsheet="${esc(v.id)}" class="sheet-import"><div class="sheet-topbar">${sheetSteps(3)}${fileline}</div>${warning}<div class="sheet-intro"><h3>${v.work ? 'Importing your cars…' : v.state === 'complete' ? 'Your selected cars have been processed' : 'Choose the cars to import'}</h3><p>${v.work ? 'Progress is saved after each car. Closing this window keeps your progress in Review → Spreadsheet imports.' : v.state === 'complete' ? `${c.imported} imported · ${c.submitted} submitted for Dealership approval · ${c.skipped} left out. Submitted cars still need approval.` : 'Ticked rows will be imported. Review possible matches before choosing to update an existing car or add a separate one.'}</p></div>${v.work ? `<progress aria-label="Import progress" max="${v.total || 1}" value="${v.done}"></progress>` : ''}${v.error ? `<p class="note warning">${esc(v.error)}</p>` : ''}<div class="sheet-review-toolbar"><div class="actions">${[
       ['all', 'All cars'],
       ['new', 'Unmatched'],
       ['matches', 'Possible matches'],
