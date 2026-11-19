@@ -18,6 +18,7 @@ module.exports=async(win,store,network,media,services={})=>{
   const fill=async values=>js(`(()=>{const values=${JSON.stringify(values)};for(const [name,value]of Object.entries(values)){const el=document.querySelector('[name="'+name+'"]');if(!el)throw Error('Missing field '+name);el.value=value;el.dispatchEvent(new Event('input',{bubbles:true}));}})()`);
   const submit=async()=>{await js(`document.querySelector('#modal-form').requestSubmit()`);await wait(`!document.querySelector('#dialog').open`);};
   await wait(`document.body.textContent.includes('On the workbench')`);
+  if(process.argv.includes('--car-actions-only')){const checks=await require('./car-actions-smoke.cjs')({store,js,wait,click,submit});assert.deepEqual(errors,[]);fs.writeFileSync(path.join(__dirname,'../.qa','car-actions-result.json'),JSON.stringify({passed:true,checks},null,2));console.log(checks);return;}
   if(process.argv.includes('--cars-browser-only')){const ctx={win,store,js,wait,click,fill,submit,qa:path.join(__dirname,'../.qa')};const checks=await require('./cars-browser-smoke.cjs')(ctx);assert.deepEqual(errors,[]);fs.writeFileSync(path.join(ctx.qa,'cars-browser-result.json'),JSON.stringify({passed:true,checks},null,2));console.log(checks);return;}
   if(process.argv.includes('--spreadsheet-only')){const ctx={win,store,js,wait,click,qa:path.join(__dirname,'../.qa'),service:services.spreadsheetImports},checks=await require('./spreadsheet-import-smoke.cjs')(ctx);assert.deepEqual(errors,[]);fs.writeFileSync(path.join(ctx.qa,'spreadsheet-result.json'),JSON.stringify({passed:true,checks,rendererErrors:errors},null,2));console.log(checks);return;}
   if(process.argv.includes('--setup-suggestions-only')){const ctx={win,store,js,wait,click,fill,submit,qa:path.join(__dirname,'../.qa')},checks=await require('./setup-suggestions-smoke.cjs')(ctx);assert.deepEqual(errors,[]);fs.writeFileSync(path.join(ctx.qa,'setup-suggestions-result.json'),JSON.stringify({passed:true,checks,rendererErrors:errors},null,2));console.log(checks);return;}
@@ -140,6 +141,7 @@ module.exports=async(win,store,network,media,services={})=>{
   reviewChecks.push(...await require('./workshop-polish-smoke.cjs')({win,store,network,js,wait,click,fill,submit,qa,dialog}));
   reviewChecks.push(...await require('./sqlite-smoke.cjs')({win,store,js,wait,click,qa,dialog,media}));
   reviewChecks.push(...await require('./query-pages-smoke.cjs')({store,js,wait,click,fill,submit}));
+  reviewChecks.push(...await require('./car-actions-smoke.cjs')({store,js,wait,click,submit}));
   reviewChecks.push(...await require('./query-context-smoke.cjs')({store,js,wait,click,fill,submit}));
   reviewChecks.push(...await require('./backup-smoke.cjs')({win,store,network,js,wait,click,qa,dialog}));
   reviewChecks.push(...await require('./club-smoke.cjs')({win,store,network,js,wait,click,fill,submit,qa,dialog}));

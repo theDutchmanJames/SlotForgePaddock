@@ -57,3 +57,5 @@
   .showroom-hero .showroom-hero-copy{width:auto;padding:20px}
   .showroom-hero .showroom-story{background:color-mix(in srgb,var(--ink) 4%,var(--panel))}
 }
+.car-card .card-foot .btn.icon.ghost{color:var(--muted)}.car-card .card-foot .btn.icon.ghost:hover{color:var(--ink)}
+.car-action-list{max-height:220px;margin:10px 0;padding-left:20px;overflow:auto}.car-action-list li{margin:2px 0}

@@ -3,7 +3,7 @@
 const {spawnSync}=require('node:child_process');
 const path=require('node:path');
 const files=[
-  "renderer/cars-browser.js", "tests/cars-browser-smoke.cjs",
+  "renderer/cars-browser.js", "tests/cars-browser-smoke.cjs", "renderer/car-actions.js", "tests/car-actions-smoke.cjs",
   "src/spreadsheet-fields.cjs", "src/spreadsheet-parser.cjs", "src/spreadsheet-worker.cjs", "src/spreadsheet-import.cjs", "renderer/spreadsheet-import.js", "tests/spreadsheet-import.test.cjs", "tests/spreadsheet-import-smoke.cjs",
   "src/catalogue-picture-matching.cjs",
   "tests/catalogue-picture-matching.test.cjs",

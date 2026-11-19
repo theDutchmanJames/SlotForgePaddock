@@ -1,6 +1,8 @@
 // Shared presentation for the Timing-inspired collection and workshop interface.
 // Rendering uses the existing data and action handlers; no preview records live here.
 const uiIcons = {
+  archive: '<path d="M3 4h18v4H3zM5 8v12h14V8M10 12h4"/>',
+  restore: '<path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4h4"/>',
   trash: '<path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/>',
   shopping:
     '<path d="M3 3h2l3 12h11l3-9H6M8 15l-1 3h13"/><circle cx="9" cy="21" r="1"/><circle cx="19" cy="21" r="1"/>',

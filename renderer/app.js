@@ -336,7 +336,15 @@ function renderCars() {
 function renderCarResults() {
   const list = filteredCars();
   let bar = selected.size
-    ? `<div class="selection-bar"><strong>${selected.size} selected</strong>${local() ? btn('Edit selected…', 'bulk-edit', 'small primary') + btn(icon('download') + ' Export selected (' + selected.size + ')', 'export-selected', 'small primary') + btn('Compare…', 'car-compare', 'small') + (!wishlistTab() && canSubmit() ? btn(icon('share') + ' Send to club', 'send-selected', 'small') : '') : ''}${btn('Clear selection', 'clear-selection', 'small ghost')}</div>`
+    ? `<div class="selection-bar"><strong>${selected.size} selected</strong>${
+        local()
+          ? btn('Edit selected…', 'bulk-edit', 'small primary') +
+            btn(icon('download') + ' Export selected (' + selected.size + ')', 'export-selected', 'small primary') +
+            btn('Compare…', 'car-compare', 'small') +
+            carSelectionActions() +
+            (!wishlistTab() && canSubmit() ? btn(icon('share') + ' Send to club', 'send-selected', 'small') : '')
+          : ''
+      }${btn('Clear selection', 'clear-selection', 'small ghost')}</div>`
     : '';
   if (exportChoosing)
     bar =
@@ -369,7 +377,7 @@ function renderCarResults() {
     `<div class="car-grid">${list
       .map(
         c =>
-          `<article class="car-card"><label class="car-check">${check(c)}</label><button class="card-photo" data-action="open-car" data-id="${c.id}" aria-label="Open ${esc(c.name)}">${photo(c, true)}</button><div class="card-body"><button class="car-title" data-action="open-car" data-id="${c.id}">${esc(c.name)}</button>${carCardRows(c)}</div><div class="card-foot">${btn('Open', 'open-car', 'small', c.id)}<span class="spacer"></span>${c.availability && c.availability !== 'Available' ? badge(c.availability) : ''}</div></article>`
+          `<article class="car-card"><label class="car-check">${check(c)}</label><button class="card-photo" data-action="open-car" data-id="${c.id}" aria-label="Open ${esc(c.name)}">${photo(c, true)}</button><div class="card-body"><button class="car-title" data-action="open-car" data-id="${c.id}">${esc(c.name)}</button>${carCardRows(c)}</div><div class="card-foot">${btn('Open', 'open-car', 'small', c.id)}<span class="spacer"></span>${c.availability && c.availability !== 'Available' ? badge(c.availability) : ''}${carCardActions(c)}</div></article>`
       )
       .join('')}</div>`
   );
@@ -1046,6 +1054,7 @@ document.addEventListener('click', async event => {
   try {
     actionBusy = true;
     if (await carBrowserAction(action, id)) return;
+    if (await carActionsAction(action, id)) return;
     if (await spreadsheetAction(action, id)) return;
     if (await picturePreviewAction(action, id)) return;
     if (await pictureAction(action, id)) return;
