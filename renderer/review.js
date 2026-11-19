@@ -127,7 +127,7 @@ function renderReviewHub() {
         ? btn(icon('plus') + ' New workshop job', 'new-job', 'primary')
         : ''
   );
-  const nav = `<div class="tabs review-tabs" aria-label="Review sections">${tabs.map(([name, symbol, count]) => `<button type="button" data-action="review-tab" data-id="${name}" class="${reviewTab === name ? 'active' : ''}" aria-pressed="${reviewTab === name}">${icon(symbol)}${name === 'Club changes' ? 'Dealership changes' : name} ${count === null ? '' : '<span class="badge">' + count + '</span>'}</button>`).join('')}</div>`;
+  const nav = `<div class="tabs review-tabs" aria-label="Review sections">${tabs.map(([name, symbol, count]) => `<button type="button" data-action="review-tab" data-id="${name}" class="${reviewTab === name ? 'active' : ''}" aria-pressed="${reviewTab === name}">${icon(symbol)}${name === 'Club changes' ? 'Dealership changes' : name} ${count === null ? '' : '<span class="badge review-count' + (count ? ' has-items' : '') + '">' + count + '</span>'}</button>`).join('')}</div>`;
   if (reviewTab === 'Car merges' && mergeReviewAvailable) return head + nav + renderMergeHub();
   if (reviewTab === 'Spreadsheet imports') return head + nav + renderSpreadsheetImports();
   if (reviewTab === 'Timing collection') return head + nav + renderTimingCollection();

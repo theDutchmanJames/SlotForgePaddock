@@ -1,0 +1,21 @@
+/* Review, after SlotForgeRestyle.md: the sections as one quiet, wrapping switch whose counts turn amber when
+   something waits; neutral cards (the job cards share the Workshop look), plain notes. */
+#main[data-page="Review"] .review-tabs{display:flex;flex-wrap:wrap;gap:2px;width:fit-content;max-width:100%;margin:0 0 20px;padding:3px;border:1px solid var(--line);border-radius:10px;background:color-mix(in srgb,var(--bg) 60%,var(--panel))}
+#main[data-page="Review"] .review-tabs button{display:inline-flex;align-items:center;gap:7px;min-height:30px;padding:4px 11px;border:0;border-radius:7px;background:transparent;box-shadow:none;color:var(--muted);font-size:13px;font-weight:400}
+#main[data-page="Review"] .review-tabs button:hover{background:color-mix(in srgb,var(--ink) 6%,transparent);color:var(--ink)}
+#main[data-page="Review"] .review-tabs button.active{background:color-mix(in srgb,var(--ink) 12%,var(--panel));border:0;box-shadow:none;color:var(--ink);font-weight:600}
+#main[data-page="Review"] .review-tabs button svg{width:15px;height:15px}
+#main[data-page="Review"] .review-tabs button.active svg{color:var(--accent)}
+#main[data-page="Review"] .review-tabs .review-count{min-width:20px;padding:0 6px;border:0;border-radius:999px;background:color-mix(in srgb,var(--ink) 8%,var(--panel));color:var(--muted);font:500 11px var(--font-mono);text-align:center}
+#main[data-page="Review"] .review-tabs .review-count.has-items{background:var(--amber);color:#1a1205;font-weight:700}
+#main[data-page="Review"] .note.info{border:0;border-left:2px solid color-mix(in srgb,var(--accent) 55%,var(--line));border-radius:0;background:none;box-shadow:none;padding:4px 0 4px 12px;color:var(--muted);font-size:12.5px}
+#main[data-page="Review"] .panel{border:1px solid var(--line);border-top:1px solid var(--line);border-radius:12px;box-shadow:none}
+#main[data-page="Review"] .panel+.panel{margin-top:12px}
+#main[data-page="Review"] .panel-heading{padding:14px 18px 4px;border:0;background:none}
+#main[data-page="Review"] .panel-heading h2{font-size:20px}
+#main[data-page="Review"] .panel-heading h2 svg{width:20px;height:20px;padding:3px;border-radius:6px;color:var(--muted);background:color-mix(in srgb,var(--ink) 8%,var(--panel))}
+#main[data-page="Review"] .panel-content{padding:6px 18px 14px}
+#main[data-page="Review"] .panel-content .actions .btn{min-height:28px;padding:3px 10px;font-size:12.5px}
+#main[data-page="Review"] .review-maintenance-card{border-top:1px solid var(--line)}
+#main[data-page="Review"] th{background:none;color:var(--muted);font:600 10px "Segoe UI",system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase;white-space:nowrap}
+#main[data-page="Review"] .table-wrap{border:1px solid var(--line);border-radius:10px;box-shadow:none}

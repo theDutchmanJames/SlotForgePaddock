@@ -4,11 +4,11 @@
 .workshop-tabs .btn svg{width:15px;height:15px}
 
 /* jobs */
-#main[data-page="Workshop"] .job-queue-card,#main[data-page="Workshop"] .job-queue-card[class*="job-tone-"]{border:1px solid var(--line);border-top:1px solid var(--line);border-radius:12px;box-shadow:none;background:var(--panel)}
+#main[data-page="Workshop"] .job-queue-card,#main[data-page="Workshop"] .job-queue-card[class*="job-tone-"],#main[data-page="Review"] .job-queue-card,#main[data-page="Review"] .job-queue-card[class*="job-tone-"]{border:1px solid var(--line);border-top:1px solid var(--line);border-radius:12px;box-shadow:none;background:var(--panel)}
 #main[data-page="Workshop"] .job-queue-card:hover{border-color:color-mix(in srgb,var(--job-tone,var(--ink)) 45%,var(--line))}
-#main[data-page="Workshop"] .job-queue-card .job-kind{border:0;background:color-mix(in srgb,var(--job-tone,var(--amber)) 16%,transparent)}
-#main[data-page="Workshop"] .job-car-name{font:italic 700 21px/1.05 var(--font-cond);text-transform:uppercase;letter-spacing:.02em}
-#main[data-page="Workshop"] .job-queue-footer{margin:auto -18px -18px;padding:9px 18px;border-top:1px solid var(--line);border-radius:0 0 12px 12px;background:color-mix(in srgb,var(--bg) 50%,var(--panel))}
+#main[data-page="Review"] .job-queue-card .job-kind,#main[data-page="Workshop"] .job-queue-card .job-kind{border:0;background:color-mix(in srgb,var(--job-tone,var(--amber)) 16%,transparent)}
+#main[data-page="Review"] .job-car-name,#main[data-page="Workshop"] .job-car-name{font:italic 700 21px/1.05 var(--font-cond);text-transform:uppercase;letter-spacing:.02em}
+#main[data-page="Review"] .job-queue-footer,#main[data-page="Workshop"] .job-queue-footer{margin:auto -18px -18px;padding:9px 18px;border-top:1px solid var(--line);border-radius:0 0 12px 12px;background:color-mix(in srgb,var(--bg) 50%,var(--panel))}
 #main[data-page="Workshop"] .job-queue-heading h2 .badge{font-family:var(--font-mono)}
 #main[data-page="Workshop"] .workshop-panels .panel,#main[data-page="Workshop"] .section-panel{border-top:1px solid var(--line);box-shadow:none}
 
