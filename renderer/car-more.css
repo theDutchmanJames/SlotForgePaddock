@@ -1,0 +1,15 @@
+/* The car's More menu, after docs/ui-reference/more-menu-2026-11 option A: a drop-down under the button,
+   grouped actions with an icon and one line each, Permanently delete set apart in red. */
+.car-more-menu{position:fixed;z-index:60;width:380px;max-width:calc(100vw - 16px);overflow:auto;padding:6px;border:1px solid color-mix(in srgb,var(--ink) 18%,var(--line));border-radius:14px;background:var(--panel);box-shadow:0 24px 60px rgba(0,0,0,.5)}
+.car-more-group{padding:8px 10px 3px;font:600 9.5px "Segoe UI",system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.car-more-item{--t:var(--ink);display:flex;align-items:center;gap:11px;width:100%;min-height:0;padding:7px 10px;border:0;border-radius:9px;background:transparent;box-shadow:none;color:var(--ink);text-align:left;cursor:pointer}
+.car-more-item[data-tone=amber]{--t:var(--amber)}.car-more-item[data-tone=blue]{--t:var(--blue)}.car-more-item[data-tone=green]{--t:var(--green)}.car-more-item[data-tone=violet]{--t:var(--purple,#a88cda)}.car-more-item[data-tone=red]{--t:var(--accent)}
+.car-more-item:hover,.car-more-item:focus-visible{background:color-mix(in srgb,var(--ink) 8%,var(--panel));outline:none}
+.car-more-item i{display:grid;place-items:center;flex:none;width:30px;height:30px;border-radius:8px;color:var(--t);background:color-mix(in srgb,var(--t) 14%,var(--panel))}
+.car-more-item i svg{width:16px;height:16px}
+.car-more-item b{display:block;font-size:13px;font-weight:600}
+.car-more-item small{display:block;font-size:11.5px;color:var(--muted)}
+.car-more-item.danger b{color:var(--accent)}
+.car-more-item.danger:hover,.car-more-item.danger:focus-visible{background:color-mix(in srgb,var(--accent) 10%,var(--panel))}
+.car-more-sep{height:1px;margin:6px 4px;background:color-mix(in srgb,var(--line) 70%,transparent)}
+[data-action="car-more"].on{border-color:color-mix(in srgb,var(--ink) 40%,var(--line));background:color-mix(in srgb,var(--ink) 10%,var(--panel))}

@@ -1256,15 +1256,9 @@ document.addEventListener('click', async event => {
       case 'delete-view':
         await change('view.delete', { id });
         break;
-      case 'car-more': {
-        const c = db.cars.find(c => c.id === id);
-        modal(
-          'More · ' + c.name,
-          `<div class="stack">${!slotforgeDomain.isWishlist(c) && !c.archived && !c.rebuild?.to ? btn('Start rebuild…', 'rebuild-start', '', id) : ''}${mergeReviewAvailable ? btn('Merge duplicate car…', 'merge-start', '', id) : ''}${btn(slotforgeDomain.isWishlist(c) ? 'Duplicate Wishlist entry' : 'Duplicate as another physical car', 'duplicate-car', '', id)}${btn('Export this car', 'export-car', 'outline', id)}${btn('Print / PDF…', 'reports', 'outline', id)}${btn('Photo framing…', 'photo-focus', '', id)}${!slotforgeDomain.isWishlist(c) && canSubmit() ? btn('Send to ' + esc(net.remote.name), 'send-car', '', id) : ''}${!c.rebuild?.to ? btn(c.archived ? 'Restore from archive' : 'Archive car', 'archive-car', '', id) : ''}${btn('Research slotcar…', 'slotcar-research', '', id)}${btn('Permanently delete car…', 'car-delete', 'danger', id)}</div>`,
-          null
-        );
+      case 'car-more':
+        toggleCarMore(id);
         return;
-      }
       case 'duplicate-car':
         carId = await change('car.duplicate', { id });
         $('#dialog').close();

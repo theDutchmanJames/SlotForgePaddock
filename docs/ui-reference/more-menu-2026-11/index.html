@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>More menu redesign</title>
+<!-- The car photo comes from .qa/preview-cars (ignored by git), made from the local library; it is not part of the repository. -->
+<style>
+@font-face{font-family:'SF Barlow Condensed';src:url('../../../renderer/fonts/barlowcondensed/BarlowCondensed-BoldItalic.ttf') format('truetype');font-weight:700;font-style:italic}
+@font-face{font-family:'SF Roboto Mono';src:url('../../../renderer/fonts/robotomono/RobotoMono[wght].ttf') format('truetype');font-weight:100 700}
+:root{--bg:#171b21;--panel:#222831;--raised:#2a313b;--ink:#e8e6e1;--ink2:#c4c8ce;--muted:#98a0ab;--faint:#6b7380;--line:#343b47;--line2:#2b313b;--accent:#e5484d;--ok:#3ecf8e;--amber:#edbd6a;--blue:#79b5ed;--violet:#a88cda;--green:#67c79b;
+  --cond:'SF Barlow Condensed','Bahnschrift',sans-serif;--mono:'SF Roboto Mono',Consolas,monospace;--ui:'Segoe UI',system-ui,sans-serif;color-scheme:dark}
+[data-theme=light]{--bg:#f1efea;--panel:#fff;--raised:#f0eee9;--ink:#1d2229;--ink2:#3a414c;--muted:#656c76;--faint:#8a929d;--line:#d9d6cf;--line2:#e6e3dd;--accent:#c92424;--amber:#a7741c;--blue:#236db4;--ok:#1f9a62;--green:#187a50;--violet:#7950a6;color-scheme:light}
+*{box-sizing:border-box}html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:13.5px/1.45 var(--ui);overflow:hidden}
+button{font:inherit;color:inherit}
+.mono{font-family:var(--mono);font-weight:500}
+h1,h2,h3,h4{font-family:var(--cond);font-style:italic;font-weight:700;text-transform:uppercase;letter-spacing:.02em;margin:0}
+.eye{font:600 10px var(--ui);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.muted{color:var(--muted)}.grow{flex:1}
+.switch{position:relative;z-index:50;display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;height:46px;padding:0 20px;background:var(--bg);border-bottom:1px solid var(--line2)}
+.switch b{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.switch p{margin:0 0 0 auto;font-size:12px;color:var(--faint)}
+.seg{display:inline-flex;gap:2px;padding:3px;border:1px solid var(--line);border-radius:9px;background:color-mix(in srgb,var(--bg) 60%,var(--panel))}
+.seg button{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 11px;border:0;border-radius:6px;background:transparent;color:var(--muted);font-size:12.5px;cursor:pointer;white-space:nowrap}
+.seg button.on{background:color-mix(in srgb,var(--ink) 12%,var(--panel));color:var(--ink);font-weight:600}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:32px;padding:5px 12px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);font-size:13px;white-space:nowrap;cursor:pointer}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}.btn.ghost{background:transparent;border-color:transparent;color:var(--muted)}.btn.fill{background:color-mix(in srgb,var(--ink) 8%,var(--panel));border-color:transparent}
+.btn.on{border-color:color-mix(in srgb,var(--ink) 40%,var(--line));background:color-mix(in srgb,var(--ink) 10%,var(--panel))}
+/* car page behind */
+.page{position:absolute;inset:46px 0 0;padding:0}
+.chrome{display:flex;align-items:center;gap:12px;height:56px;padding:0 20px;background:var(--panel);border-bottom:1px solid var(--line)}
+.logo{width:36px;height:36px;border-radius:9px;background:var(--accent)}
+.navg{display:flex;gap:2px;padding:3px;border-radius:10px;background:color-mix(in srgb,var(--ink) 5%,var(--bg));font-size:12.5px;color:var(--ink2)}.navg span{padding:6px 10px;border-radius:7px}.navg span.on{background:color-mix(in srgb,var(--ink) 13%,var(--panel));color:var(--ink);font-weight:600}
+.carhead{display:flex;align-items:center;gap:14px;padding:22px 26px 14px}
+.carhead .ic{width:44px;height:44px;border-radius:10px;background:color-mix(in srgb,var(--accent) 16%,var(--panel));border:1px solid color-mix(in srgb,var(--accent) 35%,var(--line))}
+.carhead h1{font-size:30px;line-height:1}.carhead p{margin:3px 0 0;font-size:12.5px;color:var(--muted)}
+.carhead .acts{margin-left:auto;display:flex;gap:6px;position:relative}
+.carbody{display:grid;grid-template-columns:200px 1fr 1fr;gap:18px;padding:0 26px}
+.rail{border:1px solid var(--line);border-radius:12px;padding:10px 8px;display:grid;gap:2px;align-content:start;background:color-mix(in srgb,var(--bg) 55%,var(--panel));font-size:13px;color:var(--ink2)}
+.rail span{padding:7px 10px;border-radius:8px}.rail span.on{background:color-mix(in srgb,var(--ink) 10%,var(--panel));color:var(--ink);font-weight:600}
+.photo{border:1px solid var(--line);border-radius:12px;overflow:hidden;height:330px}.photo img{width:100%;height:100%;object-fit:cover}
+.panel{border:1px solid var(--line);border-radius:12px;background:var(--panel);height:330px;padding:16px}
+.panel .r{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line2);font-size:12.5px}.panel .r span{color:var(--muted)}
+.dim .page>*:not(.carhead){filter:blur(1.5px);opacity:.5}
+/* option A: dropdown menu */
+.menu{position:absolute;right:0;top:calc(100% + 8px);z-index:20;width:380px;border:1px solid color-mix(in srgb,var(--ink) 18%,var(--line));border-radius:14px;background:var(--panel);box-shadow:0 24px 60px rgba(0,0,0,.5);padding:6px;overflow:hidden}
+.mg{padding:8px 10px 3px;font:600 9.5px var(--ui);letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
+.mi{display:flex;align-items:center;gap:11px;width:100%;padding:7px 10px;border:0;border-radius:9px;background:transparent;text-align:left;cursor:pointer}
+.mi:hover,.mi.hi{background:color-mix(in srgb,var(--ink) 8%,var(--panel))}
+.mi i{flex:none;width:30px;height:30px;border-radius:8px;display:grid;place-items:center;font-style:normal;font-size:14px;color:var(--c,var(--ink2));background:color-mix(in srgb,var(--c,var(--ink)) 14%,var(--panel))}
+.mi b{display:block;font-size:13px;font-weight:600}.mi small{display:block;font-size:11.5px;color:var(--muted)}
+.mi kbd{margin-left:auto;font:500 10.5px var(--mono);color:var(--faint);border:1px solid var(--line);border-radius:5px;padding:1px 5px}
+.sep{height:1px;margin:6px 4px;background:var(--line2)}
+.mi.danger b{color:var(--accent)}.mi.danger i{--c:var(--accent)}
+/* option B: actions window */
+.win{position:absolute;z-index:10;left:50%;top:calc(46px + 40px);transform:translateX(-50%);width:min(980px,calc(100vw - 40px));border:1px solid var(--line);border-radius:14px;background:var(--panel);box-shadow:0 30px 80px rgba(0,0,0,.5);overflow:hidden}
+.backdrop{position:absolute;inset:46px 0 0;background:rgba(5,7,10,.55);z-index:5}
+.whead{display:flex;gap:16px;align-items:center;padding:16px 20px;border-bottom:1px solid var(--line)}
+.whead img{width:96px;height:60px;object-fit:cover;border-radius:8px;border:1px solid var(--line2)}
+.whead h2{font-size:24px;line-height:1}.whead p{margin:3px 0 0;font-size:12px;color:var(--muted)}
+.whead .x{margin-left:auto;color:var(--muted);font-size:18px}
+.wb{padding:16px 20px 18px}
+.tg{margin:4px 0 8px;font:600 9.5px var(--ui);letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.tile{display:flex;gap:11px;align-items:flex-start;padding:11px 12px;border:1px solid var(--line);border-radius:11px;background:var(--panel);text-align:left;cursor:pointer}
+.tile:hover{border-color:color-mix(in srgb,var(--c,var(--ink)) 50%,var(--line))}
+.tile i{flex:none;width:34px;height:34px;border-radius:9px;display:grid;place-items:center;font-style:normal;font-size:15px;color:var(--c,var(--ink2));background:color-mix(in srgb,var(--c,var(--ink)) 14%,var(--panel))}
+.tile b{display:block;font-size:13px}.tile small{display:block;margin-top:1px;font-size:11.5px;color:var(--muted)}
+.danger-zone{display:flex;align-items:center;gap:14px;padding:12px 14px;border:1px solid color-mix(in srgb,var(--accent) 40%,var(--line));border-radius:11px;background:color-mix(in srgb,var(--accent) 6%,var(--panel))}
+.danger-zone b{display:block;color:var(--accent)}.danger-zone small{font-size:12px;color:var(--muted)}
+.btn.danger{border-color:color-mix(in srgb,var(--accent) 50%,var(--line));color:var(--accent);background:transparent}
+</style>
+</head>
+<body>
+<div class="switch">
+ <b>Option</b><div class="seg" id="oSeg"><button data-o="a" class="on">A · Drop-down menu</button><button data-o="b">B · Car actions window</button></div>
+ <b>Theme</b><div class="seg" id="tSeg"><button data-t="dark" class="on">Dark</button><button data-t="light">Light</button></div>
+ <p>Preview · your own car photo</p>
+</div>
+<div id="root"></div>
+<script>
+const IMG='../../../.qa/preview-cars/car-2.jpg';
+let opt='a';
+const $=s=>document.querySelector(s);
+const ACT=[
+ ['Rebuild & life',[['⟳','Start a rebuild','Turn this car into a linked new one; history stays','var(--amber)'],['▤','Archive car','Hide it from your collection; nothing is deleted','var(--blue)']]],
+ ['Copies',[['⧉','Duplicate as another physical car','A second car with the same details','var(--violet)'],['⇄','Merge duplicate car…','Combine two records of the same car','var(--violet)']]],
+ ['Share & print',[['⇪','Export this car','A file to open in another Paddock','var(--green)'],['⎙','Print / PDF…','Car card with QR, spec sheet','var(--green)'],['➤','Send to Club dealership','Propose it for the shared collection','var(--green)']]],
+ ['Photos & research',[['◐','Photo framing…','Choose the focus point for Fill views','var(--blue)'],['⌕','Research slotcar…','Product template for your AI, then import','var(--blue)']]]
+];
+const page=menu=>`<div class="page"><div class="chrome"><div class="logo"></div><div class="navg"><span>Overview</span><span>Showroom</span><span class="on">Cars</span><span>Parts</span><span>Shopping List</span><span>Build from Scratch</span><span>Workshop</span><span>Library</span><span>Connections</span><span>Import &amp; Export</span><span>Settings</span></div></div>
+ <div class="carhead"><div class="ic"></div><div><h1>BMW Z4</h1><p>NSR · 1:32</p></div><div class="acts"><button class="btn">Compare</button><button class="btn">⌕ Google</button><button class="btn fill">Edit details</button><button class="btn fill">Add setup</button><button class="btn primary">Record work</button><button class="btn fill">Start a Rebuild</button><button class="btn ${menu?'on':''}">More ⌄</button>${menu||''}</div></div>
+ <div class="carbody"><div class="rail"><span class="on">Overview</span><span>Identity &amp; ownership</span><span>Technical &amp; parts</span><span>Real Car History</span><span>Setups</span><span>Maintenance</span><span>Performance</span><span>Photos &amp; documents</span><span>History</span></div><div class="photo"><img src="${IMG}" alt=""></div><div class="panel"><div class="eye" style="margin-bottom:8px">Car details</div><div class="r"><span>Manufacturer</span><b>NSR</b></div><div class="r"><span>Owner</span><b>James</b></div><div class="r"><span>Class</span><b>GT3</b></div><div class="r"><span>Condition</span><b>Raced</b></div></div></div></div>`;
+function A(){const m=`<div class="menu">${ACT.map(([g,items],gi)=>`<div class="mg">${g}</div>${items.map(([i,t,s,c],ii)=>`<button class="mi ${gi===2&&ii===1?'hi':''}" style="--c:${c}"><i>${i}</i><span><b>${t}</b><small>${s}</small></span></button>`).join('')}`).join('')}<div class="sep"></div><button class="mi danger"><i>⌫</i><span><b>Permanently delete car…</b><small>Removes the car and its history. Asks you to type its name.</small></span></button></div>`;
+ document.body.classList.remove('dim');return page(m)}
+function B(){document.body.classList.add('dim');return page('')+`<div class="backdrop"></div><div class="win"><div class="whead"><img src="${IMG}" alt=""><div><div class="eye">Car actions</div><h2>BMW Z4</h2><p>NSR · 1:32 · in your collection</p></div><span class="x">×</span></div><div class="wb">${ACT.map(([g,items])=>`<div class="tg">${g}</div><div class="tiles">${items.map(([i,t,s,c])=>`<button class="tile" style="--c:${c}"><i>${i}</i><span><b>${t}</b><small>${s}</small></span></button>`).join('')}</div>`).join('')}
+ <div class="danger-zone"><span><b>Permanently delete this car</b><small>Removes the car, its photos and its history from this collection. This cannot be undone; archiving keeps everything instead.</small></span><span class="grow"></span><button class="btn danger">Delete car…</button></div></div></div>`}
+function render(){$('#root').innerHTML=opt==='a'?A():B();for(const[id,k,v]of[['#oSeg','o',opt],['#tSeg','t',document.documentElement.dataset.theme]])document.querySelectorAll(id+' button').forEach(b=>b.classList.toggle('on',b.dataset[k]===v));}
+document.addEventListener('click',e=>{const b=e.target.closest('.switch button');if(!b)return;if(b.dataset.o)opt=b.dataset.o;if(b.dataset.t)document.documentElement.dataset.theme=b.dataset.t;render();});
+function fromHash(){const q=new URLSearchParams(location.hash.slice(1));opt=q.get('o')||opt;document.documentElement.dataset.theme=q.get('t')||document.documentElement.dataset.theme;render();}
+addEventListener('hashchange',fromHash);fromHash();
+</script>
+</body>
+</html>
