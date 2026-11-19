@@ -198,6 +198,9 @@ function renderOverviewDesign() {
     `<div class="home-grid">${activity}${collection}${local() ? renderCollectionValue(d._view?.value) : ''}</div>`
   );
 }
+function exchangeGroup(title, note, cards) {
+  return `<div class="exchange-group"><div class="exchange-group-head"><h2>${title}</h2><span class="muted">${note}</span></div><div class="exchange-grid">${cards.map(([title, ic, tone, desc, label, action, cls, id]) => `<section class="panel exchange-card tone-${tone}"><header>${uiTile(ic, tone)}<h3>${title}</h3></header><p class="muted">${desc}</p><div class="actions">${btn(label, action, cls, id)}</div></section>`).join('')}</div></div>`;
+}
 function renderExchangeDesign() {
   if (!local())
     return empty('Use your local database', 'Switch to your collection to import, export or back up records.');
@@ -210,7 +213,7 @@ function renderExchangeDesign() {
       'Import CSV or Excel (.xlsx) car tables. Match columns to editable car fields and review the rows before saving. Resume unfinished imports from Review.',
       'Choose CSV / XLSX',
       'sheet-pick',
-      'primary',
+      '',
       ''
     ],
     [
@@ -240,7 +243,7 @@ function renderExchangeDesign() {
       'Keep a complete copy of cars, stock, jobs, photos, history and settings. Portable backups include original photos and private information. Progress and cancellation are available.',
       'Create backup',
       'backup',
-      '',
+      'primary',
       ''
     ],
     [
@@ -255,9 +258,10 @@ function renderExchangeDesign() {
     ]
   ];
   return (
-    heading('Import & Export', 'Move cars and manufacturer information into your collection.') +
-    catalogueImportCard() +
-    `<div class="two-col exchange-grid">${cards.map(([title, ic, tone, desc, label, action, cls, id]) => `<section class="panel exchange-card tone-${tone}">${uiTile(ic, tone)}<h2>${title}</h2><p class="muted">${desc}</p><div class="actions">${btn(label, action, cls, id)}</div></section>`).join('')}</div>` +
+    heading('Import & Export', 'Bring cars and manufacturer information in, take cars out, and keep backups.') +
+    exchangeGroup('Cars', 'Spreadsheets, Paddock car files and Timing exports', cards.slice(0, 3)) +
+    exchangeGroup('Backups', 'A complete copy of this database, and restoring one', cards.slice(3)) +
+    `<div class="exchange-group"><div class="exchange-group-head"><h2>Catalogue</h2><span class="muted">Product information and pictures, researched with your own AI</span></div><div class="exchange-catalogue">${catalogueImportCard()}</div></div>` +
     uiSectionHeading(
       'Review inbox',
       badge(

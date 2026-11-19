@@ -1,0 +1,29 @@
+/* Import & Export, after SlotForgeRestyle.md: the cards grouped under Cars, Backups and Catalogue as compact
+   Entry Cards (tile beside the title, buttons in a foot), no coloured top borders, the small print folded. */
+.exchange-group{margin:0 0 26px}
+.exchange-group-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px;margin:0 2px 12px}
+#main .exchange-group-head h2{margin:0;font-size:24px;line-height:1}
+.exchange-group-head .muted{font-size:12.5px}
+#main[data-page="Import & Export"] .exchange-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:0}
+#main[data-page="Import & Export"] .exchange-card{display:flex;flex-direction:column;gap:8px;min-width:0;margin:0;padding:14px 16px 0;border:1px solid var(--line);border-top:1px solid var(--line);border-radius:12px;background:var(--panel);box-shadow:none;overflow:hidden}
+#main[data-page="Import & Export"] .exchange-card:hover{border-color:color-mix(in srgb,var(--ink) 22%,var(--line))}
+#main .exchange-card>header{display:flex;align-items:center;gap:12px;min-height:0;margin:0;padding:0;border:0;background:none;box-shadow:none;position:static}
+.exchange-card>header .section-icon{width:40px;height:40px;flex:none;margin:0;border-radius:10px}
+.exchange-card>header .section-icon svg{width:20px;height:20px}
+#main .exchange-card>header h3{margin:0;font-size:19px;line-height:1.1}
+#main[data-page="Import & Export"] .exchange-card>p{flex:1;margin:0;font-size:13px;line-height:1.5}
+#main[data-page="Import & Export"] .exchange-card>.actions{margin:6px -16px 0;padding:9px 16px;border-top:1px solid var(--line);background:color-mix(in srgb,var(--bg) 50%,var(--panel))}
+.exchange-catalogue{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:stretch}
+#main[data-page="Import & Export"] .exchange-catalogue>.panel{display:flex;flex-direction:column;margin:0;padding:14px 16px 12px;border:1px solid var(--line);border-top:1px solid var(--line);border-radius:12px;box-shadow:none}
+#main[data-page="Import & Export"] .exchange-catalogue .row{align-items:flex-start;gap:12px}
+#main[data-page="Import & Export"] .exchange-catalogue .section-icon{width:40px;height:40px;flex:none;margin:0;border-radius:10px}
+#main[data-page="Import & Export"] .exchange-catalogue h2{margin:0 0 4px;font-size:19px;line-height:1.15}
+#main[data-page="Import & Export"] .exchange-catalogue p.muted{margin:0;font-size:13px}
+#main[data-page="Import & Export"] .exchange-catalogue .actions{flex-wrap:wrap;margin-top:auto;padding-top:12px}
+.exchange-more{margin-top:10px;font-size:12px}
+.exchange-more>summary{cursor:pointer;color:var(--muted)}
+.exchange-more>p{margin:6px 0 0}
+#main[data-page="Import & Export"] .review-inbox-summary{border-top:1px solid var(--line);box-shadow:none}
+#main[data-page="Import & Export"] .transfer-help{box-shadow:none}
+@media(max-width:1100px){#main[data-page="Import & Export"] .exchange-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:900px){.exchange-catalogue,#main[data-page="Import & Export"] .exchange-grid{grid-template-columns:1fr}}
