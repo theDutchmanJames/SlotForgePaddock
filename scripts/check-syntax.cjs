@@ -3,10 +3,10 @@
 const {spawnSync}=require('node:child_process');
 const path=require('node:path');
 const files=[
-  "renderer/cars-browser.js", "tests/cars-browser-smoke.cjs", "renderer/car-actions.js", "renderer/car-more.js", "renderer/car-picker.js", "renderer/field-arranger.js", "renderer/manual-test.js", "renderer/touch-ups.js", "tests/car-actions-smoke.cjs",
+  "renderer/cars-browser.js", "tests/cars-browser-smoke.cjs", "renderer/car-actions.js", "renderer/car-more.js", "renderer/car-picker.js", "renderer/field-arranger.js", "renderer/manual-test.js", "renderer/touch-ups.js", "renderer/tech-groups.js", "tests/car-actions-smoke.cjs",
   "src/spreadsheet-fields.cjs", "src/spreadsheet-parser.cjs", "src/spreadsheet-worker.cjs", "src/spreadsheet-import.cjs", "renderer/spreadsheet-import.js", "tests/spreadsheet-import.test.cjs", "tests/spreadsheet-import-smoke.cjs",
   "src/catalogue-picture-matching.cjs",
-  "tests/catalogue-picture-matching.test.cjs",
+  "tests/catalogue-picture-matching.test.cjs", "tests/report-print.test.cjs",
   "renderer/factory-specs-model.js",
   "renderer/factory-specs.js",
   "tests/factory-specs.test.cjs",

@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Printed PDF redesign</title>
+<!-- Car photos come from .qa/preview-cars (ignored by git), made from the local library; they are not part of the repository. -->
+<style>
+@font-face{font-family:'SF Barlow Condensed';src:url('../../../renderer/fonts/barlowcondensed/BarlowCondensed-BoldItalic.ttf') format('truetype');font-weight:700;font-style:italic}
+@font-face{font-family:'SF Roboto Mono';src:url('../../../renderer/fonts/robotomono/RobotoMono[wght].ttf') format('truetype');font-weight:100 700}
+:root{--cond:'SF Barlow Condensed','Bahnschrift',sans-serif;--mono:'SF Roboto Mono',Consolas,monospace;--ui:'Segoe UI',system-ui,sans-serif;--red:#d62828}
+*{box-sizing:border-box}html,body{margin:0;height:100%}
+body{background:#2a2f36;font:13px/1.4 var(--ui);color:#1b2128;overflow:hidden}
+.switch{position:relative;z-index:5;display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;height:46px;padding:0 20px;background:#171b21;color:#e8e6e1;border-bottom:1px solid #2b313b}
+.switch b{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#98a0ab}.switch p{margin:0 0 0 auto;font-size:12px;color:#6b7380}
+.seg{display:inline-flex;gap:2px;padding:3px;border:1px solid #343b47;border-radius:9px;background:#1d2229}
+.seg button{height:26px;padding:0 11px;border:0;border-radius:6px;background:transparent;color:#98a0ab;font:12.5px var(--ui);cursor:pointer}
+.seg button.on{background:#343b47;color:#fff;font-weight:600}
+.stage{position:absolute;inset:46px 0 0;display:flex;justify-content:center;gap:28px;padding:22px;overflow:auto}
+.paper{flex:none;width:794px;height:1123px;background:#fff;box-shadow:0 20px 60px rgba(0,0,0,.45);position:relative;overflow:hidden;transform-origin:top center}
+.mono{font-family:var(--mono)}
+.cond{font-family:var(--cond);font-style:italic;font-weight:700;text-transform:uppercase;letter-spacing:.01em}
+img{display:block}
+.qr{background:repeating-conic-gradient(#111 0 25%,#fff 0 50%) 0 0/7px 7px;outline:3px solid #111;outline-offset:-3px}
+.foot{position:absolute;left:40px;right:40px;bottom:22px;display:flex;justify-content:space-between;font-size:9px;color:#6b7684}
+
+/* ===== A · Race programme ===== */
+.a .band{height:92px;background:#15191f;color:#fff;display:flex;align-items:center;gap:16px;padding:0 40px;position:relative}
+.a .band::after{content:'';position:absolute;right:0;top:0;bottom:0;width:240px;background:linear-gradient(115deg,transparent 0 30%,var(--red) 30% 52%,transparent 52% 60%,#f2c230 60% 68%,transparent 68%)}
+.a .band .t{font-size:34px;line-height:1}.a .band small{display:block;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#9aa3ad;margin-bottom:3px}
+.a .band .r{margin-left:auto;margin-right:250px;text-align:right;font-size:11px;color:#c9ced4}
+.a .body{padding:26px 40px}
+.a .card{display:grid;grid-template-columns:300px 1fr;border:1.5px solid #15191f;border-radius:10px;overflow:hidden;margin-bottom:18px;height:292px}
+.a .card .ph{position:relative}.a .card .ph img{width:100%;height:100%;object-fit:cover}
+.a .num{position:absolute;left:14px;top:14px;width:58px;height:58px;border-radius:50%;background:#fff;border:3px solid #15191f;display:grid;place-items:center;font:italic 700 30px var(--cond)}
+.a .card .tx{padding:13px 18px 12px;display:flex;flex-direction:column}
+.a .card h2{margin:0;font:italic 700 28px/1 var(--cond);text-transform:uppercase}
+.a .chips{display:flex;gap:5px;margin:6px 0 9px}.a .chips span{padding:1px 8px;border-radius:99px;border:1px solid #c3cad2;font-size:10.5px;color:#3a434d}
+.a .specs{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-top:1px solid #d5dae0}
+.a .specs div{padding:7px 0 7px;border-bottom:1px solid #d5dae0}.a .specs div:nth-child(3n+2),.a .specs div:nth-child(3n){padding-left:10px;border-left:1px solid #d5dae0}
+.a .specs dt{font-size:8.5px;letter-spacing:.12em;text-transform:uppercase;color:#6b7684}.a .specs dd{margin:1px 0 0;font:600 12.5px var(--mono)}
+.a .qrrow{margin-top:auto;display:flex;align-items:flex-end;gap:10px;font-size:9px;color:#6b7684}.a .qrrow .qr{width:62px;height:62px}
+.a table{width:100%;border-collapse:collapse;font-size:11.5px}
+.a th{text-align:left;font-size:8.5px;letter-spacing:.12em;text-transform:uppercase;color:#6b7684;padding:7px 8px;border-bottom:2px solid #15191f}
+.a td{padding:7px 8px;border-bottom:1px solid #e1e5ea}.a tr:nth-child(even) td{background:#f6f7f9}
+.a td img{width:54px;height:34px;object-fit:cover;border-radius:4px}
+.a .sec{display:flex;align-items:center;gap:10px;margin:18px 0 8px;font:italic 700 16px var(--cond);text-transform:uppercase}.a .sec::after{content:'';flex:1;height:2px;background:#15191f}
+.a .hero{display:grid;grid-template-columns:260px 1fr;gap:18px;align-items:center}.a .hero img{width:260px;height:160px;object-fit:cover;border-radius:8px}
+.a .kv{display:grid;grid-template-columns:1fr 1fr;gap:0 18px}.a .kv div{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #e1e5ea;font-size:11.5px}.a .kv span{color:#6b7684}.a .kv b{font-family:var(--mono);font-weight:600}
+.a .chk td.c{width:80px;text-align:center}.a .box{display:inline-block;width:14px;height:14px;border:1.5px solid #15191f;border-radius:3px}
+.a .sign{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-top:16px}.a .sign div{border-bottom:1.5px solid #15191f;padding-top:26px;font-size:9px;color:#6b7684}
+.a .totals{display:flex;gap:10px;margin-top:12px}.a .totals div{flex:1;padding:10px 12px;border:1.5px solid #15191f;border-radius:8px}.a .totals b{display:block;font:italic 700 24px var(--cond)}.a .totals span{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#6b7684}
+
+/* ===== B · Homologation papers ===== */
+.b{font-family:var(--mono);color:#14202b}
+.b .head{margin:34px 40px 0;border:2px solid #14202b;display:grid;grid-template-columns:120px 1fr 170px}
+.b .head>div{padding:10px 12px;border-right:2px solid #14202b}.b .head>div:last-child{border-right:0}
+.b .logo{display:grid;place-items:center;font:italic 700 15px/1 var(--cond);text-align:center;text-transform:uppercase}
+.b .head h1{margin:0;font:700 18px var(--mono);letter-spacing:.08em;text-transform:uppercase}.b .head p{margin:3px 0 0;font-size:10px}
+.b .lab{font:700 7.5px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:#4f5d6b}
+.b .grid4{display:grid;grid-template-columns:repeat(4,1fr);margin:0 40px;border:2px solid #14202b;border-top:0}
+.b .f{padding:6px 8px;border-right:1px solid #14202b;border-bottom:1px solid #14202b;min-height:44px}.b .f b{display:block;margin-top:3px;font-size:12px}
+.b .f:nth-child(4n){border-right:0}
+.b .s{margin:14px 40px 0;padding:4px 8px;background:#14202b;color:#fff;font:700 10px var(--mono);letter-spacing:.14em}
+.b .cards{display:grid;grid-template-columns:1fr 1fr;gap:0;margin:20px 40px;border:1px dashed #8a97a5}
+.b .hc{padding:12px;border-right:1px dashed #8a97a5;border-bottom:1px dashed #8a97a5;height:476px;display:flex;flex-direction:column}.b .hc:nth-child(2n){border-right:0}
+.b .hc .top{display:flex;justify-content:space-between;align-items:flex-start;border:2px solid #14202b;padding:6px 8px}
+.b .hc .top b{font-size:13px}.b .hc .no{font:700 26px var(--mono)}
+.b .hc img{width:100%;height:150px;object-fit:cover;border:2px solid #14202b;border-top:0;filter:grayscale(.15)}
+.b .hc table{width:100%;border-collapse:collapse;border:2px solid #14202b;border-top:0;font-size:10.5px}.b .hc td{padding:4px 7px;border-bottom:1px solid #14202b}.b .hc td:first-child{width:42%;border-right:1px solid #14202b;font-size:7.5px;letter-spacing:.12em;text-transform:uppercase;color:#4f5d6b;font-weight:700}
+.b .hc .bot{margin-top:auto;display:flex;gap:8px;align-items:flex-end}.b .hc .qr{width:58px;height:58px}
+.b .stamp{flex:1;height:58px;border:2px dashed #14202b;display:grid;place-items:center;font-size:7.5px;letter-spacing:.14em;color:#4f5d6b}
+.b .cut{position:absolute;font-size:8px;color:#8a97a5}
+.b table.t{width:calc(100% - 80px);margin:0 40px;border-collapse:collapse;border:2px solid #14202b;font-size:10.5px}
+.b table.t th{text-align:left;padding:5px 7px;border:1px solid #14202b;font:700 7.5px var(--mono);letter-spacing:.12em;text-transform:uppercase;background:#eef1f4}
+.b table.t td{padding:6px 7px;border:1px solid #14202b;height:26px}
+.b .chk{display:inline-block;width:12px;height:12px;border:1.5px solid #14202b}
+
+/* ===== C · Shelf and garage ===== */
+.c{font-family:var(--ui)}
+.c .fold{position:absolute;left:0;right:0;top:561px;border-top:1.5px dashed #9aa3ad}
+.c .fold span{position:absolute;right:30px;top:-9px;background:#fff;padding:0 6px;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#9aa3ad}
+.c .tent{position:absolute;left:0;right:0;height:561px;padding:34px 40px;display:grid;grid-template-columns:1fr 210px;gap:24px;align-items:center}
+.c .tent.back{top:0;transform:rotate(180deg)}.c .tent.front{top:562px}
+.c .tent img{width:100%;height:330px;object-fit:cover;border-radius:14px}
+.c .big{font:italic 700 150px/.8 var(--cond);color:#15191f}
+.c .tent h2{margin:10px 0 0;font:italic 700 34px/1 var(--cond);text-transform:uppercase}
+.c .tent p{margin:6px 0 0;font-size:12px;color:#55606c}
+.c .bar{height:10px;width:120px;margin-top:14px;background:linear-gradient(90deg,var(--red) 0 60%,#f2c230 60%)}
+.c .back .facts{display:grid;gap:8px;font-size:12px}.c .back .facts div{display:flex;justify-content:space-between;border-bottom:1px solid #e1e5ea;padding-bottom:5px}.c .back .facts b{font-family:var(--mono)}
+.c .back .qr{width:110px;height:110px}
+.c .pit{padding:36px 40px}
+.c .pit h1{margin:0;font:italic 700 46px/1 var(--cond);text-transform:uppercase}
+.c .pit .sub{font-size:12px;color:#55606c;margin:4px 0 18px}
+.c .blocks{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.c .blk{border-radius:12px;background:#15191f;color:#fff;padding:12px 14px}.c .blk span{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#9aa3ad}.c .blk b{display:block;font:600 22px var(--mono);margin-top:2px}
+.c .blk.y{background:#f2c230;color:#15191f}.c .blk.y span{color:#5a4a12}
+.c .blk.r{background:var(--red)}.c .blk.r span{color:#ffd9d9}
+.c .tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;padding:0 40px}
+.c .tile img{width:100%;height:140px;object-fit:cover;border-radius:10px}.c .tile b{display:block;margin-top:6px;font:italic 700 16px/1.05 var(--cond);text-transform:uppercase}.c .tile small{display:flex;justify-content:space-between;font-size:10px;color:#55606c;margin-top:2px}
+.c .tick{display:grid;grid-template-columns:28px 1fr 120px 90px;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid #e1e5ea;font-size:12.5px}
+.c .tick i{width:22px;height:22px;border:2px solid #15191f;border-radius:6px}.c .tick b{font-family:var(--mono)}.c .tick .m{height:22px;border-bottom:1.5px solid #9aa3ad}
+.c .what{position:fixed;left:20px;bottom:16px;max-width:330px;padding:12px 14px;border-radius:12px;background:#171b21;color:#e8e6e1;font-size:12.5px;z-index:9}
+/* ===== A2 · Race programme in Timing's print style (after SlotForge Timing's race report) ===== */
+.t{--pu:#7c3aed;--ln:#e3e6ea;--mu:#6b7684;font-family:'Segoe UI',system-ui,sans-serif;color:#15191f}
+.t .rule{position:absolute;left:40px;right:40px;top:34px;height:5px;background:#e5484d}
+.t .hd{position:absolute;left:40px;right:40px;top:56px;display:flex;align-items:flex-start;gap:16px}
+.t .kick{font:700 9.5px 'Segoe UI',sans-serif;letter-spacing:.22em;text-transform:uppercase;color:#e5484d}
+.t .ttl{margin:2px 0 0;font:italic 700 38px/1 var(--cond);text-transform:uppercase}
+.t .sub{margin:5px 0 0;font-size:11.5px;color:#4b5560}
+.t .logo{margin-left:auto;height:22px;margin-top:26px}
+.t .date{width:62px;height:62px;border:1px solid var(--ln);border-radius:9px;display:grid;place-items:center;align-content:center;margin-top:6px}
+.t .date b{font:italic 700 28px/1 var(--cond)}.t .date span{font-size:8px;letter-spacing:.12em;color:var(--mu)}
+.t .chk{position:absolute;left:40px;right:40px;top:142px;height:9px;background:repeating-conic-gradient(#15191f 0 25%,#fff 0 50%) 0 0/9px 9px}
+.t .bd{position:absolute;left:40px;right:40px;top:168px}
+.t .lab{font:700 8.5px 'Segoe UI',sans-serif;letter-spacing:.2em;text-transform:uppercase;color:#4b5560}
+.t .pn{border:1px solid var(--ln);border-radius:10px;padding:10px 12px}
+.t .tiles{display:grid;gap:8px}.t .tiles>div{border:1px solid var(--ln);border-radius:9px;padding:7px 10px}
+.t .tiles b{display:block;margin-top:2px;font:600 17px var(--mono)}.t .tiles small{font-size:9px;color:var(--mu)}
+.t .best{color:var(--pu)}
+.t .car{display:grid;grid-template-columns:250px 1fr;gap:14px;margin-bottom:12px;border:1px solid var(--ln);border-radius:12px;padding:10px;break-inside:avoid}
+.t .car .ph{position:relative;height:186px;border-radius:8px;overflow:hidden}.t .car .ph img{width:100%;height:100%;object-fit:cover}
+.t .badge{position:absolute;left:8px;top:8px;min-width:44px;height:44px;padding:0 6px;border-radius:9px;background:#fff;display:grid;place-items:center;font:italic 700 24px var(--cond);box-shadow:0 2px 8px rgba(0,0,0,.25)}
+.t .car h2{margin:2px 0 0;font:italic 700 26px/1 var(--cond);text-transform:uppercase}
+.t .car .meta{margin:3px 0 8px;font-size:11px;color:#4b5560}
+.t .car .tiles{grid-template-columns:repeat(3,1fr)}.t .car .tiles b{font-size:13px}
+.t .car .q{display:flex;align-items:center;gap:9px;margin-top:8px;font-size:9px;color:var(--mu)}.t .car .q .qr{width:44px;height:44px}
+.t table{width:100%;border-collapse:collapse;font-size:11px}
+.t th{text-align:left;padding:6px 7px;font:700 8.5px 'Segoe UI',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#4b5560;border-bottom:1.5px solid #15191f}
+.t td{padding:6px 7px;border-bottom:1px solid var(--ln)}
+.t td.n{font-family:var(--mono);text-align:right}
+.t td img{width:50px;height:31px;object-fit:cover;border-radius:4px}
+.t .stripe td:first-child{box-shadow:inset 3px 0 0 var(--c,#e5484d)}
+.t .note2{margin:10px 0 0;font-size:9.5px;color:var(--mu)}
+.t .sec{margin:16px 0 7px}
+.t .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.t .kv div{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--ln);font-size:11px}.t .kv span{color:#4b5560}.t .kv b{font:600 11px var(--mono)}
+.t .callout{margin-top:12px;padding:8px 12px;border-left:3px solid #e5484d;background:#f5f6f8;font-size:10.5px}
+.t .box{display:inline-block;width:13px;height:13px;border:1.5px solid #15191f;border-radius:3px}
+.t .line{border-bottom:1px solid #9aa3ad;height:22px}
+.t .ft{position:absolute;left:40px;right:40px;bottom:26px;padding-top:8px;border-top:1px solid var(--ln);display:flex;align-items:center;justify-content:space-between;font-size:9px;color:var(--mu)}
+.t .ft img{height:13px}
+.note{position:fixed;left:20px;bottom:16px;max-width:340px;padding:12px 14px;border-radius:12px;background:#171b21;color:#e8e6e1;font-size:12.5px;z-index:9;box-shadow:0 10px 30px rgba(0,0,0,.4)}
+.note b{display:block;margin-bottom:4px;font:italic 700 15px var(--cond);text-transform:uppercase}.note ul{margin:0;padding-left:16px;color:#c4c8ce}.note li{margin:2px 0}
+</style>
+</head>
+<body>
+<div class="switch">
+ <b>Design</b><div class="seg" id="oSeg"><button data-o="a2" class="on">A · Timing style</button><button data-o="a">A · first version</button><button data-o="b">B · Homologation papers</button><button data-o="c">C · Shelf &amp; garage</button></div>
+ <b>Report</b><div class="seg" id="rSeg"><button data-r="cards" class="on">Car cards</button><button data-r="setup">Setup sheet</button><button data-r="scrut">Scrutineering</button><button data-r="inv">Inventory</button></div>
+ <p>A4 · example data</p>
+</div>
+<div class="stage" id="stage"></div>
+<div class="note" id="note"></div>
+<script>
+let o='a2',r='cards';
+const $=s=>document.querySelector(s);
+const img=f=>'../../../.qa/preview-cars/'+f;
+const CARS=[
+ {f:'car-0.jpg',n:'Audi R8 GT2',m:'Scaleauto',s:'1:32',no:'7',cl:'GT3',loc:'Shelf 1',acq:'14 Jan 2025',sel:'Club swap meet',pr:'€ 49',mo:'NSR King EVO 21.5K',pi:'12',ge:'34',ra:'2.833:1',ty:'NSR Supergrip 19.5×12',w:'82 g'},
+ {f:'car-1.jpg',n:'Mosler MT900R',m:'NSR',s:'1:32',no:'10',cl:'GT',loc:'Shelf 2',acq:'14 Feb 2025',sel:'Online shop',pr:'€ 55',mo:'Shark 25K',pi:'11',ge:'32',ra:'2.909:1',ty:'Slot.it P6',w:'78 g'},
+ {f:'car-2.jpg',n:'BMW Z4',m:'NSR',s:'1:32',no:'13',cl:'GT3',loc:'Box 3',acq:'14 Mar 2025',sel:'Club swap meet',pr:'€ 61',mo:'King Evo',pi:'12',ge:'33',ra:'2.750:1',ty:'Supergrip',w:'81 g'},
+ {f:'car-3.jpg',n:'Mclaren 720S',m:'NSR',s:'1:32',no:'16',cl:'GT3',loc:'Shelf 1',acq:'14 Apr 2025',sel:'Gift',pr:'—',mo:'King 21.5K',pi:'12',ge:'34',ra:'2.833:1',ty:'Ultragrip',w:'80 g'},
+ {f:'car-5.jpg',n:'Nissan R390',m:'Slot.it',s:'1:32',no:'22',cl:'Group C',loc:'Box 3',acq:'14 Jun 2025',sel:'Online shop',pr:'€ 79',mo:'V12/6 21.5K',pi:'10',ge:'30',ra:'3.000:1',ty:'Slot.it F22',w:'76 g'},
+ {f:'car-9.jpg',n:'Porsche 952KH',m:'Slot.it',s:'1:32',no:'1',cl:'Group C',loc:'Shelf 2',acq:'14 Aug 2025',sel:'Club swap meet',pr:'€ 85',mo:'V12/6 21.5K',pi:'11',ge:'32',ra:'2.909:1',ty:'Slot.it P6',w:'74 g'}
+];
+const SPECS=c=>[['Motor',c.mo],['Gearing',c.pi+' / '+c.ge],['Ratio',c.ra],['Rear tyres',c.ty],['Weight',c.w],['Class',c.cl]];
+const SCRUT=c=>[['Class',c.cl],['Motor',c.mo],['Gear ratio',c.ra],['Weight',c.w],['Ground clearance','1.0 mm'],['Front width','64 mm'],['Rear width','65 mm'],['Rear tyre diameter','19.5 mm'],['Magnets','None']];
+const SETUP=[['Motor & transmission',[['Motor','NSR King EVO 21.5K'],['Pinion','12'],['Crown','34'],['Ratio','2.833:1'],['Motor mount','Anglewinder']]],['Wheels & tyres',[['Rear tyres','NSR Supergrip 19.5×12'],['Front tyres','NSR 18×10 slick'],['Rear wheels','Aluminium 17×10'],['Front wheels','Plastic 15.5×8']]],['Chassis',[['Chassis','NSR Evo medium'],['Motor pod','Soft'],['Body screws','Loose half turn'],['Guide','Long, deep'],['Weight','82 g']]]];
+const PARTS=[['Motor','NSR King EVO 21.5K × 1'],['Pinion','NSR brass 12z × 1'],['Crown','NSR 34z × 1'],['Rear tyres','NSR Supergrip × 2'],['Guide','NSR long × 1']];
+const foot=(t)=>`<div class="foot"><span>SlotForge Paddock · My collection · ${t}</span><span>19 Nov 2026 · page 1</span></div>`;
+
+const A={
+ head:(t)=>`<div class="band"><div><small>SlotForge Paddock · My collection</small><div class="t cond">${t}</div></div><div class="r">19 November 2026<br>${r==="inv"?"6 cars":r==="cards"?"3 cars":"1 car"}</div></div>`,
+ cards:()=>A.head('Car cards')+`<div class="body">${CARS.slice(0,3).map(c=>`<div class="card"><div class="ph"><img src="${img(c.f)}" alt=""><span class="num">${c.no}</span></div><div class="tx"><h2>${c.n}</h2><div class="chips"><span>${c.m}</span><span>${c.s}</span><span>${c.cl}</span></div><dl class="specs">${SPECS(c).map(([k,v])=>`<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl><div class="qrrow"><span class="qr"></span><span>Scan to open this car in Paddock<br>on a computer with this collection.</span></div></div></div>`).join('')}</div>`+foot('Car cards'),
+ setup:()=>{const c=CARS[0];return A.head('Setup sheet')+`<div class="body"><div class="hero"><img src="${img(c.f)}" alt=""><div><h2 class="cond" style="margin:0;font-size:34px;line-height:1">${c.n}</h2><p style="margin:4px 0 10px;color:#55606c">${c.m} · ${c.s} · #${c.no} · Configuration: Club race setup · 9 Nov 2026 · Club circuit</p><div class="totals"><div><span>Ratio</span><b>2.833:1</b></div><div><span>Weight</span><b>82 g</b></div><div><span>Pinion / crown</span><b>12 / 34</b></div></div></div></div>${SETUP.map(([g,rows])=>`<div class="sec">${g}</div><div class="kv">${rows.map(([k,v])=>`<div><span>${k}</span><b>${v}</b></div>`).join('')}</div>`).join('')}<div class="sec">Tracked parts</div><table><thead><tr><th>Position</th><th>Part</th></tr></thead><tbody>${PARTS.map(([k,v])=>`<tr><td>${k}</td><td>${v}</td></tr>`).join('')}</tbody></table></div>`+foot('Setup sheet')},
+ scrut:()=>{const c=CARS[0];return A.head('Scrutineering')+`<div class="body"><div class="hero"><img src="${img(c.f)}" alt=""><div><h2 class="cond" style="margin:0;font-size:34px;line-height:1">#${c.no} ${c.n}</h2><p style="margin:4px 0 0;color:#55606c">${c.m} · ${c.s} · class ${c.cl}</p></div></div><div class="sec">Technical check</div><table class="chk"><thead><tr><th>Item</th><th>Recorded</th><th>Measured</th><th class="c">OK</th></tr></thead><tbody>${SCRUT(c).map(([k,v])=>`<tr><td>${k}</td><td class="mono">${v}</td><td></td><td class="c"><span class="box"></span></td></tr>`).join('')}</tbody></table><p style="font-size:10px;color:#6b7684">Recorded specifications only. Verify against your club's rules and actual measurements.</p><div class="sign"><div>Inspector</div><div>Date</div><div>Result</div></div><div class="sec">Notes</div><div style="height:120px;border:1.5px solid #15191f;border-radius:8px"></div></div>`+foot('Scrutineering')},
+ inv:()=>A.head('Collection inventory')+`<div class="body"><table><thead><tr><th></th><th>No.</th><th>Car</th><th>Maker</th><th>Scale</th><th>Location</th><th>Acquired</th><th>Seller</th><th style="text-align:right">Price</th></tr></thead><tbody>${CARS.map(c=>`<tr><td><img src="${img(c.f)}" alt=""></td><td class="mono">${c.no}</td><td><b>${c.n}</b></td><td>${c.m}</td><td>${c.s}</td><td>${c.loc}</td><td>${c.acq}</td><td>${c.sel}</td><td class="mono" style="text-align:right">${c.pr}</td></tr>`).join('')}</tbody></table><div class="totals"><div><span>Cars</span><b>6</b></div><div><span>Makers</span><b>3</b></div><div><span>Paid · EUR</span><b>€ 329</b></div></div><p style="font-size:10px;color:#6b7684;margin-top:10px">Monetary values keep their own currencies; nothing is converted or valued.</p></div>`+foot('Collection inventory')
+};
+const B={
+ head:(t,code)=>`<div class="head"><div class="logo">Slot<br>Forge</div><div><div class="lab">Document</div><h1>${t}</h1><p>My collection · issued 19.11.2026</p></div><div><div class="lab">Reference</div><b style="font-size:15px">${code}</b><p>Page 1 / 1</p></div></div>`,
+ cards:()=>B.head('Homologation cards','SFP-HC-0003')+`<div class="cards">${CARS.slice(0,4).map((c,i)=>`<div class="hc"><div class="top"><div><div class="lab">Model</div><b>${c.n}</b></div><div style="text-align:right"><div class="lab">No.</div><span class="no">${c.no.padStart(2,'0')}</span></div></div><img src="${img(c.f)}" alt=""><table>${SPECS(c).map(([k,v])=>`<tr><td>${k}</td><td>${v}</td></tr>`).join('')}<tr><td>Maker / scale</td><td>${c.m} · ${c.s}</td></tr></table><div class="bot"><span class="qr"></span><span class="stamp">CLUB STAMP</span></div></div>`).join('')}</div><span class="cut" style="left:28px;top:150px">✂</span>`+foot('Homologation cards'),
+ setup:()=>{const c=CARS[0];return B.head('Setup data sheet','SFP-SU-0912')+`<div class="grid4">${[['Model',c.n],['Maker',c.m],['Race no.',c.no],['Scale',c.s],['Configuration','Club race setup'],['Date','09.11.2026'],['Track','Club circuit'],['Class',c.cl]].map(([k,v])=>`<div class="f"><span class="lab">${k}</span><b>${v}</b></div>`).join('')}</div>${SETUP.map(([g,rows],gi)=>`<div class="s">${gi+1}. ${g.toUpperCase()}</div><table class="t"><tbody>${rows.map(([k,v],ri)=>`<tr><td style="width:60px" class="lab">${gi+1}.${ri+1}</td><td style="width:40%">${k}</td><td><b>${v}</b></td></tr>`).join('')}</tbody></table>`).join('')}<div class="s">4. TRACKED PARTS</div><table class="t"><tbody>${PARTS.map(([k,v],ri)=>`<tr><td style="width:60px" class="lab">4.${ri+1}</td><td style="width:40%">${k}</td><td>${v}</td></tr>`).join('')}</tbody></table>`+foot('Setup data sheet')},
+ scrut:()=>{const c=CARS[0];return B.head('Technical inspection','SFP-TI-0007')+`<div class="grid4">${[['Model',c.n],['Race no.',c.no],['Class',c.cl],['Entrant','']].map(([k,v])=>`<div class="f"><span class="lab">${k}</span><b>${v}</b></div>`).join('')}</div><div class="s">1. CHECKS</div><table class="t"><thead><tr><th>Item</th><th>Declared</th><th>Measured</th><th>Pass</th><th>Fail</th></tr></thead><tbody>${SCRUT(c).map(([k,v])=>`<tr><td>${k}</td><td>${v}</td><td></td><td><span class="chk"></span></td><td><span class="chk"></span></td></tr>`).join('')}</tbody></table><div class="s">2. DECISION</div><div class="grid4" style="border-top:2px solid #14202b;margin-top:0">${['Inspector','Signature','Date','Result'].map(k=>`<div class="f" style="min-height:70px"><span class="lab">${k}</span></div>`).join('')}</div><div style="margin:16px 40px 0;display:flex;justify-content:flex-end"><div class="stamp" style="flex:none;width:170px;height:110px">OFFICIAL STAMP</div></div>`+foot('Technical inspection')},
+ inv:()=>B.head('Collection register','SFP-CR-2026')+`<div style="height:14px"></div><table class="t"><thead><tr><th>#</th><th>No.</th><th>Model</th><th>Maker</th><th>Scale</th><th>Location</th><th>Acquired</th><th>Source</th><th>Price</th></tr></thead><tbody>${CARS.map((c,i)=>`<tr><td>${String(i+1).padStart(3,'0')}</td><td>${c.no}</td><td><b>${c.n}</b></td><td>${c.m}</td><td>${c.s}</td><td>${c.loc}</td><td>${c.acq}</td><td>${c.sel}</td><td>${c.pr}</td></tr>`).join('')}${Array.from({length:6},()=>'<tr>'+'<td></td>'.repeat(9)+'</tr>').join('')}</tbody></table><div class="grid4" style="border-top:2px solid #14202b;margin-top:14px"><div class="f"><span class="lab">Cars</span><b>6</b></div><div class="f"><span class="lab">Makers</span><b>3</b></div><div class="f"><span class="lab">Paid (EUR)</span><b>329.00</b></div><div class="f"><span class="lab">Checked by</span></div></div>`+foot('Collection register')
+};
+const C={
+ cards:()=>{const c=CARS[5];return `<div class="tent back"><div><div class="facts">${SPECS(c).map(([k,v])=>`<div><span>${k}</span><b>${v}</b></div>`).join('')}</div><p style="margin-top:14px;font-size:11px;color:#55606c">${c.m} · ${c.s} · bought ${c.acq}</p></div><div style="text-align:center"><span class="qr" style="display:inline-block"></span><p style="font-size:10px;color:#55606c">Open in Paddock</p></div></div><div class="fold"><span>Fold here · stand it next to the car</span></div><div class="tent front"><img src="${img(c.f)}" alt=""><div><div class="big">${c.no}</div><h2>${c.n}</h2><p>${c.m} · ${c.cl}</p><div class="bar"></div></div></div>`},
+ setup:()=>{const c=CARS[0];return `<div class="pit"><h1>${c.n} · setup</h1><div class="sub">Club race setup · 9 Nov 2026 · Club circuit · stick it on the pit wall</div><div class="blocks"><div class="blk r"><span>Ratio</span><b>2.833:1</b></div><div class="blk"><span>Pinion / crown</span><b>12 / 34</b></div><div class="blk y"><span>Weight</span><b>82 g</b></div><div class="blk"><span>Motor</span><b style="font-size:16px">King EVO 21.5K</b></div><div class="blk"><span>Rear tyres</span><b style="font-size:16px">Supergrip 19.5×12</b></div><div class="blk"><span>Guide</span><b style="font-size:16px">Long, deep</b></div></div><img src="${img(c.f)}" alt="" style="width:100%;height:260px;object-fit:cover;border-radius:14px;margin:16px 0"><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 24px;font-size:12px">${SETUP.flatMap(([,rows])=>rows).slice(0,10).map(([k,v])=>`<div style="display:flex;justify-content:space-between;border-bottom:1px solid #e1e5ea;padding:4px 0"><span style="color:#55606c">${k}</span><b class="mono">${v}</b></div>`).join('')}</div></div>`+foot('Setup')},
+ scrut:()=>{const c=CARS[0];return `<div class="pit"><h1>Check-in · #${c.no}</h1><div class="sub">${c.n} · ${c.m} · class ${c.cl} · tick each line at the scrutineering table</div><div class="tick" style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#55606c;border-bottom:2px solid #15191f"><span></span><span>Check</span><span>Recorded</span><span>Measured</span></div>${SCRUT(c).map(([k,v])=>`<div class="tick"><i></i><span>${k}</span><b>${v}</b><span class="m"></span></div>`).join('')}<div class="blocks" style="margin-top:26px"><div class="blk"><span>Inspector</span><b>&nbsp;</b></div><div class="blk y"><span>Result</span><b>&nbsp;</b></div><div class="blk"><span>Date</span><b>&nbsp;</b></div></div></div>`+foot('Check-in')},
+ inv:()=>`<div class="pit" style="padding-bottom:12px"><h1>My collection</h1><div class="sub">6 cars · a picture catalogue of what you own and where it is</div></div><div class="tiles">${CARS.map(c=>`<div class="tile"><img src="${img(c.f)}" alt=""><b>${c.n}</b><small><span>${c.m} · ${c.s}</span><span>${c.loc}</span></small><small><span>#${c.no} · ${c.cl}</span><span class="mono">${c.pr}</span></small></div>`).join('')}</div>`+foot('Picture catalogue')
+};
+const LOGO='../../../assets/slotforge-wordmark-light.svg';
+const T={
+ head:(kick,title,sub)=>`<div class="rule"></div><div class="hd"><div><div class="kick">${kick}</div><div class="ttl">${title}</div><div class="sub">${sub}</div></div><img class="logo" src="${LOGO}" alt="SlotForge"><div class="date"><b>19</b><span>NOV 2026</span></div></div><div class="chk"></div>`,
+ ft:(l)=>`<div class="ft"><span>Made with SlotForge Paddock · ${l}</span><img src="${LOGO}" alt=""></div>`,
+ cards:()=>T.head('Collection · car cards','Car cards','My collection · 3 cars · scan a card to open the car in Paddock')+`<div class="bd">${CARS.slice(0,3).map(c=>`<div class="car"><div class="ph"><img src="${img(c.f)}" alt=""><span class="badge">${c.no}</span></div><div><div class="kick" style="color:#4b5560">${c.m} · ${c.s} · ${c.cl}</div><h2>${c.n}</h2><div class="meta">${c.loc} · bought ${c.acq}</div><div class="tiles">${SPECS(c).map(([k,v])=>`<div><span class="lab">${k}</span><b>${v}</b></div>`).join('')}</div><div class="q"><span class="qr"></span><span>Open in Paddock on a computer<br>with this collection installed.</span></div></div></div>`).join('')}</div>`+T.ft('Car cards'),
+ setup:()=>{const c=CARS[0];return T.head('Setup sheet · club race setup',c.n,`${c.m} · ${c.s} · #${c.no} · saved 9 November 2026 · Club circuit`)+`<div class="bd"><div style="display:grid;grid-template-columns:250px 1fr;gap:12px"><div style="border-radius:10px;overflow:hidden;height:150px"><img src="${img(c.f)}" alt="" style="width:100%;height:100%;object-fit:cover"></div><div class="tiles" style="grid-template-columns:repeat(3,1fr);align-content:start">${[['Ratio','2.833:1','12 / 34'],['Weight','82 g','with body'],['Motor','King EVO','21.5K rpm'],['Rear tyres','Supergrip','19.5 × 12'],['Guide','Long','deep blade'],['Class',c.cl,'club rules']].map(([k,v,s])=>`<div><span class="lab">${k}</span><b>${v}</b><small>${s}</small></div>`).join('')}</div></div><div class="grid2" style="margin-top:12px">${SETUP.map(([g,rows])=>`<div class="pn"><div class="lab" style="margin-bottom:4px">${g}</div><div class="kv">${rows.map(([k,v])=>`<div><span>${k}</span><b>${v}</b></div>`).join('')}</div></div>`).join('')}<div class="pn"><div class="lab" style="margin-bottom:4px">Tracked parts</div><div class="kv">${PARTS.map(([k,v])=>`<div><span>${k}</span><b>${v}</b></div>`).join('')}</div></div></div><div class="callout"><b>Configuration:</b> Club race setup · the specification saved on 9 Nov 2026, not the car as it is today.</div></div>`+T.ft('Setup sheet · '+c.n)},
+ scrut:()=>{const c=CARS[0];return T.head('Scrutineering · club check','#'+c.no+' '+c.n,`${c.m} · ${c.s} · class ${c.cl} · bring this sheet to the technical table`)+`<div class="bd"><div class="tiles" style="grid-template-columns:repeat(4,1fr)">${[['Class',c.cl],['Weight',c.w],['Ratio',c.ra],['Motor',c.mo]].map(([k,v])=>`<div><span class="lab">${k}</span><b style="font-size:14px">${v}</b><small>recorded</small></div>`).join('')}</div><div class="lab sec">Technical check</div><table><thead><tr><th>Item</th><th>Recorded</th><th>Measured</th><th style="width:60px;text-align:center">OK</th></tr></thead><tbody>${SCRUT(c).map(([k,v])=>`<tr><td>${k}</td><td class="mono">${v}</td><td><div class="line"></div></td><td style="text-align:center"><span class="box"></span></td></tr>`).join('')}</tbody></table><div class="callout">Recorded specifications only. Verify against your club's rules and actual measurements.</div><div class="grid2" style="grid-template-columns:repeat(3,1fr);margin-top:16px">${['Inspector','Date','Result'].map(k=>`<div class="pn" style="height:64px"><div class="lab">${k}</div></div>`).join('')}</div><div class="pn" style="height:120px;margin-top:10px"><div class="lab">Notes</div></div></div>`+T.ft('Scrutineering · #'+c.no+' '+c.n)},
+ inv:()=>T.head('Collection · inventory','My collection','6 cars · 3 makers · prices in their own currency')+`<div class="bd"><div class="tiles" style="grid-template-columns:repeat(4,1fr)">${[['Cars','6',''],['Makers','3','NSR · Slot.it · Scaleauto'],['Paid','€ 329','5 with a price'],['Locations','3','Shelf 1 · Shelf 2 · Box 3']].map(([k,v,s])=>`<div><span class="lab">${k}</span><b>${v}</b><small>${s}</small></div>`).join('')}</div><div class="lab sec">Cars</div><table><thead><tr><th></th><th>No.</th><th>Car</th><th>Maker</th><th>Scale</th><th>Location</th><th>Acquired</th><th>Seller</th><th style="text-align:right">Price</th></tr></thead><tbody>${CARS.map((c,i)=>`<tr class="stripe" style="--c:${['#e5484d','#3b82f6','#f2c230','#34c77b','#a855f7','#f97316'][i]}"><td><img src="${img(c.f)}" alt=""></td><td class="mono">${c.no}</td><td><b>${c.n}</b></td><td>${c.m}</td><td>${c.s}</td><td>${c.loc}</td><td>${c.acq}</td><td>${c.sel}</td><td class="n">${c.pr}</td></tr>`).join('')}</tbody></table><p class="note2">Monetary values keep their own currencies; nothing is converted or valued. Purchase details are included because you chose to include them.</p></div>`+T.ft('Collection inventory')
+};
+const NOTES={a2:['Timing\'s print style: thin red rule, spaced red label, condensed title','SlotForge logo and a date tile, the checkered strip','Light rounded panels, stat tiles with monospaced values, the same footer'],a:['A dark title band with racing stripes, condensed titles and race-number roundels','Three car cards per page with photo, specs and QR','Tables with thumbnails, totals and sign-off lines'],b:['Looks like official homologation and technical inspection papers','Numbered sections, boxed fields, monospaced values','Car cards 4 per page with cut lines and a club stamp box'],c:['Made to be used: car cards fold into a stand for the display shelf','Setup as a pit-board with big blocks; scrutineering as a tick-off check-in','Inventory becomes a picture catalogue of what you own and where it is']};
+function paint(){const D={a:A,a2:T,b:B,c:C}[o];$('#stage').innerHTML=`<div class="paper ${o==='a2'?'t':o}">${D[r]()}</div>`;const p=$('.paper'),h=innerHeight-46-44,s=Math.min(1,h/1123);p.style.transform=`scale(${s})`;p.style.marginBottom=`${-1123*(1-s)}px`;$('#note').innerHTML=`<b>${{a2:'A · Timing style',a:'A · Race programme',b:'B · Homologation papers',c:'C · Shelf & garage'}[o]}</b><ul>${NOTES[o].map(x=>`<li>${x}</li>`).join('')}</ul>`;}
+function segc(id,attr,set){document.querySelectorAll(`#${id} button`).forEach(b=>b.onclick=()=>{document.querySelectorAll(`#${id} button`).forEach(x=>x.classList.toggle('on',x===b));set(b.dataset[attr]);paint();});}
+segc('oSeg','o',v=>o=v);segc('rSeg','r',v=>r=v);
+function fromHash(){const h=new URLSearchParams(location.hash.slice(1));if(h.get('o'))o=h.get('o');if(h.get('r'))r=h.get('r');document.querySelectorAll('#oSeg button').forEach(b=>b.classList.toggle('on',b.dataset.o===o));document.querySelectorAll('#rSeg button').forEach(b=>b.classList.toggle('on',b.dataset.r===r));paint();}
+addEventListener('hashchange',fromHash);addEventListener('resize',paint);fromHash();
+</script>
+</body>
+</html>

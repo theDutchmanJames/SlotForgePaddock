@@ -1,0 +1,76 @@
+/* Printed reports (car cards, setup sheets, scrutineering, inventory) in SlotForge Timing's print style, after
+   docs/ui-reference/print-2026-11 (A · Timing style). Used by the PDF (src/reports.cjs reads this file) and by the
+   preview in Print & PDF. Everything is scoped to .report. */
+.report{--rp-red:#e5484d;--rp-ink:#15191f;--rp-ink2:#4b5560;--rp-mute:#6b7684;--rp-line:#e3e6ea;--rp-best:#7c3aed;--rp-cond:'SF Barlow Condensed','Bahnschrift',sans-serif;--rp-mono:'SF Roboto Mono',Consolas,monospace;font:11px/1.4 'Segoe UI',system-ui,Arial,sans-serif;color:var(--rp-ink);background:#fff;padding:0}
+.report *{box-sizing:border-box}
+.report img{display:block}
+.report .rp-doc{break-after:page}
+.report .rp-doc:last-child{break-after:auto}
+/* header */
+.report .rp-rule{height:5px;background:var(--rp-red);margin-bottom:12px}
+.report .rp-head{display:flex;align-items:flex-start;gap:16px}
+.report .rp-kick{font:700 9px 'Segoe UI',Arial,sans-serif;letter-spacing:.22em;text-transform:uppercase;color:var(--rp-red)}
+.report .rp-title{margin:2px 0 0;font:italic 700 34px/1 var(--rp-cond);text-transform:uppercase;color:var(--rp-ink);overflow-wrap:anywhere}
+.report .rp-sub{margin:5px 0 0;font-size:11px;color:var(--rp-ink2)}
+.report .rp-logo{margin-left:auto;flex:none;height:20px;width:auto;margin-top:22px}
+.report .rp-date{flex:none;width:58px;height:58px;border:1px solid var(--rp-line);border-radius:9px;display:grid;place-items:center;align-content:center;margin-top:4px;text-align:center}
+.report .rp-date b{display:block;font:italic 700 26px/1 var(--rp-cond)}
+.report .rp-date span{font-size:7.5px;letter-spacing:.12em;color:var(--rp-mute)}
+.report .rp-check{height:8px;margin:12px 0 14px;background:repeating-conic-gradient(var(--rp-ink) 0 25%,#fff 0 50%) 0 0/8px 8px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+/* labels, panels and tiles */
+.report .rp-lab{font:700 8px 'Segoe UI',Arial,sans-serif;letter-spacing:.2em;text-transform:uppercase;color:var(--rp-ink2)}
+.report .rp-sec{margin:14px 0 6px}
+.report .rp-panel{border:1px solid var(--rp-line);border-radius:10px;padding:9px 12px;break-inside:avoid}
+.report .rp-panel>.rp-lab{display:block;margin-bottom:4px}
+.report .rp-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.report .rp-tiles.four{grid-template-columns:repeat(4,minmax(0,1fr))}
+.report .rp-tile{min-width:0;border:1px solid var(--rp-line);border-radius:9px;padding:6px 9px}
+.report .rp-tile b{display:block;margin-top:2px;font:600 13px/1.25 var(--rp-mono);overflow-wrap:anywhere}
+.report .rp-tile small{display:block;font-size:8.5px;color:var(--rp-mute)}
+.report .rp-tiles.big .rp-tile b{font-size:16px}
+.report .rp-kv>div{display:flex;justify-content:space-between;gap:12px;padding:4px 0;border-bottom:1px solid var(--rp-line);font-size:10.5px}
+.report .rp-kv>div:last-child{border-bottom:0}
+.report .rp-kv span{color:var(--rp-ink2)}
+.report .rp-kv b{font:600 10.5px var(--rp-mono);text-align:right;overflow-wrap:anywhere}
+.report .rp-grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;align-items:start}
+.report .rp-callout{margin-top:10px;padding:7px 11px;border-left:3px solid var(--rp-red);background:#f5f6f8;font-size:10px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.report .rp-note{margin:8px 0 0;font-size:9px;color:var(--rp-mute)}
+.report .rp-qr{display:flex;align-items:center;gap:9px;font-size:8.5px;color:var(--rp-mute)}
+.report .report-qr{flex:none;width:58px;height:58px}
+.report a{color:inherit;text-decoration:none}
+/* car cards */
+.report .rp-card{display:grid;grid-template-columns:230px minmax(0,1fr);gap:14px;margin-bottom:10px;padding:10px;border:1px solid var(--rp-line);border-radius:12px;break-inside:avoid}
+.report .rp-photo{position:relative;height:176px;border-radius:8px;overflow:hidden;background:#f0f2f4}
+.report .rp-photo img{width:100%;height:100%;object-fit:cover}
+.report .rp-photo.empty{display:grid;place-items:center;color:var(--rp-mute);font-size:9px;letter-spacing:.14em;text-transform:uppercase}
+.report .rp-num{position:absolute;left:8px;top:8px;min-width:40px;height:40px;padding:0 6px;border-radius:9px;background:#fff;display:grid;place-items:center;font:italic 700 22px var(--rp-cond);box-shadow:0 2px 8px rgba(0,0,0,.25)}
+.report .rp-card h2{margin:2px 0 0;font:italic 700 24px/1 var(--rp-cond);text-transform:uppercase;overflow-wrap:anywhere}
+.report .rp-meta{margin:3px 0 7px;font-size:10.5px;color:var(--rp-ink2)}
+.report .rp-card .rp-qr{margin-top:7px}
+.report .rp-card .report-qr{width:46px;height:46px}
+/* sheet heroes */
+.report .rp-hero{display:grid;grid-template-columns:230px minmax(0,1fr);gap:12px;align-items:start}
+.report .rp-hero .rp-photo{height:146px}
+.report .rp-hero.nophoto{grid-template-columns:1fr}
+/* tables */
+.report table{width:100%;border-collapse:collapse;font-size:10.5px}
+.report th{text-align:left;padding:5px 7px;font:700 8px 'Segoe UI',Arial,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--rp-ink2);border-bottom:1.5px solid var(--rp-ink)}
+.report td{padding:5px 7px;border-bottom:1px solid var(--rp-line);overflow-wrap:anywhere;vertical-align:middle}
+.report tr{break-inside:avoid}
+.report td.rp-m{font-family:var(--rp-mono)}
+.report td.rp-r,.report th.rp-r{text-align:right}
+.report td.rp-c,.report th.rp-c{text-align:center}
+.report td.rp-thumb{width:58px}
+.report td.rp-thumb img{width:50px;height:31px;object-fit:cover;border-radius:4px}
+.report tr.rp-lane td:first-child{box-shadow:inset 3px 0 0 var(--lane,var(--rp-red));-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.report .rp-box{display:inline-block;width:13px;height:13px;border:1.5px solid var(--rp-ink);border-radius:3px}
+.report .rp-write{display:block;height:18px;border-bottom:1px solid #9aa3ad}
+.report .rp-sign{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:12px}
+.report .rp-sign .rp-panel{height:60px}
+.report .rp-notes{height:110px;margin-top:9px}
+.report footer{margin-top:14px;padding-top:7px;border-top:1px solid var(--rp-line);font-size:9px;color:var(--rp-mute)}
+@media print{.report footer{display:none}}
+/* on screen (Print & PDF preview) */
+.report-preview .report{padding:20px 22px}
+.report-preview .rp-doc+.rp-doc{margin-top:24px;padding-top:20px;border-top:2px dashed #d5dae0}
+.report-preview{background:#fff}
