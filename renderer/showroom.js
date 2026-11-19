@@ -33,6 +33,13 @@ function showroomStar(c) {
     ? `<button class="showroom-star ${c.favourite ? 'is-favourite' : ''}" data-action="showroom-favourite" data-id="${esc(c.id)}" aria-label="${c.favourite ? 'Remove' : 'Add'} ${esc(c.name)} ${c.favourite ? 'from' : 'to'} favourites" aria-pressed="${!!c.favourite}">${c.favourite ? '★' : '☆'}</button>`
     : '';
 }
+// A soft, blurred copy of the cover photo fills the card, so the photo itself keeps its own shape.
+function showroomBackdrop(c) {
+  const p = ShowroomModel.photos(c)[0];
+  return p
+    ? `<span class="showroom-hero-backdrop" aria-hidden="true"><img src="${esc(thumbnailSource(p.data))}" alt="" decoding="async"></span>`
+    : '';
+}
 function showroomFeatured() {
   const c = showroomCoverCar();
   if (!c)
@@ -49,7 +56,7 @@ function showroomFeatured() {
     .map(u => badge(u, 'usage'))
     .join(
       ''
-    )}</div>${showroomStory(c)}<div class="actions mt">${btn('View photos', 'showroom-open', 'primary', c.id)}${btn('View car →', 'showroom-car', '', c.id)}${showroom.preferences.cover.mode === 'rotate' ? btn(showroom.coverPaused ? 'Resume cover' : 'Pause cover', 'showroom-cover-pause') : ''}</div></div><button class="showroom-hero-photo" data-action="showroom-open" data-id="${esc(c.id)}" aria-label="View photographs of ${esc(c.name)}">${showroomPhoto(c, true)}</button></section>`;
+    )}</div>${showroomStory(c)}<div class="actions mt">${btn('View photos', 'showroom-open', 'primary', c.id)}${btn('View car →', 'showroom-car', '', c.id)}${showroom.preferences.cover.mode === 'rotate' ? btn(showroom.coverPaused ? 'Resume cover' : 'Pause cover', 'showroom-cover-pause') : ''}</div></div>${showroomBackdrop(c)}<button class="showroom-hero-photo" data-action="showroom-open" data-id="${esc(c.id)}" aria-label="View photographs of ${esc(c.name)}">${showroomPhoto(c, true)}</button></section>`;
 }
 function showroomGallery() {
   const list = showroomCars();
