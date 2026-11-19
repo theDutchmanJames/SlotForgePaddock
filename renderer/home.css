@@ -10,13 +10,13 @@
 .home-feature-backdrop{position:absolute;inset:0;z-index:-3;overflow:hidden}
 .home-feature-backdrop img{width:100%;height:100%;object-fit:cover;filter:blur(28px) saturate(1.15);transform:scale(1.2)}
 .home-feature-backdrop::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,color-mix(in srgb,var(--home-photo) 94%,transparent) 0,color-mix(in srgb,var(--home-photo) 78%,transparent) 45%,color-mix(in srgb,var(--home-photo) 50%,transparent) 100%)}
-/* Like the Showroom cover: the photo in its own shape on the right, fading into a blurred copy of itself. */
-.home-feature-photo{position:absolute;top:0;right:0;bottom:0;z-index:-2;display:grid;place-items:center;height:100%;aspect-ratio:4/3;max-width:68%}
-.home-feature-photo img{width:100%;height:100%;object-fit:cover;-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 32%);mask-image:linear-gradient(90deg,transparent 0,#000 32%)}
-.home-feature.no-photo .home-feature-photo{left:0;max-width:none;aspect-ratio:auto}
+/* Like the Showroom cover: the photo in its own shape on the right, edge to edge, on a blurred copy of itself. */
+.home-feature-photo{position:absolute;top:0;right:0;bottom:0;z-index:-2;display:grid;place-items:center;aspect-ratio:4/3;max-width:68%;border-left:1px solid color-mix(in srgb,var(--ink) 14%,transparent);background:var(--home-photo);overflow:hidden;box-shadow:-18px 0 40px rgba(0,0,0,.45)}
+.home-feature-photo img{width:100%;height:100%;object-fit:cover}
+.home-feature.no-photo .home-feature-photo{inset:0;max-width:none;aspect-ratio:auto;border:0;border-radius:0;box-shadow:none}
 .home-feature.no-photo .home-feature-photo{background:radial-gradient(90% 90% at 70% 40%,color-mix(in srgb,var(--accent) 22%,var(--home-photo)),var(--home-photo) 70%)}
 .home-feature.no-photo .home-feature-photo svg{width:42%;height:auto;margin-left:30%;color:color-mix(in srgb,var(--ink) 22%,transparent)}
-.home-feature::after{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(0deg,color-mix(in srgb,var(--home-photo) 65%,transparent),transparent 40%)}
+.home-feature::after{display:none}
 .home-feature-copy{display:flex;flex-direction:column;align-items:flex-start;width:100%;padding:24px 26px 22px}
 .home-feature-meta{margin-top:12px;font:italic 700 15px var(--font-cond);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
 .home-feature-name{max-width:11ch;margin:6px 0 0;font:italic 700 clamp(38px,4.4vw,58px)/.92 var(--font-cond);text-transform:uppercase;overflow-wrap:anywhere}
