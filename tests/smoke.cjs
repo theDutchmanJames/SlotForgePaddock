@@ -67,7 +67,7 @@ module.exports=async(win,store,network,media,services={})=>{
   if(process.argv.includes('--query-only')){console.log(await require('./query-pages-smoke.cjs')({store,js,wait,click,fill,submit}));assert.deepEqual(errors,[]);return;}
   if(process.argv.includes('--club-only')){const checks=await require('./club-smoke.cjs')({win,store,network,js,wait,click,fill,submit,qa:path.join(__dirname,'..','.qa')});assert.deepEqual(errors,[]);fs.writeFileSync(path.join(__dirname,'..','.qa','club-smoke-result.json'),JSON.stringify({passed:true,checks,rendererErrors:errors},null,2));console.log('PASS focused Dealership workflows: '+checks.length);return;}
   await click('[data-action="nav"][data-id="Cars"]');
-  await wait(`document.body.innerText.includes('Your collection starts here')`);
+  await wait(`document.body.textContent.includes('Your collection starts here')`);
   await click('[data-action="add-car"]');await fill({name:'Smoke test Corvette',maker:'NSR',number:'QA-001',usage:'Home racing, Club racing','technical.motor':'King Evo','technical.weight':'83.5'});await submit();assert.equal(store.data.cars.length,1);assert.equal(store.data.cars[0].technical.motor,'King Evo');
   await click('[data-action="section"][data-id="Setups"]');await click('[data-action="save-setup"]');await fill({name:'Baseline QA',setupSource:'snapshot'});await js("document.querySelector('#setup-source').dispatchEvent(new Event('change'))");await submit();assert.equal(store.data.setups.length,1);
   await click('[data-action="nav"][data-id="Parts"]');await click('[data-action="add-part"]');await fill({name:'QA tyres',quantity:'4',category:'Wheels & tyres',partType:'Tyre'});await submit();assert.equal(store.data.parts.length,1);
@@ -81,8 +81,8 @@ module.exports=async(win,store,network,media,services={})=>{
   const member=new Store();const memberCar=member.mutate('car.save',{data:{name:'Submitted Porsche',privateNotes:'Do not share',price:'99',technical:{motor:'Test motor'}}}).result;
   const importPath=path.join(qa,'test-package.json');fs.writeFileSync(importPath,JSON.stringify(makePackage(member.data,[memberCar])));
   dialog.showOpenDialog=async()=>({canceled:false,filePaths:[importPath]});
-  await click('[data-action="nav"][data-id="Import & Export"]');await click('[data-action="import"]');await wait(`document.body.innerText.includes('Submitted Porsche')`);assert.equal(store.data.cars.length,1);
-  await click('[data-action="accept-review"]');await wait(`document.body.innerText.includes('Your review inbox is clear')`);assert.equal(store.data.cars.length,2);assert.equal(store.data.cars.find(c=>c.id===memberCar).privateNotes,undefined);
+  await click('[data-action="nav"][data-id="Import & Export"]');await click('[data-action="import"]');await wait(`document.body.textContent.includes('Submitted Porsche')`);assert.equal(store.data.cars.length,1);
+  await click('[data-action="accept-review"]');await wait(`document.body.textContent.includes('Your review inbox is clear')`);assert.equal(store.data.cars.length,2);assert.equal(store.data.cars.find(c=>c.id===memberCar).privateNotes,undefined);
   const backupPath=path.join(qa,'test-backup.json');dialog.showSaveDialog=async()=>({canceled:false,filePath:backupPath});
   await click('[data-action="nav"][data-id="Import & Export"]');await click('[data-action="backup"]');assert.equal(JSON.parse(fs.readFileSync(backupPath)).database.cars.length,2);
   await click('[data-action="nav"][data-id="Cars"]');await click('[data-action="open-car"]');await click('[data-action="section"][data-id="Photos & documents"]');
@@ -104,7 +104,7 @@ module.exports=async(win,store,network,media,services={})=>{
   await click('[data-action="nav"][data-id="Parts"]');await click('[data-action="remove-assembly"]');await fill({location:'Used pit box'});await js(`document.querySelector('[name="confirmed"]').checked=true`);await submit();assert.equal(store.data.assemblies[0].carId,null);
   await click('[data-action="install-assembly"]');await fill({carId:originalCar});await js(`document.querySelector('[name="confirmed"]').checked=true`);await submit();
   await click('[data-action="nav"][data-id="Cars"]');await click(`[data-action="open-car"][data-id="${memberCar}"]`);await click('[data-action="section"][data-id="Setups"]');await click(`[data-action="apply-setup"][data-id="${assemblySetup}"]`);await click('[data-action="preview-setup"]');
-  await wait(`document.querySelector('#dialog').innerText.includes('Transfers from other cars')`);
+  await wait(`document.querySelector('#dialog').textContent.includes('Transfers from other cars')`);
   await js(`new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))`);
   fs.writeFileSync(path.join(qa,'setup-review.png'),(await win.webContents.capturePage()).toPNG());
   await js(`document.querySelector('[name="confirmed"]').checked=true;document.querySelector('[name="transfers"]').checked=true`);await submit();assert.equal(store.data.assemblies[0].carId,memberCar);

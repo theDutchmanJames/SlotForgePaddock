@@ -6,7 +6,7 @@ module.exports=async({win,store,js,wait,click,fill,submit,qa})=>{
  const open=dialog.showOpenDialog;dialog.showOpenDialog=async()=>({canceled:false,filePaths:[file]});
  const refresh=()=>js(`(async()=>{acceptSnapshot((await api('read',{queryView:{page:'Parts',partsTab:'Assemblies'}})).data);page='Parts';partsTab='Assemblies';render()})()`);
  try{
-  await refresh();await click('[data-action="add-assembly"]');assert.ok(await js("document.querySelector('#assembly-photo-editor').innerText.includes('optional')"));await click('[data-action="assembly-photo-pick"]');await wait('!assemblyPhotoState.busy');await fill({name:'Rear axle assembly',component0:part,quantity0:'1'});await submit();
+  await refresh();await click('[data-action="add-assembly"]');assert.ok(await js("document.querySelector('#assembly-photo-editor').textContent.includes('optional')"));await click('[data-action="assembly-photo-pick"]');await wait('!assemblyPhotoState.busy');await fill({name:'Rear axle assembly',component0:part,quantity0:'1'});await submit();
   const a=store.data.assemblies.find(a=>a.name==='Rear axle assembly');assert.ok(a);assert.equal(a.picture,original);
   await wait("document.querySelector('.assembly-photo-preview img')?.naturalWidth===512");
   await click('[data-action="assembly-photo-view"]');await wait("document.querySelector('.assembly-photo-full')?.naturalWidth===1000");await click('[data-action="close-modal"]');

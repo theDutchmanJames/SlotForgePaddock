@@ -9,10 +9,10 @@ module.exports=async({win,store,js,wait,click,submit,qa})=>{
   for(let index=0;index<Math.ceil(bytes.length/U.CHUNK);index++){const chunk=bytes.subarray(index*U.CHUNK,(index+1)*U.CHUNK);await run('chunk',{...base,index,sha256:U.hash(chunk),data:chunk.toString('base64')});}
   await js('loadView()');assert.equal(await js('db._view.historyImports.total'),0);await run('commit',{...base,sha256:U.hash(bytes)});
  }else await require('../src/domain-tasks.cjs').run(store,{kind:'history-import',action:'receive',bytes:Buffer.from(JSON.stringify(b))});await js('loadView()');
- await js("openReview('Historical imports')");await wait(`reviewTab==='Historical imports'&&document.body.innerText.includes('Older club race')`);
+ await js("openReview('Historical imports')");await wait(`reviewTab==='Historical imports'&&document.body.textContent.includes('Older club race')`);
  assert.equal(await js('!!globalThis.historyInjected'),false);assert.equal(await js(`document.querySelectorAll('[data-action="history-import-inspect"]').length`),1);
  fs.writeFileSync(path.join(qa,'historical-review.png'),(await win.webContents.capturePage()).toPNG());
- await click('[data-action="history-import-inspect"]');await wait(`document.querySelector('#dialog').open`);assert.equal(await js(`document.querySelector('#dialog').innerText.includes('Acceptance')||document.querySelector('#dialog').innerText.includes('acceptance')`),true);
+ await click('[data-action="history-import-inspect"]');await wait(`document.querySelector('#dialog').open`);assert.equal(await js(`document.querySelector('#dialog').textContent.includes('Acceptance')||document.querySelector('#dialog').textContent.includes('acceptance')`),true);
  assert.equal(await js(`document.querySelector('#dialog button[disabled]').textContent`),'Approve (not yet available)');
  fs.writeFileSync(path.join(qa,'historical-review-detail.png'),(await win.webContents.capturePage()).toPNG());
  await js(`document.querySelector('#history-reject-note').value='Need original race evidence';`);await submit();await wait(`db._view.historyImports.total===0`);

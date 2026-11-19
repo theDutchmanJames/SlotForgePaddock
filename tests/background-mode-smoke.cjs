@@ -19,19 +19,19 @@ async function run(win){
  await js("await api('network','background-mode',{enabled:true}); true");win.close();assert.equal(win.isDestroyed(),false);assert.equal(win.isVisible(),false);
  async function send(payload){const r=await fetch('http://127.0.0.1:'+service.network.port+'/v1/timing/sessions',{method:'POST',headers:{Authorization:'Bearer '+service.token,'X-SlotForge-Instance':service.instanceId,'X-SlotForge-Database':service.store.data.id,'Content-Type':'application/json'},body:JSON.stringify(payload)});const value=await r.json();assert.equal(r.status,200,JSON.stringify(value));return value;}
  await send(f.normal);assert.equal(win.isVisible(),false);trayMenu[0].click();assert.equal(win.isVisible(),true);
- await js("page='Review';reviewTab='Race results';await loadView();true");assert.match(await js("document.querySelector('#main').innerText"),/Club race/);
+ await js("page='Review';reviewTab='Race results';await loadView();true");assert.match(await js("document.querySelector('#main').innerText"),/Club race/i);
  win.setSize(1442,982);await wait(200);await win.webContents.capturePage();await wait(100);
  fs.writeFileSync(path.join(__dirname,'..','.qa','phase-two-review.png'),(await win.webContents.capturePage()).toPNG());
- await js("await reviewAction('result-session','0');true");assert.match(await js("document.querySelector('#dialog').innerText"),/Measured laps/);await js("document.querySelector('#dialog').close()");await wait(50);
- await js("await reviewAction('result-open-car','car-a'); true");for(let i=0;i<100&&!(await js("!!db._view?.timing"));i++)await wait(20);assert.equal(await js("section"),'Performance');assert.match(await js("document.querySelector('#main').innerText"),/Club race/);
+ await js("await reviewAction('result-session','0');true");assert.match(await js("document.querySelector('#dialog').innerText"),/Measured laps/i);await js("document.querySelector('#dialog').close()");await wait(50);
+ await js("await reviewAction('result-open-car','car-a'); true");for(let i=0;i<100&&!(await js("!!db._view?.timing"));i++)await wait(20);assert.equal(await js("section"),'Performance');assert.match(await js("document.querySelector('#main').innerText"),/Club race/i);
  await js("page='Review';reviewTab='Race results';await loadView();await reviewAction('result-seen','0');true");assert.equal(await js("db._view.resultInbox.total"),0);
- await send(f.correction);await js("await loadView();true");assert.equal(await js("db._view.resultInbox.total"),1);assert.match(await js("document.querySelector('#main').innerText"),/Corrected/);
+ await send(f.correction);await js("await loadView();true");assert.equal(await js("db._view.resultInbox.total"),1);assert.match(await js("document.querySelector('#main').innerText"),/Corrected/i);
  const token=service.token;powerMonitor.emit('suspend');powerMonitor.emit('resume');await service.recover();assert.equal(service.token,token);
  win.close();app.emit('activate');assert.equal(win.isVisible(),true);win.close();await js("await api('network','background-mode',{enabled:false});true");assert.equal(win.isVisible(),true);
- await js("page='Settings';settingsSection='Appearance';await loadView();true");assert.match(await js("document.querySelector('#main').innerText"),/Keep Paddock available/);
+ await js("page='Settings';settingsSection='Appearance';await loadView();true");assert.match(await js("document.querySelector('#main').innerText"),/Keep Paddock available/i);
  await js("document.querySelector('[data-action=background-mode]').click()");for(let i=0;i<100&&!(await js("net.background.enabled"));i++)await wait(20);assert.equal(await js("net.background.enabled"),true);
  await js("document.querySelector('[data-action=background-mode]').scrollIntoView({block:'center'})");win.setSize(1440,980);await wait(150);await win.webContents.capturePage();await wait(50);fs.writeFileSync(path.join(__dirname,'..','.qa','phase-two-settings.png'),(await win.webContents.capturePage()).toPNG());
- await js("page='Settings';settingsSection='Database';connectionPanels.advanced=true;await loadView();true");assert.match(await js("document.querySelector('#main').innerText"),/Local service ready/);assert.match(await js("document.querySelector('#main').innerText"),/Retry local service/);
+ await js("page='Settings';settingsSection='Database';connectionPanels.advanced=true;await loadView();true");assert.match(await js("document.querySelector('#main').innerText"),/Local service ready/i);assert.match(await js("document.querySelector('#main').innerText"),/Retry local service/i);
  assert.equal(errors.length,0);success=true;trayMenu.at(-1).click();
 }
 const deadline=setTimeout(()=>{console.error('Background smoke timed out');app.exit(1);},30000);

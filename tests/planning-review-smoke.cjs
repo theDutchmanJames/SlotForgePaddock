@@ -21,7 +21,7 @@ module.exports=async({win,store,js,wait,click,submit,qa,dialog})=>{
   await click('[data-action="close-modal"]');
   await js(`openReports([${JSON.stringify(carId)}])`);
   await js(`document.querySelector('#report-kind').value='setup';document.querySelector('#report-kind').dispatchEvent(new Event('change',{bubbles:true}))`);
-  await wait(`document.querySelector('#report-preview').innerText.includes('Corrected motor × 1')`);
+  await wait(`document.querySelector('#report-preview').textContent.includes('Corrected motor × 1')`);
   await click('[data-action="close-modal"]');
   checks.push('comparison preserves historical labels and current setup report uses corrected labels');
 
@@ -29,7 +29,7 @@ module.exports=async({win,store,js,wait,click,submit,qa,dialog})=>{
   act('submission.review',{id:subId,carId,revision:store.data.cars[0].revision,fields:[],decision:'accept',includeSetups:true});
   const imported=store.data.setups.find(s=>s.sourceId);
   await js(`(async()=>{db=(await api('read')).data;openSetupComparison(${JSON.stringify(imported.id)});})()`);
-  assert.match(await js(`document.querySelector('#comparison-result').innerText`),/no tracked-inventory record/);
+  assert.match(await js(`document.querySelector('#comparison-result').innerText`),/no tracked-inventory record/i);
   assert.equal(await js(`document.querySelector('#comparison-result').innerText.includes('Corrected motor × 1')`),false);
   await click('[data-action="close-modal"]');checks.push('shared setups show unknown inventory instead of false removed-part differences');
 

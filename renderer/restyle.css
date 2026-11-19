@@ -1,0 +1,54 @@
+/* SlotForge Restyle (from SlotForge Timing's SlotForgeRestyle.md): Type Trio, Garage Card and a
+   Broadcast-style Showroom spotlight. Loaded after the app's own styles so these win. */
+
+/* ---------- Type Trio: titles in Barlow Condensed, numbers in Roboto Mono ---------- */
+#main :is(h1,h2,h3),dialog :is(h2,h3){font-family:var(--font-cond);font-weight:700;font-style:italic;text-transform:uppercase;letter-spacing:.02em}
+.page-heading h1{font-size:30px;line-height:1}
+.section-heading h2{font-size:24px;line-height:1.05}
+.panel-heading h2{font-size:19px;line-height:1.1}
+.dialog-head h2{font-size:24px;line-height:1.1}
+.mono,.stat,.cars-tab-count,.cars-result-range strong,.cars-pagination .btn,#showroom-count{font-family:var(--font-mono);font-weight:500;font-style:normal;font-variant-numeric:tabular-nums}
+.label{font-size:11px;font-weight:700;letter-spacing:.14em}
+
+/* ---------- Cars: Garage Card ---------- */
+.car-grid{grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px}
+.car-card{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:12px;background:var(--panel);box-shadow:none;overflow:hidden}
+.car-card:hover,.car-card:focus-within{transform:none;border-color:color-mix(in srgb,var(--ink) 30%,var(--line))}
+.car-card .card-photo{display:block;aspect-ratio:16/10;height:auto;min-height:0;border-bottom:1px solid var(--line);overflow:hidden}
+.car-card .card-photo img{width:100%;height:100%;object-fit:cover;display:block}
+.car-card .card-photo .placeholder{height:100%;min-height:0}
+.car-card .card-body{display:flex;flex-direction:column;gap:3px;flex:1 1 auto;min-width:0;padding:12px 14px}
+.car-card .car-title{margin:0 0 5px;padding:0;border:0;background:none;color:var(--ink);text-align:left;font:italic 700 19px/1.1 var(--font-cond);text-transform:uppercase;letter-spacing:.02em;overflow-wrap:anywhere;cursor:pointer}
+.car-card .car-title:hover{color:var(--ink);text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px}
+.card-row{display:flex;align-items:baseline;justify-content:space-between;gap:12px;font-size:12.5px;line-height:1.45}
+.card-row>span{color:var(--muted);white-space:nowrap}
+.card-row>b{min-width:0;font-weight:400;color:var(--ink);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-row>b.mono{font-weight:500}
+.car-card .card-foot{display:flex;align-items:center;gap:6px;margin:0;padding:8px 10px;border-top:1px solid var(--line);background:color-mix(in srgb,var(--bg) 50%,var(--panel));color:var(--muted);font-size:12px}
+.car-card .car-check{top:10px;left:10px}
+
+/* ---------- Showroom: the spotlight as a broadcast hero ---------- */
+.showroom-hero.showroom-story-hero{position:relative;display:grid;grid-template:minmax(0,1fr)/minmax(0,1fr);min-height:460px;padding:0;border:1px solid var(--line);border-radius:14px;background:var(--home-photo);overflow:hidden;isolation:isolate}
+.showroom-hero.showroom-story-hero>*{grid-area:1/1}
+.showroom-hero .showroom-hero-photo{position:relative;z-index:0;width:100%;height:100%;min-height:0;margin:0;padding:0;border:0;border-radius:0;background:var(--home-photo);cursor:zoom-in}
+.showroom-hero .showroom-hero-photo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.showroom-hero .showroom-hero-photo::after{content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient(90deg,color-mix(in srgb,var(--home-photo) 94%,transparent) 0,color-mix(in srgb,var(--home-photo) 78%,transparent) 30%,color-mix(in srgb,var(--home-photo) 20%,transparent) 58%,transparent 75%)}
+.showroom-hero .showroom-hero-copy{position:relative;z-index:1;align-self:stretch;display:flex;flex-direction:column;justify-content:flex-end;gap:8px;width:min(560px,52%);min-height:0;margin:0;padding:30px 32px 28px;background:none;overflow:visible;pointer-events:none}
+.showroom-hero .showroom-hero-copy>*{pointer-events:auto}
+.showroom-hero .showroom-hero-copy>.label{color:var(--muted)}
+.showroom-hero .showroom-hero-copy>h2{margin:0;font-size:clamp(40px,4.2vw,64px);line-height:.92;text-wrap:balance;overflow-wrap:anywhere}
+.showroom-hero .showroom-hero-copy>p{margin:0;color:color-mix(in srgb,var(--ink) 80%,var(--muted));font-size:14px}
+.showroom-hero .showroom-story{margin:8px 0 0;padding:12px 14px;border:1px solid color-mix(in srgb,var(--line) 70%,transparent);border-left:0;border-radius:10px;background:color-mix(in srgb,var(--panel) 78%,transparent);backdrop-filter:blur(8px)}
+.showroom-hero .showroom-story>.label{color:var(--muted)}
+.showroom-hero .showroom-story-facts dd{font-weight:600}
+.showroom-hero .showroom-story-fact-year dd,.showroom-hero .showroom-fact-year dd{font-family:var(--font-mono);font-weight:500}
+.showroom-hero .actions{margin-top:10px}
+.showroom-collection-head h2 #showroom-count{margin-left:8px;font-size:13px;text-transform:none;letter-spacing:0;color:var(--muted)}
+.showroom-card-caption h3{font-size:19px;line-height:1.1}
+@media(max-width:900px){
+  .showroom-hero.showroom-story-hero{display:flex;flex-direction:column;min-height:0}
+  .showroom-hero .showroom-hero-photo{order:-1;aspect-ratio:16/9;height:auto}
+  .showroom-hero .showroom-hero-photo::after{background:linear-gradient(0deg,color-mix(in srgb,var(--home-photo) 55%,transparent),transparent 40%)}
+  .showroom-hero .showroom-hero-copy{width:auto;padding:20px}
+  .showroom-hero .showroom-story{background:color-mix(in srgb,var(--ink) 4%,var(--panel))}
+}

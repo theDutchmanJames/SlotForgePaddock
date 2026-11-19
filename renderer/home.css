@@ -1,10 +1,10 @@
-@font-face{font-family:'SF Cond';src:url('fonts/barlowcondensed/BarlowCondensed-BoldItalic.ttf') format('truetype');font-weight:700;font-style:italic;font-display:swap}
-@font-face{font-family:'SF Cond';src:url('fonts/barlowcondensed/BarlowCondensed-Bold.ttf') format('truetype');font-weight:700;font-style:normal;font-display:swap}
-@font-face{font-family:'SF Mono';src:url('fonts/robotomono/RobotoMono[wght].ttf') format('truetype');font-weight:100 700;font-display:swap}
-:root{--font-cond:'SF Cond','Bahnschrift SemiBold Condensed','Bahnschrift',sans-serif;--font-mono:'SF Mono',Consolas,monospace;--home-photo:color-mix(in srgb,var(--bg) 70%,#000)}
+@font-face{font-family:'SF Barlow Condensed';src:url('fonts/barlowcondensed/BarlowCondensed-BoldItalic.ttf') format('truetype');font-weight:700;font-style:italic;font-display:swap}
+@font-face{font-family:'SF Barlow Condensed';src:url('fonts/barlowcondensed/BarlowCondensed-Bold.ttf') format('truetype');font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:'SF Roboto Mono';src:url('fonts/robotomono/RobotoMono[wght].ttf') format('truetype');font-weight:100 700;font-display:swap}
+:root{--font-cond:'SF Barlow Condensed','Bahnschrift SemiBold Condensed','Bahnschrift',sans-serif;--font-mono:'SF Roboto Mono',Consolas,monospace;--home-photo:color-mix(in srgb,var(--bg) 70%,#000)}
 :root[data-tone=light]{--home-photo:color-mix(in srgb,var(--bg) 88%,var(--ink))}
 /* Overview: the latest car and the welcome, the workbench, then three cards. Follows SlotForge Timing's Home. */
-.home-kicker,.home-welcome .label{font-size:10.5px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:color-mix(in srgb,var(--accent) 80%,var(--ink))}
+.home-kicker,.home-welcome .label{font:700 11px "Segoe UI",system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
 .home-top{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:16px}
 .home-feature{position:relative;display:flex;min-height:340px;border:1px solid var(--line);border-radius:14px;background:var(--home-photo);overflow:hidden;isolation:isolate}
 .home-feature-photo{position:absolute;inset:0;z-index:-2;display:grid;place-items:center}

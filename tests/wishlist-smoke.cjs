@@ -5,7 +5,7 @@ module.exports=async({win,store,js,wait,click,fill,submit,qa})=>{
  const owned=store.mutate('car.save',{data:{name:'Owned racer',maker:'NSR',ownership:'Wanted',usage:['Owned only']}}).result;
  await click('[data-action="nav"][data-id="Cars"]');await wait('!!document.querySelector(".car-membership-tabs")');
  assert.equal(await js('wishlistUi'),true);assert.equal(await js('filteredCars().length'),1);
- await click('[data-action="cars-tab"][data-id="wishlist"]');assert.equal(await js('filteredCars().length'),0);assert.ok(await js('document.body.innerText.includes("Start your Wishlist")'));
+ await click('[data-action="cars-tab"][data-id="wishlist"]');assert.equal(await js('filteredCars().length'),0);assert.ok(await js('document.body.textContent.includes("Start your Wishlist")'));
  await click('[data-action="add-car"]');assert.equal(await js('document.querySelector("[name=ownership]").value'),'Wanted');
  await fill({name:'Desired <GT>',maker:'Slot.it',reference:'CA-1',model:'Vintage GT',price:'79.95',currency:'EUR',usage:'Vintage',description:'Saved research'});
  await js(`modalPhoto=${JSON.stringify(image)}`);await submit();await wait('!!carId&&!viewPendingKey');

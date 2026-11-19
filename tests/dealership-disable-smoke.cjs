@@ -7,7 +7,7 @@ module.exports=async(win,store,root)=>{
  const click=async selector=>{await wait(`!!document.querySelector(${JSON.stringify(selector)})`);await js(`document.querySelector(${JSON.stringify(selector)}).click()`);await wait('!actionBusy&&!viewPendingKey');};
  await wait("document.body.textContent.includes('On the workbench')");
  await click('[data-action="nav"][data-id="Connections"]');
- await wait("document.body.innerText.includes('Dealership offline')");
+ await wait("document.body.textContent.includes('Dealership offline')");
  const timing=await require('../packages/shared-library/index.cjs').open({application:'SlotForge Timing',installationId:'disable-test',sharedRoot:path.join(root,'shared')});
  try{
   const before=await timing.status();await click('[data-action="club-disable"]');

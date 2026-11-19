@@ -20,7 +20,7 @@ module.exports=async({win,store,js,wait,click,qa,service})=>{
   assert.ok(await js('document.querySelectorAll(".sheet-field-option").length<15'));await click('[data-action=sheet-field-pick][data-id="factory.motor"]');
   // Duplicate field: the box names both columns, the grid marks them, and "Choose cars" points at the box instead of advancing.
   await assign(1,'name','display name');assert.equal(await js('document.querySelector("[data-action=sheet-preview]").getAttribute("aria-disabled")'),'true');
-  assert.equal(await js('document.querySelector("#sheet-blockers").hidden'),false);assert.match(await js('document.querySelector("#sheet-blockers").innerText'),/Display name is used by 2 columns[\s\S]*column A “Name” and column B “Manufacturer”/);
+  assert.equal(await js('document.querySelector("#sheet-blockers").hidden'),false);assert.match(await js('document.querySelector("#sheet-blockers").innerText'),/Display name is used by 2 columns[\s\S]*column A “Name” and column B “Manufacturer”/i);
   assert.deepEqual(await js('[...document.querySelectorAll(".sheet-grid thead .sheet-col-problem.sheet-map-cell")].map(e=>e.dataset.sheetColumn)'),['0','1']);assert.equal(await js('document.querySelector(\'.sheet-map-cell[data-sheet-column="0"] .sheet-col-flag\').textContent'),'Same field as column B');
   assert.match(await js('document.querySelector("#sheet-footer-blocked").textContent'),/Fix 1 thing above/);assert.equal(await js('document.querySelector("#sheet-mapping-status").getBoundingClientRect().height<=1'),true);
   await click('[data-action="sheet-preview"]');assert.equal(await js('!!document.querySelector(".sheet-review")'),false);assert.equal(await js('document.querySelector("#sheet-blockers").classList.contains("sheet-blockers-flash")'),true);
@@ -28,7 +28,7 @@ module.exports=async({win,store,js,wait,click,qa,service})=>{
   await click('[data-action=sheet-blocker-column][data-id="1"]');await wait('!!document.querySelector("#sheet-field-dialog")');await search('manufacturer');await click('[data-action=sheet-field-pick][data-id="maker"]');
   assert.equal(await js('document.querySelector("#sheet-blockers").hidden'),true);assert.equal(await js('document.querySelector("[data-action=sheet-preview]").getAttribute("aria-disabled")'),'false');assert.equal(await js('document.querySelectorAll(".sheet-col-flag").length'),0);
   // Missing Display name: the box offers a column chooser that assigns it in one step.
-  await click('[data-action=sheet-assign][data-id="0"]');await click('[data-action=sheet-field-ignore]');assert.match(await js('document.querySelector("#sheet-blockers").innerText'),/Choose the column with your car names/);
+  await click('[data-action=sheet-assign][data-id="0"]');await click('[data-action=sheet-field-ignore]');assert.match(await js('document.querySelector("#sheet-blockers").innerText'),/Choose the column with your car names/i);
   await capture('spreadsheet-mapping-blocked-name.png');
   await click('[data-action=sheet-name-column]');await wait('!!document.querySelector("[data-action=sheet-name-pick]")');await click('[data-action=sheet-name-pick][data-id="0"]');
   assert.equal(await js('document.querySelector("#sheet-map-0").value'),'name');assert.equal(await js('document.querySelector("#sheet-blockers").hidden'),true);
@@ -52,11 +52,11 @@ module.exports=async({win,store,js,wait,click,qa,service})=>{
   await click('[data-action=sheet-filter][data-id=all]');await capture('spreadsheet-review-verified.png');
   await click('[data-action=sheet-back]');assert.equal(await js('document.querySelector("#dialog").textContent.includes("resets")'),true);await click('[data-action=sheet-return]');
   await click('[data-action="close-modal"]');await js("openReview('Spreadsheet imports')");await wait('!!document.querySelector("[data-action=sheet-saved]")');await click('[data-action="sheet-saved"]');await click('[data-action="sheet-open"]');
-  await click('[data-action="sheet-confirm"]');assert.equal(store.snapshot().cars.length,1);assert.equal(await js('document.querySelector(".sheet-confirm-counts").innerText.includes("Update existing cars")'),true);
+  await click('[data-action="sheet-confirm"]');assert.equal(store.snapshot().cars.length,1);assert.equal(await js('document.querySelector(".sheet-confirm-counts").textContent.includes("Update existing cars")'),true);
   await click('[data-action="sheet-start"]');await service.work?.promise;await wait('!!document.querySelector("[data-action=sheet-done]")');assert.equal(store.snapshot().cars.length,3);
   await click('[data-action="sheet-done"]');assert.equal(await js('document.querySelector("#dialog").open'),false);
   const cars=store.snapshot().cars,car=cars.find(c=>c.reference==='00085'),updated=cars.find(c=>c.id===originalCar);assert.equal(car.owner,'James');assert.equal(car.privateNotes,'Private note');assert.equal(car.factory.motor,'Factory motor');assert.equal(car.technical.motor,'Replacement motor');assert.equal(updated.name,'Updated name');assert.equal(updated.owner,'Owner stays');assert.equal(updated.technical.motor,'Keep motor');
-  await click('[data-action="nav"][data-id="Cars"]');await wait('document.body.innerText.includes("BMW M1")');
+  await click('[data-action="nav"][data-id="Cars"]');await wait('document.body.textContent.includes("BMW M1")');
   // A second real XLSX exercises cross-page selection without saving test cars.
   const X=require('xlsx'),book=X.utils.book_new();X.utils.book_append_sheet(book,X.utils.aoa_to_sheet([['Name','Reference'],...Array.from({length:50},(_,i)=>['Paged '+i,'PAGE-'+i])]),'Cars');chosenFile=path.join(qa,'spreadsheet-pages-'+Date.now()+'.xlsx');fs.writeFileSync(chosenFile,X.write(book,{type:'buffer',bookType:'xlsx'}));
   await click('[data-action="nav"][data-id="Import & Export"]');await click('[data-action=sheet-pick]');await click('[data-action=sheet-match]');

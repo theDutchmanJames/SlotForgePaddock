@@ -13,15 +13,15 @@ module.exports=async({win,store,js,wait,click,qa})=>{
  // Simulate only a lost renderer acknowledgement after the real IPC/worker
  // commit. Retry must reuse the note and show exactly one accepted session.
  await js("globalThis.approvalOriginalApi=api;api=async(...args)=>{const result=await approvalOriginalApi(...args);if(args[0]==='historyImport'&&args[1].action==='approve'&&!globalThis.approvalLostReply){globalThis.approvalLostReply=true;throw Error('Synthetic lost acknowledgement');}return result;};void 0;");
- await click('[data-action="history-evidence-approve"]');await wait("document.querySelector('#historical-evidence').innerText.includes('Synthetic lost acknowledgement')");
+ await click('[data-action="history-evidence-approve"]');await wait("document.querySelector('#historical-evidence').textContent.includes('Synthetic lost acknowledgement')");
  assert.equal(store.data.timing.imports[0].status,'approved');assert.equal(await js("document.querySelector('#history-reject-note').disabled"),true);assert.equal(await js("document.querySelector('#dialog button[type=submit]').disabled"),true);
  await click('[data-action="history-evidence-tab"][data-id="Laps"]');await wait("historicalEvidenceState.result.status==='approved'");
  assert.equal(await js("document.querySelector('#dialog button[type=submit]')"),null);await click('[data-action="close-modal"]');
  await wait('db._view.historyImports.total===0');assert.equal(store.data.timing.sessions.length,1);
- await click('[data-action="history-import-inspect"]');assert.equal(await js("document.querySelector('#historical-evidence').innerText.includes('approved into shared history')"),true);await click('[data-action="close-modal"]');
+ await click('[data-action="history-import-inspect"]');assert.equal(await js("document.querySelector('#historical-evidence').textContent.includes('approved into shared history')"),true);await click('[data-action="close-modal"]');
  // A second pending item exercises successful approval through the UI.
  b.operationId='native-second';b.items[0].sessionId='native-second';await tasks.run(store,{kind:'history-import',action:'receive',input:b});await js('loadView()');await click('[data-action="history-import-inspect"]');
- await js('globalThis.approvalLostReply=false');await click('[data-action="history-evidence-approve"]');await wait("document.querySelector('#dialog').innerText.includes('Retry approval')");
+ await js('globalThis.approvalLostReply=false');await click('[data-action="history-evidence-approve"]');await wait("document.querySelector('#dialog').textContent.includes('Retry approval')");
  await click('[data-action="history-evidence-approve"]');await wait("!document.querySelector('#dialog').open&&db._view.historyImports.total===0");
  assert.equal(store.data.timing.sessions.length,2);assert.equal(store.data.timing.audit.length,2);await js('api=approvalOriginalApi;void 0');
  // Retained evidence from a previous recovery generation is visible but its

@@ -46,7 +46,7 @@ module.exports=async({win,store,js,wait,click,fill,submit,qa})=>{
  let shopping=store.data.planning.shopping.find(s=>s.id===line);assert.equal(shopping.jobId,job);assert.equal(shopping.buildId,draft);assert.equal(shopping.purchase.listId,'general');
  await click(selector('shop-done'));await submit();await settle();assert.equal(store.data.parts.find(p=>p.id===motor).quantity,0);
  await click(selector('shop-reopen'));await click(selector('shop-done'));await js(`document.querySelector('[name=doneMode][value=stock]').click();document.querySelector('[name=confirmed]').checked=true`);await submit();await settle();assert.equal(store.data.parts.find(p=>p.id===motor).quantity,3);
- await click(selector('shop-edit'));await click(selector('shop-history'));assert.match(await js(`document.querySelector('#dialog').innerText`),/3/);await click('[data-action="close-modal"]');
+ await click(selector('shop-edit'));await click(selector('shop-history'));assert.match(await js(`document.querySelector('#dialog').innerText`),/3/i);await click('[data-action="close-modal"]');
  await click(selector('shop-delete'));await settle();await wait(`document.querySelectorAll('.shopping-compact-row').length===14`);
  await click('[data-action="shop-undo"]');await settle();assert.equal(store.data.parts.find(p=>p.id===motor).quantity,3);assert.equal(store.data.planning.shopping.find(s=>s.id===line).buildId,draft);
  await click(`[data-action="shop-done"][data-id="${free}"]`);assert.equal(await js(`document.querySelector('[name=doneMode][value=stock]').disabled`),true);await click('[data-action="close-modal"]');
@@ -70,7 +70,7 @@ module.exports=async({win,store,js,wait,click,fill,submit,qa})=>{
  await win.webContents.reload();await wait('typeof db!=="undefined"&&!!db');await reload();await settle();assert.equal(await js(`document.querySelectorAll('[data-job-step]').length`),5);
  const savedPlan=structuredClone(store.data.planning.jobs.find(p=>p.jobId===job));
  act('planning.job.save',{...savedPlan,checklist:Array.from({length:50},(_,i)=>({text:'Step '+i,done:false}))});await reload();await settle();
- await click('[data-action="job-checklist-quick"]');assert.equal(await js(`!!document.querySelector('[data-quick-checklist]')`),false);assert.match(await js(`document.querySelector('#toast').innerText`),/50/);
+ await click('[data-action="job-checklist-quick"]');assert.equal(await js(`!!document.querySelector('[data-quick-checklist]')`),false);assert.match(await js(`document.querySelector('#toast').innerText`),/50/i);
  act('planning.job.save',savedPlan);await reload();await settle();
  act('job.cancel',{id:job,confirmed:true});await reload();await settle();
  assert.equal(await js(`document.querySelectorAll('[data-action="job-checklist-quick"],.shopping-compact-row [data-action="shop-edit"],.shopping-compact-row [data-action="shop-delete"]').length`),0);

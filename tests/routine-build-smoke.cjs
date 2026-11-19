@@ -14,7 +14,7 @@ module.exports=async({win,store,network,js,wait,click,fill,submit,qa})=>{
  await js("page='Parts';partsTab='Stock';stockScope='owned';buildDirty=false;loadView()");
  // Use the dedicated shopping page and reopen the saved build from its purchase.
  await click('[data-action="nav"][data-id="Shopping List"]');
- await wait("document.body.innerText.includes('Future GT3 racer')");await click(`[data-action="build-load-draft"][data-id="${draft}"]`);
+ await wait("document.body.textContent.includes('Future GT3 racer')");await click(`[data-action="build-load-draft"][data-id="${draft}"]`);
  await wait("page==='Build from Scratch'&&buildState.name==='Future GT3 racer'");assert.equal(await js('buildState.parts.length'),1);
  checks.push('Zero-stock catalogue selection creates linked shopping and reopens the same plan');
  await js(`buildDirty=false;page='Cars';carId=${JSON.stringify(car)};section='Overview';loadView()`);

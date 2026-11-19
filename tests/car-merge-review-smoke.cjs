@@ -3,7 +3,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
 module.exports=async({win,store,js,wait,click,qa})=>{
  const {ipcMain}=require('electron'),S=require('../src/car-merge-storage.cjs'),Service=require('../src/car-merge-review-service.cjs');
  const initialActivation=S.enabled();assert.equal(await js('mergeReviewAvailable'),initialActivation);
- await js("openReview('Incoming cars')");assert.equal(await js("document.body.innerText.includes('Car merges')"),initialActivation);
+ await js("openReview('Incoming cars')");assert.equal(await js("document.body.textContent.includes('Car merges')"),initialActivation);
  const f=require('./support/timing-fixtures.cjs').fixtures(),act=(a,p)=>f.store.mutate(a,{revision:f.store.data.revision,...p},{snapshot:false}).result;
  const image='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==';
  act('car.save',{id:'car-a',revision:f.store.data.cars[0].revision,data:{name:'Duplicate GT3 <img src=x onerror="globalThis.mergeInjected=true">',reference:'NSR-TEST',picture:image,photos:[{id:'extra-photo',name:'Track photo',data:image}]}});

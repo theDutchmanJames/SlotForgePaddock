@@ -313,6 +313,23 @@ function filteredCars() {
     )
     .sort((a, b) => CarSort.compare(a, b, sort, sortDirection));
 }
+// The detail rows of a car card (Garage Card): the label on the left, the value on the right.
+function carCardRows(c) {
+  const rows = [
+    ['Manufacturer', c.maker, ''],
+    ['Scale', c.scale, 'mono'],
+    ['Number', c.number, 'mono'],
+    ['Use', (c.usage || []).slice(0, 2).join(', '), '']
+  ].filter(([, value]) => value);
+  return rows.length
+    ? rows
+        .map(
+          ([label, value, kind]) =>
+            `<div class="card-row"><span>${label}</span><b class="${kind}">${esc(value)}</b></div>`
+        )
+        .join('')
+    : '<div class="card-row"><span>Details to add</span></div>';
+}
 function renderCars() {
   return renderCarsBrowser();
 }
@@ -352,14 +369,7 @@ function renderCarResults() {
     `<div class="car-grid">${list
       .map(
         c =>
-          `<article class="car-card"><label class="car-check">${check(c)}</label><button class="card-photo" data-action="open-car" data-id="${c.id}" aria-label="Open ${esc(c.name)}">${photo(c, true)}</button><div class="card-body"><button class="car-title" data-action="open-car" data-id="${c.id}">${esc(c.name)}</button><div class="card-sub">${esc([c.number, c.maker, c.scale].filter(Boolean).join(' · ') || 'Details to add')}</div><div class="row">${(
-            c.usage || []
-          )
-            .slice(0, 3)
-            .map(u => badge(u, 'usage'))
-            .join(
-              ' '
-            )}</div><div class="card-foot">${icon('pin')}${esc(c.location || 'No location set')}<span class="spacer"></span>${c.availability && c.availability !== 'Available' ? badge(c.availability) : ''}</div></div></article>`
+          `<article class="car-card"><label class="car-check">${check(c)}</label><button class="card-photo" data-action="open-car" data-id="${c.id}" aria-label="Open ${esc(c.name)}">${photo(c, true)}</button><div class="card-body"><button class="car-title" data-action="open-car" data-id="${c.id}">${esc(c.name)}</button>${carCardRows(c)}</div><div class="card-foot">${btn('Open', 'open-car', 'small', c.id)}<span class="spacer"></span>${c.availability && c.availability !== 'Available' ? badge(c.availability) : ''}</div></article>`
       )
       .join('')}</div>`
   );

@@ -34,7 +34,7 @@ module.exports=async({win,store,js,wait,click,qa})=>{
   await js(`document.querySelector('[data-quick-filter]').value='on';document.querySelector('[data-quick-filter]').dispatchEvent(new Event('input'))`);
   assert.ok(await js(`document.querySelectorAll('[data-quick-row]:not([hidden])').length<10`));
   await js(`document.querySelector('[data-quick-filter]').value='';document.querySelector('[data-quick-filter]').dispatchEvent(new Event('input'));const check=document.querySelector('[data-quick-row="default-slot-it"] [data-quick-field="visible"]');check.checked=false;check.dispatchEvent(new Event('input',{bubbles:true}));`);
-  assert.match(await js(`document.querySelector('[data-quick-row="default-slot-it"] summary').innerText`),/Hidden/);await save();
+  assert.match(await js(`document.querySelector('[data-quick-row="default-slot-it"] summary').innerText`),/Hidden/i);await save();
   await click('[data-quick-toggle]');assert.equal(await js(`!!document.querySelector('[data-quick-open="default-slot-it"]')`),false);await click('[data-quick-manage]');await click('[data-quick-reset]');await save();
   await click('[data-quick-toggle]');assert.equal(await js(`document.querySelectorAll('[data-quick-open]').length`),26);await click('[data-quick-manage]');await click('[data-quick-add]');await edit('Invalid','file:///C:/bad');await js(`document.querySelector('.quick-links-manager form').requestSubmit()`);assert.equal(await js(`document.querySelector('[data-quick-error]').hidden`),false);await click('[data-quick-cancel]');
   assert.equal(store.data.revision,baseline);checks.push('personal links, escaping, hiding, restoring defaults and validation; no collection revision or Review changes');

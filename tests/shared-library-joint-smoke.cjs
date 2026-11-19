@@ -9,7 +9,7 @@ module.exports=async(win,store,root)=>{
  await wait("document.body.textContent.includes('On the workbench')");
  const cars=store.data.cars,records=store.data.timing.sessions;assert.ok(cars.length);assert.ok(records.length);
  await click('[data-action="nav"][data-id="Cars"]');
- for(const car of cars)await wait('document.body.innerText.includes('+JSON.stringify(car.name)+')');checks.push('Timing normal editor cars visible in Paddock Cars');
+ for(const car of cars)await wait('document.body.textContent.includes('+JSON.stringify(car.name)+')');checks.push('Timing normal editor cars visible in Paddock Cars');
  let measured=0,originals=0;
  for(const car of cars){
   await click('[data-action="nav"][data-id="Cars"]');await click('[data-action="open-car"][data-id="'+car.id+'"]');await click('[data-action="section"][data-id="Performance"]');
@@ -33,7 +33,7 @@ module.exports=async(win,store,root)=>{
   const exchange=config.exchange,pause=()=>new Promise(r=>setTimeout(r,100)),receive=async name=>{for(let n=0;n<1000;n++){if(fs.existsSync(path.join(exchange,'failure.json')))throw Error(fs.readFileSync(path.join(exchange,'failure.json'),'utf8'));if(fs.existsSync(path.join(exchange,name)))return JSON.parse(fs.readFileSync(path.join(exchange,name),'utf8'));await pause();}throw Error('Timing handshake timeout: '+name);},publish=(name,value)=>{const file=path.join(exchange,name);fs.writeFileSync(file+'.tmp',JSON.stringify(value));fs.renameSync(file+'.tmp',file);};
   const ready=await receive('ready.json'),car=cars[0];assert.equal(ready.status.databaseId,config.databaseId);
   await click('[data-action="nav"][data-id="Cars"]');publish('go.json',{databaseId:config.databaseId,carId:car.id,name:'Timing native joint edit'});
-  const written=await receive('written.json');await wait("document.body.innerText.includes('Timing native joint edit')");checks.push('Timing normal editor save refreshes Paddock Cars automatically');
+  const written=await receive('written.json');await wait("document.body.textContent.includes('Timing native joint edit')");checks.push('Timing normal editor save refreshes Paddock Cars automatically');
   await click('[data-action="open-car"][data-id="'+car.id+'"]');await click('[data-action="section"][data-id="Performance"]');await wait('!!historyCarState?.result');
   await wait('historyCarState.result.entries.some(e=>e.sessionId==='+JSON.stringify(written.sessionId)+')');checks.push('Timing normal race finalization appears in Paddock Performance');
   await click('[data-action="edit-car"]');await wait('!!document.querySelector(\'[name="name"]\')');await js("document.querySelector('[name=name]').value='Paddock native joint edit';document.querySelector('#modal-form').requestSubmit()");await wait("!document.querySelector('#dialog').open&&!modalSaving");

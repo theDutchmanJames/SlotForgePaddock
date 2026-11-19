@@ -72,8 +72,8 @@ module.exports=async({win,store,js,wait,click,fill,submit,qa})=>{
   checks.push('cancel and stale review preserve draft and inventory; confirmed save creates a partial car and its initial setup atomically');
   await js(`page='Build from Scratch';render()`);
   await js(`const target=document.querySelector('.build-hotspot[data-id="frontTyres"]');target.focus();target.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}));`);
-  await wait('buildSlot==="frontTyres"');assert.match(await js(`document.querySelector('.build-picker').innerText`),/Front tyres/);
-  await click('[data-action="build-slot"][data-id="body"]');assert.match(await js(`document.querySelector('#build-stock-list').innerText`),/No suggested/);
+  await wait('buildSlot==="frontTyres"');assert.match(await js(`document.querySelector('.build-picker').innerText`),/Front tyres/i);
+  await click('[data-action="build-slot"][data-id="body"]');assert.match(await js(`document.querySelector('#build-stock-list').innerText`),/No suggested/i);
   await js(`document.querySelector('#build-all').click()`);await click(`[data-action="build-pick"][data-id="${motor}"]`);
   await fill({'build-name':'Unusual custom body'});await js(`document.querySelector('#build-setup').click()`);
   await click('[data-action="build-review"]');await js(`document.querySelector('[name=confirmed]').checked=true`);await submit();

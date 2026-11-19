@@ -55,7 +55,7 @@ module.exports=async({win,store,network,js,wait,click,fill})=>{
 
  await click('[data-action="nav"][data-id="Connections"]');
  assert.equal(await js(`document.querySelector('#main .panel').classList.contains('club-connections')`),true);
- assert.match(await js(`document.querySelector('.club-connections h2').innerText`),/Dealership Mode/);
+ assert.match(await js(`document.querySelector('.club-connections h2').innerText`),/Dealership Mode/i);
  assert.equal(await js(`!!document.querySelector('.connection-cards')`),!network.club.coordinator);
  for(const theme of ['dark','light']){
   await js(`db.settings.theme=${JSON.stringify(theme)};render()`);win.setSize(960,760);

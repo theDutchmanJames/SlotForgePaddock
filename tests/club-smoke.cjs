@@ -8,15 +8,15 @@ module.exports=async({win,store,network,js,wait,click,fill,submit,qa})=>{
  const start=network.start.bind(network);network.start=async()=>{throw Error('Test listener unavailable');};
  try{await submit();}finally{network.start=start;}
  assert.equal(club.coordinator,true);assert.equal(club.device.hostPassword,'race');
- assert.match(await js(`document.querySelector('#toast').innerText`),/settings saved.*could not start/);
+ assert.match(await js(`document.querySelector('#toast').innerText`),/settings saved.*could not start/i);
  await click('[data-action="club-start"]');
  checks.push('failed first hosting start retains the saved setup and offers a working retry');
- assert.equal(club.coordinator,true);await wait(`document.body.innerText.includes('Dealership Mode')`);assert.equal(network.clubCode,'race');assert.equal(network.hostingMode,'dealership');assert.equal(await js("!!document.querySelector('[data-action=\"set-host-password\"]')"),false);await click('[data-action="club-stop"]');await click('[data-action="club-start"]');assert.equal(network.clubCode,'race');fs.writeFileSync(path.join(qa,'dealership-password-host.png'),(await win.webContents.capturePage()).toPNG());checks.push('Dealership Mode starts with one remembered password and separate hosting controls');
+ assert.equal(club.coordinator,true);await wait(`document.body.textContent.includes('Dealership Mode')`);assert.equal(network.clubCode,'race');assert.equal(network.hostingMode,'dealership');assert.equal(await js("!!document.querySelector('[data-action=\"set-host-password\"]')"),false);await click('[data-action="club-stop"]');await click('[data-action="club-start"]');assert.equal(network.clubCode,'race');fs.writeFileSync(path.join(qa,'dealership-password-host.png'),(await win.webContents.capturePage()).toPNG());checks.push('Dealership Mode starts with one remembered password and separate hosting controls');
  await click('[data-action="nav"][data-id="Cars"]');await click('[data-action="add-car"]');
  await fill({name:'Club review UI car',maker:'NSR','technical.motor':'21.5k RPM'});await submit();
  assert.ok(!store.data.cars.some(c=>c.name==='Club review UI car'));
  await wait(`page==='Review'&&reviewTab==='Club changes'&&!!document.querySelector('[data-action="club-compare"]')`);
- await click('[data-action="club-compare"]');await wait(`document.querySelector('#modal-form').innerText.includes('Club review UI car')`);
+ await click('[data-action="club-compare"]');await wait(`document.querySelector('#modal-form').textContent.includes('Club review UI car')`);
  fs.writeFileSync(path.join(qa,'club-review-dark.png'),(await win.webContents.capturePage()).toPNG());
  await js(`db.settings.theme='light';applyTheme()`);win.setSize(960,760);
  fs.writeFileSync(path.join(qa,'club-review-light-small.png'),(await win.webContents.capturePage()).toPNG());
