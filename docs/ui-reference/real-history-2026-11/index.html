@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Real history redesign</title>
+<!-- Car photos come from .qa/preview-cars (ignored by git), made from the local library; they are not part of the repository. -->
+<style>
+@font-face{font-family:'SF Barlow Condensed';src:url('../../../renderer/fonts/barlowcondensed/BarlowCondensed-BoldItalic.ttf') format('truetype');font-weight:700;font-style:italic}
+@font-face{font-family:'SF Roboto Mono';src:url('../../../renderer/fonts/robotomono/RobotoMono[wght].ttf') format('truetype');font-weight:100 700}
+:root{--bg:#171b21;--panel:#222831;--raised:#2a313b;--ink:#e8e6e1;--ink2:#c4c8ce;--muted:#98a0ab;--faint:#6b7380;--line:#343b47;--line2:#2b313b;--accent:#e5484d;--ok:#3ecf8e;--amber:#edbd6a;--blue:#79b5ed;--violet:#a88cda;--green:#67c79b;
+  --cond:'SF Barlow Condensed','Bahnschrift',sans-serif;--mono:'SF Roboto Mono',Consolas,monospace;--ui:'Segoe UI',system-ui,sans-serif;color-scheme:dark}
+[data-theme=light]{--bg:#f1efea;--panel:#fff;--raised:#f0eee9;--ink:#1d2229;--ink2:#3a414c;--muted:#656c76;--faint:#8a929d;--line:#d9d6cf;--line2:#e6e3dd;--accent:#c92424;--amber:#a7741c;--blue:#236db4;--ok:#1f9a62;--green:#187a50;--violet:#7950a6;color-scheme:light}
+*{box-sizing:border-box}html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:13.5px/1.45 var(--ui);overflow:hidden}
+button,input{font:inherit;color:inherit}
+.mono{font-family:var(--mono);font-weight:500}
+h1,h2,h3,h4{font-family:var(--cond);font-style:italic;font-weight:700;text-transform:uppercase;letter-spacing:.02em;margin:0}
+.eye{font:600 10px var(--ui);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.muted{color:var(--muted)}.grow{flex:1}
+.switch{position:relative;z-index:50;display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;height:46px;padding:0 20px;background:var(--bg);border-bottom:1px solid var(--line2)}
+.switch b{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.switch p{margin:0 0 0 auto;font-size:12px;color:var(--faint)}
+.seg{display:inline-flex;gap:2px;padding:3px;border:1px solid var(--line);border-radius:9px;background:color-mix(in srgb,var(--bg) 60%,var(--panel))}
+.seg button{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 11px;border:0;border-radius:6px;background:transparent;color:var(--muted);font-size:12.5px;cursor:pointer;white-space:nowrap}
+.seg button.on{background:color-mix(in srgb,var(--ink) 12%,var(--panel));color:var(--ink);font-weight:600}
+.app{position:absolute;inset:46px 0 0;filter:blur(2px);opacity:.45}
+.chrome{display:flex;align-items:center;gap:12px;height:56px;padding:0 20px;background:var(--panel);border-bottom:1px solid var(--line)}
+.logo{width:36px;height:36px;border-radius:9px;background:var(--accent)}
+.backdrop{position:absolute;inset:46px 0 0;background:rgba(5,7,10,.55)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:32px;padding:5px 12px;border:1px solid transparent;border-radius:8px;background:color-mix(in srgb,var(--ink) 8%,var(--panel));color:var(--ink);font-size:13px;white-space:nowrap;cursor:pointer}
+.btn.primary{background:var(--accent);color:#fff;font-weight:600}.btn.ghost{background:transparent;color:var(--muted)}.btn.small{min-height:27px;padding:3px 10px;font-size:12.5px}
+input.f{width:100%;min-height:34px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);outline:none}
+.fl{display:grid;gap:5px;font-size:12px;color:var(--muted)}
+.win{position:absolute;left:50%;top:calc(46px + 26px);transform:translateX(-50%);width:min(1260px,calc(100vw - 40px));height:calc(100vh - 46px - 52px);display:flex;flex-direction:column;border:1px solid var(--line);border-radius:14px;background:var(--panel);box-shadow:0 30px 80px rgba(0,0,0,.5);overflow:hidden}
+.whead{display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid var(--line)}
+.whead h2{font-size:24px;line-height:1}.whead p{margin:0;font-size:12.5px;color:var(--muted)}.whead .x{margin-left:auto;color:var(--muted);font-size:18px}
+.wbody{flex:1;min-height:0;display:flex}
+.wfoot{display:flex;align-items:center;gap:10px;padding:11px 20px;border-top:1px solid var(--line);background:color-mix(in srgb,var(--bg) 40%,var(--panel))}
+.wfoot .sum{font-size:12.5px;color:var(--muted)}.wfoot .sum b{color:var(--ink)}
+/* real car history */
+.wbody{flex:1;min-height:0;display:flex}
+.col{display:flex;flex-direction:column;min-width:0;min-height:0}
+.cb{flex:1;min-height:0;overflow:auto;padding:16px 22px}
+.hint{font-size:12px;color:var(--muted)}
+.grp{display:flex;align-items:center;gap:10px;margin:18px 0 8px;font:600 9.5px var(--ui);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}.grp::after{content:'';flex:1;height:1px;background:var(--line2)}
+.grp:first-child{margin-top:0}
+.row{display:grid;gap:10px;align-items:start}.r2{grid-template-columns:repeat(2,minmax(0,1fr))}.r3{grid-template-columns:repeat(3,minmax(0,1fr))}.r4{grid-template-columns:90px 1fr 110px}
+textarea.f{display:block;width:100%;min-height:110px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit;resize:none;outline:none}
+.sugg{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}.sugg span{padding:1px 9px;border-radius:99px;border:1px solid var(--line);font-size:11.5px;color:var(--muted);white-space:nowrap}.sugg span.on{border-color:var(--blue);color:var(--ink);background:color-mix(in srgb,var(--blue) 12%,var(--panel))}
+/* classification cards */
+.cls{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.cl{padding:10px 11px;border:1px solid var(--line);border-radius:11px;background:var(--panel);min-width:0}
+.cl .em{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font-size:15px;margin-bottom:7px;background:color-mix(in srgb,var(--c) 18%,var(--panel));color:var(--c)}
+.cl b{display:block;font-size:12.5px}.cl small{display:block;font-size:11px;color:var(--muted);line-height:1.3;margin-top:2px}
+.cl.on{border-color:var(--c);box-shadow:0 0 0 2px color-mix(in srgb,var(--c) 35%,transparent);background:color-mix(in srgb,var(--c) 7%,var(--panel))}
+.drv{display:flex;flex-wrap:wrap;gap:6px;padding:5px;border:1px solid var(--line);border-radius:8px;background:var(--bg);min-height:34px;align-items:center}
+.drv span{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 6px 0 10px;border-radius:99px;background:color-mix(in srgb,var(--ink) 10%,var(--panel));font-size:12.5px}.drv span i{font-style:normal;color:var(--muted)}
+.drv em{font-style:normal;color:var(--faint);font-size:12.5px;padding-left:4px}
+.src{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:var(--panel);font-size:12.5px;margin-bottom:6px}
+.src .fav{width:28px;height:28px;border-radius:7px;display:grid;place-items:center;font:700 11px var(--mono);background:color-mix(in srgb,var(--blue) 15%,var(--panel));color:var(--blue)}
+.src small{display:block;color:var(--muted);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.src.add{border-style:dashed;color:var(--muted);grid-template-columns:1fr;text-align:center}
+/* the preview card (as on the car's overview) */
+.side{width:400px;flex:none;border-left:1px solid var(--line);background:color-mix(in srgb,var(--bg) 22%,var(--panel));display:flex;flex-direction:column}
+.pcard{border:1px solid var(--line);border-radius:14px;background:var(--panel);overflow:hidden}
+.pcard .ph{position:relative;height:170px}.pcard .ph img{width:100%;height:100%;object-fit:cover}
+.pcard .ph::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,transparent 40%,rgba(0,0,0,.7))}
+.pcard .num{position:absolute;left:14px;bottom:-22px;z-index:2;width:56px;height:56px;border-radius:50%;display:grid;place-items:center;background:#fff;color:#111;font:italic 700 28px var(--cond);border:3px solid var(--panel);box-shadow:0 6px 18px rgba(0,0,0,.4)}
+.pcard .ttl{position:absolute;left:84px;right:14px;bottom:10px;z-index:2;color:#fff}.pcard .ttl .eye{color:rgba(255,255,255,.75)}.pcard .ttl h3{font-size:22px;line-height:1}
+.pcard .bd{padding:30px 16px 14px}
+.facts{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border:1px solid var(--line2);border-radius:10px;overflow:hidden;margin:8px 0}
+.facts div{padding:8px 10px;border-right:1px solid var(--line2)}.facts div:last-child{border-right:0}
+.facts dt{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}.facts dd{margin:2px 0 0;font:600 14px var(--mono)}
+.badge2{display:inline-flex;align-items:center;gap:7px;padding:4px 10px;border-radius:99px;font-size:12px;font-weight:600;background:color-mix(in srgb,var(--c) 15%,var(--panel));color:var(--c);border:1px solid color-mix(in srgb,var(--c) 40%,var(--line))}
+.meter{display:flex;gap:4px;margin-top:8px}.meter i{flex:1;height:5px;border-radius:9px;background:var(--line2)}.meter i.on{background:var(--green)}
+/* B: inline card */
+.prog{max-width:820px;margin:0 auto;border:1px solid var(--line);border-radius:16px;background:var(--panel);overflow:hidden}
+.prog .hero{position:relative;height:230px}.prog .hero img{width:100%;height:100%;object-fit:cover}.prog .hero::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.05) 30%,rgba(0,0,0,.78))}
+.prog .num{position:absolute;left:22px;bottom:-30px;z-index:2;width:78px;height:78px;border-radius:50%;display:grid;place-items:center;background:#fff;color:#111;font:italic 700 40px var(--cond);border:4px solid var(--panel);box-shadow:0 8px 22px rgba(0,0,0,.45)}
+.prog .ttl{position:absolute;left:118px;right:22px;bottom:16px;z-index:2;color:#fff}.prog .ttl h3{font-size:32px;line-height:1}.prog .ttl p{margin:2px 0 0;opacity:.85}
+.ed{outline:1.5px dashed color-mix(in srgb,var(--blue) 55%,transparent);outline-offset:3px;border-radius:4px}
+.ed.focus{outline:2px solid var(--blue);background:color-mix(in srgb,var(--blue) 12%,transparent)}
+.ed.empty{color:var(--faint);font-style:italic}
+.prog .bd{padding:42px 22px 20px;display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.prog .facts dd{font-size:16px}
+.floating{position:absolute;right:30px;top:60px;width:290px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--raised);box-shadow:0 14px 40px rgba(0,0,0,.45);z-index:5}
+/* C: tabs */
+.tabs{display:flex;gap:2px;padding:0 20px;border-bottom:1px solid var(--line)}
+.tabs span{padding:10px 14px;font-size:13px;color:var(--muted);border-bottom:2px solid transparent}.tabs span.on{color:var(--ink);font-weight:600;border-color:var(--accent)}
+.tabs .c{font:600 10.5px var(--mono);padding:0 6px;border-radius:99px;background:color-mix(in srgb,var(--ink) 10%,transparent);margin-left:5px}
+</style>
+</head>
+<body>
+<div class="switch">
+ <b>Option</b><div class="seg" id="oSeg"><button data-o="a" class="on">A · Form and live card</button><button data-o="b">B · Type on the card</button><button data-o="c">C · Tabs</button></div>
+ <b>Theme</b><div class="seg" id="tSeg"><button data-t="dark" class="on">Dark</button><button data-t="light">Light</button></div>
+ <p>Real Car History · example entry, made-up data</p>
+</div>
+<div class="app"><div class="chrome"><div class="logo"></div></div></div>
+<div class="backdrop"></div>
+<div class="win" id="win"></div>
+<script>
+let o='a';
+const $=s=>document.querySelector(s);
+const img=f=>'../../../.qa/preview-cars/'+f;
+const head=(t,p)=>`<div class="whead"><h2>${t}</h2><p>${p}</p><span class="x">×</span></div>`;
+const fld=(l,v,ph='',extra='')=>`<label class="fl">${l}<input class="f" value="${v}" placeholder="${ph}">${extra}</label>`;
+const CLS=[['Unverified','?','var(--muted)','Not classified yet'],['Real Racing Car','⚑','var(--green)','A real car and livery'],['Fantasy Livery','✦','var(--purple,#a88cda)','Imagined colours'],['Tribute Livery','❖','var(--amber)','A nod to another car'],['Road / Show Car','◉','var(--blue)','Road or show car']];
+const cls=on=>`<div class="cls">${CLS.map(([n,e,c,s],i)=>`<div class="cl ${i===on?'on':''}" style="--c:${c}"><span class="em">${e}</span><b>${n}</b><small>${s}</small></div>`).join('')}</div>`;
+const drivers=`<label class="fl">Drivers<span class="drv"><span>A. Rossi <i>×</i></span><span>J. Meyer <i>×</i></span><em>Add a driver…</em></span></label>`;
+const sources=`<div class="src"><span class="fav">RS</span><span>Race results, 1000 km of Spa 1986<small>https://www.racingsportscars.com/results/…</small></span><span class="hint">×</span></div><div class="src"><span class="fav">SI</span><span>Slot.it product page<small>https://www.slot.it/…</small></span><span class="hint">×</span></div><div class="src add">+ Add a source · paste a link</div>`;
+const card=()=>`<div class="pcard"><div class="ph"><img src="${img('car-9.jpg')}" alt=""><span class="num">17</span><div class="ttl"><div class="eye">The car behind the model</div><h3>Valkyrie Racing</h3></div></div><div class="bd"><p class="hint" style="margin:0">1000 km of Spa</p><dl class="facts"><div><dt>Year</dt><dd>1986</dd></div><div><dt>Qualifying</dt><dd>4th</dd></div><div><dt>Finish</dt><dd>2nd</dd></div></dl><p class="hint" style="margin:6px 0">Drivers · A. Rossi, J. Meyer</p><span class="badge2" style="--c:var(--green)">⚑ Real Racing Car</span></div></div>`;
+const foot=sum=>`<div class="wfoot"><span class="sum">${sum}</span><span class="grow"></span><button class="btn ghost">Cancel</button><button class="btn primary">Save history</button></div>`;
+
+function optA(){return head('Real Car History','Porsche 952KH · the full-size car and livery this model represents')+`<div class="wbody"><div class="col" style="flex:1"><div class="cb">
+ <div class="grp">Livery classification</div>${cls(1)}
+ <div class="grp">The entry</div><div class="row r4">${fld('Race number','17')}${fld('Racing team','Valkyrie Racing')}${fld('Year','1986')}</div><div style="margin-top:10px">${drivers}</div>
+ <div class="grp">The race</div><div class="row r3">${fld('Event / circuit','1000 km of Spa')}${fld('Qualifying','4th','','<span class="sugg"><span>Pole</span><span>Did not qualify</span></span>')}${fld('Finish','2nd','','<span class="sugg"><span>Winner</span><span>DNF</span><span>DNS</span></span>')}</div>
+ <div class="grp">The story</div><textarea class="f" placeholder="What happened to the original car? Its history, drivers, results and what makes it special…">Ran second for most of the race after a long stop for a broken exhaust; the team's best result of the season.</textarea>
+ <div class="grp">Sources</div>${sources}
+ </div></div><aside class="side"><div class="cb"><div class="eye" style="margin-bottom:8px">Live preview · on the car's overview</div>${card()}<div class="grp">How complete</div><div class="meter">${[1,1,1,1,1,1,1,0].map(x=>`<i class="${x?'on':''}"></i>`).join('')}</div><p class="hint">7 of 8 facts filled in · 2 sources. Reference photographs are added on the Real Car History page.</p><p class="hint">History and sources travel with a Paddock car export.</p></div></aside></div>`+foot('<b>Real Racing Car</b> · 2 sources')}
+
+function optB(){return head('Real Car History','Porsche 952KH · click any part of the card to fill it in')+`<div class="wbody" style="position:relative"><div class="cb"><div class="prog"><div class="hero"><img src="${img('car-9.jpg')}" alt=""><span class="num ed">17</span><div class="ttl"><div class="eye" style="color:rgba(255,255,255,.75)">The car behind the model</div><h3><span class="ed focus">Valkyrie Racing</span></h3><p><span class="ed">1000 km of Spa</span></p></div></div><div class="bd"><div><dl class="facts"><div><dt>Year</dt><dd class="ed">1986</dd></div><div><dt>Qualifying</dt><dd class="ed">4th</dd></div><div><dt>Finish</dt><dd class="ed">2nd</dd></div></dl><p style="margin:12px 0 4px" class="hint">Drivers</p><p style="margin:0"><span class="ed">A. Rossi, J. Meyer</span></p><p style="margin:14px 0 6px" class="hint">Classification</p>${cls(1).replace('class="cls"','class="cls" style="grid-template-columns:repeat(5,1fr);gap:4px"')}</div><div><p style="margin:0 0 4px" class="hint">The story</p><p style="margin:0;line-height:1.55" class="ed">Ran second for most of the race after a long stop for a broken exhaust; the team's best result of the season.</p><p style="margin:14px 0 6px" class="hint">Sources</p>${sources}</div></div></div></div>
+ <div class="floating"><div class="eye">Racing team</div><input class="f" value="Valkyrie Racing" style="margin-top:6px"><p class="hint" style="margin:8px 0 0">Enter moves to the next fact · Esc closes</p></div></div>`+foot('Click a dashed field to edit it')}
+
+function optC(){return head('Real Car History','Porsche 952KH · the full-size car and livery this model represents')+`<div class="tabs"><span class="on">The entry</span><span>The story</span><span>Sources<span class="c">2</span></span></div><div class="wbody"><div class="col" style="flex:1"><div class="cb">
+ <div class="grp">Livery classification</div>${cls(1)}
+ <div class="grp">Facts</div><div class="row r3">${fld('Racing team','Valkyrie Racing')}${fld('Race number','17')}${fld('Year','1986')}${fld('Event / circuit','1000 km of Spa')}${fld('Qualifying','4th')}${fld('Finish','2nd')}</div><div style="margin-top:10px">${drivers}</div>
+ </div></div><aside class="side" style="width:360px"><div class="cb">${card()}</div></aside></div>`+foot('<b>Real Racing Car</b> · 7 of 8 facts')}
+
+function paint(){document.documentElement.dataset.theme=document.querySelector('#tSeg .on').dataset.t;$('#win').innerHTML=({a:optA,b:optB,c:optC})[o]();}
+function segc(id,attr,set){document.querySelectorAll(`#${id} button`).forEach(b=>b.onclick=()=>{document.querySelectorAll(`#${id} button`).forEach(x=>x.classList.toggle('on',x===b));set(b.dataset[attr]);paint();});}
+segc('oSeg','o',v=>o=v);segc('tSeg','t',()=>{});
+function fromHash(){const h=new URLSearchParams(location.hash.slice(1));if(h.get('o'))o=h.get('o');const t=h.get('t')||'dark';document.querySelectorAll('#oSeg button').forEach(b=>b.classList.toggle('on',b.dataset.o===o));document.querySelectorAll('#tSeg button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));paint();}
+addEventListener('hashchange',fromHash);fromHash();
+</script>
+</body>
+</html>
