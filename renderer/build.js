@@ -60,6 +60,7 @@ function ensureBuild() {
     buildSlot = 'motor';
     buildSearch = '';
     buildAll = false;
+    buildPopOpen = false;
   }
 }
 function buildSlotInfo() {
@@ -136,6 +137,79 @@ function buildDiagram() {
 function buildQuantity(partId, exceptKey) {
   return buildState.parts.filter(r => r.partId === partId && r.key !== exceptKey).reduce((n, r) => n + r.quantity, 0);
 }
+// The groups of the build sheet: the diagram positions by area, then the parts beyond the drawing.
+const buildSheetGroups = [
+  ['Chassis & mounting', ['chassis', 'pod', 'fasteners']],
+  ['Front end', ['frontTyres', 'frontWheels', 'frontBearings', 'frontAxle']],
+  ['Rear end', ['rearTyres', 'rearWheels', 'rearBearings', 'rearAxle']],
+  ['Drivetrain', ['motor', 'pinionPart', 'gearPart']],
+  ['Guide & electrics', ['guide', 'guideScrew', 'braids', 'wiring']],
+  ['Beyond the drawing', ['body', 'lights', 'chip', 'magnets', 'ballast', 'suspension']]
+];
+// Where a part comes from: your stock (enough available), a planned purchase, or the original car.
+function buildSource(assigned) {
+  if (!assigned) return '';
+  if (assigned.reuse) return 'reuse';
+  if (assigned.signature) return 'stock';
+  const p = db.parts.find(p => p.id === assigned.partId);
+  return !p || available(p) < buildQuantity(assigned.partId) ? 'buy' : 'stock';
+}
+function buildAssignedName(assigned) {
+  if (!assigned) return '';
+  if (assigned.signature) return db.assemblies.find(a => a.id === assigned.id)?.name || assigned.name;
+  return db.parts.find(p => p.id === assigned.partId)?.name || assigned.name;
+}
+function buildSheetRow(slot) {
+  const meta = BuildModel.slots.find(s => s.id === slot),
+    assigned = buildAssigned(slot),
+    source = buildSource(assigned),
+    row = buildState.parts.find(r => r.slot === slot),
+    on = slot === buildSlot,
+    name = buildAssignedName(assigned);
+  const detail =
+    on && row && !assigned?.reuse
+      ? `<div class="build-sheet-detail"><label class="build-sheet-qty">Pieces<input id="build-quantity" type="number" min="1" step="1" value="${row.quantity}" aria-label="Pieces of ${esc(meta.label)}"></label>${btn('Remove', 'build-remove', 'small ghost', row.key)}</div>`
+      : '';
+  return `<div class="build-sheet-item ${on ? 'on' : ''}"><button type="button" class="build-sheet-row" data-action="build-slot" data-id="${slot}" data-sheet-slot="${slot}" aria-pressed="${on}"><span class="build-sheet-name">${esc(meta.label)}</span><span class="build-sheet-part ${name ? '' : 'is-empty'}">${esc(name || 'Empty')}${assigned?.reuse ? ' · reused' : assigned?.signature ? ' · assembly' : ''}</span>${source ? `<span class="build-dot ${source}" title="${source === 'buy' ? 'To buy' : source === 'reuse' ? 'Reused from the original' : 'From stock'}"></span>` : ''}</button>${detail}</div>`;
+}
+function buildSheet() {
+  const rows = buildState.parts,
+    reused = rebuildAssignments(),
+    groups = buildState.assemblies,
+    loose = rows.filter(r => !r.slot),
+    all = [...rows, ...reused],
+    stock = all.filter(r => buildSource(r) !== 'buy').length + groups.length,
+    buy = all.filter(r => buildSource(r) === 'buy').length,
+    chosen = new Set([...rows.map(r => r.slot), ...reused.map(r => r.slot)].filter(Boolean));
+  for (const s of BuildModel.slots) if (buildAssigned(s.id)) chosen.add(s.id);
+  const pieces =
+    reused.reduce((n, r) => n + r.quantity, 0) +
+    rows.reduce((n, r) => n + r.quantity, 0) +
+    groups.reduce(
+      (n, g) => n + (db.assemblies.find(a => a.id === g.id)?.components.reduce((n, c) => n + c.quantity, 0) || 0),
+      0
+    );
+  const other =
+    loose.length || groups.length
+      ? `<span class="build-sheet-group">Other parts</span>${groups
+          .map(g => {
+            const a = db.assemblies.find(a => a.id === g.id && !a.dismantled);
+            return `<div class="build-sheet-item"><div class="build-sheet-row static"><span class="build-sheet-name">${icon('assembly')}Assembly</span><span class="build-sheet-part">${esc(a?.name || g.name)}${a && !a.carId ? '' : ' · unavailable'}</span></div><div class="build-sheet-detail">${btn('Remove', 'build-remove-assembly', 'small ghost', g.id)}</div></div>`;
+          })
+          .join('')}${loose
+          .map(
+            r =>
+              `<div class="build-sheet-item"><div class="build-sheet-row static"><span class="build-sheet-name">${esc(r.position || 'Additional part')}</span><span class="build-sheet-part">${r.quantity} × ${esc(db.parts.find(p => p.id === r.partId)?.name || r.name)}</span><span class="build-dot ${buildSource(r)}"></span></div><div class="build-sheet-detail">${btn('Edit', 'build-edit-row', 'small ghost', r.key)}${btn('Remove', 'build-remove', 'small ghost', r.key)}</div></div>`
+          )
+          .join('')}`
+      : '';
+  return `<section class="build-sheet" id="build-summary" aria-label="Build sheet"><header><h2>Build sheet</h2><span class="muted"><span class="mono">${chosen.size}</span> of <span class="mono">${BuildModel.slots.length}</span> · <span class="mono">${pieces}</span> piece${pieces === 1 ? '' : 's'}</span></header><div class="build-sheet-list">${buildSheetGroups
+    .map(([title, slots]) => `<span class="build-sheet-group">${title}</span>${slots.map(buildSheetRow).join('')}`)
+    .join(
+      ''
+    )}${other}</div><div class="build-sheet-totals"><span><span class="build-dot stock"></span><span class="mono">${stock}</span> from stock</span><span><span class="build-dot buy"></span><span class="mono">${buy}</span> to buy</span></div><div class="build-sheet-tools">${btn(icon('plus') + ' Other part', 'build-slot', 'small ghost build-other-add', '')}${btn(icon('assembly') + ' Use an assembly', 'build-assemblies', 'small ghost')}</div></section>`;
+}
+// The matches in the search box next to a part: your stock first, then the catalogue.
 function buildPickerRows() {
   const slot = buildSlotInfo(),
     existing = buildState.parts.find(r => r.slot && r.slot === buildSlot);
@@ -145,95 +219,142 @@ function buildPickerRows() {
       (buildAll || !slot || slot.types.includes(p.partType)) &&
       [p.name, p.reference, p.maker, p.location, p.partType].join(' ').toLowerCase().includes(buildSearch.toLowerCase())
   );
-  return parts.length
-    ? parts
-        .map(p => {
-          const remaining = available(p) - buildQuantity(p.id, existing?.key),
-            reserved = liveAssemblies().some(a => a.components.some(c => c.partId === p.id));
-          return `<button type="button" class="build-stock-item" data-action="build-pick" data-id="${p.id}" ${reserved ? 'disabled' : ''}>${itemVisual(p)}<span><strong>${esc(p.name)}</strong><small>${esc([p.reference, p.location].filter(Boolean).join(' · '))}</small><small>${reserved ? 'In an assembly' : Math.max(0, remaining) + ' available · catalogue planning allowed'}</small></span>${icon('plus')}</button>`;
-        })
-        .join('')
-    : `<p class="muted">${buildAll ? 'No matching parts. Add or import catalogue entries in Parts, then return to this build.' : 'No suggested parts. Choose “Show all parts” to use another type.'}</p>`;
+  if (!parts.length)
+    return `<p class="build-pop-empty muted">${buildAll ? 'No matching parts. Add or import catalogue entries in Parts, then return to this build.' : 'No suggested parts for this position. Tick All part types to search everything.'}</p>`;
+  const row = p => {
+    const remaining = available(p) - buildQuantity(p.id, existing?.key),
+      reserved = liveAssemblies().some(a => a.components.some(c => c.partId === p.id)),
+      current = existing?.partId === p.id;
+    const tag = reserved
+      ? '<span class="build-pop-src">In an assembly</span>'
+      : current
+        ? '<span class="build-pop-src stock">On the car</span>'
+        : remaining > 0
+          ? `<span class="build-pop-src stock">In stock <b class="mono">${remaining}</b></span>`
+          : '<span class="build-pop-src buy">Catalogue</span>';
+    return `<button type="button" class="build-stock-item" data-action="build-pick" data-id="${p.id}" ${reserved ? 'disabled' : ''}>${itemVisual(p)}<span class="build-pop-copy"><strong>${esc(p.name)}</strong><small>${esc([p.reference, p.maker].filter(Boolean).join(' · '))}</small></span>${tag}</button>`;
+  };
+  const owned = parts.filter(p => available(p) > 0 || existing?.partId === p.id),
+    rest = parts.filter(p => !owned.includes(p));
+  return (
+    (owned.length ? '<span class="build-pop-group">My stock</span>' + owned.map(row).join('') : '') +
+    (rest.length ? '<span class="build-pop-group">Catalogue · plan to buy</span>' + rest.map(row).join('') : '')
+  );
 }
+let buildPopOpen = false;
 function buildPicker() {
+  if (!buildPopOpen) return '';
   const slot = buildSlotInfo(),
     assigned = slot && buildAssigned(slot.id),
     row = buildState.parts.find(r => r.slot && r.slot === buildSlot),
-    assembly = assigned?.signature && db.assemblies.find(a => a.id === assigned.id);
-  return `<section class="panel build-picker"><div class="panel-heading"><h2>${icon('box')}${esc(slot?.label || 'Additional part')}</h2></div><div class="panel-content"><p class="muted tiny">${slot?.quantity === 2 ? 'This position covers both sides. Quantity starts at two; you can plan parts before buying them.' : 'Choose stock or a catalogue part to plan a purchase.'}</p>${assigned?.reuse ? `<p class="note info">Reusing <strong>${esc(assigned.name)}</strong> from the original. Deselect it in the rebuild project above before assigning a replacement here.</p>` : ''}${assembly ? `<div class="note info">Provided by <strong>${esc(assembly.name)}</strong>. Remove the complete assembly from this build before changing its positions.</div>${btn('Remove assembly from build', 'build-remove-assembly', 'small', assembly.id)}` : `${row ? `<div class="build-current"><strong>${esc(db.parts.find(p => p.id === row.partId)?.name || row.name)}</strong><label class="field">Quantity<input id="build-quantity" type="number" min="1" step="1" value="${row.quantity}"></label>${btn('Remove assignment', 'build-remove', 'small', row.key)}</div>` : ''}<label class="search">${icon('search')}<input id="build-stock-search" aria-label="Search stock and catalogue" placeholder="Search stock and catalogue…" value="${esc(buildSearch)}"></label><label class="check-row tiny"><input id="build-all" type="checkbox" ${buildAll || !slot ? 'checked' : ''} ${!slot ? 'disabled' : ''}>Show all parts</label><div class="build-stock-list" id="build-stock-list">${buildPickerRows()}${viewPager(db._view?.list)}</div>`}</div></section>`;
+    assembly = assigned?.signature && db.assemblies.find(a => a.id === assigned.id),
+    label = slot?.label || 'Additional part';
+  const now = assigned
+    ? `Now: <b>${esc(buildAssignedName(assigned))}</b>`
+    : slot
+      ? 'Empty position'
+      : 'A part that is not in the drawing';
+  const body = assigned?.reuse
+    ? `<p class="build-pop-note">Reusing <strong>${esc(assigned.name)}</strong> from the original. Deselect it in the rebuild project above before choosing a replacement.</p>`
+    : assembly
+      ? `<p class="build-pop-note">Provided by <strong>${esc(assembly.name)}</strong>. Remove the complete assembly from this build before changing its positions.</p><div class="build-pop-actions">${btn('Remove assembly from build', 'build-remove-assembly', 'small', assembly.id)}</div>`
+      : `<label class="build-pop-search">${icon('search')}<input id="build-stock-search" type="search" autocomplete="off" aria-label="Search stock and catalogue for ${esc(label)}" placeholder="Type a name or reference…" value="${esc(buildSearch)}"></label><div class="build-pop-list" id="build-stock-list" role="listbox">${buildPickerRows()}${viewPager(db._view?.list)}</div><div class="build-pop-foot"><span>↑ ↓ move · Enter choose · Esc close</span><label class="check-row"><input id="build-all" type="checkbox" ${buildAll || !slot ? 'checked' : ''} ${!slot ? 'disabled' : ''}>All part types</label></div>`;
+  return `<div class="build-picker build-pop" id="build-pop" role="dialog" aria-label="Choose ${esc(label)}"><div class="build-pop-head"><span class="build-pop-label">${esc(label)}</span><span class="build-pop-now">${now}</span>${row ? btn('Clear', 'build-remove', 'small ghost', row.key) : ''}<button type="button" class="btn small icon ghost" data-action="build-pop-close" aria-label="Close" title="Close">✕</button></div>${body}</div>`;
 }
-function buildSummary() {
-  const rows = buildState.parts,
-    groups = buildState.assemblies,
-    reused = rebuildAssignments(),
-    pieces =
-      reused.reduce((n, r) => n + r.quantity, 0) +
-      rows.reduce((n, r) => n + r.quantity, 0) +
-      groups.reduce(
-        (n, g) => n + (db.assemblies.find(a => a.id === g.id)?.components.reduce((n, c) => n + c.quantity, 0) || 0),
-        0
-      );
-  return `<div class="section-heading"><h2>Planned parts</h2><span class="badge">${pieces} piece${pieces === 1 ? '' : 's'}</span></div>${!rows.length && !groups.length && !reused.length ? '<p class="muted">Start anywhere. One part is enough to save a car.</p>' : ''}<div class="build-selections">${reused.map(r => `<div class="build-selection"><span><strong>${r.quantity} × ${esc(r.name)}</strong><small>Reused from original${r.assemblyName ? ' · ' + esc(r.assemblyName) : ''}</small></span></div>`).join('')}${groups
-    .map(g => {
-      const a = db.assemblies.find(a => a.id === g.id && !a.dismantled);
-      return `<div class="build-selection"><span>${icon('assembly')}<strong>${esc(a?.name || g.name)}</strong><small>${a && !a.carId ? 'Complete assembly' : 'Unavailable assembly — remove or replace'} · ${a?.components.length || 0} components</small></span>${btn('Remove', 'build-remove-assembly', 'small ghost', g.id)}</div>`;
-    })
-    .join('')}${rows
-    .map(r => {
-      const p = db.parts.find(p => p.id === r.partId),
-        slot = BuildModel.slots.find(s => s.id === r.slot),
-        short = !p || available(p) < buildQuantity(r.partId);
-      return `<div class="build-selection ${short ? 'unavailable' : ''}"><span><strong>${r.quantity} × ${esc(p?.name || r.name)}</strong><small>${esc(slot?.label || r.position || 'Additional part')}${short ? (p ? ' · planned purchase' : ' · part missing from catalogue') : ''}</small></span><div class="actions">${btn('Edit', 'build-edit-row', 'small ghost', r.key)}${btn('Remove', 'build-remove', 'small ghost', r.key)}</div></div>`;
-    })
-    .join('')}</div>`;
+// Keep the search box next to the part (on the diagram or in the build sheet) it belongs to.
+function placeBuildPop() {
+  const pop = $('#build-pop');
+  if (!pop) return;
+  const anchor =
+    (buildSlot && document.querySelector(`.build-hotspot[data-id="${CSS.escape(buildSlot)}"] .build-part-art`)) ||
+    (buildSlot && document.querySelector(`[data-sheet-slot="${CSS.escape(buildSlot)}"]`)) ||
+    document.querySelector('.build-other-add');
+  if (!anchor) return;
+  const r = anchor.getBoundingClientRect(),
+    w = pop.offsetWidth,
+    h = pop.offsetHeight,
+    gap = 14;
+  let left = r.right + gap,
+    side = 'right';
+  if (left + w > innerWidth - 8) {
+    left = r.left - w - gap;
+    side = 'left';
+  }
+  if (left < 8) {
+    left = Math.max(8, Math.min(innerWidth - w - 8, r.left));
+    side = 'below';
+  }
+  let top = side === 'below' ? r.bottom + gap : r.top + r.height / 2 - 80;
+  top = Math.max(8, Math.min(top, innerHeight - h - 8));
+  pop.dataset.side = side;
+  pop.style.left = Math.round(left) + 'px';
+  pop.style.top = Math.round(top) + 'px';
+  pop.style.setProperty('--arrow', Math.round(Math.max(16, Math.min(h - 28, r.top + r.height / 2 - top - 6))) + 'px');
+}
+function closeBuildPop() {
+  if (!buildPopOpen) return;
+  buildPopOpen = false;
+  $('#build-pop')?.remove();
+}
+function buildBoard() {
+  const values = BuildModel.gearing(effectiveBuildState(), db),
+    m = PerformanceModel.calculate(buildPerformanceInput()),
+    line = (label, value, unit) =>
+      `<div class="build-board-line"><span>${label}</span><strong>${value}${unit ? `<small>${unit}</small>` : ''}</strong></div>`;
+  return (
+    `<div class="build-board-line accent"><span>Gear ratio</span><strong id="build-gear-ratio" aria-live="polite">${slotforgeDomain.gearRatioText(values.pinion.value, values.gear.value) || '—'}</strong></div>` +
+    line('Top speed', performanceValue(m, 'speedKmh', 1), 'km/h') +
+    line('Rear axle', performanceValue(m, 'axleRpm', 0), 'rpm') +
+    line('Per motor turn', performanceValue(m, 'rollout', 1), 'mm')
+  );
 }
 function buildGearingPanel() {
   const values = BuildModel.gearing(effectiveBuildState(), db);
-  return `<section class="panel build-gearing"><h2>${icon('setup')}Gearing calculator</h2><div class="form-grid">${[
-    ['pinion', 'Pinion teeth'],
-    ['gear', 'Crown / axle gear teeth']
+  return `<div class="build-gearing"><div class="build-gear-inputs">${[
+    ['pinion', 'Pinion'],
+    ['gear', 'Crown / axle gear']
   ]
     .map(
       ([key, label]) =>
-        `<label class="field">${label}<input type="number" min="1" step="1" inputmode="numeric" data-build-tooth="${key}" aria-describedby="build-teeth-${key}" value="${esc(buildState.gearing?.[key] || '')}" placeholder="${esc(values[key].automatic || 'Enter teeth')}"><small class="muted" id="build-teeth-${key}">${esc(values[key].automatic ? `Selected part: ${values[key].automatic} teeth. Blank uses this value.` : 'Enter the tooth count; part names are not used to guess it.')}</small></label>`
+        `<label class="field">${label}<input type="number" min="1" step="1" inputmode="numeric" data-build-tooth="${key}" aria-describedby="build-teeth-help" value="${esc(buildState.gearing?.[key] || '')}" placeholder="${esc(values[key].automatic || 'Teeth')}"></label>`
+    )
+    .join(
+      '<span class="build-gear-x" aria-hidden="true">×</span>'
+    )}</div><p class="tiny muted" id="build-teeth-help">${values.pinion.automatic || values.gear.automatic ? 'Empty fields use the tooth counts of the chosen parts.' : 'Tooth counts are optional; part names are not used to guess them.'} ${btn('Use part specifications', 'build-gearing-reset', 'small ghost')}</p><div class="build-board" id="build-board">${buildBoard()}</div></div>`;
+}
+function buildCarDetails(count) {
+  return `<div class="build-details">${[
+    ['name', 'Car name'],
+    ['maker', 'Manufacturer'],
+    ['scale', 'Scale']
+  ]
+    .map(
+      ([k, label]) =>
+        `<label class="field ${k === 'name' ? 'wide' : ''}">${label}<input name="build-${k}" data-build-value="${k}" value="${esc(buildState[k])}" maxlength="200" ${k === 'name' ? 'required' : ''}></label>`
     )
     .join(
       ''
-    )}</div><div class="gear-ratio"><span>Crown / axle gear ÷ pinion</span><output id="build-gear-ratio" aria-live="polite">${slotforgeDomain.gearRatioText(values.pinion.value, values.gear.value) || 'Enter both positive whole tooth counts'}</output></div><p class="tiny muted">Rounded to three decimals. Counts are optional and saved with the car and its As built setup. Typed values override part specifications.</p>${btn('Use part specifications', 'build-gearing-reset', 'small ghost')}</section>`;
+    )}<label class="field wide">Usage labels (comma separated)<input data-build-value="usage" value="${esc(buildState.usage.join(', '))}" placeholder="Club racing, Home racing…"></label><label class="field wide">Private build notes<textarea data-build-value="notes" maxlength="20000" rows="3">${esc(buildState.notes)}</textarea></label><label class="check-row tiny wide"><input id="build-setup" type="checkbox" ${buildState.saveSetup ? 'checked' : ''}>Save an “As built” setup snapshot</label><p class="tiny muted wide">Saving the plan starts a shopping list for the parts to buy. ${count ? '' : 'Choose at least one part before saving to Cars.'}</p></div>`;
 }
 function renderBuild(tabs = '') {
   ensureBuild();
-  const count = buildState.parts.length + buildState.assemblies.length + rebuildAssignments().length;
+  const count = buildState.parts.length + buildState.assemblies.length + rebuildAssignments().length,
+    state = buildDirty ? 'Unsaved changes' : buildDraftId ? 'Saved · stock is not reserved' : 'Not saved yet';
+  queueMicrotask(() => requestAnimationFrame(placeBuildPop));
   return (
     heading(
       'Build from Scratch',
-      'Plan a car using stock or catalogue parts. Buy what is missing, then build.',
-      btn('Refresh stock', 'build-refresh-stock', 'outline') +
-        btn('Saved drafts (' + db.buildDrafts.length + ')', 'build-drafts') +
-        btn('New build', 'build-new') +
-        btn('Rebuild an existing car…', 'rebuild-start')
+      'Plan a car with stock or catalogue parts. Buy what is missing, then build.',
+      `<button type="button" class="build-draft-switch" data-action="build-drafts" title="Saved drafts (${db.buildDrafts.length})"><span class="muted">Draft</span><b>${esc(buildState.name || 'Untitled build')}</b><span id="build-save-state" class="tiny muted">${state}</span><span class="build-draft-count mono">${db.buildDrafts.length}</span>${icon('next')}</button>` +
+        btn('New build', 'build-new', 'outline small') +
+        btn('Rebuild a car…', 'rebuild-start', 'outline small') +
+        (buildDraftId ? btn('Shopping changes', 'shop-requirements', 'ghost small', 'build:' + buildDraftId) : '') +
+        btn('Save plan', 'build-save-draft', 'small') +
+        btn('Review & save to Cars', 'build-review', 'primary small' + (!count ? ' is-empty' : ''))
     ) +
     tabs +
     renderRebuildEditor() +
-    `<div class="build-intro"><span>${icon('info')}Choose parts on the diagram. Empty positions are welcome.</span><span id="build-save-state" class="tiny muted">${buildDirty ? 'Unsaved changes' : buildDraftId ? 'Draft saved · stock is not reserved' : 'New build · stock stays available until saved to Cars'}</span></div><div class="build-layout"><div class="build-main"><section class="panel build-canvas"><div class="build-canvas-toolbar"><span class="tiny">${badge('Selected', 'build-selected-key')} ${badge('Assigned', 'good')}</span><label class="tiny">Zoom <select id="build-zoom" aria-label="Diagram zoom"><option value="1" ${buildZoom === 1 ? 'selected' : ''}>Fit</option><option value="2" ${buildZoom === 2 ? 'selected' : ''}>150%</option><option value="3" ${buildZoom === 3 ? 'selected' : ''}>200%</option></select></label></div>${buildDiagram()}<p class="tiny muted build-caption">Universal schematic · click an icon or label. Paired icons share an assignment. Part fit and compatibility must be checked by you.</p></section>${buildPerformancePanel()}<section class="panel build-extras"><h2>Beyond the drawing</h2><div class="actions">${BuildModel.slots
-      .slice(18)
-      .map(s =>
-        btn(esc(s.label) + (buildAssigned(s.id) ? ' ✓' : ''), 'build-slot', s.id === buildSlot ? 'on' : '', s.id)
-      )
-      .join(
-        ''
-      )}${btn('+ Other part', 'build-slot', '', '')}${btn(icon('assembly') + ' Use an assembly', 'build-assemblies')}</div></section><section class="panel" id="build-summary">${buildSummary()}</section></div><aside class="build-side">${buildPicker()}${buildGearingPanel()}${buildPerformanceEditor()}<section class="panel build-details"><h2>Your new car</h2><div class="form-grid">${[
-      ['name', 'Car name'],
-      ['maker', 'Manufacturer'],
-      ['scale', 'Scale']
-    ]
-      .map(
-        ([k, label]) =>
-          `<label class="field ${k === 'name' ? 'wide' : ''}">${label}<input name="build-${k}" data-build-value="${k}" value="${esc(buildState[k])}" maxlength="200" ${k === 'name' ? 'required' : ''}></label>`
-      )
-      .join(
-        ''
-      )}<label class="field wide">Usage labels (comma separated)<input data-build-value="usage" value="${esc(buildState.usage.join(', '))}" placeholder="Club racing, Home racing…"></label><label class="field wide">Private build notes<textarea data-build-value="notes" maxlength="20000">${esc(buildState.notes)}</textarea></label></div><label class="check-row tiny"><input id="build-setup" type="checkbox" ${buildState.saveSetup ? 'checked' : ''}>Save an “As built” setup snapshot</label><div class="actions">${btn('Save plan', 'build-save-draft') + (buildDraftId ? btn('Review shopping changes', 'shop-requirements', '', 'build:' + buildDraftId) : '')}${btn('Review & save to Cars', 'build-review', 'primary' + (!count ? ' is-empty' : ''))}</div><p class="tiny muted">A new plan starts a shopping list. Later changes are offered for review; your checklist stays as you left it. Add parts to stock before saving the finished car.</p></section></aside></div>`
+    `<div class="build-workbench">${buildSheet()}<section class="build-canvas"><div class="build-canvas-toolbar"><span class="build-legend"><span><span class="build-dot selected"></span>Selected</span><span><span class="build-dot stock"></span>From stock</span><span><span class="build-dot buy"></span>To buy</span></span><span class="build-canvas-tools">${btn('Refresh stock', 'build-refresh-stock', 'small ghost')}<label class="tiny">Zoom <select id="build-zoom" aria-label="Diagram zoom"><option value="1" ${buildZoom === 1 ? 'selected' : ''}>Fit</option><option value="2" ${buildZoom === 2 ? 'selected' : ''}>150%</option><option value="3" ${buildZoom === 3 ? 'selected' : ''}>200%</option></select></label></span></div>${buildDiagram()}<p class="tiny muted build-caption">Click a part to choose it. Paired parts share one choice. Check fit and compatibility yourself.</p></section><aside class="build-numbers"><header><h2>Numbers</h2><span class="muted tiny">Ideal, no losses</span></header>${buildGearingPanel()}<details class="build-fold"><summary><h3>Motor &amp; tyres</h3><span>RPM, torque, tyre size</span></summary>${buildPerformanceEditor()}</details><details class="build-fold"><summary><h3>Performance &amp; curves</h3><span>All figures, torque and power, compare</span></summary>${buildPerformancePanel()}</details><details class="build-fold" open><summary><h3>Your new car</h3><span>Name, maker, scale</span></summary>${buildCarDetails(count)}</details></aside></div>${buildPicker()}`
   );
 }
 function markBuildDirty() {
@@ -323,7 +444,12 @@ async function buildAction(action, id) {
     buildSlot = id || '';
     buildAll = !id;
     buildSearch = '';
+    buildPopOpen = true;
     buildRefresh();
+    ($('#build-stock-search') || document.querySelector('.build-hotspot.selected'))?.focus({ preventScroll: true });
+  }
+  if (action === 'build-pop-close') {
+    closeBuildPop();
     document.querySelector('.build-hotspot.selected')?.focus({ preventScroll: true });
   }
   if (action === 'build-gearing-reset') {
@@ -367,6 +493,7 @@ async function buildAction(action, id) {
     };
     if (existing) buildState.parts.splice(buildState.parts.indexOf(existing), 1, row);
     else buildState.parts.push(row);
+    buildPopOpen = false;
     markBuildDirty();
     buildRefresh();
   }
@@ -425,11 +552,12 @@ async function buildAction(action, id) {
       buildSlot = 'motor';
       buildSearch = '';
       buildAll = false;
+      buildPopOpen = false;
     };
     if (buildDirty)
       modal(
         'Start a new build?',
-        '<p>Unsaved changes to this build will be discarded. Cancel and choose Save draft to keep them.</p>',
+        '<p>Unsaved changes to this build will be discarded. Cancel and choose Save plan to keep them.</p>',
         async () => reset(),
         'Discard changes & start'
       );
@@ -457,6 +585,7 @@ async function buildAction(action, id) {
       buildSlot = 'motor';
       buildSearch = '';
       buildAll = false;
+      buildPopOpen = false;
     };
     if (buildDirty)
       modal(
@@ -494,9 +623,6 @@ document.addEventListener('input', e => {
     buildState.gearing ??= { pinion: '', gear: '' };
     buildState.gearing[key] = e.target.validity.badInput ? 'invalid' : e.target.value;
     markBuildDirty();
-    const values = BuildModel.gearing(effectiveBuildState(), db);
-    $('#build-gear-ratio').textContent =
-      slotforgeDomain.gearRatioText(values.pinion.value, values.gear.value) || 'Enter both positive whole tooth counts';
     refreshBuildPerformance();
   }
   const el = e.target;
@@ -543,13 +669,36 @@ document.addEventListener('change', e => {
     }
     r.quantity = quantity;
     markBuildDirty();
-    $('#build-summary').innerHTML = buildSummary();
-    $('#build-stock-list').innerHTML = buildPickerRows();
+    buildRefresh();
   }
 });
 document.addEventListener('keydown', e => {
+  if (buildPopOpen && e.key === 'Escape' && !$('#dialog')?.open) {
+    e.preventDefault();
+    closeBuildPop();
+    document.querySelector('.build-hotspot.selected')?.focus({ preventScroll: true });
+    return;
+  }
+  if (e.target.id === 'build-stock-search' && ['ArrowDown', 'ArrowUp', 'Enter'].includes(e.key)) {
+    const items = [...document.querySelectorAll('#build-stock-list .build-stock-item:not([disabled])')];
+    if (!items.length) return;
+    e.preventDefault();
+    const at = items.findIndex(i => i.classList.contains('hi'));
+    if (e.key === 'Enter') return void (items[at] || items[0]).click();
+    const next = e.key === 'ArrowDown' ? Math.min(items.length - 1, at + 1) : Math.max(0, at - 1);
+    items.forEach((item, i) => item.classList.toggle('hi', i === next));
+    items[next].scrollIntoView({ block: 'nearest' });
+    return;
+  }
   if (e.target.matches('.build-hotspot') && ['Enter', ' '].includes(e.key)) {
     e.preventDefault();
     e.target.dispatchEvent(new MouseEvent('click', { bubbles: true }));
   }
 });
+document.addEventListener('click', e => {
+  if (!buildPopOpen || page !== 'Build from Scratch') return;
+  if (e.target.closest('#build-pop, [data-action="build-slot"], #dialog')) return;
+  closeBuildPop();
+});
+window.addEventListener('scroll', () => buildPopOpen && placeBuildPop(), true);
+window.addEventListener('resize', () => buildPopOpen && placeBuildPop());

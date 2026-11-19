@@ -33,7 +33,7 @@ module.exports=async({win,store,js,wait,click,fill,submit,qa})=>{
   await click('[data-action="build-slot"][data-id="motor"]');await move({x:5,y:5});await js(`db.settings.theme='dark';render()`);win.setSize(1440,1000);
   checks.push('original SVG geometry is preserved once; mouse contours, empty cutouts, paired targets, keyboard focus and dark/light highlights work without rectangular overlays');
   await click('[data-action="build-review"]');assert.equal(store.data.cars.length,0);
-  await click(`[data-action="build-pick"][data-id="${motor}"]`);assert.equal(store.data.installations.length,0);
+  await click('[data-action="build-slot"][data-id="motor"]');await click(`[data-action="build-pick"][data-id="${motor}"]`);assert.equal(store.data.installations.length,0);
   await fill({'build-name':'Club special','build-maker':'Scratch-built','build-scale':'1:32'});assert.equal(await js('buildState.name'),'Club special','name input updates build state');
   for(const [pinion,gear,ratio] of [['8','27','3.375:1'],['13','31','2.385:1'],['9','27','3.00:1']]){
     await js(`for(const [key,value] of Object.entries(${JSON.stringify({pinion,gear})})){const el=document.querySelector('[data-build-tooth="'+key+'"]');el.value=value;el.dispatchEvent(new Event('input',{bubbles:true}));}`);
@@ -51,7 +51,7 @@ module.exports=async({win,store,js,wait,click,fill,submit,qa})=>{
   checks.push('diagram positions assign filtered inventory, editable pair quantities and complete stored assemblies without moving stock');
   for(const [width,theme]of [[1440,'dark'],[960,'light']]){
     win.setSize(width,1000);await js(`db.settings.theme='${theme}';render();window.scrollTo(0,0)`);await new Promise(r=>setTimeout(r,220));
-    assert.equal(await js('document.documentElement.scrollWidth<=innerWidth'),true);
+    assert.equal(await js('document.documentElement.scrollWidth<=innerWidth'),true,await js(`[...document.querySelectorAll('body *')].filter(e=>e.getBoundingClientRect().right>innerWidth+1).slice(0,5).map(e=>e.tagName+'.'+e.className+':'+Math.round(e.getBoundingClientRect().right)).join(' | ')`));
     fs.writeFileSync(path.join(qa,`build-from-scratch-${width}.png`),(await win.webContents.capturePage()).toPNG());
   }
   await win.webContents.reload();await wait('typeof db!=="undefined"&&!!db');

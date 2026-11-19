@@ -103,6 +103,8 @@ function buildPerformancePanel() {
 function refreshBuildPerformance() {
   const result = $('#build-performance-results');
   if (result) result.innerHTML = buildPerformanceResults();
+  const board = $('#build-board');
+  if (board) board.innerHTML = buildBoard();
 }
 document.addEventListener('input', event => {
   const el = event.target,
