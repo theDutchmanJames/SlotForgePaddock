@@ -1,0 +1,23 @@
+/* The top bar, like SlotForge Timing: the mark, the menu in groups, search and Review on the right. */
+#header{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;min-height:62px;padding:12px 20px;background:var(--panel);border-bottom:1px solid var(--line)}
+#header .brand{flex:none;margin:0;gap:10px}
+#header .brand-mark{width:40px;height:40px}
+#header .brand-copy{width:150px}
+#header .brand-copy small{display:block}
+#header .main-nav{display:flex;flex-wrap:wrap;align-items:center;gap:8px;flex:0 1 auto;min-width:0;align-self:center}
+#header .nav-group{display:inline-flex;flex-wrap:wrap;gap:2px;padding:3px;border-radius:10px;background:color-mix(in srgb,var(--ink) 5%,var(--bg))}
+#header .nav-btn{display:inline-flex;align-items:center;gap:7px;height:34px;margin:0;padding:0 11px;border:0;border-radius:8px;background:transparent;color:color-mix(in srgb,var(--ink) 82%,var(--muted));font-size:13.5px;font-weight:400;white-space:nowrap}
+#header .nav-btn svg{width:16px;height:16px;flex:none;color:color-mix(in srgb,var(--accent) 80%,var(--ink))}
+#header .nav-btn:hover{background:color-mix(in srgb,var(--ink) 7%,transparent);color:var(--ink)}
+#header .nav-btn.active{background:color-mix(in srgb,var(--ink) 13%,var(--panel));color:var(--ink);font-weight:600;border:0;box-shadow:none}
+#header .nav-btn.active::after{display:none}
+#header .nav-btn:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
+#header .header-tools{display:flex;align-items:center;gap:10px;margin-left:auto}
+#header .palette-button{min-width:0;height:40px;margin:0;padding:0 8px 0 12px;border-radius:10px;background:transparent;font-size:13px}
+#header .palette-button span{flex:none}
+#header .palette-button kbd{margin-left:10px}
+#header .btn.header-review{height:40px;min-height:40px;padding:0 16px;border-radius:10px;font:italic 700 17px/1 var(--font-cond);letter-spacing:.06em}
+#header .btn.header-review svg{width:16px;height:16px}
+/* Under the width the whole bar needs, the menu takes its own row. */
+@media(max-width:1900px){#header .main-nav{order:3;flex-basis:100%}}
+@media(max-width:760px){#header{padding:10px 14px}#header .brand-copy small{display:none}#header .brand-copy{width:120px}#header .palette-button span,#header .palette-button kbd{display:none}#header .palette-button{width:40px;padding:0;justify-content:center}#header .nav-btn{height:32px;padding:0 9px;font-size:12.5px}}

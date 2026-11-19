@@ -6,7 +6,7 @@ module.exports=async(win,store,root)=>{
  win.webContents.on('console-message',(_e,...args)=>{for(const a of args)if(typeof a==='string'&&/Uncaught|ReferenceError|TypeError/.test(a))errors.push(a);});
  const js=code=>win.webContents.executeJavaScript(code,true),wait=async expression=>{for(let i=0;i<180;i++){if(await js(expression))return;await new Promise(r=>setTimeout(r,50));}throw Error('Joint app wait failed: '+expression+'\n'+await js('document.body.innerText'));};
  const click=async selector=>{await wait(`!!document.querySelector(${JSON.stringify(selector)})`);await js(`document.querySelector(${JSON.stringify(selector)}).click()`);await wait('!actionBusy&&!viewPendingKey');};
- await wait("document.body.innerText.includes('On the workbench')");
+ await wait("document.body.textContent.includes('On the workbench')");
  const cars=store.data.cars,records=store.data.timing.sessions;assert.ok(cars.length);assert.ok(records.length);
  await click('[data-action="nav"][data-id="Cars"]');
  for(const car of cars)await wait('document.body.innerText.includes('+JSON.stringify(car.name)+')');checks.push('Timing normal editor cars visible in Paddock Cars');

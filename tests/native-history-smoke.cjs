@@ -6,7 +6,7 @@ module.exports=async(win,store,root)=>{
  const click=async selector=>{await wait(`!!document.querySelector(${JSON.stringify(selector)})`);await js(`document.querySelector(${JSON.stringify(selector)}).click()`);await wait('!actionBusy&&!viewPendingKey');};
  const capture=async name=>{await js('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');fs.writeFileSync(path.join(root,name),(await win.webContents.capturePage()).toPNG());};
  const car=JSON.parse(fs.readFileSync(path.join(root,'native-history.json'))).carId;
- await wait("document.body.innerText.includes('On the workbench')");await click('[data-action="nav"][data-id="Cars"]');await click('[data-action="open-car"][data-id="'+car+'"]');await click('[data-action="section"][data-id="Performance"]');
+ await wait("document.body.textContent.includes('On the workbench')");await click('[data-action="nav"][data-id="Cars"]');await click('[data-action="open-car"][data-id="'+car+'"]');await click('[data-action="section"][data-id="Performance"]');
  await wait("document.body.innerText.includes('7.500 s')&&document.body.innerText.includes('Saved 5 Apr 2020')");
  assert.equal(await js("document.body.innerText.includes('Lanes 2')"),true);assert.equal(await js("document.body.innerText.includes('7.000 s')"),true);await capture('performance.png');
  await click('[data-action="history-view-open"]');await wait("document.querySelector('#dialog').innerText.includes('7.500 s')");assert.equal(await js("document.querySelector('#dialog').innerText.includes('Pending historical evidence')"),false);assert.equal(await js("document.querySelector('#dialog').innerText.includes('Saved 5 Apr 2020')"),true);await capture('session.png');

@@ -130,7 +130,7 @@ function view(store, request = {}) {
     } else if (require('./view-context.cjs').extraView(db, data, r, request)) {
       // Page-specific context supplied above.
     } else if (request.page === 'Overview') {
-      data.cars = r.list('cars', { collectionStatus: 'collection', archived: false, sort: 'updated', limit: 3 }).rows;
+      data.cars = r.list('cars', { collectionStatus: 'collection', archived: false, sort: 'updated', limit: 4 }).rows;
       data.events = r.list('events', { limit: 4 }).rows;
       data.jobs = r.list('jobs', { status: 'active', limit: 3 }).rows;
       data.jobs.forEach(j => addCar(j.carId));

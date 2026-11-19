@@ -26,6 +26,13 @@ Imported photographs, documents, manufacturer descriptions and other external
 material retain their respective owners' rights. Importing them into Paddock
 does not relicense them or grant additional redistribution rights.
 
+Fonts
+
+renderer/fonts holds Barlow Condensed (Bold and Bold Italic) and Roboto Mono,
+both from the Google Fonts repository (github.com/google/fonts, ofl folder)
+and reused from SlotForge Timing. They are licensed under the SIL Open Font
+License 1.1; each font folder keeps its OFL.txt with the copyright notice.
+
 QR Code encoder
 
 The JavaScript QR encoder under src/vendor/QRCode is Copyright (c) 2009

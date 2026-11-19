@@ -4,7 +4,7 @@ module.exports=async({store,js,wait,click,fill,submit})=>{
  const saved=store.snapshot(),checks=[];
  try{
   store.replace(initial());store.mutate('car.save',{data:{name:'Seed'}});store.transact(db=>{const seed=db.cars[0];db.events=[];db.cars=Array.from({length:120},(_,i)=>({...seed,id:'paged-'+i,name:'Paged '+String(i).padStart(3,'0')}));});
-  await js("(async()=>{switchCollection('local');page='Overview';await loadView();})()");assert.equal(await js('db._view.stats.cars'),120);assert.equal(await js('db.cars.length'),3);
+  await js("(async()=>{switchCollection('local');page='Overview';await loadView();})()");assert.equal(await js('db._view.stats.cars'),120);assert.equal(await js('db.cars.length'),4);
   await click('[data-action="nav"][data-id="Cars"]');await wait('db._view?.list?.total===120&&!viewPendingKey');assert.equal(await js('db.cars.length'),48);assert.equal(await js('document.querySelectorAll(".car-card").length'),48);
   await click('[data-action="query-next"]');await wait('db._view?.list?.offset===48&&!viewPendingKey');assert.equal(await js('db.cars[0].name'),'Paged 048');
   await js("document.querySelector('#car-search').value='119';document.querySelector('#car-search').dispatchEvent(new Event('input',{bubbles:true}))");await wait('db._view?.list?.total===1&&!viewPendingKey');assert.equal(await js('db.cars[0].name'),'Paged 119');

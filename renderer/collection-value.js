@@ -27,14 +27,14 @@ function valueScale(max) {
   return { top: Math.ceil(max / step) * step, step };
 }
 
-function valueChart(entry) {
+function valueChart(entry, size = { width: 1000, height: 240 }) {
   const years = entry.years;
   if (!years.length) return '<p class="muted">Add the date each car was bought to see spending per year.</p>';
   const { top: maxY, step } = valueScale(Math.max(...years.map(y => y.spent)));
   const axisLabel = v => valueMoney(v, entry.currency, Number.isInteger(step));
   // Room for the longest axis label (about 7 units per character at this size).
-  const W = 1000,
-    H = 240,
+  const W = size.width,
+    H = size.height,
     left = Math.max(56, axisLabel(maxY).length * 7 + 12),
     right = 8,
     top = 12,
@@ -91,12 +91,10 @@ function renderCollectionValue(summary) {
       ? CollectionValueModel.summarize(CollectionValueModel.fromCars(db.cars))
       : null);
   if (!v) return '';
-  const heading = uiSectionHeading('Collection value', '');
+  const head = (tag = '') =>
+    `<header><h3>Collection value</h3>${tag ? `<span class="home-tag">${esc(tag)}</span>` : ''}</header>`;
   if (!v.currencies.length) {
-    return (
-      heading +
-      `<div class="panel value-empty"><p class="muted">Add purchase prices or valuations to your cars (Identity & ownership) to see what your collection is worth and what you spent per year. Values stay private on this computer.</p></div>`
-    );
+    return `<section class="home-card home-value">${head()}<div class="home-card-body"><p class="muted">Add purchase prices or valuations to your cars (Identity & ownership) to see what your collection is worth and what you spent per year. Values stay private on this computer.</p></div></section>`;
   }
   const main = v.currencies[0],
     others = v.currencies.slice(1),
@@ -108,11 +106,11 @@ function renderCollectionValue(summary) {
   ]
     .filter(Boolean)
     .join(' · ');
-  const tiles =
-    `<div class="overview-stats value-stats">` +
-    `<div class="panel overview-stat"><span class="stat-label">${icon('database')}Collection value</span><strong class="stat">${esc(valueMoney(main.value, main.currency))}</strong><span class="tiny muted">${esc(basis || 'No values yet')}</span></div>` +
-    `<div class="panel overview-stat"><span class="stat-label">${icon('box')}Spent on cars</span><strong class="stat">${esc(valueMoney(main.spent, main.currency))}</strong><span class="tiny muted">${main.boughtCars} ${main.boughtCars === 1 ? 'car' : 'cars'} with a price, including sold ones${main.undatedCars ? ` · ${main.undatedCars} without a purchase date` : ''}</span></div>` +
-    `</div>`;
+  const figures =
+    `<div class="home-value-figures">` +
+    `<div><strong>${esc(valueMoney(main.value, main.currency))}</strong><span>Worth now</span></div>` +
+    `<div class="spent"><strong>${esc(valueMoney(main.spent, main.currency))}</strong><span>Spent on cars</span></div>` +
+    `</div><p class="tiny muted">${esc(basis || 'No values yet')} · ${main.boughtCars} ${main.boughtCars === 1 ? 'car' : 'cars'} with a price, including sold ones${main.undatedCars ? ` · ${main.undatedCars} without a purchase date` : ''}</p>`;
   const rest = others.length
     ? `<p class="tiny muted">Other currencies (not converted): ${others.map(o => esc(`${valueMoney(o.value, o.currency)} value · ${valueMoney(o.spent, o.currency)} spent`)).join('; ')}.</p>`
     : '';
@@ -120,9 +118,8 @@ function renderCollectionValue(summary) {
     ? `<p class="tiny muted">${c.unreadable} ${c.unreadable === 1 ? 'car has' : 'cars have'} a price or value that could not be read as a number; that amount is ignored.</p>`
     : '';
   return (
-    heading +
-    tiles +
-    `<div class="panel value-panel">${valueChart(main)}${rest}${warn}<p class="tiny muted">Collection value uses each car's valuation, or what you paid when there is none. Wishlist cars are not included.</p></div>`
+    `<section class="home-card home-value">${head(main.currency)}<div class="home-card-body">${figures}${valueChart(main, { width: 460, height: 220 })}${rest}${warn}</div>` +
+    `<footer>Uses each car's valuation, or what you paid when there is none. Wishlist cars are not included.</footer></section>`
   );
 }
 

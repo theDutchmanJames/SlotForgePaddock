@@ -47,6 +47,13 @@ const navs = [
   'Import & Export',
   'Settings'
 ];
+// The main menu in groups, like SlotForge Timing: home, the collection, the work, the app.
+const navGroups = [
+  ['Overview'],
+  ['Showroom', 'Cars', 'Parts', 'Shopping List'],
+  ['Build from Scratch', 'Workshop', 'Library'],
+  ['Connections', 'Import & Export', 'Settings']
+];
 const usageDefaults = ['Collection / Display', 'Home racing', 'Club racing', 'Competition', 'Testing / Development'];
 let carScope = 'collection',
   wishlistUi = false;
@@ -243,9 +250,9 @@ function render() {
   prepareShowroom();
   applyTheme();
   $('#header').innerHTML =
-    `<div class="brand"><span class="brand-mark" aria-hidden="true"><span class="paddock-brand-symbol"></span></span><div class="brand-copy"><span class="brand-wordmark" role="img" aria-label="SlotForge Paddock"><img class="brand-wordmark-light" src="../assets/paddock-wordmark-light.svg" alt="" width="600" height="90"><img class="brand-wordmark-dark" src="../assets/paddock-wordmark-dark.svg" alt="" width="600" height="90"></span><small>Collection & workshop</small></div></div><nav class="main-nav" aria-label="Main navigation">${navs.map(n => `<button class="nav-btn ${page === n ? 'active' : ''}" data-action="nav" data-id="${esc(n)}" aria-current="${page === n ? 'page' : 'false'}">${icon(uiPageIcons[n])}${esc(n)}</button>`).join('')}</nav>${reviewButton()}`;
+    `<div class="brand"><span class="brand-mark" aria-hidden="true"><span class="paddock-brand-symbol"></span></span><div class="brand-copy"><span class="brand-wordmark" role="img" aria-label="SlotForge Paddock"><img class="brand-wordmark-light" src="../assets/paddock-wordmark-light.svg" alt="" width="600" height="90"><img class="brand-wordmark-dark" src="../assets/paddock-wordmark-dark.svg" alt="" width="600" height="90"></span><small>Collection & workshop</small></div></div><nav class="main-nav" aria-label="Main navigation">${navGroups.map(group => `<span class="nav-group">${group.map(n => `<button class="nav-btn ${page === n ? 'active' : ''}" data-action="nav" data-id="${esc(n)}" aria-current="${page === n ? 'page' : 'false'}">${icon(uiPageIcons[n])}${esc(n)}</button>`).join('')}</span>`).join('')}</nav><div class="header-tools">${paletteButtonHtml()}${reviewButton()}</div>`;
   $('#database-bar').innerHTML =
-    `<span class="muted">Database</span><select id="database-select" aria-label="Current database"><option value="local">${esc(db.settings.name)}</option>${remote ? `<option value="remote" ${source === 'remote' ? 'selected' : ''}>${esc(remote.settings.name)} · Shared</option>` : ''}</select><span class="db-state">${icon('database')} ${local() ? (clubState?.active ? 'Dealership collection copy' : clubState?.role === 'coordinator' ? 'Dealership Mode' : 'Local database') : net.remote?.permissions?.submit ? 'Shared collection · Submit for review' : 'Shared collection · Browse only'}</span>${paletteButtonHtml()}<span class="spacer"></span><span class="db-state"><span class="dot ${local() ? (clubState?.active && clubState.state !== 'connected' ? 'offline' : '') : net.remote?.state !== 'connected' ? 'offline' : ''}"></span>${local() ? (clubState?.active ? (clubState.state === 'connected' ? 'Dealership connected' : clubState.state === 'outdated' ? 'Collection copy out of date' : 'Dealership offline · saved copy') : 'Saved on this computer') : net.remote?.state === 'connected' ? 'Connected' : 'Saved view · offline'}</span>${net.sharing ? badge(net.hostingMode === 'dealership' ? 'Dealership online' : 'Sharing enabled', 'good') : ''}${updateNoticeHtml()}`;
+    `<span class="muted">Database</span><select id="database-select" aria-label="Current database"><option value="local">${esc(db.settings.name)}</option>${remote ? `<option value="remote" ${source === 'remote' ? 'selected' : ''}>${esc(remote.settings.name)} · Shared</option>` : ''}</select><span class="db-state">${icon('database')} ${local() ? (clubState?.active ? 'Dealership collection copy' : clubState?.role === 'coordinator' ? 'Dealership Mode' : 'Local database') : net.remote?.permissions?.submit ? 'Shared collection · Submit for review' : 'Shared collection · Browse only'}</span><span class="spacer"></span><span class="db-state"><span class="dot ${local() ? (clubState?.active && clubState.state !== 'connected' ? 'offline' : '') : net.remote?.state !== 'connected' ? 'offline' : ''}"></span>${local() ? (clubState?.active ? (clubState.state === 'connected' ? 'Dealership connected' : clubState.state === 'outdated' ? 'Collection copy out of date' : 'Dealership offline · saved copy') : 'Saved on this computer') : net.remote?.state === 'connected' ? 'Connected' : 'Saved view · offline'}</span>${net.sharing ? badge(net.hostingMode === 'dealership' ? 'Dealership online' : 'Sharing enabled', 'good') : ''}${updateNoticeHtml()}`;
   const views = {
     'Overview': renderOverview,
     'Showroom': renderShowroom,

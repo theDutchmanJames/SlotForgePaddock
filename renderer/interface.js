@@ -87,6 +87,61 @@ function uiPanel(title, body, className = '') {
 function uiSectionHeading(title, action = '') {
   return `<div class="section-heading"><h2>${esc(title)}</h2><div class="actions">${action}</div></div>`;
 }
+// Overview: the latest car and the welcome on top, the workbench below, then activity,
+// recent cars and the collection value. The look follows SlotForge Timing's Home.
+function homeDigits(value) {
+  const text = String(value ?? 0);
+  return `<span class="home-digits" aria-label="${esc(text)}">${[...text].map(ch => `<i aria-hidden="true">${esc(ch)}</i>`).join('')}</span>`;
+}
+function homeFeature(c) {
+  if (!c)
+    return `<section class="home-feature no-photo"><div class="home-feature-photo">${icon('car')}</div><div class="home-feature-copy"><span class="home-kicker">Your garage</span><h2 class="home-feature-name">No cars yet</h2><span class="home-feature-sub">The car you changed last is parked here.</span></div></section>`;
+  const meta = [c.maker, c.scale].filter(Boolean).join(' · '),
+    sub = [c.updated ? 'Updated ' + date(c.updated) : '', c.number].filter(Boolean).join(' · ');
+  return `<section class="home-feature${c.picture ? '' : ' no-photo'}"><div class="home-feature-photo">${c.picture ? `<img src="${esc(c.picture)}" alt="" data-focus-car="${esc(c.id)}" data-focus-photo="main" decoding="async">` : icon('car')}</div><div class="home-feature-copy"><span class="home-kicker">Latest in the garage</span>${meta ? `<span class="home-feature-meta">${esc(meta)}</span>` : ''}<h2 class="home-feature-name">${esc(c.name)}</h2>${sub ? `<span class="home-feature-sub">${esc(sub)}</span>` : ''}<div class="home-feature-actions">${btn('Open car ' + icon('next'), 'open-car', 'primary', c.id)}${btn(icon('showroom') + ' Visit the Showroom', 'nav', 'outline', 'Showroom')}</div></div></section>`;
+}
+function homeJobCards(jobs) {
+  return `<div class="home-jobs">${jobs
+    .map(j => {
+      const c = db.cars.find(c => c.id === j.carId) || { name: 'Unknown car' },
+        image = ShowroomModel.photos(c)[0],
+        category = JobTypes.get(j.category),
+        plan = jobPlan(j.id),
+        steps = plan.checklist,
+        done = steps.filter(s => s.done).length,
+        overdue = plan.targetDate && plan.targetDate < slotforgeDomain.today(),
+        note =
+          j.log.filter(e => e.action !== 'job.edit').at(-1)?.note ||
+          j.notes ||
+          (j.kind === 'general' ? 'No work instructions added yet.' : 'Work towards the saved configuration.');
+      const bar = !steps.length
+        ? '<i></i>'
+        : steps.length > 12
+          ? `<i class="part" style="--done:${Math.round((done / steps.length) * 100)}%"></i>`
+          : steps.map(s => `<i class="${s.done ? 'done' : ''}"></i>`).join('');
+      const when = [
+        plan.priority + ' priority',
+        plan.targetDate ? (overdue ? 'Overdue · ' : 'Target ') + date(plan.targetDate) : ''
+      ].filter(Boolean);
+      return `<article class="home-card home-job job-tone-${category.tone}" data-action="open-job" data-id="${esc(j.id)}" aria-label="Resume ${esc(j.name)} for ${esc(c.name)}"><header><span class="home-chip">${icon(category.icon)}${esc(category.label)}</span><span class="home-job-status${plan.waiting ? ' waiting' : ''}"><span class="home-dot"></span>${plan.waiting ? 'Waiting for parts' : 'Active'}</span></header><div class="home-job-body"><span class="home-job-photo">${image ? `<img src="${esc(thumbnailSource(image.data))}" alt="" loading="lazy">` : icon('car')}</span><span class="home-job-names"><strong>${esc(c.name)}</strong><span>${esc(j.name)}</span>${j.kind === 'general' ? '' : '<small>Saved setup plan</small>'}</span><span class="home-steps">${bar}</span><span class="home-job-meta"><span>${steps.length ? `${done} of ${steps.length} steps` : 'No steps'}</span><span class="${overdue ? 'overdue' : ''}">${esc(when.join(' · '))}</span></span><p class="home-job-note">${esc(note)}</p></div><footer><span>Updated ${date(j.updated)}</span><span class="actions">${btn('Edit', 'edit-job', 'ghost small', j.id)}${btn('Resume ' + icon('next'), 'open-job', 'small outline', j.id)}</span></footer></article>`;
+    })
+    .join('')}</div>`;
+}
+function homeTimeline(events) {
+  if (!events.length) return '<p class="muted">Nothing recorded yet.</p>';
+  return `<ul class="home-timeline">${events
+    .map(e => {
+      const kind = JobTypes.valid(e.workCategory) ? JobTypes.get(e.workCategory) : null;
+      const detail = [
+        kind ? kind.label : e.type === 'created' ? '' : e.type,
+        e.nextDue || e.nextDueLaps ? 'next due ' + slotforgeDomain.reminderText(e) : ''
+      ]
+        .filter(Boolean)
+        .join(' · ');
+      return `<li class="tone-${kind ? kind.tone : 'accent'}"><b>${esc(e.title)}</b><time>${date(e.performedDate || e.date)}</time>${detail ? `<span>${esc(detail)}</span>` : ''}</li>`;
+    })
+    .join('')}</ul>`;
+}
 function renderOverviewDesign() {
   const d = current(),
     cars = d.cars.filter(slotforgeDomain.activeCar),
@@ -94,39 +149,51 @@ function renderOverviewDesign() {
     due = local() ? slotforgeDomain.reminders(d.events).filter(e => cars.some(c => c.id === e.carId)) : [];
   const stats = local()
     ? [
-        ['Cars in collection', d._view?.stats?.cars ?? cars.length, 'car', 'Cars', 'Your collection'],
+        ['Cars in collection', d._view?.stats?.cars ?? cars.length, 'Cars', 'Your collection'],
         [
           'Owned part types',
           d._view?.stats?.parts ?? d.parts.filter(p => p.quantity > 0).length,
-          'box',
           'Parts',
           (d._view?.stats?.available ?? d.parts.reduce((n, p) => n + available(p), 0)) +
             ' available pieces · ' +
             (d._view?.stats?.catalogue ?? d.parts.length) +
             ' catalogue entries'
         ],
-        ['Open jobs', d._view?.stats?.jobs ?? jobs.length, 'tool', 'Workshop', 'Work in progress'],
-        ['Service reminders', d._view?.stats?.maintenance ?? due.length, 'calendar', 'Workshop', 'Upcoming maintenance']
+        ['Open jobs', d._view?.stats?.jobs ?? jobs.length, 'Workshop', 'Work in progress'],
+        ['Service reminders', d._view?.stats?.maintenance ?? due.length, 'Workshop', 'Upcoming maintenance']
       ]
     : [
-        ['Cars in collection', cars.length, 'car', 'Cars', 'Shared collection'],
-        ['Shared setups', d.setups.length, 'setup', 'Cars', 'Saved configurations']
+        ['Cars in collection', cars.length, 'Cars', 'Shared collection'],
+        ['Shared setups', d.setups.length, 'Cars', 'Saved configurations']
       ];
   const recent = cars
     .slice()
     .sort((a, b) => String(b.updated).localeCompare(String(a.updated)))
-    .slice(0, 3);
+    .slice(0, 4);
+  const others = recent.slice(1);
+  const welcome = `<section class="home-welcome">${bannerMarkup(d.settings)}${local() ? `<div class="home-welcome-actions">${btn(icon('plus') + (cars.length ? ' Add car' : ' Add your first car'), 'add-car', 'primary')}${btn(icon('edit') + ' Customise welcome', 'settings-welcome', 'outline')}</div>` : `<div class="row">${badge('Shared collection', 'good')}${badge('Read only')}</div>`}</section>`;
+  const counts = `<div class="home-stats">${stats.map(([title, value, to, help]) => `<button type="button" class="home-stat${to === 'Workshop' && title === 'Open jobs' && value ? ' busy' : ''}" data-action="nav" data-id="${to}"><span class="home-stat-label">${title}</span>${homeDigits(value)}<span class="home-stat-help">${esc(help)}</span></button>`).join('')}</div>`;
+  const workbench = local()
+    ? `<div class="home-heading"><h2>On the workbench</h2>${jobs.length ? `<span class="muted">${jobs.length < (d._view?.stats?.jobs ?? jobs.length) ? `${jobs.length} of ${d._view.stats.jobs} open jobs` : `${jobs.length} open ${jobs.length === 1 ? 'job' : 'jobs'}`}</span>` : ''}<span class="actions">${btn('Workshop ' + icon('next'), 'nav', 'ghost small', 'Workshop')}</span></div>` +
+      (jobs.length
+        ? homeJobCards(jobs.slice(0, 3))
+        : `<div class="workbench-empty">${uiTile('tool', 'amber')}<div><h3>Your workbench is ready</h3><p class="muted">Plan maintenance, a modification or the steps towards a saved setup.</p></div>${btn(icon('plus') + ' New workshop job', 'new-job', 'primary')}</div>`)
+    : '';
+  const activity = `<section class="home-card"><header><h3>Recent activity</h3></header><div class="home-card-body">${homeTimeline(d.events.slice(0, 4))}</div></section>`;
+  const collection = `<section class="home-card"><header><h3>Back to your collection</h3><span class="home-tag">Recently changed</span></header><div class="home-card-body">${
+    others.length
+      ? others
+          .map(
+            c =>
+              `<div class="home-recent"><span class="home-recent-photo">${photo(c, true)}</span><span class="home-recent-name"><strong>${esc(c.name)}</strong><small>${esc([c.maker, c.scale].filter(Boolean).join(' · '))}</small></span>${btn('Open ' + icon('next'), 'open-car', 'ghost small', c.id)}</div>`
+          )
+          .join('')
+      : `<p class="muted">${cars.length ? 'Other cars you change will appear here.' : 'Your recently changed cars will appear here.'}</p>`
+  }</div><footer>${btn(icon('showroom') + ' Visit the Showroom', 'nav', 'small outline', 'Showroom')}</footer></section>`;
   return (
-    `<section class="welcome"><div>${bannerMarkup(d.settings)}<div class="row mt">${badge(local() ? 'Personal collection' : 'Shared collection', 'good')}${badge(local() ? 'Saved on this computer' : 'Read only')}</div></div>${local() ? `<div class="welcome-actions">${btn(icon('plus') + (cars.length ? ' Add car' : ' Add your first car'), 'add-car', 'primary')}${btn(icon('edit') + ' Customise welcome', 'settings-welcome')}</div>` : ''}</section>` +
-    `<div class="overview-stats">${stats.map(([title, value, ic, to, help]) => `<button class="panel overview-stat" data-action="nav" data-id="${to}"><span class="stat-label">${icon(ic)}${title}</span><strong class="stat">${value}</strong><span class="tiny muted">${help}</span></button>`).join('')}</div>` +
-    (local()
-      ? uiSectionHeading('On the workbench', btn('Workshop ' + icon('next'), 'nav', 'ghost small', 'Workshop')) +
-        (jobs.length
-          ? jobCards(jobs.slice(0, 3))
-          : `<div class="workbench-empty">${uiTile('tool', 'amber')}<div><h3>Your workbench is ready</h3><p class="muted">Plan maintenance, a modification or the steps towards a saved setup.</p></div>${btn(icon('plus') + ' New workshop job', 'new-job', 'primary')}</div>`)
-      : '') +
-    `<div class="two-col mt">${panel('Recent activity', timeline(d.events.slice(0, 4)))}${panel('Back to your collection', recent.length ? recent.map(c => `<div class="recent-car list-row"><span class="recent-car-photo">${photo(c, true)}</span><div class="recent-car-name"><strong>${esc(c.name)}</strong><div class="tiny muted">${esc([c.maker, c.scale].filter(Boolean).join(' · '))}</div></div>${btn('Open ' + icon('next'), 'open-car', 'ghost small', c.id)}</div>`).join('') + `<div class="actions mt">${btn(icon('showroom') + ' Visit the Showroom', 'nav', '', 'Showroom')}</div>` : `<p class="muted">Your recently updated cars will appear here.</p>${local() ? btn('Add your first car', 'add-car', 'primary') : ''}`)}</div>` +
-    (local() ? renderCollectionValue(d._view?.value) : '')
+    `<div class="home-top">${homeFeature(recent[0])}<div class="home-side">${welcome}${counts}</div></div>` +
+    workbench +
+    `<div class="home-grid">${activity}${collection}${local() ? renderCollectionValue(d._view?.value) : ''}</div>`
   );
 }
 function renderExchangeDesign() {
