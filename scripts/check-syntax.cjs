@@ -3,7 +3,7 @@
 const {spawnSync}=require('node:child_process');
 const path=require('node:path');
 const files=[
-  "renderer/cars-browser.js", "tests/cars-browser-smoke.cjs", "renderer/car-actions.js", "renderer/car-more.js", "renderer/car-picker.js", "renderer/field-arranger.js", "tests/car-actions-smoke.cjs",
+  "renderer/cars-browser.js", "tests/cars-browser-smoke.cjs", "renderer/car-actions.js", "renderer/car-more.js", "renderer/car-picker.js", "renderer/field-arranger.js", "renderer/manual-test.js", "tests/car-actions-smoke.cjs",
   "src/spreadsheet-fields.cjs", "src/spreadsheet-parser.cjs", "src/spreadsheet-worker.cjs", "src/spreadsheet-import.cjs", "renderer/spreadsheet-import.js", "tests/spreadsheet-import.test.cjs", "tests/spreadsheet-import-smoke.cjs",
   "src/catalogue-picture-matching.cjs",
   "tests/catalogue-picture-matching.test.cjs",
@@ -16,7 +16,7 @@ const files=[
   "scripts/build-startup-splash.cjs",
   "tests/application-frame.test.cjs",
   "tests/startup-feedback.test.cjs",
-  "tests/startup-window-smoke.cjs", "tests/part-sheet-smoke.cjs", "tests/job-window-smoke.cjs", "tests/shopping-basket-smoke.cjs", "tests/bulk-edit-smoke.cjs", "tests/car-more-smoke.cjs", "tests/setup-sheet-smoke.cjs", "tests/car-picker-smoke.cjs", "tests/field-arranger-smoke.cjs", "tests/picture-request-smoke.cjs",
+  "tests/startup-window-smoke.cjs", "tests/part-sheet-smoke.cjs", "tests/job-window-smoke.cjs", "tests/shopping-basket-smoke.cjs", "tests/bulk-edit-smoke.cjs", "tests/car-more-smoke.cjs", "tests/setup-sheet-smoke.cjs", "tests/car-picker-smoke.cjs", "tests/field-arranger-smoke.cjs", "tests/picture-request-smoke.cjs", "tests/manual-test-smoke.cjs",
   "tests/windows-installer.test.cjs",
   "src/catalogue-pricing.cjs",
   "tests/catalogue-pricing.test.cjs",

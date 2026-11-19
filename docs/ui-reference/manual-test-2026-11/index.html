@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Manual test redesign</title>
+<!-- Car photos come from .qa/preview-cars (ignored by git), made from the local library; they are not part of the repository. -->
+<style>
+@font-face{font-family:'SF Barlow Condensed';src:url('../../../renderer/fonts/barlowcondensed/BarlowCondensed-BoldItalic.ttf') format('truetype');font-weight:700;font-style:italic}
+@font-face{font-family:'SF Roboto Mono';src:url('../../../renderer/fonts/robotomono/RobotoMono[wght].ttf') format('truetype');font-weight:100 700}
+:root{--bg:#171b21;--panel:#222831;--raised:#2a313b;--ink:#e8e6e1;--ink2:#c4c8ce;--muted:#98a0ab;--faint:#6b7380;--line:#343b47;--line2:#2b313b;--accent:#e5484d;--ok:#3ecf8e;--amber:#edbd6a;--blue:#79b5ed;--violet:#a88cda;--green:#67c79b;
+  --cond:'SF Barlow Condensed','Bahnschrift',sans-serif;--mono:'SF Roboto Mono',Consolas,monospace;--ui:'Segoe UI',system-ui,sans-serif;color-scheme:dark}
+[data-theme=light]{--bg:#f1efea;--panel:#fff;--raised:#f0eee9;--ink:#1d2229;--ink2:#3a414c;--muted:#656c76;--faint:#8a929d;--line:#d9d6cf;--line2:#e6e3dd;--accent:#c92424;--amber:#a7741c;--blue:#236db4;--ok:#1f9a62;--green:#187a50;--violet:#7950a6;color-scheme:light}
+*{box-sizing:border-box}html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:13.5px/1.45 var(--ui);overflow:hidden}
+button,input{font:inherit;color:inherit}
+.mono{font-family:var(--mono);font-weight:500}
+h1,h2,h3,h4{font-family:var(--cond);font-style:italic;font-weight:700;text-transform:uppercase;letter-spacing:.02em;margin:0}
+.eye{font:600 10px var(--ui);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.muted{color:var(--muted)}.grow{flex:1}
+.switch{position:relative;z-index:50;display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;height:46px;padding:0 20px;background:var(--bg);border-bottom:1px solid var(--line2)}
+.switch b{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.switch p{margin:0 0 0 auto;font-size:12px;color:var(--faint)}
+.seg{display:inline-flex;gap:2px;padding:3px;border:1px solid var(--line);border-radius:9px;background:color-mix(in srgb,var(--bg) 60%,var(--panel))}
+.seg button{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 11px;border:0;border-radius:6px;background:transparent;color:var(--muted);font-size:12.5px;cursor:pointer;white-space:nowrap}
+.seg button.on{background:color-mix(in srgb,var(--ink) 12%,var(--panel));color:var(--ink);font-weight:600}
+.app{position:absolute;inset:46px 0 0;filter:blur(2px);opacity:.45}
+.chrome{display:flex;align-items:center;gap:12px;height:56px;padding:0 20px;background:var(--panel);border-bottom:1px solid var(--line)}
+.logo{width:36px;height:36px;border-radius:9px;background:var(--accent)}
+.backdrop{position:absolute;inset:46px 0 0;background:rgba(5,7,10,.55)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:32px;padding:5px 12px;border:1px solid transparent;border-radius:8px;background:color-mix(in srgb,var(--ink) 8%,var(--panel));color:var(--ink);font-size:13px;white-space:nowrap;cursor:pointer}
+.btn.primary{background:var(--accent);color:#fff;font-weight:600}.btn.ghost{background:transparent;color:var(--muted)}.btn.small{min-height:27px;padding:3px 10px;font-size:12.5px}
+input.f{width:100%;min-height:34px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);outline:none}
+.fl{display:grid;gap:5px;font-size:12px;color:var(--muted)}
+.win{position:absolute;left:50%;top:calc(46px + 26px);transform:translateX(-50%);width:min(1260px,calc(100vw - 40px));height:calc(100vh - 46px - 52px);display:flex;flex-direction:column;border:1px solid var(--line);border-radius:14px;background:var(--panel);box-shadow:0 30px 80px rgba(0,0,0,.5);overflow:hidden}
+.whead{display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid var(--line)}
+.whead h2{font-size:24px;line-height:1}.whead p{margin:0;font-size:12.5px;color:var(--muted)}.whead .x{margin-left:auto;color:var(--muted);font-size:18px}
+.wbody{flex:1;min-height:0;display:flex}
+.wfoot{display:flex;align-items:center;gap:10px;padding:11px 20px;border-top:1px solid var(--line);background:color-mix(in srgb,var(--bg) 40%,var(--panel))}
+.wfoot .sum{font-size:12.5px;color:var(--muted)}.wfoot .sum b{color:var(--ink)}
+/* manual test */
+.wbody{flex:1;min-height:0;display:flex}
+.col{display:flex;flex-direction:column;min-width:0;min-height:0}
+.cb{flex:1;min-height:0;overflow:auto;padding:16px 22px}
+.hint{font-size:12px;color:var(--muted)}
+.grp{display:flex;align-items:center;gap:10px;margin:18px 0 8px;font:600 9.5px var(--ui);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}.grp::after{content:'';flex:1;height:1px;background:var(--line2)}
+.grp:first-child{margin-top:0}
+.row{display:grid;gap:10px}.r3{grid-template-columns:repeat(3,minmax(0,1fr))}.r2{grid-template-columns:repeat(2,minmax(0,1fr))}.r4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.sugg{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}.sugg span{padding:1px 9px;border-radius:99px;border:1px solid var(--line);font-size:11.5px;color:var(--muted)}.sugg span.on{border-color:var(--blue);color:var(--ink);background:color-mix(in srgb,var(--blue) 12%,var(--panel))}
+.segw{display:grid;gap:5px;font-size:12px;color:var(--muted)}
+.seg2{display:inline-flex;gap:2px;padding:3px;border:1px solid var(--line);border-radius:9px;background:color-mix(in srgb,var(--bg) 60%,var(--panel))}
+.seg2 span{padding:5px 11px;border-radius:6px;font-size:12.5px;color:var(--muted);white-space:nowrap}.seg2 span.on{background:color-mix(in srgb,var(--ink) 12%,var(--panel));color:var(--ink);font-weight:600}
+/* scoreboard */
+.board{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:10px}
+.sc{padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:color-mix(in srgb,var(--bg) 45%,var(--panel))}
+.sc .eye{margin-bottom:4px}
+.sc .v{font:600 34px/1.1 var(--mono);letter-spacing:-.02em}.sc .v small{font-size:15px;color:var(--muted);margin-left:4px}
+.sc.best{border-color:color-mix(in srgb,var(--green) 50%,var(--line));background:color-mix(in srgb,var(--green) 8%,var(--panel))}
+.sc .d{margin-top:3px;font:600 12px var(--mono);color:var(--green)}
+.sc.focus{box-shadow:0 0 0 3px color-mix(in srgb,var(--blue) 28%,transparent);border-color:var(--blue)}
+.cfg{display:grid;gap:6px}
+.cf{display:grid;grid-template-columns:18px minmax(0,1fr) auto;gap:10px;align-items:center;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel);font-size:13px}
+.cf small{display:block;font-size:11.5px;color:var(--muted)}
+.cf .rd{width:16px;height:16px;border-radius:50%;border:1.5px solid var(--line)}
+.cf.on{border-color:var(--blue);background:color-mix(in srgb,var(--blue) 8%,var(--panel))}.cf.on .rd{border:5px solid var(--blue)}
+.side{width:360px;flex:none;border-left:1px solid var(--line);background:color-mix(in srgb,var(--bg) 22%,var(--panel));display:flex;flex-direction:column}
+.side .cb{padding:16px 18px}
+.carh{display:flex;gap:12px;align-items:center}.carh img{width:96px;height:60px;object-fit:cover;border-radius:8px}.carh b{display:block;font:italic 700 18px var(--cond);text-transform:uppercase}.carh small{color:var(--muted);font-size:12px}
+.hist{display:grid;gap:5px}
+.hi{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;padding:7px 10px;border:1px solid var(--line2);border-radius:8px;background:var(--panel);font-size:12px}
+.hi small{display:block;color:var(--muted);font-size:11px}.hi b{font:600 12.5px var(--mono)}
+.hi.new{border-color:var(--green);background:color-mix(in srgb,var(--green) 9%,var(--panel))}.hi.new b{color:var(--green)}
+.spark{display:flex;align-items:flex-end;gap:3px;height:70px;padding:8px 10px;border:1px solid var(--line2);border-radius:10px;background:var(--panel)}
+.spark i{flex:1;border-radius:3px 3px 0 0;background:color-mix(in srgb,var(--blue) 55%,var(--panel))}.spark i.b{background:var(--green)}.spark i.x{background:color-mix(in srgb,var(--ink) 18%,var(--panel))}
+textarea.f{display:block;width:100%;min-height:70px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit;resize:none;outline:none}
+.carh[hidden]{display:none}
+.sugg span{white-space:nowrap}
+.cgrid .sugg{flex-wrap:nowrap;overflow:hidden}
+/* B: lap entry */
+.laps{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:6px}
+.lap{display:flex;align-items:center;gap:6px;padding:5px 8px;border:1px solid var(--line);border-radius:8px;background:var(--panel);font:500 13px var(--mono)}
+.lap small{font:600 10px var(--ui);color:var(--muted);width:16px}
+.lap.b{border-color:var(--green);color:var(--green)}.lap.x{opacity:.5;text-decoration:line-through}
+.lap.add{border-style:dashed;color:var(--muted);font-family:var(--ui);font-size:12px;justify-content:center}
+.paste{display:flex;gap:8px;align-items:center;padding:8px 10px;border:1px dashed var(--line);border-radius:10px;font-size:12px;color:var(--muted);margin-top:8px}
+.mini{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.mini .sc{padding:9px 12px}.mini .sc .v{font-size:22px}
+/* C: compact */
+.sect{border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:12px 14px}
+.sect h4{font-size:15px;margin-bottom:10px}
+.cgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+</style>
+</head>
+<body>
+<div class="switch">
+ <b>Option</b><div class="seg" id="oSeg"><button data-o="a" class="on">A · Scoreboard</button><button data-o="b">B · Type the laps</button><button data-o="c">C · Tidy form</button></div>
+ <b>Theme</b><div class="seg" id="tSeg"><button data-t="dark" class="on">Dark</button><button data-t="light">Light</button></div>
+ <p>Record a manual test · on a car's Performance page</p>
+</div>
+<div class="app"><div class="chrome"><div class="logo"></div></div></div>
+<div class="backdrop"></div>
+<div class="win" id="win"></div>
+<script>
+let o='a';
+const $=s=>document.querySelector(s);
+const img=f=>'../../../.qa/preview-cars/'+f;
+const head=(t,p)=>`<div class="whead"><h2>${t}</h2><p>${p}</p><span class="x">×</span></div>`;
+const fld=(l,v,ph='',extra='')=>`<label class="fl">${l}<input class="f" value="${v}" placeholder="${ph}">${extra}</label>`;
+const seg=(l,opts,on)=>`<div class="segw">${l}<span class="seg2">${opts.map((x,i)=>`<span class="${i===on?'on':''}">${x}</span>`).join('')}</span></div>`;
+const where=()=>`<div class="row r3">${fld('Track','Club circuit','','<span class="sugg"><span class="on">Club circuit</span><span>Home track</span><span>Ninco Pro</span></span>')}${fld('Lane','2','','<span class="sugg"><span>1</span><span class="on">2</span><span>3</span><span>4</span></span>')}${fld('Driver','Bjornie','','<span class="sugg"><span class="on">Bjornie</span><span>James</span></span>')}</div>`;
+const cond=()=>`<div class="row" style="grid-template-columns:140px auto auto;align-items:end">${fld('Track voltage','12.5','V')}${seg('Direction',['Unknown','Clockwise','Anticlockwise'],1)}${seg('Traction magnets',['Unknown','With magnets','Without'],2)}</div>`;
+const config=()=>`<div class="cfg"><div class="cf on"><span class="rd"></span><span>The car as it is now<small>Including unfinished work · NSR Shark 25K · 12 / 34 · 78 g</small></span><span class="hint">Now</span></div><div class="cf"><span class="rd"></span><span>Club race setup<small>Saved snapshot · 9 Nov 2026</small></span><span class="hint">Snapshot</span></div><div class="cf"><span class="rd"></span><span>Wood track, no magnet<small>Saved snapshot · 2 Oct 2026</small></span><span class="hint">Snapshot</span></div></div>`;
+const side=(best)=>`<div class="cb"><div class="carh"><img src="${img('car-9.jpg')}" alt=""><div><b>Porsche 952KH</b><small>Slot.it · 1:32</small></div></div><div class="grp">Earlier tests · Club circuit, lane 2</div><div class="hist"><div class="hi new"><span>This test<small>19 Nov 2026 · Bjornie</small></span><b>${best}</b></div><div class="hi"><span>Club race setup<small>9 Nov 2026 · Bjornie</small></span><b>5.402</b></div><div class="hi"><span>Before the new tyres<small>2 Nov 2026 · James</small></span><b>5.611</b></div></div><p class="hint" style="margin-top:10px">0.051 s faster than your best on this track and lane. Only tests on the same track, lane and direction are compared.</p><div class="grp">Do not double count</div><p class="hint">Races from SlotForge Timing are recorded automatically. Record only tests that Timing did not measure.</p></div>`;
+const foot=(sum,label='Save test')=>`<div class="wfoot"><span class="sum">${sum}</span><span class="grow"></span><button class="btn ghost">Cancel</button><button class="btn primary">${label}</button></div>`;
+
+function optA(){return head('Record a manual test','A test you timed yourself, not measured by SlotForge Timing')+`<div class="wbody"><div class="col" style="flex:1"><div class="cb">
+ <div class="grp">Result</div><div class="board"><div class="sc best focus"><div class="eye">Best lap</div><div class="v">5.351<small>s</small></div><div class="d">−0.051 s vs your best here</div></div><div class="sc"><div class="eye">Average lap</div><div class="v">5.488<small>s</small></div></div><div class="sc"><div class="eye">Laps</div><div class="v">20</div></div></div>
+ <div class="grp">Where and who</div>${where()}
+ <div class="grp">Conditions</div>${cond()}
+ <div class="grp">Car configuration</div>${config()}
+ <div class="grp">Observations</div><textarea class="f" placeholder="How did it feel? Grip, braking, anything to change next time…">Rear stepped out in the hairpin, try a softer tyre.</textarea>
+ </div></div><aside class="side">${side('5.351')}</aside></div>`+foot('<b>5.351 s</b> best · 20 laps · Club circuit, lane 2')}
+
+function optB(){const L=[5.62,5.51,5.49,5.43,5.47,5.40,5.38,5.44,5.351,5.42,5.39,7.91,5.46,5.41,5.37,5.45];
+ return head('Record a manual test','A test you timed yourself, not measured by SlotForge Timing')+`<div class="wbody"><div class="col" style="flex:1"><div class="cb">
+ <div class="grp">Lap times · type or paste them</div><div class="laps">${L.map((t,i)=>`<span class="lap ${t===5.351?'b':''} ${t>7?'x':''}"><small>${i+1}</small>${t.toFixed(3)}</span>`).join('')}<span class="lap add">+ lap</span></div>
+ <div class="paste">⧉ Paste a column of times from a stopwatch app or spreadsheet. Laps much slower than the rest (crashes, deslots) are left out of the average — click one to include it.</div>
+ <div class="grp">Worked out for you</div><div class="mini"><div class="sc best"><div class="eye">Best lap</div><div class="v">5.351<small>s</small></div></div><div class="sc"><div class="eye">Average · 15 laps</div><div class="v">5.436<small>s</small></div></div><div class="sc"><div class="eye">Laps</div><div class="v">16</div></div></div><p class="hint" style="margin-top:6px">No individual times? Type the best lap, average and number of laps instead.</p>
+ <div class="grp">Where and who</div>${where()}
+ <div class="grp">Conditions</div>${cond()}
+ <div class="grp">Car configuration</div><div class="row r2"><label class="fl">Configuration<input class="f" value="The car as it is now (including unfinished work)"></label><label class="fl">Observations<input class="f" placeholder="Grip, braking, what to change next…"></label></div>
+ </div></div><aside class="side"><div class="cb" style="flex:none"><div class="carh"><img src="${img('car-9.jpg')}" alt=""><div><b>Porsche 952KH</b><small>Slot.it · 1:32</small></div></div><div class="grp">Your laps</div><div class="spark">${L.map(t=>`<i class="${t===5.351?'b':''} ${t>7?'x':''}" style="height:${t>7?100:Math.max(12,(5.7-t)/0.4*90)}%"></i>`).join('')}</div><p class="hint">Taller is faster. Lap 12 (7.910 s) looks like a deslot and is left out.</p></div>${side('5.351').replace('<div class="cb"><div class="carh">','<div class="cb" style="padding-top:0;flex:1"><div class="carh" hidden>')}</aside></div>`+foot('<b>5.351 s</b> best · 16 laps · average of 15')}
+
+function optC(){return head('Record a manual test','A test you timed yourself, not measured by SlotForge Timing')+`<div class="wbody"><div class="cb"><div class="cgrid">
+ <div class="sect"><h4>Result</h4><div class="row r3">${fld('Best lap','5.351','s')}${fld('Average lap','5.488','s')}${fld('Laps','20')}</div></div>
+ <div class="sect"><h4>Where and who</h4>${where()}</div>
+ <div class="sect"><h4>Conditions</h4>${cond()}</div>
+ <div class="sect"><h4>Car configuration</h4>${config()}</div>
+ <div class="sect" style="grid-column:1/-1"><h4>Observations</h4><textarea class="f" placeholder="How did it feel?"></textarea></div>
+ </div></div></div>`+foot('Porsche 952KH · <b>5.351 s</b> best')}
+
+function paint(){document.documentElement.dataset.theme=document.querySelector('#tSeg .on').dataset.t;$('#win').innerHTML=({a:optA,b:optB,c:optC})[o]();}
+function segc(id,attr,set){document.querySelectorAll(`#${id} button`).forEach(b=>b.onclick=()=>{document.querySelectorAll(`#${id} button`).forEach(x=>x.classList.toggle('on',x===b));set(b.dataset[attr]);paint();});}
+segc('oSeg','o',v=>o=v);segc('tSeg','t',()=>{});
+function fromHash(){const h=new URLSearchParams(location.hash.slice(1));if(h.get('o'))o=h.get('o');const t=h.get('t')||'dark';document.querySelectorAll('#oSeg button').forEach(b=>b.classList.toggle('on',b.dataset.o===o));document.querySelectorAll('#tSeg button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));paint();}
+addEventListener('hashchange',fromHash);fromHash();
+</script>
+</body>
+</html>

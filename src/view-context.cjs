@@ -520,6 +520,14 @@ function editor(db, data, r, request) {
       ['carId', 'name', 'date', 'track'],
       pageQuery.relatedIds(r, 'setups', carId)
     );
+  // Record a manual test compares with this car's earlier tests on the same track and lane.
+  if (a === 'add-test' && carId)
+    data.tests = pageQuery.descriptors(
+      r,
+      'tests',
+      ['carId', 'date', 'track', 'lane', 'driver', 'best'],
+      pageQuery.relatedIds(r, 'tests', carId)
+    );
   if (a === 'compare-setup' && carId) {
     h.installations(carId);
     h.related('tests', carId);

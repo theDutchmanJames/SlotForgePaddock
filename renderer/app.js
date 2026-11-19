@@ -962,28 +962,7 @@ function updateRecordWork() {
 async function saveSetup(id) {
   await setupSuggestionEditor(id);
 }
-function addTest(id) {
-  const setups = db.setups.filter(s => s.carId === id);
-  simpleForm(
-    'Record a manual test',
-    `<label class="field">Configuration<select name="setupId"><option value="">Actual current car (including unfinished work)</option>${setups.map(s => `<option value="${s.id}">Saved historical snapshot: ${esc(s.name)} · ${date(s.date)}</option>`).join('')}</select></label>` +
-      field('track', 'Track', '') +
-      field('lane', 'Lane', '') +
-      field('driver', 'Driver', '') +
-      field('voltage', 'Track voltage (V)', '', 'number') +
-      field('direction', 'Track direction', 'Unknown', 'select', ['Unknown', 'Clockwise', 'Anticlockwise']) +
-      field('magnetStatus', 'Traction magnets during this test', 'Unknown', 'select', [
-        'Unknown',
-        'With magnets',
-        'Without magnets'
-      ]) +
-      field('laps', 'Laps', '', 'number') +
-      field('best', 'Best lap (seconds)', '', 'number') +
-      field('average', 'Average lap (seconds)', '', 'number') +
-      field('notes', 'Observations', '', 'textarea'),
-    async values => change('test.add', { carId: id, ...values })
-  );
-}
+// addTest lives in manual-test.js.
 function updateCarExportFormat() {
   const timing = $('#car-export-format')?.value === 'timing';
   const detail = $('#car-export-paddock'),
@@ -1064,6 +1043,7 @@ document.addEventListener('click', async event => {
     if (setupAction(action, id)) return;
     if (carPickerAction(action, id)) return;
     if (fieldArrangerAction(action, id)) return;
+    if (manualTestAction(action, id)) return;
     if (await picturePreviewAction(action, id)) return;
     if (await pictureAction(action, id)) return;
     if (await historicalEvidenceAction(action, id)) return;
