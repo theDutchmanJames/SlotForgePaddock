@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Add shopping item redesign</title>
+<!-- Part pictures come from .qa/preview-parts (ignored by git), made from the local library; they are not part of the repository. -->
+<style>
+@font-face{font-family:'SF Barlow Condensed';src:url('../../../renderer/fonts/barlowcondensed/BarlowCondensed-BoldItalic.ttf') format('truetype');font-weight:700;font-style:italic}
+@font-face{font-family:'SF Roboto Mono';src:url('../../../renderer/fonts/robotomono/RobotoMono[wght].ttf') format('truetype');font-weight:100 700}
+:root{--bg:#171b21;--panel:#222831;--raised:#2a313b;--ink:#e8e6e1;--ink2:#c4c8ce;--muted:#98a0ab;--faint:#6b7380;--line:#343b47;--line2:#2b313b;--accent:#e5484d;--ok:#3ecf8e;--amber:#edbd6a;--blue:#79b5ed;--violet:#a88cda;--green:#67c79b;
+  --cond:'SF Barlow Condensed','Bahnschrift',sans-serif;--mono:'SF Roboto Mono',Consolas,monospace;--ui:'Segoe UI',system-ui,sans-serif;color-scheme:dark}
+[data-theme=light]{--bg:#f1efea;--panel:#fff;--raised:#f0eee9;--ink:#1d2229;--ink2:#3a414c;--muted:#656c76;--faint:#8a929d;--line:#d9d6cf;--line2:#e6e3dd;--accent:#c92424;--amber:#a7741c;--blue:#236db4;--ok:#1f9a62;--green:#187a50;color-scheme:light}
+*{box-sizing:border-box}html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:13.5px/1.45 var(--ui);overflow:hidden}
+button,input,select,textarea{font:inherit;color:inherit}
+.mono{font-family:var(--mono);font-weight:500}
+h1,h2,h3,h4{font-family:var(--cond);font-style:italic;font-weight:700;text-transform:uppercase;letter-spacing:.02em;margin:0}
+.eye{font:600 10px var(--ui);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.muted{color:var(--muted)}.grow{flex:1}
+.switch{position:relative;z-index:50;display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;height:46px;padding:0 20px;background:var(--bg);border-bottom:1px solid var(--line2)}
+.switch b{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.switch p{margin:0 0 0 auto;font-size:12px;color:var(--faint)}
+.seg{display:inline-flex;gap:2px;padding:3px;border:1px solid var(--line);border-radius:9px;background:color-mix(in srgb,var(--bg) 60%,var(--panel))}
+.seg button{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 11px;border:0;border-radius:6px;background:transparent;color:var(--muted);font-size:12.5px;cursor:pointer;white-space:nowrap}
+.seg button.on{background:color-mix(in srgb,var(--ink) 12%,var(--panel));color:var(--ink);font-weight:600}
+.seg .n{font:500 11px var(--mono);color:var(--faint)}
+.app{position:absolute;inset:46px 0 0;filter:blur(2px);opacity:.45}
+.chrome{display:flex;align-items:center;gap:12px;height:56px;padding:0 20px;background:var(--panel);border-bottom:1px solid var(--line)}
+.logo{width:36px;height:36px;border-radius:9px;background:var(--accent)}
+.navg{display:flex;gap:2px;padding:3px;border-radius:10px;background:color-mix(in srgb,var(--ink) 5%,var(--bg));font-size:12.5px;color:var(--ink2)}.navg span{padding:6px 10px;border-radius:7px}
+.backdrop{position:absolute;inset:46px 0 0;background:rgba(5,7,10,.55)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:32px;padding:5px 12px;border:1px solid transparent;border-radius:8px;background:color-mix(in srgb,var(--ink) 8%,var(--panel));color:var(--ink);font-size:13px;white-space:nowrap;cursor:pointer}
+.btn.primary{background:var(--accent);color:#fff;font-weight:600}.btn.ghost{background:transparent;color:var(--muted)}.btn.small{min-height:27px;padding:3px 10px;font-size:12.5px}
+input.f,select.f,textarea.f{width:100%;min-height:34px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);outline:none}
+.fl{display:grid;gap:5px;font-size:12px;color:var(--muted)}
+.win{position:absolute;left:50%;top:calc(46px + 26px);transform:translateX(-50%);width:min(1260px,calc(100vw - 40px));height:calc(100vh - 46px - 52px);display:flex;flex-direction:column;border:1px solid var(--line);border-radius:14px;background:var(--panel);box-shadow:0 30px 80px rgba(0,0,0,.5);overflow:hidden}
+.whead{display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid var(--line)}
+.whead h2{font-size:24px;line-height:1}.whead .x{margin-left:auto;color:var(--muted);font-size:18px}
+.wbody{flex:1;min-height:0;display:flex}
+.wfoot{display:flex;align-items:center;gap:10px;padding:11px 20px;border-top:1px solid var(--line);background:color-mix(in srgb,var(--bg) 40%,var(--panel))}
+.wfoot .sum{font-size:12.5px;color:var(--muted)}.wfoot .sum b{color:var(--ink)}
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+.search{padding:16px 20px 10px;border-bottom:1px solid var(--line2)}
+.search .row{display:flex;gap:10px;align-items:center}
+.q{position:relative;flex:1}
+.q input{padding-left:38px;min-height:44px;font-size:15px}
+.q::before{content:'⌕';position:absolute;left:13px;top:8px;font-size:20px;color:var(--muted)}
+.filters{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;align-items:center}
+.fchip{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border:1px solid var(--line);border-radius:999px;font-size:12px;color:var(--ink2)}
+.fchip.on{border-color:var(--blue);color:var(--blue);background:color-mix(in srgb,var(--blue) 10%,transparent)}
+.count{margin-left:auto;font-size:12px;color:var(--muted)}.count b{color:var(--ink)}
+.results{flex:1;min-height:0;overflow:auto;padding:12px 20px 16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(178px,1fr));gap:10px;align-content:start}
+.pc{position:relative;display:flex;flex-direction:column;border:1px solid var(--line);border-radius:10px;background:var(--panel);overflow:hidden;cursor:pointer}
+.pc .ph{position:relative;height:116px;background:#fff;display:grid;place-items:center}
+[data-theme=dark] .pc .ph{background:#f4f4f2}
+.pc .ph img{max-width:92%;max-height:104px;object-fit:contain}
+.pc .stock{position:absolute;left:7px;top:7px;padding:1px 8px;border-radius:999px;background:color-mix(in srgb,var(--ok) 85%,#000);color:#032;font-size:10.5px;font-weight:700}
+.pc .t{padding:8px 10px 9px;flex:1;display:flex;flex-direction:column;gap:2px}
+.pc b{font-size:12.5px;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pc small{font-size:11px;color:var(--muted)}
+.pc .add{position:absolute;right:7px;top:7px;width:28px;height:28px;border-radius:8px;display:grid;place-items:center;background:var(--accent);color:#fff;font-weight:700;font-size:16px;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+.pc.on{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 45%,transparent)}
+.pc.on .add{background:var(--ok)}
+.pc .inb{position:absolute;right:7px;top:7px;padding:2px 8px;border-radius:999px;background:var(--ok);color:#032;font-size:11px;font-weight:700}
+.own{grid-column:1/-1;display:flex;align-items:center;gap:12px;padding:12px;border:1px dashed var(--line);border-radius:10px;font-size:13px;color:var(--ink2)}
+.own i{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;font-style:normal;font-size:18px;background:color-mix(in srgb,var(--ink) 8%,var(--panel))}
+.side{width:390px;flex:none;border-left:1px solid var(--line);background:color-mix(in srgb,var(--bg) 22%,var(--panel));display:flex;flex-direction:column}
+.side .sh{padding:14px 18px 10px;border-bottom:1px solid var(--line2)}
+.side .sh h3{font-size:19px;line-height:1.1;margin-top:2px}
+.side .sh p{margin:3px 0 0;font-size:12px;color:var(--muted)}
+.side .sb{flex:1;min-height:0;overflow:auto;padding:14px 18px}
+.side .sf{padding:10px 18px;border-top:1px solid var(--line2);display:flex;gap:8px;align-items:center}
+.pick{display:flex;gap:12px;align-items:center;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+.pick .th{flex:none;width:76px;height:56px;border-radius:7px;background:#f4f4f2;display:grid;place-items:center;overflow:hidden}
+.pick .th img{max-width:92%;max-height:50px;object-fit:contain}
+.pick>span>b{display:block;font-size:12.5px;line-height:1.25}
+.pick small{font-size:11.5px;color:var(--muted)}
+.stepper{display:flex;align-items:center;gap:8px}
+.stepper button{width:32px;height:32px;border:1px solid var(--line);border-radius:8px;background:var(--panel);font-size:17px;cursor:pointer}
+.stepper .n{min-width:48px;text-align:center;font:600 22px var(--mono)}
+.lbl{margin:16px 0 6px;font:600 9.5px var(--ui);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.lists{display:flex;flex-direction:column;gap:4px}
+.lst{display:flex;align-items:center;gap:10px;padding:7px 10px;border:1px solid var(--line2);border-radius:9px;font-size:12.5px;cursor:pointer}
+.lst i{width:8px;height:8px;border-radius:50%;background:var(--c,var(--muted));flex:none}
+.lst small{margin-left:auto;color:var(--faint);font:500 11px var(--mono)}
+.lst.on{border-color:var(--blue);background:color-mix(in srgb,var(--blue) 8%,var(--panel));font-weight:600}
+details.opt{margin-top:14px;border-top:1px solid var(--line2);padding-top:10px}
+details.opt summary{cursor:pointer;font-size:12.5px;font-weight:600}
+.optg{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.note{font-size:12px;color:var(--muted);margin:10px 0 0}
+.basket{display:flex;flex-direction:column;gap:6px}
+.bi{display:grid;grid-template-columns:52px 1fr auto;gap:10px;align-items:center;padding:8px;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+.bi .th{width:52px;height:40px;border-radius:6px;background:#f4f4f2;display:grid;place-items:center;overflow:hidden}
+.bi .th img{max-width:90%;max-height:36px;object-fit:contain}
+.bi b{display:block;font-size:12px;line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.bi small{font-size:11px;color:var(--muted)}
+.bi .q2{display:flex;align-items:center;gap:4px}
+.bi .q2 button{width:24px;height:24px;border:1px solid var(--line);border-radius:6px;background:var(--panel);font-size:13px;padding:0}
+.bi .q2 span{min-width:22px;text-align:center;font:600 13px var(--mono)}
+.v{display:none}.v.on{display:flex}
+</style>
+</head>
+<body>
+<div class="switch">
+ <b>Option</b><div class="seg" id="oSeg"><button data-o="a" class="on">A · Search &amp; add</button><button data-o="b">B · Basket</button></div>
+ <b>Theme</b><div class="seg" id="tSeg"><button data-t="dark" class="on">Dark</button><button data-t="light">Light</button></div>
+ <p>Preview · your own catalogue pictures, example lists</p>
+</div>
+<div class="app"><div class="chrome"><div class="logo"></div><div class="navg"><span>Overview</span><span>Showroom</span><span>Cars</span><span>Parts</span><span>Shopping List</span><span>Build from Scratch</span><span>Workshop</span><span>Library</span><span>Connections</span><span>Import &amp; Export</span><span>Settings</span></div></div></div>
+<div class="backdrop"></div>
+<div class="win" id="win"></div>
+<script>
+const P=[["part-0.jpg","NSR 9046 3/32 Formula trued rear race tyre EXTREME 19,5x13 (2 pcs)","NSR","9046","Wheel & tyre set",0],["part-6.jpg","NSR 9069 3/32 Trued Rear Race tyre EXTREME 19,5X13 on Ø17mm wheels (2 pcs)","NSR","9069","Wheel & tyre set",2],["part-7.jpg","NSR 3/32 Front slick RTR glued and trued tyres — 18.2 x 10mm","NSR","9063","Wheel & tyre set",0],["part-2.jpg","NSR 3/32″ CNC ultralight plastic front wheels — Front 13mm","NSR","5025","Wheel",4],["part-4.jpg","NSR 3/32″ aluminium wheels 16.5mm (Formula 22/26) — Rear 16.5x12","NSR","5033","Wheel",0],["part-5.jpg","NSR Shark EVO 32K motor — 32.000 rpm, short can with wires","NSR","3042F","Motor",1],["part-8.jpg","NSR Formula 86/89 motor support — black, medium","NSR","1281","Motor pod",0],["part-11.jpg","NSR EVO3 anglewinder long-can motor pod, hard white","NSR","1226","Motor pod",0],["part-3.jpg","NSR Corvette C7R chassis — white, hard","NSR","1492","Chassis",0],["part-10.jpg","NSR wood-track racing guide, black, screw fixing","NSR","4859B","Guide",3],["part-9.jpg","NSR standard screws for body and motor support — 2,2x6,5","NSR","4833","Screw",12],["part-13.jpg","NSR axle spacers 3/32 brass — 0.25mm","NSR","4811","Spacer / shim",0]];
+const LISTS=[['General shopping','var(--muted)',4],['Tyres','var(--green)',0],['Supplies','var(--blue)',0],['Porsche 952KH · Rebuild','var(--amber)',5],['British Barn 88C · Rebuild','var(--amber)',3]];
+let opt='a';
+const $=s=>document.querySelector(s);
+const img=f=>'../../../.qa/preview-parts/'+f;
+const head=t=>`<div class="whead"><h2>${t}</h2><span class="x">×</span></div>`;
+const kinds=`<div class="seg"><button class="on">Catalogue parts <span class="n">3,119</span></button><button>Workshop supplies <span class="n">129</span></button><button>Something else</button></div>`;
+const search=`<div class="search"><div class="row"><div class="q"><input class="f" value="nsr 3/32"></div>${kinds}</div>
+ <div class="filters"><span class="fchip on">NSR ×</span><span class="fchip">All groups ⌄</span><span class="fchip">All types ⌄</span><span class="fchip">Not in stock</span><span class="count"><b class="mono">48</b> matches · showing <b class="mono">12</b></span></div></div>`;
+function grid(sel,inb){return `<div class="results">${P.map((p,i)=>`<div class="pc ${sel.includes(i)?'on':''}"><div class="ph"><img src="${img(p[0])}" alt="">${p[5]?`<span class="stock">In stock ${p[5]}</span>`:''}${inb&&inb[i]?`<span class="inb">${inb[i]} in basket</span>`:`<span class="add">${sel.includes(i)?'✓':'+'}</span>`}</div><div class="t"><b>${p[1]}</b><small>${p[2]} · ${p[3]} · ${p[4]}</small></div></div>`).join('')}
+ <div class="own"><i>+</i><span><b>Not in your catalogue?</b><br><small class="muted">Add “nsr 3/32” as your own item, with a name, manufacturer and reference</small></span><span class="grow"></span><button class="btn small">Own item…</button></div></div>`}
+function lists(on){return `<div class="lists">${LISTS.map(([n,c,k],i)=>`<div class="lst ${i===on?'on':''}" style="--c:${c}"><i></i>${n}<small>${k}</small></div>`).join('')}<div class="lst" style="border-style:dashed;color:var(--muted)">+ New list…</div></div>`}
+function A(){const p=P[1];return head('Add shopping item')+`<div class="wbody"><div class="main">${search}${grid([1])}</div>
+ <aside class="side"><div class="sh"><div class="eye">Adding</div><h3>Rear race tyres</h3><p>Choose a part on the left, then how many and where.</p></div>
+ <div class="sb"><div class="pick"><span class="th"><img src="${img(p[0])}" alt=""></span><span><b>${p[1]}</b><small>${p[2]} · ${p[3]} · you have <b class="mono">${p[5]}</b></small></span></div>
+  <div class="lbl">How many</div><div class="stepper"><button>−</button><span class="n">2</span><button>+</button><span class="muted" style="font-size:12px">packs</span></div>
+  <div class="lbl">Shopping list</div>${lists(1)}
+  <details class="opt"><summary>Supplier, price, link and notes</summary><div class="optg"><label class="fl">Supplier<input class="f" placeholder="Slotshop"></label><label class="fl">Price each<input class="f" placeholder="€ 9.95"></label><label class="fl" style="grid-column:1/-1">Purchase link<input class="f" placeholder="https://…"></label></div></details>
+  <p class="note">Adding an item does not change stock. When you tick it off, you can add it to your parts.</p></div></aside></div>
+ <div class="wfoot"><span class="sum"><b>2 ×</b> NSR 9069 rear race tyres → <b>Tyres</b></span><span class="grow"></span><button class="btn ghost">Cancel</button><button class="btn">Add &amp; find another</button><button class="btn primary">Add to list</button></div>`}
+function B(){const inb={1:2,5:1,9:2,10:1};return head('Add to shopping list')+`<div class="wbody"><div class="main">${search}${grid([1,5,9,10],inb)}</div>
+ <aside class="side"><div class="sh"><div class="eye">Your basket</div><h3>4 items · 6 pieces</h3><p>Every click on a part adds one. Adjust here, then add them all at once.</p></div>
+ <div class="sb"><div class="basket">${Object.entries(inb).map(([i,n])=>{const p=P[i];return `<div class="bi"><span class="th"><img src="${img(p[0])}" alt=""></span><span><b>${p[1]}</b><small>${p[2]} · ${p[3]}</small></span><span class="q2"><button>−</button><span>${n}</span><button>+</button></span></div>`}).join('')}</div>
+  <div class="lbl">Put them on</div>${lists(3)}
+  <p class="note">Linked to the Porsche 952KH rebuild job. Adding items does not change stock.</p></div>
+ <div class="sf"><button class="btn small ghost">Empty basket</button></div></aside></div>
+ <div class="wfoot"><span class="sum"><b>6 pieces</b> across <b>4 parts</b> → <b>Porsche 952KH · Rebuild</b></span><span class="grow"></span><button class="btn ghost">Cancel</button><button class="btn primary">Add 4 items to list</button></div>`}
+function render(){$('#win').innerHTML=opt==='a'?A():B();for(const[id,k,v]of[['#oSeg','o',opt],['#tSeg','t',document.documentElement.dataset.theme]])document.querySelectorAll(id+' button').forEach(b=>b.classList.toggle('on',b.dataset[k]===v));}
+document.addEventListener('click',e=>{const b=e.target.closest('.switch button');if(!b)return;if(b.dataset.o)opt=b.dataset.o;if(b.dataset.t)document.documentElement.dataset.theme=b.dataset.t;render();});
+function fromHash(){const q=new URLSearchParams(location.hash.slice(1));opt=q.get('o')||opt;document.documentElement.dataset.theme=q.get('t')||document.documentElement.dataset.theme;render();}
+addEventListener('hashchange',fromHash);fromHash();
+</script>
+</body>
+</html>

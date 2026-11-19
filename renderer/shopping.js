@@ -198,9 +198,9 @@ async function loadShoppingMatches(root, expand = true) {
     fillFinderMakers(root, data.makers, f.maker);
     const picking = root.dataset.shoppingFinder === 'picker';
     const card = p =>
-      `<button type="button" class="shopping-match" ${picking ? `data-pick-stock="${esc(p.id)}" data-pick-name="${esc(p.name)}"` : `data-action="shop-quick-add" data-id="${esc(p.id)}"`} title="${esc(p.name)}"><span class="shop-match-pic">${itemVisual(p)}${p.quantity > 0 ? `<span class="shop-match-stock">In stock <b class="mono">${p.quantity}</b></span>` : ''}</span><span class="shop-match-copy"><strong>${esc(p.name)}</strong><small>${esc([p.maker, p.reference].filter(Boolean).join(' · '))}</small>${p.partType ? `<small class="shop-match-type">${esc(p.partType)}</small>` : ''}</span><span class="shopping-match-action">${picking ? 'Choose' : icon('plus') + 'Add'}</span></button>`;
+      `<button type="button" class="shopping-match" ${picking ? `data-pick-stock="${esc(p.id)}" data-pick-name="${esc(p.name)}"` : `data-action="shop-quick-add" data-id="${esc(p.id)}"`} title="${esc(p.name)}"><span class="shop-match-pic">${itemVisual(p)}${p.quantity > 0 ? `<span class="shop-match-stock">In stock <b class="mono">${p.quantity}</b></span>` : ''}</span><span class="shop-match-copy"><strong>${esc(p.name)}</strong><small>${esc([p.maker, p.reference].filter(Boolean).join(' · '))}</small>${p.partType ? `<small class="shop-match-type">${esc(p.partType)}</small>` : ''}</span><span class="shopping-match-action">${picking && !root.closest('.sb-win') ? 'Choose' : icon('plus') + 'Add'}</span></button>`;
     out.innerHTML = data.items.length
-      ? `<div class="shop-match-head"><span><b class="mono">${data.total}</b> ${data.total === 1 ? 'match' : 'matches'}${data.total > data.items.length ? ` · showing the first <b class="mono">${data.items.length}</b>, type more to narrow it down` : ''}</span><span class="tiny muted">${picking ? 'Choose one' : 'Each click adds one'} · Esc closes</span></div><div class="shop-match-grid">${data.items.map(card).join('')}</div>`
+      ? `<div class="shop-match-head"><span><b class="mono">${data.total}</b> ${data.total === 1 ? 'match' : 'matches'}${data.total > data.items.length ? ` · showing the first <b class="mono">${data.items.length}</b>, type more to narrow it down` : ''}</span><span class="tiny muted">${root.closest('.sb-win') ? 'Each click adds one to your basket' : picking ? 'Choose one · Esc closes' : 'Each click adds one · Esc closes'}</span></div><div class="shop-match-grid">${data.items.map(card).join('')}</div>`
       : '<p>No matching parts. Try another name, reference or filter.</p>';
   } catch (e) {
     if (serial === finderSerial && root.isConnected) {
@@ -233,56 +233,213 @@ function shoppingOptional(s = {}, jobId = '') {
     'No linked job'
   )}${field('supplier', 'Supplier', s.supplier || '')}${purchasePriceFields(s)}${field('url', 'Purchase link', s.url || '')}${field('notes', 'Notes', s.notes || '', 'textarea')}</div></details>`;
 }
+// Add to shopping list, after docs/ui-reference/shopping-add-2026-11 (option B, basket): search the catalogue or
+// your workshop supplies; every click on a result adds one to a basket on the right; adjust the numbers, choose
+// the list once and add everything together. "Something else" adds an item of your own.
+// Form names stay as before: kind, finderQuery, stockId, quantity (the line you touched last, or your own
+// item's number), listId, jobId, supplier, unitPrice, currency, url and notes.
+let shopBasket = [],
+  shopBasketActive = -1;
+function shopBasketLines() {
+  const box = $('#sb-lines');
+  if (!box) return;
+  const free = $('#dialog [name=kind]')?.value === 'free';
+  box.innerHTML = shopBasket.length
+    ? shopBasket
+        .map(
+          (l, i) =>
+            `<div class="sb-line ${i === shopBasketActive ? 'on' : ''}" data-line="${i}"><span class="sb-th">${l.visual}</span><span class="sb-copy"><b>${esc(l.name)}</b><small>${esc(l.sub || (l.kind === 'supply' ? 'Workshop supply' : 'Catalogue part'))}</small></span><span class="sb-qty"><button type="button" data-action="sb-qty" data-id="${i}|-1" aria-label="One fewer">−</button><input type="number" min="1" max="1000000" step="1" value="${l.quantity}" ${i === shopBasketActive && !free ? 'name="quantity"' : ''} data-sb-line="${i}" aria-label="How many: ${esc(l.name)}"><button type="button" data-action="sb-qty" data-id="${i}|1" aria-label="One more">+</button></span><button type="button" class="sb-remove" data-action="sb-remove" data-id="${i}" aria-label="Remove ${esc(l.name)}">×</button></div>`
+        )
+        .join('')
+    : '<p class="sb-empty">Nothing in the basket yet. Click a part on the left; every click adds one.</p>';
+  const pieces = shopBasket.reduce((n, l) => n + l.quantity, 0),
+    title = $('#sb-title');
+  if (title)
+    title.textContent = shopBasket.length
+      ? `${shopBasket.length} ${shopBasket.length === 1 ? 'item' : 'items'} · ${pieces} ${pieces === 1 ? 'piece' : 'pieces'}`
+      : 'Empty basket';
+  $('#sb-empty-btn').hidden = !shopBasket.length;
+  const counts = new Map(shopBasket.map(l => [l.kind + '|' + l.id, l.quantity]));
+  document.querySelectorAll('#dialog .sb-win [data-pick-stock]').forEach(b => {
+    const n = counts.get(($('#dialog [name=kind]').value === 'supply' ? 'supply' : 'part') + '|' + b.dataset.pickStock);
+    b.classList.toggle('in-basket', !!n);
+    b.querySelector('.sb-in')?.remove();
+    if (n)
+      b.querySelector('.shop-match-pic')?.insertAdjacentHTML('beforeend', `<span class="sb-in">${n} in basket</span>`);
+  });
+  const stock = $('#dialog [name=stockId]');
+  if (stock) stock.value = shopBasket[shopBasketActive]?.id || '';
+  const freeQty = $('#sb-free-qty');
+  if (freeQty) freeQty.name = free ? 'quantity' : 'freeQuantity';
+  shopBasketSummary();
+}
+function shopBasketSummary() {
+  const free = $('#dialog [name=kind]')?.value === 'free',
+    own = free && $('#dialog [name=name]')?.value.trim(),
+    count = shopBasket.length + (own ? 1 : 0),
+    list = $('#dialog [name=listId]'),
+    listName = list?.selectedOptions[0]?.textContent || '',
+    pieces = shopBasket.reduce((n, l) => n + l.quantity, 0);
+  const submit = $('#dialog .dialog-footer [type=submit]');
+  if (submit) submit.textContent = count > 1 ? `Add ${count} items to list` : 'Add to list';
+  const sum = $('#sb-summary');
+  if (sum)
+    sum.innerHTML = count
+      ? `<b>${pieces + (own ? Number($('#sb-free-qty')?.value) || 1 : 0)} ${pieces === 1 && !own ? 'piece' : 'pieces'}</b> across <b>${count} ${count === 1 ? 'item' : 'items'}</b> → <b>${esc(listName)}</b>`
+      : 'Pick parts on the left, or choose “Something else” for an item of your own.';
+  document.querySelectorAll('.sb-list').forEach(b => {
+    const on = b.dataset.id === (list?.value ?? '');
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-pressed', String(on));
+  });
+}
+function shopBasketAdd(pick) {
+  const kind = $('#dialog [name=kind]').value === 'supply' ? 'supply' : 'part',
+    id = pick.dataset.pickStock,
+    at = shopBasket.findIndex(l => l.kind === kind && l.id === id);
+  if (at >= 0) {
+    shopBasket[at].quantity++;
+    shopBasketActive = at;
+  } else {
+    const pic = pick.querySelector('.shop-match-pic')?.cloneNode(true);
+    pic?.querySelectorAll('.shop-match-stock,.sb-in').forEach(e => e.remove());
+    shopBasket.push({
+      kind,
+      id,
+      name: pick.dataset.pickName,
+      sub: pick.querySelector('.shop-match-copy small')?.textContent || '',
+      visual: pic?.innerHTML || '',
+      quantity: 1
+    });
+    shopBasketActive = shopBasket.length - 1;
+  }
+  shopBasketLines();
+}
+function shopListButtons(lists, value, automatic) {
+  const counts = new Map();
+  for (const s of db.planning?.shopping || [])
+    if (!s.done) counts.set(s.purchase?.listId || 'general', (counts.get(s.purchase?.listId || 'general') || 0) + 1);
+  return `<div class="sb-lists" role="group" aria-label="Shopping list">${automatic ? `<button type="button" class="sb-list" data-action="sb-list" data-id=""><i></i>${esc(automatic)}</button>` : ''}${lists
+    .map(
+      ([id, name]) =>
+        `<button type="button" class="sb-list" data-action="sb-list" data-id="${esc(id)}" data-tone="${/rebuild|build|·/i.test(name) ? 'amber' : id === 'general' ? 'muted' : 'blue'}"><i></i>${esc(name)}<small class="mono">${counts.get(id) || 0}</small></button>`
+    )
+    .join('')}</div>`;
+}
 function addShopping(partId = '', jobId = '', quantity = 1) {
   const part = db.parts.find(p => p.id === partId),
-    revision = db.revision;
+    revision = db.revision,
+    lists = shoppingLists().map(l => [l.id, l.name]),
+    listValue = page === 'Shopping List' ? shoppingFilters.listId || 'general' : '',
+    automatic = jobId ? 'Automatic: linked job list' : null;
+  shopBasket = part
+    ? [
+        {
+          kind: 'part',
+          id: part.id,
+          name: part.name,
+          sub: [part.maker, part.reference].filter(Boolean).join(' · '),
+          visual: itemVisual(part),
+          quantity: Number(quantity) || 1
+        }
+      ]
+    : [];
+  shopBasketActive = part ? 0 : -1;
   modal(
-    'Add shopping item',
-    `<div class="form-grid">${shoppingSelect(
-      'kind',
-      'Item type',
-      [
-        ['part', 'Catalogue part'],
-        ['supply', 'Workshop supply'],
-        ['free', 'Free-text item']
-      ],
-      'part',
-      null
-    )}</div><div data-purchase-kind="stock">${shoppingPicker('part', part?.id || '', part?.name || '')}</div><div class="form-grid" data-purchase-kind="free">${field('name', 'Item name')}${field('maker', 'Manufacturer (optional)')}${field('reference', 'Reference (optional)')}</div><div class="form-grid">${field('quantity', 'Quantity', quantity, 'number')}${shoppingSelect(
-      'listId',
-      'Shopping list',
-      shoppingLists().map(l => [l.id, l.name]),
-      page === 'Shopping List' ? shoppingFilters.listId || 'general' : '',
-      jobId ? 'Automatic: linked job list' : null
-    )}</div>${shoppingOptional({}, jobId)}<p class="plan-help">Adding an item does not change stock. When you mark it done, you can choose to add it to inventory.</p>`,
+    'Add to shopping list',
+    `<div class="sb-win"><div class="sb-main"><div class="sb-kinds"><select name="kind" hidden><option value="part">Catalogue part</option><option value="supply">Workshop supply</option><option value="free">Free-text item</option></select><div class="sb-seg" role="group" aria-label="What are you adding">${[
+      ['part', 'Catalogue parts'],
+      ['supply', 'Workshop supplies'],
+      ['free', 'Something else']
+    ]
+      .map(
+        ([k, l]) =>
+          `<button type="button" class="${k === 'part' ? 'on' : ''}" data-action="sb-kind" data-id="${k}" aria-pressed="${k === 'part'}">${l}</button>`
+      )
+      .join(
+        ''
+      )}</div></div><div data-purchase-kind="stock">${shoppingPicker('part', part?.id || '', part?.name || '')}</div><div class="sb-own" data-purchase-kind="free"><h3>Something else</h3><p class="muted">For anything that is not in your catalogue or supplies yet: name it, and add the manufacturer and reference if you know them.</p><div class="form-grid">${field('name', 'Item name')}${field('maker', 'Manufacturer (optional)')}${field('reference', 'Reference (optional)')}<label class="field">How many<input id="sb-free-qty" name="freeQuantity" type="number" min="1" max="1000000" step="1" value="1"></label></div></div></div><aside class="sb-side"><div class="sb-head"><div class="eye">Your basket</div><h3 id="sb-title"></h3><p>Every click on a part adds one. Adjust the numbers here, then add them all at once.</p></div><div class="sb-body"><div id="sb-lines" class="sb-lines"></div><div class="sb-lbl">Put them on</div><div class="sb-listbox">${shoppingSelect('listId', 'Shopping list', lists, listValue, automatic)}${shopListButtons(lists, listValue, automatic)}</div>${shoppingOptional({}, jobId)}<p class="plan-help">Adding items does not change stock. When you tick one off, you can choose to add it to your parts.</p></div><div class="sb-foot"><button type="button" class="btn small ghost" data-action="sb-empty" id="sb-empty-btn">Empty basket</button></div></aside></div>`,
     async v => {
-      if (v.kind !== 'free' && !v.stockId) throw Error('Choose a catalogue item from the search results.');
-      const item =
-        v.kind === 'free'
-          ? { kind: 'free', name: v.name.trim(), maker: v.maker.trim(), reference: v.reference.trim() }
-          : { kind: v.kind, id: v.stockId };
-      await change('planning.shopping.add', {
-        revision,
-        item,
-        quantity: v.quantity,
-        jobId: v.jobId,
-        listId: v.listId,
-        supplier: v.supplier,
-        url: v.url,
-        notes: v.notes,
-        unitPrice: v.unitPrice,
-        currency: v.currency
-      });
+      const free = v.kind === 'free',
+        lines = [...document.querySelectorAll('#sb-lines [data-sb-line]')].map(input => ({
+          ...shopBasket[Number(input.dataset.sbLine)],
+          quantity: input.value
+        })),
+        own = free && v.name?.trim();
+      if (!lines.length && !own)
+        throw Error(
+          free
+            ? 'Name your item, or pick parts from the catalogue.'
+            : 'Choose a catalogue item from the search results.'
+        );
+      const extra = {
+          jobId: v.jobId,
+          listId: v.listId,
+          supplier: v.supplier,
+          url: v.url,
+          notes: v.notes,
+          unitPrice: v.unitPrice,
+          currency: v.currency
+        },
+        items = [
+          ...lines.map(l => ({ item: { kind: l.kind, id: l.id }, quantity: l.quantity })),
+          ...(own
+            ? [
+                {
+                  item: { kind: 'free', name: v.name.trim(), maker: v.maker.trim(), reference: v.reference.trim() },
+                  quantity: v.quantity
+                }
+              ]
+            : [])
+        ];
+      // The first add checks the revision the window opened with; the rest follow on from it.
+      for (const [i, x] of items.entries())
+        await change('planning.shopping.add', { revision: i ? db.revision : revision, ...x, ...extra });
+      shopBasket = [];
+      shopBasketActive = -1;
       viewOffset = 0;
       await shoppingChanged();
-      toast('Added to your shopping list.');
+      toast(items.length === 1 ? 'Added to your shopping list.' : `${items.length} items added to your shopping list.`);
     },
-    'Add shopping item'
+    'Add to list'
   );
   styleShoppingDialog();
-  shoppingQuantityInput();
+  $('#dialog .dialog-footer').insertAdjacentHTML('afterbegin', '<span class="sb-summary" id="sb-summary"></span>');
   purchaseKindFields();
-  void loadShoppingMatches($('#dialog [data-shopping-finder]'), false);
+  shopBasketLines();
+  void loadShoppingMatches($('#dialog [data-shopping-finder]'), true);
+}
+function shopBasketAction(action, id) {
+  if (!['sb-kind', 'sb-qty', 'sb-remove', 'sb-empty', 'sb-list'].includes(action) || !$('#dialog .sb-win'))
+    return false;
+  if (action === 'sb-kind') {
+    const kind = $('#dialog [name=kind]');
+    kind.value = id;
+    kind.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  if (action === 'sb-qty') {
+    const [i, d] = id.split('|').map(Number),
+      input = $(`#sb-lines [data-sb-line="${i}"]`);
+    shopBasket[i].quantity = Math.max(1, (Number(input?.value) || shopBasket[i].quantity) + d);
+    shopBasketActive = i;
+    shopBasketLines();
+  }
+  if (action === 'sb-remove') {
+    shopBasket.splice(Number(id), 1);
+    shopBasketActive = Math.min(shopBasketActive, shopBasket.length - 1);
+    shopBasketLines();
+  }
+  if (action === 'sb-empty') {
+    shopBasket = [];
+    shopBasketActive = -1;
+    shopBasketLines();
+  }
+  if (action === 'sb-list') {
+    const list = $('#dialog [name=listId]');
+    list.value = id;
+    list.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  return true;
 }
 function shoppingQuantityInput() {
   const q = $('#dialog [name=quantity]');
@@ -301,12 +458,17 @@ function purchaseKindFields() {
     for (const input of el.querySelectorAll('input,select')) input.disabled = el.hidden;
   }
   const name = $('#dialog [name=name]');
-  if (name) name.required = kind === 'free';
+  if (name) name.required = kind === 'free' && !($('#dialog .sb-win') && shopBasket.length);
+  document.querySelectorAll('#dialog .sb-seg [data-action="sb-kind"]').forEach(b => {
+    b.classList.toggle('on', b.dataset.id === kind);
+    b.setAttribute('aria-pressed', String(b.dataset.id === kind));
+  });
   const picker = $('#dialog [data-shopping-finder]');
   if (picker && kind !== 'free' && picker.dataset.kind !== kind) {
     $('#shopping-picker').outerHTML = shoppingPicker(kind);
     void loadShoppingMatches($('#dialog [data-shopping-finder]'));
   }
+  if ($('#dialog .sb-win')) shopBasketLines();
 }
 function editShopping(id) {
   const s = db.planning.shopping.find(s => s.id === id);
@@ -525,7 +687,7 @@ document.addEventListener('focusin', e => {
 document.addEventListener('keydown', e => {
   const root = e.target.closest('[data-shopping-finder]');
   if (!root) return;
-  if (e.key === 'Escape') {
+  if (e.key === 'Escape' && !root.closest('.sb-win')) {
     if (root.dataset.shoppingFinder === 'page') shoppingFinder.open = false;
     e.preventDefault();
     e.stopPropagation();
@@ -543,6 +705,10 @@ document.addEventListener('keydown', e => {
 });
 document.addEventListener('click', e => {
   const pick = e.target.closest('[data-pick-stock]');
+  if (pick?.closest('#dialog .sb-win')) {
+    shopBasketAdd(pick);
+    return;
+  }
   if (pick) {
     $('#dialog [name=stockId]').value = pick.dataset.pickStock;
     $('#shopping-picked').textContent = 'Selected: ' + pick.dataset.pickName;
@@ -554,6 +720,7 @@ document.addEventListener('click', e => {
   }
   if (!e.target.closest('[data-shopping-finder]'))
     for (const root of document.querySelectorAll('[data-shopping-finder]')) {
+      if (root.closest('.sb-win')) continue;
       root.querySelector('.shopping-matches').hidden = true;
       root.querySelector('[name=finderQuery]').setAttribute('aria-expanded', 'false');
     }
@@ -606,4 +773,21 @@ document.addEventListener('change', async e => {
 });
 document.getElementById('dialog').addEventListener('close', () => {
   if (!$('#dialog').open) $('#dialog').classList.remove('shopping-dialog');
+});
+
+// Basket window: typing a number, naming your own item or choosing a list updates the basket and summary.
+document.addEventListener('input', e => {
+  if (!e.target.closest?.('#dialog .sb-win')) return;
+  const line = e.target.dataset?.sbLine;
+  if (line !== undefined) {
+    shopBasket[Number(line)].quantity = Math.max(1, Number(e.target.value) || 1);
+    if (shopBasketActive !== Number(line)) {
+      shopBasketActive = Number(line);
+      shopBasketLines();
+      $(`#sb-lines [data-sb-line="${line}"]`)?.focus();
+    } else shopBasketSummary();
+  } else if (['name', 'quantity', 'freeQuantity'].includes(e.target.name)) shopBasketSummary();
+});
+document.addEventListener('change', e => {
+  if (e.target.name === 'listId' && e.target.closest?.('#dialog .sb-win')) shopBasketSummary();
 });
