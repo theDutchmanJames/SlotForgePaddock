@@ -88,8 +88,9 @@ function shoppingRows(lines, readOnly = false, compact = false) {
 }
 function shoppingFinderMarkup(modalPicker = false, kind = 'part') {
   const f = modalPicker ? { query: '', maker: '', category: '', partType: '', kind } : shoppingFinder,
-    groups = kind === 'supply' ? slotforgeCatalogue.supplies : slotforgeCatalogue.parts;
-  return `<div class="shopping-finder" data-shopping-finder="${modalPicker ? 'picker' : 'page'}" data-kind="${kind}"><label class="field">${modalPicker ? 'Search the catalogue' : 'Find a Part'}<input name="finderQuery" ${modalPicker ? '' : 'id="shopping-finder-query"'} type="search" value="${esc(f.query)}" placeholder="Type a name, manufacturer or product reference…" maxlength="500" autocomplete="off" aria-label="Find a Part" aria-expanded="false" aria-controls="${modalPicker ? 'picker' : 'page'}-part-matches"></label><div class="purchase-filters">${shoppingSelect('finderMaker', 'Manufacturer', f.maker ? [[f.maker, f.maker]] : [], f.maker, 'All manufacturers')}${shoppingSelect(
+    groups = kind === 'supply' ? slotforgeCatalogue.supplies : slotforgeCatalogue.parts,
+    where = modalPicker ? 'picker' : 'page';
+  return `<div class="shopping-finder" data-shopping-finder="${where}" data-kind="${kind}"><div class="shop-finder-bar"><label class="search shop-finder-search">${icon('search')}<span class="sr-only">${modalPicker ? 'Search the catalogue' : 'Find a Part'}</span><input name="finderQuery" ${modalPicker ? '' : 'id="shopping-finder-query"'} type="search" value="${esc(f.query)}" placeholder="Name, manufacturer or product reference…" maxlength="500" autocomplete="off" aria-label="Find a Part" aria-expanded="false" aria-controls="${where}-part-matches"></label><div class="purchase-filters">${shoppingSelect('finderMaker', 'Manufacturer', f.maker ? [[f.maker, f.maker]] : [], f.maker, 'All manufacturers')}${shoppingSelect(
     'finderCategory',
     'Main group',
     Object.keys(groups).map(x => [x, x]),
@@ -101,7 +102,7 @@ function shoppingFinderMarkup(modalPicker = false, kind = 'part') {
     (f.category ? groups[f.category] || [] : Object.values(groups).flat()).map(x => [x, x]),
     f.partType,
     'All types'
-  )}</div><div id="${modalPicker ? 'picker' : 'page'}-part-matches" class="shopping-matches" aria-live="polite" hidden></div></div>`;
+  )}</div></div><div id="${where}-part-matches" class="shopping-matches" aria-live="polite" hidden></div></div>`;
 }
 // The lists as a side list: your own lists first, then the lists that come from car jobs and builds.
 function shoppingListRail(lists, active, counts, openCount) {
@@ -144,7 +145,7 @@ function renderShoppingPage() {
     const el = $('#main [data-shopping-finder]');
     if (el) void loadShoppingMatches(el, shoppingFinder.open);
   });
-  return `<div class="shopping-page">${heading('Shopping List', 'Find it. List it. Tick it off.', btn(icon('plus') + ' Add shopping item', 'shop-add', 'primary'))}<div class="purchasing-layout"><aside class="purchasing-lists"><h2>Your lists</h2>${shoppingListRail(lists, active, counts, open.length)}${btn(icon('plus') + ' New list', 'shop-new-list', 'small')}${active?.source.kind === 'manual' ? btn('Rename list', 'shop-rename-list', 'small', active.id) : ''}</aside><section class="purchasing-main"><section class="shopping-search-panel"><div class="shopping-search-heading"><h2>${icon('search')} Find a Part</h2><span class="tiny muted">Adding to <strong>${esc(active?.name || 'General shopping')}</strong></span></div>${shoppingFinderMarkup()}<p class="tiny muted">Choose a match to add one. Adjust its quantity below. These filters only search the catalogue.</p></section>${requirementSource ? `<div class="shopping-build-update"><span>Changed your ${requirementSource.kind === 'build' ? 'build' : 'job'}? Check its latest parts requirements.</span>${btn('Review ' + (requirementSource.kind === 'build' ? 'build' : 'job') + ' changes', 'shop-requirements', '', requirementSource.kind + ':' + requirementSource.id)}</div>` : ''}<div class="shopping-list-heading"><h2>${esc(active?.name || 'All Items')}</h2><span class="tiny muted">${counts[active?.id || ''] ?? open.length} to do</span></div>${shoppingConflicts(info.conflicts)}${shoppingUndo ? `<div class="note shopping-undo" role="status">Item deleted. Stock and history are unchanged. ${btn('Undo', 'shop-undo', 'small', shoppingUndo)}</div>` : ''}<div class="shopping-checklist">${shoppingRows(open)}${done.length ? '<h3 class="shopping-completed-heading">' + icon('check') + ' Done</h3>' + shoppingRows(done) : ''}${!lines.length ? empty('Your list is ready', 'Find a part above, or add a free-text item.') : ''}</div>${viewPager(db._view?.list)}</section></div></div>`;
+  return `<div class="shopping-page">${heading('Shopping List', 'Find it. List it. Tick it off.', btn(icon('plus') + ' Add shopping item', 'shop-add', 'primary'))}<div class="purchasing-layout"><aside class="purchasing-lists"><h2>Your lists</h2>${shoppingListRail(lists, active, counts, open.length)}${btn(icon('plus') + ' New list', 'shop-new-list', 'small')}${active?.source.kind === 'manual' ? btn('Rename list', 'shop-rename-list', 'small', active.id) : ''}</aside><section class="purchasing-main"><section class="shopping-search-panel"><div class="shopping-search-heading"><h2>Find a Part</h2><span class="tiny muted shop-finder-hint">Searches the whole catalogue; your list below stays as it is.</span><span class="tiny muted">Adding to <strong>${esc(active?.name || 'General shopping')}</strong></span></div>${shoppingFinderMarkup()}</section>${requirementSource ? `<div class="shopping-build-update"><span>Changed your ${requirementSource.kind === 'build' ? 'build' : 'job'}? Check its latest parts requirements.</span>${btn('Review ' + (requirementSource.kind === 'build' ? 'build' : 'job') + ' changes', 'shop-requirements', '', requirementSource.kind + ':' + requirementSource.id)}</div>` : ''}<div class="shopping-list-heading"><h2>${esc(active?.name || 'All Items')}</h2><span class="tiny muted">${counts[active?.id || ''] ?? open.length} to do</span></div>${shoppingConflicts(info.conflicts)}${shoppingUndo ? `<div class="note shopping-undo" role="status">Item deleted. Stock and history are unchanged. ${btn('Undo', 'shop-undo', 'small', shoppingUndo)}</div>` : ''}<div class="shopping-checklist">${shoppingRows(open)}${done.length ? '<h3 class="shopping-completed-heading">' + icon('check') + ' Done</h3>' + shoppingRows(done) : ''}${!lines.length ? empty('Your list is ready', 'Find a part above, or add a free-text item.') : ''}</div>${viewPager(db._view?.list)}</section></div></div>`;
 }
 async function loadShoppingMatches(root, expand = true) {
   if (!root?.isConnected) return;
@@ -195,15 +196,12 @@ async function loadShoppingMatches(root, expand = true) {
     const data = result.data._view.shoppingFinder;
     finderMakers = { key: makersKey, makers: data.makers };
     fillFinderMakers(root, data.makers, f.maker);
-    out.innerHTML =
-      data.items
-        .map(
-          p =>
-            `<button type="button" class="shopping-match" ${root.dataset.shoppingFinder === 'picker' ? `data-pick-stock="${esc(p.id)}" data-pick-name="${esc(p.name)}"` : `data-action="shop-quick-add" data-id="${esc(p.id)}"`}>${itemVisual(p)}<span><strong>${esc(p.name)}</strong><small>${esc([p.maker, p.reference, p.partType].filter(Boolean).join(' · '))}</small></span><span class="shopping-match-action">${root.dataset.shoppingFinder === 'picker' ? 'Choose' : '+ Add'}</span></button>`
-        )
-        .join('') || '<p>No matching parts. Try another name, reference or filter.</p>';
-    if (data.total > data.items.length)
-      out.innerHTML += `<p class="tiny muted">Showing ${data.items.length} of ${data.total} matches. Refine your search to find a specific part.</p>`;
+    const picking = root.dataset.shoppingFinder === 'picker';
+    const card = p =>
+      `<button type="button" class="shopping-match" ${picking ? `data-pick-stock="${esc(p.id)}" data-pick-name="${esc(p.name)}"` : `data-action="shop-quick-add" data-id="${esc(p.id)}"`} title="${esc(p.name)}"><span class="shop-match-pic">${itemVisual(p)}${p.quantity > 0 ? `<span class="shop-match-stock">In stock <b class="mono">${p.quantity}</b></span>` : ''}</span><span class="shop-match-copy"><strong>${esc(p.name)}</strong><small>${esc([p.maker, p.reference].filter(Boolean).join(' · '))}</small>${p.partType ? `<small class="shop-match-type">${esc(p.partType)}</small>` : ''}</span><span class="shopping-match-action">${picking ? 'Choose' : icon('plus') + 'Add'}</span></button>`;
+    out.innerHTML = data.items.length
+      ? `<div class="shop-match-head"><span><b class="mono">${data.total}</b> ${data.total === 1 ? 'match' : 'matches'}${data.total > data.items.length ? ` · showing the first <b class="mono">${data.items.length}</b>, type more to narrow it down` : ''}</span><span class="tiny muted">${picking ? 'Choose one' : 'Each click adds one'} · Esc closes</span></div><div class="shop-match-grid">${data.items.map(card).join('')}</div>`
+      : '<p>No matching parts. Try another name, reference or filter.</p>';
   } catch (e) {
     if (serial === finderSerial && root.isConnected) {
       out.hidden = false;

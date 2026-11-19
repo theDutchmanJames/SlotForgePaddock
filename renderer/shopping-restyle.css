@@ -53,3 +53,42 @@
 .shopping-page .shopping-row-copy>.shopping-source,.shopping-page .shopping-row-copy>.actions{margin:0}
 .shopping-page .shopping-row-copy>.shopping-source::before,.shopping-page .shopping-row-copy>.actions::before{content:'·';align-self:center;margin-right:12px;color:var(--muted);font-size:13px;line-height:1}
 .shopping-page .shopping-row-copy>.actions:empty{display:none}
+
+/* Find a Part: one search bar with its filters, matches as small picture cards (Parc Fermé) */
+.shopping-page .shopping-search-heading{justify-content:flex-start;gap:4px 14px}
+.shopping-page .shopping-search-heading>span:last-child{margin-left:auto}
+.shop-finder-hint{flex:1 1 auto}
+.shopping-finder{gap:0}
+.shop-finder-bar{display:grid;grid-template-columns:minmax(240px,1.6fr) minmax(0,2fr);gap:8px;align-items:end}
+.shop-finder-search{position:relative;display:flex;align-items:center;margin:0}
+.shop-finder-search>svg{position:absolute;left:12px;width:17px;height:17px;color:var(--muted);pointer-events:none}
+.shop-finder-search input{width:100%;min-height:40px;padding:0 12px 0 38px;border-radius:9px;background:var(--bg);font-size:14px}
+.shop-finder-bar .purchase-filters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.shop-finder-bar .purchase-filters .field{margin:0;font-size:0;gap:0}
+.shop-finder-bar .purchase-filters select{min-height:40px;font-size:13px}
+.shopping-finder .shopping-matches{max-height:none;margin-top:12px;padding:0;border:0;border-top:1px solid var(--line);border-radius:0;background:none;box-shadow:none;overflow:visible}
+.shopping-finder .shopping-matches>p{margin:0;padding:14px 2px 2px;color:var(--muted)}
+.shop-match-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 12px;padding:10px 2px;font-size:12.5px;color:var(--muted)}
+.shop-match-head b{color:var(--ink)}
+.shop-match-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:10px;max-height:460px;overflow:auto;padding:2px}
+.shopping-finder .shopping-match{display:flex;flex-direction:column;align-items:stretch;gap:0;min-width:0;padding:0;border:1px solid var(--line);border-radius:10px;background:var(--panel);overflow:hidden;text-align:left}
+.shopping-finder .shopping-match:hover{border-color:color-mix(in srgb,var(--ink) 30%,var(--line));background:var(--panel)}
+.shopping-finder .shopping-match:focus-visible{outline:3px solid #4c9aff;outline-offset:1px}
+.shop-match-pic{position:relative;display:block;flex:none;height:104px;border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--ink) 5%,var(--panel));overflow:hidden}
+.shopping-finder .shop-match-pic .item-visual{position:absolute;inset:0;width:auto;height:auto;margin:0;border:0;border-radius:0;background:none;display:grid;place-items:center}
+.shopping-finder .shop-match-pic .item-visual img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.shopping-finder .shop-match-pic .item-visual svg{width:42px;height:42px}
+.shop-match-stock{position:absolute;left:6px;top:6px;padding:2px 7px;border-radius:999px;background:color-mix(in srgb,var(--bg) 88%,transparent);color:var(--ink);font-size:11px}
+.shop-match-stock b{color:#3ecf8e}
+.shop-match-copy{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0;padding:8px 10px 6px}
+.shop-match-copy strong{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:12.5px;line-height:1.3}
+.shopping-finder .shop-match-copy small{margin:0;font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.shop-match-type{font-size:10.5px!important;letter-spacing:.06em;text-transform:uppercase}
+.shopping-finder .shopping-match-action{display:flex;align-items:center;justify-content:center;gap:6px;margin:0;padding:7px 10px;border-top:1px solid var(--line);background:color-mix(in srgb,var(--bg) 50%,var(--panel));color:var(--ink);font-size:12.5px;font-weight:600}
+.shopping-finder .shopping-match-action svg{width:14px;height:14px;color:var(--shopping)}
+.shopping-finder .shopping-match:hover .shopping-match-action{background:color-mix(in srgb,var(--shopping) 14%,var(--panel))}
+@media(max-width:1100px){.shop-finder-bar{grid-template-columns:1fr}}
+@media(max-width:620px){.shop-finder-bar .purchase-filters{grid-template-columns:1fr}}
+/* the picker inside the Add shopping item window: same cards, a bit smaller */
+.shopping-dialog .shop-match-grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));max-height:340px}
+.shopping-dialog .shop-match-pic{height:84px}
