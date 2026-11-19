@@ -420,7 +420,27 @@ async function files(action, p = {}) {
   if (action.startsWith('pictures.')) {
     const pictures = require('./catalogue-picture-requests.cjs'),
       journal = new pictures.Journal(app.getPath('userData'));
-    if (action === 'pictures.browse') return pictures.run(store.file, 'browse', p);
+    if (action === 'pictures.browse') {
+      const result = await pictures.run(store.file, 'browse', p);
+      // Products that already have a picture get it attached as a reference only (no photo bytes are read).
+      // The window shows it through the usual cached thumbnail, made once per photo.
+      if (result.rows.some(row => row.hasPicture)) {
+        const { Reader } = require('./sqlite-query.cjs'),
+          lazy = require('./lazy-assets.cjs'),
+          reader = new Reader(store.file);
+        try {
+          for (const row of result.rows.filter(row => row.hasPicture)) {
+            const record = reader.one(row.kind === 'part' ? 'parts' : 'supplies', row.id);
+            if (record && lazy.property(record, 'picture')) lazy.copyProperty(row, 'picture', record);
+          }
+        } catch {
+          // A thumbnail is only a convenience: the list works without it.
+        } finally {
+          reader.close();
+        }
+      }
+      return result;
+    }
     if (action === 'pictures.select') return pictures.run(store.file, 'select', p);
     const active = () =>
       pictures.withReader(store, (_r, a) => {

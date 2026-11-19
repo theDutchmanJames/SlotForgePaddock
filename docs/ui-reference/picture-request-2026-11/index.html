@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Picture request redesign</title>
+<!-- Part photos come from .qa/preview-parts (ignored by git), made from the local library; they are not part of the repository. -->
+<style>
+@font-face{font-family:'SF Barlow Condensed';src:url('../../../renderer/fonts/barlowcondensed/BarlowCondensed-BoldItalic.ttf') format('truetype');font-weight:700;font-style:italic}
+@font-face{font-family:'SF Roboto Mono';src:url('../../../renderer/fonts/robotomono/RobotoMono[wght].ttf') format('truetype');font-weight:100 700}
+:root{--bg:#171b21;--panel:#222831;--raised:#2a313b;--ink:#e8e6e1;--ink2:#c4c8ce;--muted:#98a0ab;--faint:#6b7380;--line:#343b47;--line2:#2b313b;--accent:#e5484d;--ok:#3ecf8e;--amber:#edbd6a;--blue:#79b5ed;--violet:#a88cda;--green:#67c79b;
+  --cond:'SF Barlow Condensed','Bahnschrift',sans-serif;--mono:'SF Roboto Mono',Consolas,monospace;--ui:'Segoe UI',system-ui,sans-serif;color-scheme:dark}
+[data-theme=light]{--bg:#f1efea;--panel:#fff;--raised:#f0eee9;--ink:#1d2229;--ink2:#3a414c;--muted:#656c76;--faint:#8a929d;--line:#d9d6cf;--line2:#e6e3dd;--accent:#c92424;--amber:#a7741c;--blue:#236db4;--ok:#1f9a62;--green:#187a50;--violet:#7950a6;color-scheme:light}
+*{box-sizing:border-box}html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:13.5px/1.45 var(--ui);overflow:hidden}
+button,input{font:inherit;color:inherit}
+.mono{font-family:var(--mono);font-weight:500}
+h1,h2,h3,h4{font-family:var(--cond);font-style:italic;font-weight:700;text-transform:uppercase;letter-spacing:.02em;margin:0}
+.eye{font:600 10px var(--ui);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.muted{color:var(--muted)}.grow{flex:1}
+.switch{position:relative;z-index:50;display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;height:46px;padding:0 20px;background:var(--bg);border-bottom:1px solid var(--line2)}
+.switch b{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.switch p{margin:0 0 0 auto;font-size:12px;color:var(--faint)}
+.seg{display:inline-flex;gap:2px;padding:3px;border:1px solid var(--line);border-radius:9px;background:color-mix(in srgb,var(--bg) 60%,var(--panel))}
+.seg button{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 11px;border:0;border-radius:6px;background:transparent;color:var(--muted);font-size:12.5px;cursor:pointer;white-space:nowrap}
+.seg button.on{background:color-mix(in srgb,var(--ink) 12%,var(--panel));color:var(--ink);font-weight:600}
+.app{position:absolute;inset:46px 0 0;filter:blur(2px);opacity:.45}
+.chrome{display:flex;align-items:center;gap:12px;height:56px;padding:0 20px;background:var(--panel);border-bottom:1px solid var(--line)}
+.logo{width:36px;height:36px;border-radius:9px;background:var(--accent)}
+.backdrop{position:absolute;inset:46px 0 0;background:rgba(5,7,10,.55)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:32px;padding:5px 12px;border:1px solid transparent;border-radius:8px;background:color-mix(in srgb,var(--ink) 8%,var(--panel));color:var(--ink);font-size:13px;white-space:nowrap;cursor:pointer}
+.btn.primary{background:var(--accent);color:#fff;font-weight:600}.btn.ghost{background:transparent;color:var(--muted)}.btn.small{min-height:27px;padding:3px 10px;font-size:12.5px}
+input.f{width:100%;min-height:34px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);outline:none}
+.fl{display:grid;gap:5px;font-size:12px;color:var(--muted)}
+.win{position:absolute;left:50%;top:calc(46px + 26px);transform:translateX(-50%);width:min(1260px,calc(100vw - 40px));height:calc(100vh - 46px - 52px);display:flex;flex-direction:column;border:1px solid var(--line);border-radius:14px;background:var(--panel);box-shadow:0 30px 80px rgba(0,0,0,.5);overflow:hidden}
+.whead{display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid var(--line)}
+.whead h2{font-size:24px;line-height:1}.whead p{margin:0;font-size:12.5px;color:var(--muted)}.whead .x{margin-left:auto;color:var(--muted);font-size:18px}
+.wbody{flex:1;min-height:0;display:flex}
+.wfoot{display:flex;align-items:center;gap:10px;padding:11px 20px;border-top:1px solid var(--line);background:color-mix(in srgb,var(--bg) 40%,var(--panel))}
+.wfoot .sum{font-size:12.5px;color:var(--muted)}.wfoot .sum b{color:var(--ink)}
+/* picture request */
+.wbody{flex:1;min-height:0;display:flex}
+.col{display:flex;flex-direction:column;min-width:0;min-height:0}
+.ch{padding:12px 18px;border-bottom:1px solid var(--line2);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.cb{flex:1;min-height:0;overflow:auto;padding:12px 18px 16px}
+.q{position:relative}.q input{padding-left:32px}.q::before{content:'⌕';position:absolute;left:11px;top:5px;font-size:18px;color:var(--muted)}
+.hint{font-size:12px;color:var(--muted)}
+.grp{display:flex;align-items:center;gap:10px;margin:14px 0 6px;font:600 9.5px var(--ui);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}.grp::after{content:'';flex:1;height:1px;background:var(--line2)}
+/* maker rail */
+.rail{width:250px;flex:none;border-right:1px solid var(--line);background:color-mix(in srgb,var(--bg) 22%,var(--panel));display:flex;flex-direction:column}
+.mk{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 8px;padding:9px 12px;border-radius:9px;cursor:pointer;margin-bottom:2px}
+.mk b{font-size:13px}.mk small{grid-column:1/-1;font-size:11px;color:var(--muted)}
+.mk .n{font:600 11.5px var(--mono);color:var(--muted)}
+.mk .bar{grid-column:1/-1;height:4px;border-radius:9px;background:var(--line2);overflow:hidden}.mk .bar i{display:block;height:100%;background:var(--green)}
+.mk.on{background:color-mix(in srgb,var(--blue) 13%,var(--panel));box-shadow:inset 3px 0 0 var(--blue)}
+.mk:hover:not(.on){background:color-mix(in srgb,var(--ink) 5%,transparent)}
+/* filters */
+.chipf{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 11px;border:1px solid var(--line);border-radius:999px;background:var(--panel);font-size:12.5px;color:var(--muted);white-space:nowrap}
+.chipf.on{border-color:color-mix(in srgb,var(--blue) 50%,var(--line));background:color-mix(in srgb,var(--blue) 12%,var(--panel));color:var(--ink);font-weight:600}
+.tog{display:inline-flex;align-items:center;gap:8px;font-size:12.5px}.tog i{width:30px;height:17px;border-radius:99px;background:var(--green);position:relative}.tog i::after{content:'';position:absolute;right:2px;top:2px;width:13px;height:13px;border-radius:50%;background:#fff}
+/* product cards */
+.pg{display:grid;grid-template-columns:repeat(auto-fill,minmax(178px,1fr));gap:10px;align-content:start}
+.pc{position:relative;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--panel)}
+.pc .ph{aspect-ratio:4/3;display:grid;place-items:center;background:color-mix(in srgb,var(--ink) 5%,var(--panel));color:var(--faint);font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+.pc .ph img{width:100%;height:100%;object-fit:contain;background:#fff}
+.pc .ph.miss{background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--ink) 4%,var(--panel)) 0 10px,color-mix(in srgb,var(--ink) 7%,var(--panel)) 10px 20px)}
+.pc .t{padding:7px 9px 9px}
+.pc b{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:12px;line-height:1.3;min-height:31px}
+.pc small{display:flex;gap:6px;align-items:center;margin-top:3px;font-size:11px;color:var(--muted)}
+.ref{font:600 11px var(--mono);color:var(--ink2)}.noref{font-size:10.5px;font-weight:700;color:var(--amber)}
+.ck{position:absolute;top:8px;left:8px;width:22px;height:22px;border-radius:7px;border:1.5px solid color-mix(in srgb,var(--ink) 35%,transparent);background:color-mix(in srgb,var(--bg) 70%,transparent);display:grid;place-items:center;color:#fff;font-size:13px}
+.pc.on{border-color:var(--blue);box-shadow:0 0 0 2px color-mix(in srgb,var(--blue) 40%,transparent)}
+.pc.on .ck{background:var(--blue);border-color:var(--blue)}
+.tagp{position:absolute;top:8px;right:8px;padding:1px 8px;border-radius:999px;font-size:10.5px;font-weight:700;background:color-mix(in srgb,var(--bg) 82%,transparent)}
+/* request side */
+.side{width:340px;flex:none;border-left:1px solid var(--line);background:color-mix(in srgb,var(--bg) 22%,var(--panel));display:flex;flex-direction:column}
+.big{font:italic 700 44px/1 var(--cond)}
+.files{display:grid;gap:6px;margin:10px 0}
+.file{display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:var(--panel);font-size:12.5px}
+.file .ic{width:30px;height:36px;border-radius:5px;background:color-mix(in srgb,var(--blue) 16%,var(--panel));display:grid;place-items:center;font:700 9px var(--mono);color:var(--blue)}
+.file small{display:block;color:var(--muted);font-size:11px}
+.ok{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:5px;font-size:12px;color:var(--muted)}
+.ok li::before{content:'✓ ';color:var(--green);font-weight:700}.ok li.no::before{content:'✕ ';color:var(--muted)}
+.tabs{display:flex;gap:2px;padding:0 20px;border-bottom:1px solid var(--line)}
+.tabs span{padding:10px 14px;font-size:13px;color:var(--muted);border-bottom:2px solid transparent}.tabs span.on{color:var(--ink);font-weight:600;border-color:var(--accent)}
+.tabs .c{font:600 10.5px var(--mono);padding:0 6px;border-radius:99px;background:color-mix(in srgb,var(--ink) 10%,transparent);margin-left:5px}
+/* B: steps */
+.steps{display:flex;gap:0;padding:14px 22px;border-bottom:1px solid var(--line2)}
+.st{display:flex;align-items:center;gap:10px;flex:1;font-size:12.5px;color:var(--muted)}
+.st b{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;border:1.5px solid var(--line);font:700 12px var(--mono)}
+.st.done b{background:var(--green);border-color:var(--green);color:#fff}.st.now b{background:var(--blue);border-color:var(--blue);color:#fff}.st.now{color:var(--ink);font-weight:600}
+.st::after{content:'';flex:1;height:1px;background:var(--line);margin:0 12px}.st:last-child::after{display:none}
+.mkg{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.mc{padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+.mc h4{font-size:19px}.mc p{margin:4px 0 10px;font-size:12px;color:var(--muted)}
+.mc .bar{height:6px;border-radius:9px;background:var(--line2);overflow:hidden}.mc .bar i{display:block;height:100%;background:var(--green)}
+.mc .row{display:flex;justify-content:space-between;margin-top:8px;font-size:12px}.mc .row b{font-family:var(--mono)}
+.mc.on{border-color:var(--blue);box-shadow:0 0 0 2px color-mix(in srgb,var(--blue) 35%,transparent)}
+/* C: table */
+.tb{width:100%;border-collapse:collapse;font-size:12.5px}
+.tb th{position:sticky;top:0;background:var(--panel);text-align:left;padding:8px 10px;font:600 10px var(--ui);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line)}
+.tb td{padding:6px 10px;border-bottom:1px solid var(--line2);vertical-align:middle}
+.tb tr.on td{background:color-mix(in srgb,var(--blue) 8%,transparent)}
+.tb .th{width:52px;height:40px;border-radius:6px;overflow:hidden;background:color-mix(in srgb,var(--ink) 6%,var(--panel));display:grid;place-items:center;font-size:9px;color:var(--faint)}.tb .th img{width:100%;height:100%;object-fit:contain;background:#fff}
+.tb .bx{width:17px;height:17px;border-radius:5px;border:1.5px solid var(--line);display:grid;place-items:center;font-size:11px;color:#fff}.tb tr.on .bx{background:var(--blue);border-color:var(--blue)}
+.bar2{flex:none;display:flex;align-items:center;gap:14px;margin:0 18px 14px;padding:10px 14px;border-radius:12px;background:color-mix(in srgb,var(--blue) 14%,var(--panel));border:1px solid color-mix(in srgb,var(--blue) 40%,var(--line))}
+.bar2 b{font-family:var(--mono)}
+</style>
+</head>
+<body>
+<div class="switch">
+ <b>Option</b><div class="seg" id="oSeg"><button data-o="a" class="on">A · Makers and cards</button><button data-o="b">B · Three steps</button><button data-o="c">C · One list</button></div>
+ <b>Theme</b><div class="seg" id="tSeg"><button data-t="dark" class="on">Dark</button><button data-t="light">Light</button></div>
+ <p>Illustrated Catalogue · picture research for your parts</p>
+</div>
+<div class="app"><div class="chrome"><div class="logo"></div></div></div>
+<div class="backdrop"></div>
+<div class="win" id="win"></div>
+<script>
+const PARTS=[["part-0.jpg","NSR 9046 3/32 Formula trued rear race tyre EXTREME 19,5x13 (2 pcs)","9046","Wheel & tyre set"],["","NSR Formula 22/26 cockpit + front and rear arms","1552","Cockpit"],["part-2.jpg","NSR 3/32″ CNC ultralight plastic front wheels — Front 13mm","5025","Wheel"],["","NSR Corvette C7R chassis — white - hard","1492","Chassis"],["","NSR 3/32″ aluminium wheels 16.5mm (Formula 22/26) — Rear 16.5x12","5033","Wheel"],["","NSR Shark EVO 32K motor - short can with wires","3042F","Motor"],["part-6.jpg","NSR 9069 3/32 trued rear race tyre EXTREME 19,5X13 on Ø17mm","9069","Wheel & tyre set"],["","NSR 3/32 front slick RTR glued and trued tyres — 18.2 x 10mm","","Wheel & tyre set"],["","NSR Formula 86/89 motor support — black - medium","1281","Motor pod"],["","NSR standard screws for body and motor support — 2,2x6,5","4833","Screws"],["","NSR anglewinder pinion 12z brass","7212","Pinion"],["","NSR crown 34z anglewinder","","Gear"]];
+const ON=new Set([1,3,4,5,8,10]);
+const MAKERS=[['NSR',84,31],['Slot.it',112,77],['Scaleauto',26,4],['Sloting Plus',18,15],['Policar',9,0],['Ortmann',12,12]];
+let o='a';
+const $=s=>document.querySelector(s);
+const img=f=>'../../../.qa/preview-parts/'+f;
+const head=(t,p)=>`<div class="whead"><h2>${t}</h2><p>${p}</p><span class="x">×</span></div>`;
+const card=(p,i,o2={})=>`<div class="pc ${ON.has(i)?'on':''}"><div class="ph ${p[0]?'':'miss'}">${p[0]?`<img src="${img(p[0])}" alt="">`:'No picture yet'}</div><span class="ck">${ON.has(i)?'✓':''}</span>${p[0]?'<span class="tagp">Has picture</span>':''}<div class="t"><b>${p[1]}</b><small>${p[2]?`<span class="ref">${p[2]}</span>`:'<span class="noref">No reference</span>'}· ${p[3]}</small></div></div>`;
+const tabs=()=>`<div class="tabs"><span class="on">New request</span><span>Saved requests<span class="c">3</span></span><span>Open finished files…</span></div>`;
+const privacy=`<div class="grp">What goes in the file</div><ul class="ok"><li>Product names, references and types</li><li>English instructions for your AI</li><li class="no">No quantities, locations, prices or notes</li><li class="no">No photos of your own items</li></ul>`;
+const files=n=>`<div class="files">${Array.from({length:Math.ceil(n/100)},(_,k)=>`<div class="file"><span class="ic">JSON</span><span>NSR pictures ${k+1}<small>${Math.min(100,n-k*100)} entries</small></span><span class="hint">≤ 100</span></div>`).join('')}</div>`;
+const filters=()=>`<div class="q" style="width:260px"><input class="f" placeholder="Name, reference or type…"></div><span class="chipf on">All</span><span class="chipf">Parts</span><span class="chipf">Workshop supplies</span><span class="chipf">Wheels &amp; tyres</span><span class="chipf">Motors</span><span class="grow"></span><span class="tog"><i></i>Include ones that have a picture</span>`;
+
+function optA(){return head('Picture request','Ask your own AI to find product pictures for parts you already have')+tabs()+`<div class="wbody"><aside class="rail"><div class="ch"><div class="eye">Manufacturers</div></div><div class="cb">${MAKERS.map(([m,t,h],k)=>`<div class="mk ${k===0?'on':''}"><b>${m}</b><span class="n">${t-h} missing</span><span class="bar"><i style="width:${h/t*100}%"></i></span><small>${h} of ${t} have a picture</small></div>`).join('')}</div></aside>
+ <div class="col" style="flex:1"><div class="ch">${filters()}</div><div class="cb"><div class="pg">${PARTS.map((p,i)=>card(p,i)).join('')}</div></div><div class="ch" style="border-top:1px solid var(--line2);border-bottom:0"><button class="btn small">Select all 84</button><button class="btn small ghost">Clear</button><span class="grow"></span><span class="hint">1–12 of 84</span><button class="btn small ghost">‹</button><button class="btn small ghost">›</button></div></div>
+ <aside class="side"><div class="ch"><div><div class="eye">Your request</div><h3 style="font-size:20px">NSR · 6 products</h3></div></div><div class="cb"><div class="big">6</div><p class="hint" style="margin:2px 0 0">selected · kept while you filter and page</p><div class="grp">Files</div>${files(6)}<p class="hint">Up to 100 products per file. Give each file to your AI, then open the finished files here.</p>${privacy}</div></aside></div>
+ <div class="wfoot"><span class="sum"><b>6</b> NSR products · 1 file</span><span class="grow"></span><button class="btn ghost">Close</button><button class="btn primary">Save request file…</button></div>`}
+
+function optB(){return head('Picture request','Ask your own AI to find product pictures for parts you already have')+`<div class="steps"><div class="st done"><b>✓</b>Manufacturer · NSR</div><div class="st now"><b>2</b>Choose products</div><div class="st"><b>3</b>Save the file</div></div><div class="wbody" style="flex-direction:column"><div class="ch">${filters()}</div><div class="cb"><div class="pg">${PARTS.map((p,i)=>card(p,i)).join('')}</div></div></div>
+ <div class="wfoot"><button class="btn ghost">‹ Manufacturer</button><span class="sum"><b>6</b> of 84 selected · 1 file</span><span class="grow"></span><button class="btn small ghost">Select all 84</button><button class="btn primary">Next: save the file ›</button></div>`}
+function optB1(){return head('Picture request','Ask your own AI to find product pictures for parts you already have')+`<div class="steps"><div class="st now"><b>1</b>Manufacturer</div><div class="st"><b>2</b>Choose products</div><div class="st"><b>3</b>Save the file</div></div><div class="wbody"><div class="cb"><div class="mkg">${MAKERS.map(([m,t,h],k)=>`<div class="mc ${k===0?'on':''}"><h4>${m}</h4><p>${t} products in your catalogue</p><div class="bar"><i style="width:${h/t*100}%"></i></div><div class="row"><span>${h} have a picture</span><b>${t-h} missing</b></div></div>`).join('')}</div></div></div><div class="wfoot"><span class="sum">Saved requests: <b>3</b> · <a style="color:var(--blue)">open finished files…</a></span><span class="grow"></span><button class="btn primary">Next: choose products ›</button></div>`}
+
+function optC(){return head('Picture request','Ask your own AI to find product pictures for parts you already have')+tabs()+`<div class="wbody" style="flex-direction:column"><div class="ch"><label class="fl" style="width:200px">Manufacturer<input class="f" value="NSR  ·  84 products"></label>${filters()}</div><div class="cb" style="padding-top:0"><table class="tb"><thead><tr><th style="width:34px"></th><th style="width:66px">Picture</th><th>Product</th><th>Reference</th><th>Type</th></tr></thead><tbody>${PARTS.map((p,i)=>`<tr class="${ON.has(i)?'on':''}"><td><span class="bx">${ON.has(i)?'✓':''}</span></td><td><span class="th">${p[0]?`<img src="${img(p[0])}" alt="">`:'none'}</span></td><td><b>${p[1]}</b></td><td>${p[2]?`<span class="ref">${p[2]}</span>`:'<span class="noref">No reference</span>'}</td><td class="hint">${p[3]}</td></tr>`).join('')}</tbody></table></div>
+ <div class="bar2"><span><b>6</b> selected · <b>1</b> file of up to 100</span><button class="btn small ghost">Select all 84</button><button class="btn small ghost">Clear</button><span class="grow"></span><span class="hint">Only names, references and types go in the file</span><button class="btn primary">Save request file…</button></div></div>`}
+
+function paint(){document.documentElement.dataset.theme=document.querySelector('#tSeg .on').dataset.t;$('#win').innerHTML=({a:optA,b:optB,b1:optB1,c:optC})[o]();}
+function seg(id,attr,set){document.querySelectorAll(`#${id} button`).forEach(b=>b.onclick=()=>{document.querySelectorAll(`#${id} button`).forEach(x=>x.classList.toggle('on',x===b));set(b.dataset[attr]);paint();});}
+seg('oSeg','o',v=>o=v);seg('tSeg','t',()=>{});
+function fromHash(){const h=new URLSearchParams(location.hash.slice(1));if(h.get('o'))o=h.get('o');const t=h.get('t')||'dark';document.querySelectorAll('#oSeg button').forEach(b=>b.classList.toggle('on',b.dataset.o===o||(o==='b1'&&b.dataset.o==='b')));document.querySelectorAll('#tSeg button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));paint();}
+addEventListener('hashchange',fromHash);fromHash();
+</script>
+</body>
+</html>

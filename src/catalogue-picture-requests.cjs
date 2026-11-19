@@ -80,6 +80,13 @@ function browse(store, p = {}) {
       )
       .all()
       .map(x => x.name);
+    // Per manufacturer: how many products there are and how many already have a picture (for the maker list).
+    const makerStats = r.db
+      .prepare(
+        `SELECT min(manufacturer) name,count(*) total,sum(hasPicture) pictured FROM (${projection}) WHERE sf_picture_normal(manufacturer)<>'' GROUP BY sf_picture_normal(manufacturer) ORDER BY sf_picture_normal(manufacturer)`
+      )
+      .all()
+      .map(x => ({ name: x.name, total: x.total, pictured: x.pictured || 0 }));
     const categories = r.db
       .prepare(
         `SELECT DISTINCT category FROM (${projection}) WHERE sf_picture_normal(manufacturer)=? ORDER BY category`
@@ -94,6 +101,7 @@ function browse(store, p = {}) {
       offset,
       next: offset + rows.length < total ? offset + rows.length : null,
       manufacturers,
+      makerStats,
       categories
     };
   });
