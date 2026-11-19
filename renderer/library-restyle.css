@@ -1,0 +1,20 @@
+/* Library, after SlotForgeRestyle.md: one switch for the two views, a quiet side list, Race Sheet tables
+   and a plain note instead of a blue box. Scoped to the Library page; the side list style is shared. */
+.library-strip{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 20px}
+.library-strip .btn svg{width:15px;height:15px}
+#main[data-page="Library"] .library-layout{grid-template-columns:220px minmax(0,1fr);gap:20px}
+#main[data-page="Library"] .library-rail{gap:2px;padding:12px 8px;border:1px solid var(--line);border-radius:12px;background:color-mix(in srgb,var(--bg) 55%,var(--panel))}
+#main[data-page="Library"] .library-rail .label{margin:2px 8px 8px;font-size:10.5px;font-weight:600;letter-spacing:.14em;color:var(--muted)}
+#main[data-page="Library"] .library-rail button{min-height:36px;padding:7px 10px;border:0;border-radius:8px;background:transparent;box-shadow:none;color:color-mix(in srgb,var(--ink) 82%,var(--muted));font-size:13px;font-weight:400}
+#main[data-page="Library"] .library-rail button:hover{background:color-mix(in srgb,var(--ink) 6%,transparent)}
+#main[data-page="Library"] .library-rail button.active{background:color-mix(in srgb,var(--ink) 10%,var(--panel));border:0;box-shadow:none;color:var(--ink);font-weight:600}
+#main[data-page="Library"] .library-rail button svg{width:17px;height:17px;color:var(--muted)}
+#main[data-page="Library"] .library-rail button.active svg{color:var(--accent)}
+#main[data-page="Library"] .note.info{padding:6px 0 6px 12px;border:0;border-left:2px solid color-mix(in srgb,var(--accent) 55%,var(--line));border-radius:0;background:none;box-shadow:none;color:var(--muted);font-size:12.5px}
+#main[data-page="Library"] .table-wrap{border:1px solid var(--line);border-radius:12px;background:var(--panel);box-shadow:none;overflow:auto}
+#main[data-page="Library"] table{width:100%;border-collapse:collapse;font-size:13px}
+#main[data-page="Library"] th{padding:9px 12px;border-bottom:1px solid var(--line);background:none;color:var(--muted);font:600 10px "Segoe UI",system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase;text-align:left;white-space:nowrap}
+#main[data-page="Library"] td{padding:7px 12px;border-bottom:1px solid color-mix(in srgb,var(--line) 65%,transparent);vertical-align:middle}
+#main[data-page="Library"] tbody tr:last-child td{border-bottom:0}
+#main[data-page="Library"] tbody tr:hover td{background:color-mix(in srgb,var(--ink) 3%,transparent)}
+#main[data-page="Library"] td .btn{min-height:28px;padding:3px 10px;font-size:12.5px}

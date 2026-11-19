@@ -21,17 +21,17 @@ function libraryContext() {
 }
 function libraryTabs() {
   return (
-    '<div class="tabs">' +
+    '<div class="library-strip"><span class="segment" role="group" aria-label="Library">' +
     [
       ['choices', 'Reusable choices', 'library'],
       ['parts', 'Parts catalogue', 'box']
     ]
       .map(
         ([id, label, ic]) =>
-          `<button data-action="library-tab" data-id="${id}" class="${libraryTab === id ? 'active' : ''}">${icon(ic)}${label}</button>`
+          `<button type="button" data-action="library-tab" data-id="${id}" class="btn ${libraryTab === id ? 'on active' : ''}" aria-pressed="${libraryTab === id}">${icon(ic)}${label}</button>`
       )
       .join('') +
-    '</div>'
+    '</span></div>'
   );
 }
 function renderGuides() {
