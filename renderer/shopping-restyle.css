@@ -1,0 +1,55 @@
+/* Shopping List, after SlotForgeRestyle.md: one accent for the main button, neutral surfaces,
+   the lists as a side list (Paddock Rail), and the items as one quiet sheet (Race Sheet).
+   The shopping green stays only as a highlight: the page tile, the ticks and the Add action of a match. */
+.shopping-page .btn.primary,.shopping-dialog .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+
+/* the lists */
+.shopping-page .purchasing-lists{display:flex;flex-direction:column;gap:2px;padding:14px 10px;border:1px solid var(--line);border-top:1px solid var(--line);border-radius:12px;background:color-mix(in srgb,var(--bg) 55%,var(--panel));box-shadow:none}
+.shopping-page .purchasing-lists>h2{margin:0 8px 10px;font-size:22px;line-height:1.1}
+.shop-rail-label{margin:12px 8px 6px;font-size:10.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.shopping-page .purchasing-lists>.btn[data-action="shop-list"]{display:flex;align-items:center;gap:10px;width:100%;min-height:36px;margin:0;padding:6px 10px;border:0;border-radius:8px;background:transparent;color:color-mix(in srgb,var(--ink) 82%,var(--muted));font-size:13px;font-weight:400;text-align:left;white-space:normal}
+.shopping-page .purchasing-lists>.btn[data-action="shop-list"]:hover{background:color-mix(in srgb,var(--ink) 6%,transparent)}
+.shopping-page .purchasing-lists>.btn[data-action="shop-list"].active{border:0;background:color-mix(in srgb,var(--ink) 10%,var(--panel));color:var(--ink);font-weight:600}
+.shop-rail-name{flex:1;min-width:0;overflow-wrap:anywhere;line-height:1.3}
+.shop-rail-count{font-size:12px;color:var(--muted)}
+.shopping-page .purchasing-lists>.btn[data-action="shop-list"].active .shop-rail-count{color:var(--ink)}
+.shopping-page .purchasing-lists>.btn[data-action="shop-new-list"],.shopping-page .purchasing-lists>.btn[data-action="shop-rename-list"]{justify-content:flex-start;width:100%;margin-top:10px;border:1px dashed color-mix(in srgb,var(--ink) 18%,transparent);background:transparent}
+.shopping-page .purchasing-lists>.btn[data-action="shop-rename-list"]{margin-top:4px;border-color:transparent}
+
+/* find a part */
+.shopping-page .shopping-search-panel{padding:16px 18px;border:1px solid var(--line);border-top:1px solid var(--line);border-radius:12px;background:var(--panel)}
+.shopping-page .shopping-search-heading{margin-bottom:10px}
+.shopping-page .shopping-search-heading h2{font-size:19px}
+.shopping-page .shopping-search-heading h2 svg{color:var(--muted)}
+.shopping-page .shopping-search-panel>p.tiny{margin:8px 0 0}
+.shopping-matches{border-color:var(--line)}
+.shopping-match:hover,.shopping-match:focus-visible{background:color-mix(in srgb,var(--ink) 6%,var(--panel));outline:0}
+.shopping-match:focus-visible{outline:3px solid #4c9aff;outline-offset:-3px}
+
+/* the items: one sheet */
+.shopping-page .shopping-list-heading{align-items:baseline;margin:4px 2px 10px}
+.shopping-page .shopping-list-heading h2{font-size:24px}
+.shopping-page .shopping-checklist{gap:0;border:1px solid var(--line);border-radius:12px;background:var(--panel);overflow:hidden}
+.shopping-page .shopping-checklist:not(:has(.shopping-check-row)){border:0;background:none}
+.shopping-page .shopping-check-row{gap:12px;padding:10px 14px;border:0;border-bottom:1px solid color-mix(in srgb,var(--line) 70%,transparent);border-radius:0;background:transparent}
+.shopping-page .shopping-check-row:last-child{border-bottom:0}
+.shopping-page .shopping-check-row:hover{background:color-mix(in srgb,var(--ink) 3%,transparent)}
+.shopping-page .shopping-check-row .item-visual,.shopping-page .shopping-check-row>.section-icon{width:40px;height:40px}
+.shopping-page .shopping-row-copy>strong{font-weight:600}
+.shopping-page .shopping-row-copy p{margin:2px 0}
+.shopping-page .shopping-row-copy>.actions{margin-top:2px}
+.shopping-page .shopping-quantity input{font-family:var(--font-mono);font-weight:500}
+.shopping-page .shopping-assignment>.tiny{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase}
+#main .shopping-page .shopping-completed-heading{margin:0;padding:9px 14px;border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--bg) 50%,var(--panel));font:600 10.5px "Segoe UI",system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase;font-style:normal}
+.shopping-page .shopping-completed-heading svg{width:15px}
+.shopping-page .shopping-check-row.is-done{opacity:.8}
+.shopping-page .shopping-build-update{border:0;border-left:2px solid color-mix(in srgb,var(--accent) 55%,var(--line));border-radius:0 10px 10px 0;background:color-mix(in srgb,var(--ink) 4%,var(--panel))}
+.shopping-undo{border-left-color:color-mix(in srgb,var(--accent) 55%,var(--line))}
+/* two lines per item: the name, then maker · reference, where it comes from and Details */
+.shopping-page .shopping-row-copy{display:flex;flex-wrap:wrap;align-items:center;column-gap:12px;row-gap:2px}
+.shopping-page .shopping-row-copy>strong{flex-basis:100%}
+.shopping-page .shopping-row-copy>p{margin:0}
+.shopping-page .shopping-row-copy>p:not(:first-of-type){flex-basis:100%}
+.shopping-page .shopping-row-copy>.shopping-source,.shopping-page .shopping-row-copy>.actions{margin:0}
+.shopping-page .shopping-row-copy>.shopping-source::before,.shopping-page .shopping-row-copy>.actions::before{content:'·';align-self:center;margin-right:12px;color:var(--muted);font-size:13px;line-height:1}
+.shopping-page .shopping-row-copy>.actions:empty{display:none}

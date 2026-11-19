@@ -103,6 +103,24 @@ function shoppingFinderMarkup(modalPicker = false, kind = 'part') {
     'All types'
   )}</div><div id="${modalPicker ? 'picker' : 'page'}-part-matches" class="shopping-matches" aria-live="polite" hidden></div></div>`;
 }
+// The lists as a side list: your own lists first, then the lists that come from car jobs and builds.
+function shoppingListRail(lists, active, counts, openCount) {
+  const item = (name, count, cls, id) =>
+    btn(
+      `<span class="shop-rail-name">${esc(name)}</span><span class="shop-rail-count mono">${count}</span>`,
+      'shop-list',
+      cls,
+      id
+    );
+  const one = l => item(l.name, counts[l.id] || 0, l.id === active?.id ? 'active' : '', l.id);
+  const own = lists.filter(l => !['job', 'build'].includes(l.source?.kind)),
+    work = lists.filter(l => ['job', 'build'].includes(l.source?.kind));
+  return (
+    item('All Items', counts[''] ?? openCount, active ? '' : 'active') +
+    (own.length ? '<span class="shop-rail-label">Lists</span>' + own.map(one).join('') : '') +
+    (work.length ? '<span class="shop-rail-label">For jobs and builds</span>' + work.map(one).join('') : '')
+  );
+}
 function renderShoppingPage() {
   if (!local()) return empty('Shopping List', 'Select your local collection to manage your shopping lists.');
   const context = db.id + '|' + dataPath;
@@ -126,7 +144,7 @@ function renderShoppingPage() {
     const el = $('#main [data-shopping-finder]');
     if (el) void loadShoppingMatches(el, shoppingFinder.open);
   });
-  return `<div class="shopping-page">${heading('Shopping List', 'Find it. List it. Tick it off.', btn(icon('plus') + ' Add shopping item', 'shop-add', 'primary'))}<div class="purchasing-layout"><aside class="purchasing-lists"><h2>Your lists</h2>${btn('All Items ' + badge(counts[''] ?? open.length), 'shop-list', active ? '' : 'active')}${lists.map(l => btn(esc(l.name) + ' ' + badge(counts[l.id] || 0), 'shop-list', l.id === active?.id ? 'active' : '', l.id)).join('')}${btn(icon('plus') + ' New list', 'shop-new-list', 'small')}${active?.source.kind === 'manual' ? btn('Rename list', 'shop-rename-list', 'small', active.id) : ''}</aside><section class="purchasing-main"><section class="shopping-search-panel"><div class="shopping-search-heading"><h2>${icon('search')} Find a Part</h2><span class="tiny muted">Adding to <strong>${esc(active?.name || 'General shopping')}</strong></span></div>${shoppingFinderMarkup()}<p class="tiny muted">Choose a match to add one. Adjust its quantity below. These filters only search the catalogue.</p></section>${requirementSource ? `<div class="shopping-build-update"><span>Changed your ${requirementSource.kind === 'build' ? 'build' : 'job'}? Check its latest parts requirements.</span>${btn('Review ' + (requirementSource.kind === 'build' ? 'build' : 'job') + ' changes', 'shop-requirements', '', requirementSource.kind + ':' + requirementSource.id)}</div>` : ''}<div class="shopping-list-heading"><h2>${esc(active?.name || 'All Items')}</h2><span class="tiny muted">${counts[active?.id || ''] ?? open.length} to do</span></div>${shoppingConflicts(info.conflicts)}${shoppingUndo ? `<div class="note shopping-undo" role="status">Item deleted. Stock and history are unchanged. ${btn('Undo', 'shop-undo', 'small', shoppingUndo)}</div>` : ''}<div class="shopping-checklist">${shoppingRows(open)}${done.length ? '<h3 class="shopping-completed-heading">' + icon('check') + ' Done</h3>' + shoppingRows(done) : ''}${!lines.length ? empty('Your list is ready', 'Find a part above, or add a free-text item.') : ''}</div>${viewPager(db._view?.list)}</section></div></div>`;
+  return `<div class="shopping-page">${heading('Shopping List', 'Find it. List it. Tick it off.', btn(icon('plus') + ' Add shopping item', 'shop-add', 'primary'))}<div class="purchasing-layout"><aside class="purchasing-lists"><h2>Your lists</h2>${shoppingListRail(lists, active, counts, open.length)}${btn(icon('plus') + ' New list', 'shop-new-list', 'small')}${active?.source.kind === 'manual' ? btn('Rename list', 'shop-rename-list', 'small', active.id) : ''}</aside><section class="purchasing-main"><section class="shopping-search-panel"><div class="shopping-search-heading"><h2>${icon('search')} Find a Part</h2><span class="tiny muted">Adding to <strong>${esc(active?.name || 'General shopping')}</strong></span></div>${shoppingFinderMarkup()}<p class="tiny muted">Choose a match to add one. Adjust its quantity below. These filters only search the catalogue.</p></section>${requirementSource ? `<div class="shopping-build-update"><span>Changed your ${requirementSource.kind === 'build' ? 'build' : 'job'}? Check its latest parts requirements.</span>${btn('Review ' + (requirementSource.kind === 'build' ? 'build' : 'job') + ' changes', 'shop-requirements', '', requirementSource.kind + ':' + requirementSource.id)}</div>` : ''}<div class="shopping-list-heading"><h2>${esc(active?.name || 'All Items')}</h2><span class="tiny muted">${counts[active?.id || ''] ?? open.length} to do</span></div>${shoppingConflicts(info.conflicts)}${shoppingUndo ? `<div class="note shopping-undo" role="status">Item deleted. Stock and history are unchanged. ${btn('Undo', 'shop-undo', 'small', shoppingUndo)}</div>` : ''}<div class="shopping-checklist">${shoppingRows(open)}${done.length ? '<h3 class="shopping-completed-heading">' + icon('check') + ' Done</h3>' + shoppingRows(done) : ''}${!lines.length ? empty('Your list is ready', 'Find a part above, or add a free-text item.') : ''}</div>${viewPager(db._view?.list)}</section></div></div>`;
 }
 async function loadShoppingMatches(root, expand = true) {
   if (!root?.isConnected) return;
