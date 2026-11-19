@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Part window redesign</title>
+<style>
+@font-face{font-family:'SF Barlow Condensed';src:url('../../../renderer/fonts/barlowcondensed/BarlowCondensed-BoldItalic.ttf') format('truetype');font-weight:700;font-style:italic}
+@font-face{font-family:'SF Roboto Mono';src:url('../../../renderer/fonts/robotomono/RobotoMono[wght].ttf') format('truetype');font-weight:100 700}
+:root{--bg:#171b21;--panel:#222831;--raised:#2a313b;--ink:#e8e6e1;--ink2:#c4c8ce;--muted:#98a0ab;--faint:#6b7380;--line:#343b47;--line2:#2b313b;--accent:#e5484d;--ok:#3ecf8e;--amber:#edbd6a;--blue:#79b5ed;--violet:#a88cda;
+  --cond:'SF Barlow Condensed','Bahnschrift',sans-serif;--mono:'SF Roboto Mono',Consolas,monospace;--ui:'Segoe UI',system-ui,sans-serif;color-scheme:dark}
+[data-theme=light]{--bg:#f1efea;--panel:#fff;--raised:#f0eee9;--ink:#1d2229;--ink2:#3a414c;--muted:#656c76;--faint:#8a929d;--line:#d9d6cf;--line2:#e6e3dd;--accent:#c92424;--amber:#a7741c;--blue:#236db4;--ok:#1f9a62;color-scheme:light}
+*{box-sizing:border-box}html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:13.5px/1.45 var(--ui);overflow:hidden}
+button,input,select,textarea{font:inherit;color:inherit}
+.mono{font-family:var(--mono);font-weight:500}
+h1,h2,h3,h4{font-family:var(--cond);font-style:italic;font-weight:700;text-transform:uppercase;letter-spacing:.02em;margin:0}
+.eye{font:600 10px var(--ui);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.muted{color:var(--muted)}.grow{flex:1}
+.switch{position:relative;z-index:50;display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;height:46px;padding:0 20px;background:var(--bg);border-bottom:1px solid var(--line2)}
+.switch b{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.switch p{margin:0 0 0 auto;font-size:12px;color:var(--faint)}
+.seg{display:inline-flex;gap:2px;padding:3px;border:1px solid var(--line);border-radius:9px;background:color-mix(in srgb,var(--bg) 60%,var(--panel))}
+.seg button{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 11px;border:0;border-radius:6px;background:transparent;color:var(--muted);font-size:12.5px;cursor:pointer;white-space:nowrap}
+.seg button.on{background:color-mix(in srgb,var(--ink) 12%,var(--panel));color:var(--ink);font-weight:600}
+.seg.wide{display:flex}.seg.wide button{flex:1;justify-content:center;height:30px}
+.app{position:absolute;inset:46px 0 0;filter:blur(2px);opacity:.45}
+.chrome{display:flex;align-items:center;gap:12px;height:56px;padding:0 20px;background:var(--panel);border-bottom:1px solid var(--line)}
+.logo{width:36px;height:36px;border-radius:9px;background:var(--accent)}
+.navg{display:flex;gap:2px;padding:3px;border-radius:10px;background:color-mix(in srgb,var(--ink) 5%,var(--bg));font-size:12.5px;color:var(--ink2)}.navg span{padding:6px 10px;border-radius:7px}
+.backdrop{position:absolute;inset:46px 0 0;background:rgba(5,7,10,.55)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:32px;padding:5px 12px;border:1px solid transparent;border-radius:8px;background:color-mix(in srgb,var(--ink) 8%,var(--panel));color:var(--ink);font-size:13px;white-space:nowrap;cursor:pointer}
+.btn.primary{background:var(--accent);color:#fff;font-weight:600}.btn.ghost{background:transparent;color:var(--muted)}.btn.small{min-height:27px;padding:3px 10px;font-size:12.5px}
+.chip{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 9px;border-radius:999px;font-size:11.5px;font-weight:600;white-space:nowrap}
+.chip.ok{color:var(--ok);background:color-mix(in srgb,var(--ok) 12%,transparent)}.chip.blue{color:var(--blue);background:color-mix(in srgb,var(--blue) 13%,transparent)}.chip.off{color:var(--muted);background:color-mix(in srgb,var(--ink) 7%,transparent)}
+.chip.dot::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor}
+input.f,select.f,textarea.f{width:100%;min-height:34px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);outline:none}
+textarea.f{min-height:64px;resize:none}
+input.f:focus,textarea.f:focus{border-color:var(--blue);box-shadow:0 0 0 3px color-mix(in srgb,var(--blue) 20%,transparent)}
+input.f.big{min-height:40px;font-size:16px;font-weight:600}
+.win{position:absolute;left:50%;top:calc(46px + 30px);transform:translateX(-50%);width:min(1120px,calc(100vw - 40px));height:calc(100vh - 46px - 60px);display:flex;flex-direction:column;border:1px solid var(--line);border-radius:14px;background:var(--panel);box-shadow:0 30px 80px rgba(0,0,0,.5);overflow:hidden}
+.whead{display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid var(--line)}
+.whead h2{font-size:24px;line-height:1}
+.whead .x{margin-left:auto;color:var(--muted);font-size:18px}
+.wbody{flex:1;min-height:0;display:flex}
+.wfoot{display:flex;align-items:center;gap:10px;padding:11px 20px;border-top:1px solid var(--line);background:color-mix(in srgb,var(--bg) 40%,var(--panel))}
+.wfoot .sum{font-size:12.5px;color:var(--muted)}.wfoot .sum b{color:var(--ink)}
+/* ---------- option A: part sheet ---------- */
+.cardcol{width:330px;flex:none;padding:18px;border-right:1px solid var(--line);background:color-mix(in srgb,var(--bg) 22%,var(--panel));display:flex;flex-direction:column;gap:14px;overflow:auto}
+.pcard{border:1px solid var(--line);border-radius:12px;background:var(--panel);overflow:hidden}
+.pvis{position:relative;height:190px;display:grid;place-items:center;background:radial-gradient(circle at 50% 45%,color-mix(in srgb,var(--c,var(--amber)) 16%,var(--panel)),var(--panel) 70%);border-bottom:1px solid var(--line2)}
+.pvis svg{width:120px;height:120px;color:var(--c,var(--amber))}
+.pvis .over{position:absolute;right:10px;bottom:10px;display:flex;gap:6px}
+.pvis .over .btn{min-height:26px;padding:2px 9px;font-size:12px;background:color-mix(in srgb,var(--bg) 70%,transparent);backdrop-filter:blur(4px)}
+.pvis .drop{position:absolute;left:10px;bottom:12px;font-size:11px;color:var(--faint)}
+.pt{padding:12px 14px 14px}
+.pt h4{font-size:21px;line-height:1.05}
+.pt p{margin:4px 0 8px;font-size:12px;color:var(--muted)}
+.pt .chips{display:flex;flex-wrap:wrap;gap:6px}
+.stockbox{border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:12px 14px}
+.stepper{display:flex;align-items:center;gap:10px;margin-top:6px}
+.stepper button{width:34px;height:34px;border:1px solid var(--line);border-radius:9px;background:var(--panel);font-size:18px;cursor:pointer}
+.stepper .n{min-width:64px;text-align:center;font:600 30px var(--mono)}
+.stepper small{color:var(--muted);font-size:12px}
+.colours{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.colours span{width:22px;height:22px;border-radius:50%;border:2px solid transparent;cursor:pointer}
+.colours span.on{border-color:var(--ink);box-shadow:0 0 0 2px var(--panel) inset}
+.formcol{flex:1;min-width:0;overflow:auto;padding:6px 24px 20px}
+.sec{padding:16px 0 6px;border-bottom:1px solid var(--line2)}
+.sec:last-child{border-bottom:0}
+.sec>h3{font-size:17px;margin-bottom:10px;display:flex;align-items:center;gap:10px}
+.sec>h3 small{font:400 12px var(--ui);text-transform:none;letter-spacing:0;font-style:normal;color:var(--muted)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px 16px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px 16px}
+.fl{display:grid;gap:5px;font-size:12px;color:var(--muted)}
+.fl.full{grid-column:1/-1}
+.cats{display:grid;grid-template-columns:repeat(auto-fill,minmax(122px,1fr));gap:6px}
+.cat{display:flex;align-items:center;gap:8px;padding:7px 9px;border:1px solid var(--line);border-radius:9px;background:var(--panel);font-size:12px;color:var(--ink2);cursor:pointer;line-height:1.2}
+.cat i{flex:none;width:22px;height:22px;border-radius:6px;display:grid;place-items:center;font-style:normal;font-size:12px;background:color-mix(in srgb,var(--ink) 8%,var(--panel))}
+.cat.on{border-color:var(--amber);background:color-mix(in srgb,var(--amber) 10%,var(--panel));color:var(--ink);font-weight:600}
+.cat.on i{background:color-mix(in srgb,var(--amber) 25%,var(--panel));color:var(--amber)}
+.sugg{display:flex;flex-wrap:wrap;gap:5px;margin-top:2px}
+.sugg span{padding:2px 9px;border:1px solid var(--line);border-radius:999px;font-size:11.5px;color:var(--ink2);cursor:pointer}
+.sugg span.on{border-color:var(--blue);color:var(--blue);background:color-mix(in srgb,var(--blue) 10%,transparent)}
+.track{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.track div{padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel);cursor:pointer}
+.track div b{display:block;font-size:13px}.track div small{font-size:11.5px;color:var(--muted)}
+.track div.on{border-color:var(--blue);box-shadow:0 0 0 2px color-mix(in srgb,var(--blue) 22%,transparent)}
+.note{font-size:12px;color:var(--muted);margin:8px 0 0}
+.used{display:flex;flex-direction:column;gap:6px}
+.used div{display:flex;align-items:center;gap:10px;padding:7px 9px;border:1px solid var(--line2);border-radius:9px;font-size:12.5px}
+.used .th{width:44px;height:30px;border-radius:6px;background:color-mix(in srgb,var(--ink) 8%,var(--panel))}
+.used small{color:var(--muted)}
+/* ---------- option B: catalogue first ---------- */
+.bcol{flex:1;min-width:0;display:flex;flex-direction:column}
+.bsearch{padding:18px 22px 12px;border-bottom:1px solid var(--line2)}
+.bsearch .q{position:relative}
+.bsearch .q input{padding-left:38px;min-height:44px;font-size:15px}
+.bsearch .q::before{content:'⌕';position:absolute;left:13px;top:9px;font-size:20px;color:var(--muted)}
+.bsearch .filters{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.bres{flex:1;min-height:0;overflow:auto;padding:6px 14px 14px}
+.res{display:flex;align-items:center;gap:12px;padding:8px 10px;border-radius:10px;cursor:pointer}
+.res:hover,.res.on{background:color-mix(in srgb,var(--ink) 6%,var(--panel))}
+.res.on{box-shadow:inset 3px 0 0 var(--accent)}
+.res .th{flex:none;width:58px;height:42px;border-radius:8px;display:grid;place-items:center;background:color-mix(in srgb,var(--amber) 12%,var(--panel));color:var(--amber)}
+.res .th svg{width:30px;height:30px}
+.res b{display:block;font-size:13px}.res small{color:var(--muted);font-size:11.5px}
+.res .own{margin-left:auto;text-align:right;font-size:11.5px;color:var(--muted)}
+.res .own b{font:600 15px var(--mono);color:var(--ink)}
+.res mark{background:color-mix(in srgb,var(--amber) 30%,transparent);color:inherit;border-radius:3px;padding:0 1px}
+.grp{padding:12px 10px 4px}
+.newrow{display:flex;align-items:center;gap:12px;margin:8px 10px 0;padding:12px;border:1px dashed var(--line);border-radius:10px;color:var(--ink2);font-size:13px}
+.newrow i{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;font-style:normal;font-size:18px;background:color-mix(in srgb,var(--ink) 8%,var(--panel))}
+.bside{width:400px;flex:none;border-left:1px solid var(--line);background:color-mix(in srgb,var(--bg) 22%,var(--panel));display:flex;flex-direction:column}
+.bside .sh{padding:16px 18px 10px;border-bottom:1px solid var(--line2)}
+.bside .sb{flex:1;min-height:0;overflow:auto;padding:14px 18px}
+.bside .sb .pcard{margin-bottom:12px}
+.bside .pvis{height:150px}.bside .pvis svg{width:90px;height:90px}
+.tabs2{display:flex;gap:18px;padding:0 22px;border-bottom:1px solid var(--line)}
+.tabs2 span{padding:12px 2px;font-size:13px;color:var(--muted);border-bottom:2px solid transparent;cursor:pointer}
+.tabs2 span.on{color:var(--ink);font-weight:600;border-bottom-color:var(--accent)}
+.tabs2 span small{font-size:11px;color:var(--faint);margin-left:4px}
+.ehead{display:flex;gap:16px;align-items:center;padding:16px 22px;border-bottom:1px solid var(--line2)}
+.ehead .th{width:96px;height:72px;border-radius:10px;display:grid;place-items:center;background:color-mix(in srgb,var(--amber) 14%,var(--panel));color:var(--amber);flex:none}
+.ehead .th svg{width:52px;height:52px}
+.ehead h3{font-size:24px;line-height:1}
+.ehead p{margin:4px 0 0;font-size:12px;color:var(--muted)}
+.ehead .stockmini{margin-left:auto;text-align:right}
+.ehead .stockmini b{display:block;font:600 26px var(--mono)}
+.ebody{flex:1;min-height:0;overflow:auto;padding:4px 22px 18px}
+.row{display:grid;grid-template-columns:200px 1fr;align-items:center;gap:16px;padding:9px 0;border-bottom:1px solid var(--line2)}
+.row>span{font-size:12.5px;color:var(--muted)}
+.row>span b{display:block;color:var(--ink);font-weight:600;font-size:13px}
+.v{display:none}.v.on{display:flex}
+</style>
+</head>
+<body>
+<div class="switch">
+ <b>Option</b><div class="seg" id="oSeg"><button data-o="a" class="on">A · Part sheet</button><button data-o="b">B · Catalogue first</button></div>
+ <b>Mode</b><div class="seg" id="mSeg"><button data-m="add" class="on">Add parts</button><button data-m="edit">Edit part</button></div>
+ <b>Theme</b><div class="seg" id="tSeg"><button data-t="dark" class="on">Dark</button><button data-t="light">Light</button></div>
+ <p>Preview with example data</p>
+</div>
+<div class="app"><div class="chrome"><div class="logo"></div><div class="navg"><span>Overview</span><span>Showroom</span><span>Cars</span><span>Parts</span><span>Shopping List</span><span>Build from Scratch</span><span>Workshop</span><span>Library</span><span>Connections</span><span>Import &amp; Export</span><span>Settings</span></div></div></div>
+<div class="backdrop"></div>
+<div class="win" id="win"></div>
+<script>
+const MOTOR=`<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><rect x="10" y="18" width="34" height="28" rx="6"/><path d="M44 26h6a3 3 0 0 1 3 3v6a3 3 0 0 1-3 3h-6"/><path d="M53 32h6"/><path d="M18 18v-4h18v4M18 46v4h18v-4"/><circle cx="27" cy="32" r="6"/><path d="M6 27v10"/></svg>`;
+const CATS=[['Body & interior','▱'],['Chassis & mounting','⌗'],['Motors & motor parts','⚙'],['Gears & transmission','✲'],['Axles & bearings','⊖'],['Wheels & tyres','◎'],['Guides & pickups','⌁'],['Wiring & electronics','ϟ'],['Suspension & handling','≋'],['Screws & fixings','⊕'],['Other & custom parts','…']];
+const COLS=['var(--amber)','var(--accent)','var(--blue)','var(--ok)','var(--violet)','#e07bb0','#8a929d'];
+let opt='a',mode='add';
+const $=s=>document.querySelector(s);
+const head=t=>`<div class="whead"><h2>${t}</h2><span class="x">×</span></div>`;
+function cats(on){return `<div class="cats">${CATS.map(([c,i])=>`<div class="cat ${c===on?'on':''}"><i>${i}</i>${c}</div>`).join('')}</div>`}
+function A(){
+ const edit=mode==='edit';
+ const name=edit?'NSR Shark 25K EVO':'', maker=edit?'NSR':'', ref=edit?'3021':'';
+ return head(edit?'Edit part':'Add parts')+`<div class="wbody">
+ <div class="cardcol">
+  <div class="pcard"><div class="pvis" style="--c:var(--amber)">${MOTOR}<span class="drop">${edit?'Automatic icon':'Drop a photo here'}</span><div class="over"><button class="btn">Photo…</button><button class="btn">Icon</button></div></div>
+   <div class="pt"><h4>${edit?name:'<span class="muted">New part</span>'}</h4><p>${edit?'NSR · 3021 · 1:32':'Name, manufacturer and reference appear here'}</p><div class="chips"><span class="chip blue">Motors &amp; motor parts</span>${edit?'<span class="chip off">Motor</span>':''}</div></div></div>
+  <div class="stockbox"><div class="eye">In stock</div><div class="stepper"><button>−</button><span class="n">${edit?2:1}</span><button>+</button><small>identical<br>pieces</small></div></div>
+  <div class="stockbox"><div class="eye">Colour</div><div class="colours">${COLS.map((c,i)=>`<span class="${i===0?'on':''}" style="background:${c}"></span>`).join('')}</div><p class="note" style="margin-top:8px">Automatic follows the category. A colour helps you spot a manufacturer.</p></div>
+ </div>
+ <div class="formcol">
+  <div class="sec"><h3>What is it</h3>
+   <div class="grid2"><label class="fl full">Part name<input class="f big" value="${name}" placeholder="For example: NSR Shark 25K EVO"></label>
+   <label class="fl">Manufacturer<input class="f" value="${maker}" placeholder="NSR, Slot.it, Scaleauto…"></label><label class="fl">Product reference<input class="f mono" value="${ref}" placeholder="1318"></label></div>
+  </div>
+  <div class="sec"><h3>Category <small>Where it lives on the Parts page</small></h3>${cats('Motors & motor parts')}
+   <label class="fl" style="margin-top:10px">Part type<div class="sugg">${['Motor','Motor pod','Motor mount','Motor bracket','Motor cable','Magnet'].map((s,i)=>`<span class="${edit&&i===0?'on':''}">${s}</span>`).join('')}<span>+ Other…</span></div></label>
+  </div>
+  <div class="sec"><h3>Stock</h3>
+   <div class="track"><div class="on"><b>Count identical pieces</b><small>For screws, tyres, gears… you keep a number of the same part.</small></div><div><b>One tracked piece</b><small>For a numbered motor or a tuned part you follow on its own.</small></div></div>
+   <div class="grid2" style="margin-top:12px"><label class="fl">Condition<div class="seg wide"><button class="on">New</button><button>Used</button><button>Needs inspection</button></div></label><label class="fl">Storage location<input class="f" value="${edit?'Drawer 3 · Box B':''}" placeholder="Drawer, box or shelf"></label></div>
+  </div>
+  <div class="sec"><h3>Specifications <small>Optional</small></h3>
+   <div class="grid3"><label class="fl">Scale<div class="seg wide"><button>1:24</button><button class="on">1:32</button><button>1:43</button><button>HO</button></div></label><label class="fl">Dimensions<input class="f" value="${edit?'Ø 25 × 31 mm':''}" placeholder="Ø 25 × 31 mm"></label><label class="fl">Material / compound<input class="f" placeholder="Urethane, aluminium…"></label></div>
+   <label class="fl" style="margin-top:10px">Fits / compatibility<input class="f" value="${edit?'Sidewinder and anglewinder pods':''}" placeholder="Which cars or pods it fits"></label>
+  </div>
+  <div class="sec"><h3>Notes</h3><textarea class="f" placeholder="Anything worth remembering">${edit?'Break in 10 min at 6 V before racing.':''}</textarea></div>
+  ${edit?`<div class="sec"><h3>Used in <small>Fitted to cars and in assemblies</small></h3><div class="used"><div><span class="th"></span><span><b>BMW M1</b><br><small>Fitted · motor</small></span></div><div><span class="th"></span><span><b>Porsche 952KH</b><br><small>Planned in rebuild</small></span></div></div></div>`:''}
+ </div></div>
+ <div class="wfoot"><span class="sum">${edit?'Last changed <b>14 Nov 2026</b> · fitted to <b>1</b> car':'Only the name is required. Everything else can wait.'}</span><span class="grow"></span><button class="btn ghost">Cancel</button>${edit?'':'<button class="btn">Save &amp; add another</button>'}<button class="btn primary">${edit?'Save part':'Add part'}</button></div>`;
+}
+const RES=[['NSR <mark>Shark</mark> 25K EVO','NSR · 3021 · Motors · Motor',2],['NSR <mark>Shark</mark> 21K EVO','NSR · 3022 · Motors · Motor',0],['NSR <mark>Shark</mark> 25K EVO (anglewinder)','NSR · 3027 · Motors · Motor',1],['NSR King <mark>Shark</mark> 22K','NSR · 3024 · Motors · Motor',0],['Slot.it V12/4 <mark>Shark</mark>','Slot.it · MN04 · Motors · Motor',0]];
+function B(){
+ if(mode==='edit') return head('Edit part')+`<div class="bcol">
+  <div class="ehead"><div class="th">${MOTOR}</div><div><h3>NSR Shark 25K EVO</h3><p>NSR · 3021 · Motors &amp; motor parts · Motor</p></div><div class="stockmini"><div class="eye">In stock</div><b>2</b><div class="stepper" style="justify-content:flex-end;margin:0"><button>−</button><button>+</button></div></div></div>
+  <div class="tabs2"><span class="on">Details</span><span>Stock</span><span>Looks <small>icon · photo</small></span><span>Used in <small>2</small></span></div>
+  <div class="ebody">
+   <div class="row"><span><b>Part name</b>As shown everywhere</span><input class="f" value="NSR Shark 25K EVO"></div>
+   <div class="row"><span><b>Manufacturer</b></span><input class="f" value="NSR"></div>
+   <div class="row"><span><b>Product reference</b></span><input class="f mono" value="3021"></div>
+   <div class="row"><span><b>Category</b>Where it lives on Parts</span><select class="f"><option>Motors &amp; motor parts</option></select></div>
+   <div class="row"><span><b>Part type</b></span><div class="sugg"><span class="on">Motor</span><span>Motor pod</span><span>Motor mount</span><span>Motor cable</span><span>+ Other…</span></div></div>
+   <div class="row"><span><b>Scale</b></span><div class="seg" style="width:fit-content"><button>1:24</button><button class="on">1:32</button><button>1:43</button><button>HO</button></div></div>
+   <div class="row"><span><b>Dimensions</b></span><input class="f" value="Ø 25 × 31 mm"></div>
+   <div class="row"><span><b>Material / compound</b></span><input class="f" placeholder="—"></div>
+   <div class="row"><span><b>Fits / compatibility</b></span><input class="f" value="Sidewinder and anglewinder pods"></div>
+   <div class="row"><span><b>Notes</b></span><textarea class="f">Break in 10 min at 6 V before racing.</textarea></div>
+  </div></div>
+  <div class="wfoot"><span class="sum">Fitted to <b>1</b> car · last changed <b>14 Nov 2026</b></span><span class="grow"></span><button class="btn ghost">Cancel</button><button class="btn primary">Save part</button></div>`;
+ return head('Add parts')+`<div class="wbody"><div class="bcol">
+  <div class="bsearch"><div class="eye" style="margin-bottom:6px">Step 1 · Find it in your catalogue</div><div class="q"><input class="f" value="shark"></div>
+   <div class="filters"><span class="chip off">All manufacturers ⌄</span><span class="chip blue">Motors &amp; motor parts ×</span><span class="chip off">Owned and not owned</span><span style="margin-left:auto;font-size:12px;color:var(--muted)"><b class="mono" style="color:var(--ink)">5</b> of 3,119 catalogue entries</span></div></div>
+  <div class="bres"><div class="grp eye">In your catalogue</div>${RES.map((r,i)=>`<div class="res ${i===0?'on':''}"><span class="th">${MOTOR}</span><span><b>${r[0]}</b><small>${r[1]}</small></span><span class="own"><b>${r[2]}</b>owned</span></div>`).join('')}
+   <div class="newrow"><i>+</i><span><b>Not in the catalogue?</b><br><small class="muted">Create a new part called “shark”</small></span><span class="grow"></span><button class="btn small">New part…</button></div></div>
+ </div>
+ <aside class="bside"><div class="sh"><div class="eye">Step 2 · Add to your stock</div><h3 style="font-size:20px;margin-top:2px">NSR Shark 25K EVO</h3><p style="margin:3px 0 0;font-size:12px;color:var(--muted)">Already in your catalogue · you own <b class="mono" style="color:var(--ink)">2</b></p></div>
+  <div class="sb"><div class="pcard"><div class="pvis">${MOTOR}</div></div>
+   <label class="fl">How many are you adding?<div class="stepper"><button>−</button><span class="n">1</span><button>+</button><small>→ <b class="mono" style="color:var(--ink)">3</b> in stock</small></div></label>
+   <label class="fl" style="margin-top:12px">Condition<div class="seg wide"><button class="on">New</button><button>Used</button><button>Needs inspection</button></div></label>
+   <label class="fl" style="margin-top:12px">Storage location<input class="f" value="Drawer 3 · Box B"></label>
+   <p class="note">Catalogue details (name, reference, specifications) stay as they are. Edit them from the part itself.</p></div>
+ </aside></div>
+ <div class="wfoot"><span class="sum">Pick the part, set how many, done. Nothing is duplicated.</span><span class="grow"></span><button class="btn ghost">Cancel</button><button class="btn">Add &amp; find another</button><button class="btn primary">Add 1 to stock</button></div>`;
+}
+function render(){$('#win').innerHTML=opt==='a'?A():B();
+ for(const[id,k,v]of[['#oSeg','o',opt],['#mSeg','m',mode],['#tSeg','t',document.documentElement.dataset.theme]])document.querySelectorAll(id+' button').forEach(b=>b.classList.toggle('on',b.dataset[k]===v));}
+document.addEventListener('click',e=>{const b=e.target.closest('.switch button');if(!b)return;if(b.dataset.o)opt=b.dataset.o;if(b.dataset.m)mode=b.dataset.m;if(b.dataset.t)document.documentElement.dataset.theme=b.dataset.t;render();});
+function fromHash(){const q=new URLSearchParams(location.hash.slice(1));opt=q.get('o')||opt;mode=q.get('m')||mode;document.documentElement.dataset.theme=q.get('t')||document.documentElement.dataset.theme;render();}
+addEventListener('hashchange',fromHash);fromHash();
+</script>
+</body>
+</html>

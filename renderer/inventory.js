@@ -60,43 +60,116 @@ function partTypeInput(category, value = '') {
       .filter(Boolean)
   ]);
 }
-function editPart(id) {
+// The part window, after docs/ui-reference/part-window-2026-11 (option A, "part sheet"): a live part card
+// with photo, icon, colour and a stock counter on the left; the details in short sections on the right.
+// Every value keeps its form name (category, tracking, condition and scale sit in hidden inputs that the
+// tiles and switches set), so saving and the rest of the app see exactly the same data as before.
+const partConditions = ['New', 'Used', 'Needs inspection'],
+  partScales = ['1:24', '1:32', '1:43', 'HO'];
+let partAgain = false;
+function partTypeChips(category, value = '') {
+  const types = (slotforgeCatalogue.parts[category] || []).slice(0, 10);
+  return types.length
+    ? `<div class="ps-types" role="group" aria-label="Common part types">${types.map(t => `<button type="button" class="${t === value ? 'on' : ''}" data-action="ps-type" data-id="${esc(t)}" aria-pressed="${t === value}">${esc(t)}</button>`).join('')}</div>`
+    : '';
+}
+function partSwitch(name, value, options, label) {
+  const all = value && !options.includes(value) ? [...options, value] : options;
+  return `<input type="hidden" name="${name}" value="${esc(value || '')}"><div class="ps-seg" role="group" aria-label="${esc(label)}" data-ps-for="${name}">${all.map(o => `<button type="button" class="${o === value ? 'on' : ''}" data-action="ps-pick" data-id="${esc(name + '|' + o)}" aria-pressed="${o === value}">${esc(o)}</button>`).join('')}</div>`;
+}
+function partCategoryTiles(value) {
+  return `<input type="hidden" name="category" value="${esc(value)}"><div class="ps-cats" role="group" aria-label="Category" data-ps-for="category">${Object.keys(
+    slotforgeCatalogue.parts
+  )
+    .map(
+      c =>
+        `<button type="button" class="${c === value ? 'on' : ''}" data-action="ps-pick" data-id="${esc('category|' + c)}" aria-pressed="${c === value}"><i aria-hidden="true">${iconSvg(slotforgeIcons.automatic({ category: c, partType: '' }))}</i><span>${esc(c)}</span></button>`
+    )
+    .join('')}</div>`;
+}
+function partTrackingCards(value) {
+  const card = (v, title, text) =>
+    `<button type="button" class="${v === value ? 'on' : ''}" data-action="ps-pick" data-id="tracking|${v}" aria-pressed="${v === value}"><b>${title}</b><small>${text}</small></button>`;
+  return `<input type="hidden" name="tracking" value="${esc(value)}"><div class="ps-track" role="group" aria-label="How you keep this part" data-ps-for="tracking">${card('quantity', 'Count identical pieces', 'For screws, tyres, gears… you keep a number of the same part.')}${card('individual', 'One tracked piece', 'For a numbered motor or a tuned part you follow on its own.')}</div>`;
+}
+function partSheetTitle() {
+  const form = $('#modal-form');
+  if (!form?.querySelector('.part-sheet')) return;
+  const v = n => form.elements.namedItem(n)?.value?.trim() || '';
+  $('#ps-title').textContent = v('name') || 'New part';
+  $('#ps-title').classList.toggle('muted', !v('name'));
+  $('#ps-sub').textContent =
+    [v('maker'), v('reference'), v('scale')].filter(Boolean).join(' · ') ||
+    'Name, manufacturer and reference appear here';
+  $('#ps-chips').innerHTML =
+    `<span class="ps-chip blue">${esc(v('category'))}</span>` +
+    (v('partType') ? `<span class="ps-chip">${esc(v('partType'))}</span>` : '');
+  $('#ps-qty-unit').textContent = v('tracking') === 'individual' ? 'tracked piece' : 'identical pieces';
+}
+// Keep the tiles and switches in step with their hidden value (also after a value is set from outside).
+function partSheetSync(name) {
+  const input = $(`#modal-form .part-sheet input[type=hidden][name="${name}"]`);
+  if (!input) return;
+  document.querySelectorAll(`[data-ps-for="${name}"] [data-action="ps-pick"]`).forEach(b => {
+    const on = b.dataset.id === name + '|' + input.value;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-pressed', String(on));
+  });
+  partSheetTitle();
+}
+function editPart(id, defaults = {}) {
   const fromLibrary = page === 'Library' && libraryTab === 'parts',
     revision = db.revision,
     p = id
       ? db.parts.find(p => p.id === id)
-      : { quantity: 1, tracking: 'quantity', condition: 'New', category: partCategory || 'Other & custom parts' };
+      : {
+          quantity: 1,
+          tracking: 'quantity',
+          condition: 'New',
+          category: defaults.category || partCategory || 'Other & custom parts',
+          maker: defaults.maker || ''
+        };
   inventoryPhoto = p.picture || '';
+  const fitted = id
+      ? (current().installations || [])
+          .filter(i => i.partId === id && !i.removed)
+          .map(i => ({ car: db.cars.find(c => c.id === i.carId), i }))
+          .filter(x => x.car)
+      : [],
+    section = (title, note, html) =>
+      `<section class="ps-sec"><h3>${title}${note ? ` <small>${note}</small>` : ''}</h3>${html}</section>`;
   modal(
     id ? 'Edit part' : fromLibrary ? 'Add catalogue entry' : 'Add parts',
-    '<div class="form-grid">' +
-      field('name', 'Part name', p.name || '', 'text', stockSuggestions('parts', 'name')) +
-      categorySelect('category', 'Category', p.category, Object.keys(slotforgeCatalogue.parts)) +
-      '<div id="part-type-field">' +
-      partTypeInput(p.category, p.partType || '') +
-      '</div>' +
-      field('maker', 'Manufacturer', p.maker || '', 'text', stockSuggestions('parts', 'maker').filter(Boolean)) +
-      field('tracking', 'Tracking', p.tracking, 'select', ['quantity', 'individual']) +
-      field('quantity', 'Owned quantity (individual pieces)', p.quantity, 'number') +
-      field('reference', 'Product reference / individual identifier', p.reference || '') +
-      field('scale', 'Scale', p.scale || '', 'text', ['1:24', '1:32', '1:43', 'HO']) +
-      field('dimensions', 'Dimensions', p.dimensions || '') +
-      field(
-        'material',
-        'Material / compound',
-        p.material || '',
-        'text',
-        stockSuggestions('parts', 'material').filter(Boolean)
-      ) +
-      field('compatibility', 'Compatibility notes', p.compatibility || '') +
-      field('condition', 'Condition', p.condition, 'text', ['New', 'Used', 'Needs inspection']) +
-      field('location', 'Storage location', p.location || '', 'text', stockSuggestions('parts', 'location')) +
-      field('notes', 'Notes', p.notes || '', 'textarea') +
-      '</div>' +
-      appearanceEditor(p) +
-      photoEditor(p),
+    `<div class="part-sheet"><aside class="ps-left"><div class="ps-card"><div class="ps-visual"><div id="item-photo-preview">${itemVisual({ ...p, name: 'Selected photograph', picture: inventoryPhoto }, true)}</div><div class="ps-over">${btn('Photo…', 'item-photo', 'small')}${btn('Remove', 'item-photo-remove', 'small')}</div></div><div class="ps-card-text"><h4 id="ps-title"></h4><p id="ps-sub"></p><div class="ps-chips" id="ps-chips"></div></div></div><div class="ps-box"><div class="eye">In stock</div><div class="ps-stepper"><button type="button" data-action="ps-qty" data-id="-1" aria-label="One fewer">−</button><input name="quantity" type="number" min="0" step="1" value="${esc(p.quantity ?? 0)}" required aria-label="Owned quantity (individual pieces)"><button type="button" data-action="ps-qty" data-id="1" aria-label="One more">+</button><small id="ps-qty-unit">identical pieces</small></div></div><div class="ps-box ps-looks">${appearanceEditor(p)}</div></aside><div class="ps-right">${section(
+      'What is it',
+      '',
+      `<div class="ps-grid"><div class="ps-name">${field('name', 'Part name', p.name || '', 'text', stockSuggestions('parts', 'name'))}</div>${field('maker', 'Manufacturer', p.maker || '', 'text', stockSuggestions('parts', 'maker').filter(Boolean))}${field('reference', 'Product reference', p.reference || '')}</div>`
+    )}${section(
+      'Category',
+      'Where it lives on the Parts page',
+      `${partCategoryTiles(p.category)}<div id="part-type-field" class="ps-type">${partTypeInput(p.category, p.partType || '')}${partTypeChips(p.category, p.partType || '')}</div>`
+    )}${section(
+      'Stock',
+      '',
+      `${partTrackingCards(p.tracking || 'quantity')}<div class="ps-grid"><div class="field">Condition${partSwitch('condition', p.condition || '', partConditions, 'Condition')}</div>${field('location', 'Storage location', p.location || '', 'text', stockSuggestions('parts', 'location'))}</div>`
+    )}${section(
+      'Specifications',
+      'Optional',
+      `<div class="ps-grid three"><div class="field">Scale${partSwitch('scale', p.scale || '', partScales, 'Scale')}</div>${field('dimensions', 'Dimensions', p.dimensions || '')}${field('material', 'Material / compound', p.material || '', 'text', stockSuggestions('parts', 'material').filter(Boolean))}</div>${field('compatibility', 'Fits / compatibility', p.compatibility || '')}`
+    )}${section('Notes', '', field('notes', 'Notes', p.notes || '', 'textarea'))}${
+      fitted.length
+        ? section(
+            'Fitted to',
+            fitted.length === 1 ? '1 car' : fitted.length + ' cars',
+            `<div class="ps-fitted">${fitted.map(({ car, i }) => `<div><span class="ps-fitted-th">${car.picture ? `<img src="${esc(car.picture)}" alt="">` : ''}</span><span><b>${esc(car.name)}</b><small>${esc(i.position || (typeof techLabels !== 'undefined' && techLabels[i.field]) || 'Fitted')} · ${i.quantity} ${i.quantity === 1 ? 'piece' : 'pieces'}</small></span></div>`).join('')}</div>`
+          )
+        : ''
+    }</div></div>`,
     async values => {
+      const again = partAgain;
+      partAgain = false;
       partId = await change('part.save', { id, revision, data: { ...values, picture: inventoryPhoto } });
+      if (again) setTimeout(() => editPart(null, { category: values.category, maker: values.maker }), 0);
       if (fromLibrary) {
         page = 'Library';
         libraryTab = 'parts';
@@ -114,12 +187,65 @@ function editPart(id) {
       partMakerFilter = '';
       partQuery = '';
     },
-    'Save part'
+    id ? 'Save part' : 'Add part'
   );
-  const quantityInput = $('#dialog [name=quantity]');
-  quantityInput.required = true;
-  quantityInput.step = '1';
+  const footer = $('#dialog .dialog-footer');
+  footer.insertAdjacentHTML(
+    'afterbegin',
+    `<span class="ps-foot-note">${id ? (fitted.length ? `Fitted to <b>${fitted.length}</b> ${fitted.length === 1 ? 'car' : 'cars'}` : 'Not fitted to a car') : 'Only the name is required. Everything else can wait.'}</span>`
+  );
+  if (!id)
+    footer
+      .querySelector('[type=submit]')
+      .insertAdjacentHTML(
+        'beforebegin',
+        '<button type="button" class="btn" id="ps-again">Save &amp; add another</button>'
+      );
+  partSheetTitle();
+  $('#dialog [name=name]').focus();
 }
+document.addEventListener('click', event => {
+  if (event.target.id !== 'ps-again') return;
+  partAgain = true;
+  $('#modal-form').requestSubmit();
+});
+function partSheetAction(action, id) {
+  if (action === 'ps-pick') {
+    const [name, ...rest] = id.split('|'),
+      value = rest.join('|'),
+      input = $(`#modal-form .part-sheet input[type=hidden][name="${name}"]`);
+    if (!input) return true;
+    // Scale and condition can be cleared by clicking the chosen one again; category and tracking always keep one.
+    input.value = input.value === value && ['scale', 'condition'].includes(name) ? '' : value;
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    return true;
+  }
+  if (action === 'ps-type') {
+    const input = $('#dialog [name=partType]');
+    input.value = id;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    return true;
+  }
+  if (action === 'ps-qty') {
+    const input = $('#dialog [name=quantity]');
+    input.value = String(Math.max(0, (Number(input.value) || 0) + Number(id)));
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    return true;
+  }
+  return false;
+}
+document.addEventListener('input', event => {
+  const el = event.target;
+  if (!el.closest?.('.part-sheet')) return;
+  if (el.type === 'hidden') partSheetSync(el.name);
+  else if (el.name === 'partType')
+    document.querySelectorAll('.ps-types [data-action="ps-type"]').forEach(b => {
+      b.classList.toggle('on', b.dataset.id === el.value);
+      b.setAttribute('aria-pressed', String(b.dataset.id === el.value));
+    });
+  partSheetTitle();
+});
 let stockScope = 'owned',
   partsLayout = 'list';
 const stockItems = () => db.parts.filter(p => stockScope !== 'owned' || p.quantity > 0);
@@ -731,6 +857,7 @@ function editSupply(id) {
   }
 }
 async function inventoryAction(action, id) {
+  if (partSheetAction(action, id)) return true;
   switch (action) {
     case 'parts-layout':
       partsLayout = id === 'grid' ? 'grid' : 'list';
@@ -844,7 +971,11 @@ async function inventoryAction(action, id) {
 }
 document.addEventListener('change', event => {
   const el = event.target;
-  if (el.id === 'category' && $('#part-type-field')) $('#part-type-field').innerHTML = partTypeInput(el.value);
+  if (el.name === 'category' && el.closest?.('.part-sheet') && $('#part-type-field')) {
+    const type = $('#dialog [name=partType]')?.value || '';
+    $('#part-type-field').innerHTML = partTypeInput(el.value, type) + partTypeChips(el.value, type);
+    partSheetSync('category');
+  } else if (el.type === 'hidden' && el.closest?.('.part-sheet')) partSheetSync(el.name);
   if (el.name === 'kind' && $('#consumable-fields')) $('#consumable-fields').hidden = el.value !== 'Consumable';
   if (el.id === 'part-category-filter') {
     partCategory = el.value;

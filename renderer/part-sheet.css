@@ -1,0 +1,94 @@
+/* The part window, after docs/ui-reference/part-window-2026-11 option A: a live part card on the left,
+   short sections on the right; category as tiles, part types as chips, tracking as two clear choices. */
+#dialog:has(.part-sheet){width:min(1120px,96vw);max-width:96vw;height:min(880px,92vh);max-height:92vh;overflow:hidden}
+#dialog:has(.part-sheet)>form{display:flex;flex-direction:column;height:100%}
+#dialog:has(.part-sheet)>form>.dialog-head,#dialog:has(.part-sheet)>form>.dialog-footer{flex:none}
+#dialog:has(.part-sheet)>form>.dialog-body{display:flex;flex-direction:column;flex:1;min-height:0;max-height:none;padding:0;overflow:hidden}
+#dialog:has(.part-sheet) #form-error{flex:none;margin:6px 24px}
+#dialog:has(.part-sheet) .dialog-footer{align-items:center}
+.ps-foot-note{margin-right:auto;font-size:12.5px;color:var(--muted)}.ps-foot-note b{color:var(--ink)}
+.part-sheet{display:flex;flex:1;min-height:0}
+.part-sheet .eye{font:600 10px "Segoe UI",system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+
+/* left: the part as it will look */
+.ps-left{display:flex;flex-direction:column;gap:12px;flex:none;width:330px;padding:18px;overflow:auto;border-right:1px solid var(--line);background:color-mix(in srgb,var(--bg) 22%,var(--panel))}
+.ps-card,.ps-box{border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+.ps-card{overflow:hidden}
+.ps-visual{position:relative;height:190px;border-bottom:1px solid color-mix(in srgb,var(--line) 70%,transparent);background:radial-gradient(circle at 50% 45%,color-mix(in srgb,var(--ink) 7%,var(--panel)),var(--panel) 70%)}
+#dialog .ps-visual #item-photo-preview{height:100%}
+#dialog .ps-visual .item-visual{width:100%;height:100%;border:0;border-radius:0;background:transparent;display:grid;place-items:center}
+#dialog .ps-visual .item-visual svg{width:112px;height:112px}
+#dialog .ps-visual .item-visual img{width:100%;height:100%;object-fit:contain}
+.ps-over{position:absolute;right:10px;bottom:10px;display:flex;gap:6px}
+.ps-over .btn{min-height:26px;padding:2px 10px;font-size:12px;background:color-mix(in srgb,var(--bg) 72%,transparent);backdrop-filter:blur(4px)}
+.ps-card-text{padding:12px 14px 14px}
+#dialog .ps-card-text h4{margin:0;font:italic 700 21px/1.05 var(--font-cond);text-transform:uppercase;letter-spacing:.02em;overflow-wrap:anywhere}
+.ps-card-text p{margin:4px 0 8px;font-size:12px;color:var(--muted);overflow-wrap:anywhere}
+.ps-chips{display:flex;flex-wrap:wrap;gap:6px}
+.ps-chip{display:inline-flex;align-items:center;height:22px;padding:0 9px;border-radius:999px;font-size:11.5px;font-weight:600;color:var(--muted);background:color-mix(in srgb,var(--ink) 7%,transparent)}
+.ps-chip.blue{color:var(--blue);background:color-mix(in srgb,var(--blue) 13%,transparent)}
+.ps-box{padding:12px 14px}
+.ps-stepper{display:flex;align-items:center;gap:8px;margin-top:6px}
+.ps-stepper button{flex:none;width:34px;height:34px;padding:0;border:1px solid var(--line);border-radius:9px;background:var(--panel);font-size:18px;line-height:1}
+.ps-stepper button:hover{background:color-mix(in srgb,var(--ink) 7%,var(--panel))}
+#dialog .ps-stepper input{width:74px;min-height:40px;padding:0 4px;border:0;background:transparent;text-align:center;font:600 28px var(--font-mono);color:var(--ink);-moz-appearance:textfield}
+.ps-stepper input::-webkit-inner-spin-button,.ps-stepper input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.ps-stepper small{font-size:12px;color:var(--muted)}
+/* the icon and colour picker sits in the left column; the big card already shows the result */
+.ps-looks .item-appearance{margin:0}
+#dialog .ps-looks .item-appearance>h3{margin:0 0 4px;font:600 10px "Segoe UI",system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase;font-style:normal;color:var(--muted)}
+.ps-looks .item-appearance>p{margin:0 0 8px;font-size:11.5px}
+.ps-looks .appearance-preview{display:none}
+.ps-looks .icon-colours{margin:0;padding:0;border:0}
+.ps-looks .icon-colours legend{display:none}
+.ps-looks .icon-colour-choice{font-size:12px}
+.ps-looks details.icon-picker{margin-top:8px}
+
+/* right: the details */
+.ps-right{flex:1;min-width:0;overflow:auto;padding:4px 24px 18px}
+.ps-sec{padding:16px 0 12px;border-bottom:1px solid color-mix(in srgb,var(--line) 70%,transparent)}
+.ps-sec:last-child{border-bottom:0}
+#dialog .ps-sec>h3{display:flex;align-items:baseline;gap:10px;margin:0 0 10px;font-size:17px}
+.ps-sec>h3 small{font:400 12px "Segoe UI",system-ui,sans-serif;font-style:normal;letter-spacing:0;text-transform:none;color:var(--muted)}
+.ps-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 16px}
+.ps-grid.three{grid-template-columns:auto 1fr 1fr}
+.ps-grid+.field,.ps-track+.ps-grid{margin-top:12px}
+.ps-name{grid-column:1/-1}
+#dialog .ps-name input{min-height:40px;font-size:16px;font-weight:600}
+.part-sheet .field{display:grid;gap:5px}
+.ps-cats{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
+.ps-cats>button{display:flex;align-items:center;gap:8px;min-height:40px;padding:6px 9px;border:1px solid var(--line);border-radius:9px;background:var(--panel);color:color-mix(in srgb,var(--ink) 85%,var(--muted));font-size:12px;line-height:1.2;text-align:left}
+.ps-cats>button:hover{border-color:color-mix(in srgb,var(--ink) 25%,var(--line))}
+.ps-cats i{display:grid;place-items:center;flex:none;width:24px;height:24px;border-radius:6px;background:color-mix(in srgb,var(--ink) 8%,var(--panel));color:var(--muted);font-style:normal}
+.ps-cats i svg{width:16px;height:16px}
+.ps-cats>button.on{border-color:var(--amber);background:color-mix(in srgb,var(--amber) 10%,var(--panel));color:var(--ink);font-weight:600}
+.ps-cats>button.on i{background:color-mix(in srgb,var(--amber) 24%,var(--panel));color:var(--amber)}
+.ps-type{margin-top:12px}
+.ps-types{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
+.ps-types>button{min-height:24px;padding:1px 10px;border:1px solid var(--line);border-radius:999px;background:transparent;color:color-mix(in srgb,var(--ink) 85%,var(--muted));font-size:11.5px}
+.ps-types>button:hover{border-color:color-mix(in srgb,var(--blue) 50%,var(--line))}
+.ps-types>button.on{border-color:var(--blue);background:color-mix(in srgb,var(--blue) 12%,transparent);color:var(--blue);font-weight:600}
+.ps-track{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ps-track>button{padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel);text-align:left}
+.ps-track>button b{display:block;font-size:13px}.ps-track>button small{display:block;margin-top:2px;font-size:11.5px;color:var(--muted)}
+.ps-track>button.on{border-color:var(--blue);box-shadow:0 0 0 2px color-mix(in srgb,var(--blue) 22%,transparent)}
+.ps-seg{display:flex;gap:2px;width:fit-content;max-width:100%;padding:3px;border:1px solid var(--line);border-radius:9px;background:color-mix(in srgb,var(--bg) 60%,var(--panel))}
+.ps-seg>button{min-height:28px;padding:2px 12px;border:0;border-radius:6px;background:transparent;box-shadow:none;color:var(--muted);font-size:12.5px;white-space:nowrap}
+.ps-seg>button:hover{background:color-mix(in srgb,var(--ink) 6%,transparent);color:var(--ink)}
+.ps-seg>button.on{background:color-mix(in srgb,var(--ink) 12%,var(--panel));color:var(--ink);font-weight:600}
+.part-sheet textarea{min-height:70px}
+.ps-fitted{display:grid;gap:6px}
+.ps-fitted>div{display:flex;align-items:center;gap:10px;padding:7px 9px;border:1px solid color-mix(in srgb,var(--line) 70%,transparent);border-radius:9px;font-size:12.5px}
+.ps-fitted-th{flex:none;width:52px;height:34px;border-radius:6px;overflow:hidden;background:color-mix(in srgb,var(--ink) 8%,var(--panel))}
+.ps-fitted-th img{width:100%;height:100%;object-fit:cover}
+.ps-fitted b{display:block}.ps-fitted small{color:var(--muted);font-size:11.5px}
+@media(max-width:900px){.part-sheet{flex-direction:column;overflow:auto}.ps-left{width:auto;border-right:0;border-bottom:1px solid var(--line);flex-direction:row;flex-wrap:wrap;overflow:visible}.ps-left>*{flex:1 1 260px}.ps-right{overflow:visible}.ps-grid.three{grid-template-columns:1fr 1fr}}
+/* keep the card, stock and looks at their own height in the left column */
+.ps-left>*{flex:none}
+/* colours as a compact row of chips; the radio stays for keyboard and screen readers */
+.ps-looks .item-appearance{padding:0;border:0;background:none}
+.ps-looks .icon-colours{gap:5px}
+.ps-looks .icon-colour-choice{position:relative;gap:6px;padding:3px 9px 3px 6px;border-radius:999px;background:transparent}
+.ps-looks .icon-colour-choice input{position:absolute;opacity:0;pointer-events:none}
+.ps-looks .icon-colour-choice:has(input:checked){border-color:var(--ink);background:color-mix(in srgb,var(--ink) 8%,var(--panel));font-weight:600}
+.ps-looks .icon-colour-choice:focus-within{outline:2px solid var(--blue);outline-offset:1px}
