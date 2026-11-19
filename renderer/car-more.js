@@ -123,11 +123,15 @@ function carMoreMenu(c) {
       ''
     )}<div class="car-more-sep"></div>${carMoreItem('car-delete', id, 'delete', 'red', 'Permanently delete car…', 'Removes the car and its history. You type its name to confirm.', 'danger')}</div>`;
 }
+let carMoreOpen = null;
+const carMoreButton = () =>
+  carMoreOpen ? $(`#main [data-action="car-more"][data-id="${CSS.escape(carMoreOpen)}"]`) : null;
 function closeCarMore(focusButton = false) {
   const menu = $('#car-more-menu');
   if (!menu) return false;
+  const button = carMoreButton();
   menu.remove();
-  const button = $('[data-action="car-more"][aria-expanded="true"]');
+  carMoreOpen = null;
   button?.setAttribute('aria-expanded', 'false');
   button?.classList.remove('on');
   if (focusButton) button?.focus();
@@ -135,7 +139,7 @@ function closeCarMore(focusButton = false) {
 }
 function placeCarMore() {
   const menu = $('#car-more-menu'),
-    button = $('[data-action="car-more"][aria-expanded="true"]');
+    button = carMoreButton();
   if (!menu || !button) return;
   const r = button.getBoundingClientRect(),
     w = menu.offsetWidth,
@@ -150,13 +154,26 @@ function toggleCarMore(id) {
   const c = db.cars.find(c => c.id === id),
     button = $(`[data-action="car-more"][data-id="${CSS.escape(id)}"]`);
   if (!c || !button) return;
+  carMoreOpen = id;
   button.setAttribute('aria-expanded', 'true');
   button.classList.add('on');
-  // Inside #main, so any redraw of the page closes the menu by itself.
-  $('#main').insertAdjacentHTML('beforeend', carMoreMenu(c));
+  document.body.insertAdjacentHTML('beforeend', carMoreMenu(c));
   placeCarMore();
   $('#car-more-menu .car-more-item')?.focus();
 }
+// The page can redraw while the menu is open (a view finishing loading): stay with the redrawn More
+// button of the same car, or close when that car is no longer on screen.
+// (Set up once the page exists: this file loads before app.js defines $.)
+addEventListener('DOMContentLoaded', () =>
+  new MutationObserver(() => {
+    if (!document.getElementById('car-more-menu')) return;
+    const button = carMoreButton();
+    if (!button) return void closeCarMore();
+    button.setAttribute('aria-expanded', 'true');
+    button.classList.add('on');
+    placeCarMore();
+  }).observe(document.getElementById('main'), { childList: true })
+);
 // Picking an item closes the menu (the action itself runs through the normal click handler);
 // so does a click elsewhere, Escape, scrolling the page away or resizing the window.
 document.addEventListener(
