@@ -1,0 +1,47 @@
+/* The smaller screens, after SlotForgeRestyle.md: the building blocks they share, styled once.
+   No coloured top borders on cards anywhere (colour stays on icons, chips and tiles), plain notes,
+   Race Sheet table headings, quiet tab strips; then the Search and Quick Links menus and the photo viewer. */
+
+/* cards: one neutral border */
+html body :is(#sheet-field-dialog,.club-proposal,.connection-cards>.section-panel,.file-progress,.guide-card,.merge-dialog,.overview-details-panel,.pace-card,.pending-connection,.purchase-card,.purchasing-lists,.review-card,.review-maintenance-card,.standalone-shopping,.timing-results .section-panel,.history-session-card,.history-evidence-grid .panel,.history-lane-records,.job-plan-panel,.rebuild-link,.rebuild-planner,.setup-grid>.panel){border-top:1px solid var(--line);box-shadow:none}
+html body .panel{box-shadow:none}
+html body .panel-heading{background:none}
+
+/* notes: a grey line with a thin accent rule, not a blue box */
+html body .note.info{border:0;border-left:2px solid color-mix(in srgb,var(--accent) 55%,var(--line));border-radius:0;background:none;box-shadow:none;padding:4px 0 4px 12px;color:var(--muted)}
+html body .note.info strong{color:var(--ink)}
+
+/* tables: small grey capitals over the columns, quiet rows */
+html body th{background:none;color:var(--muted);font:600 10px "Segoe UI",system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase;white-space:nowrap}
+html body .table-wrap{border:1px solid var(--line);border-radius:10px;box-shadow:none}
+html body td{border-bottom-color:color-mix(in srgb,var(--line) 65%,transparent)}
+
+/* plain tab strips that are left (car merges and similar): a quiet switch */
+html body .tabs:not(.review-tabs){display:flex;flex-wrap:wrap;gap:2px;width:fit-content;max-width:100%;padding:3px;border:1px solid var(--line);border-radius:10px;background:color-mix(in srgb,var(--bg) 60%,var(--panel))}
+html body .tabs:not(.review-tabs)>button{display:inline-flex;align-items:center;gap:7px;min-height:30px;padding:4px 11px;border:0;border-radius:7px;background:transparent;box-shadow:none;color:var(--muted);font-size:13px;font-weight:400}
+html body .tabs:not(.review-tabs)>button:hover{background:color-mix(in srgb,var(--ink) 6%,transparent);color:var(--ink)}
+html body .tabs:not(.review-tabs)>button.active{background:color-mix(in srgb,var(--ink) 12%,var(--panel));border:0;box-shadow:none;color:var(--ink);font-weight:600}
+html body .tabs:not(.review-tabs)>button.active svg{color:var(--accent)}
+/* inside a window's form the tabs stay the side list from dialog-restyle.css */
+html body dialog .dialog-body:has(>[data-form-panel])>.tabs{display:grid;width:auto;padding:6px}
+@media(max-width:760px){html body dialog .dialog-body:has(>[data-form-panel])>.tabs{display:flex}}
+
+/* Search (Ctrl K) */
+.palette{border:1px solid color-mix(in srgb,var(--ink) 18%,var(--line));border-radius:14px;box-shadow:0 30px 80px rgba(0,0,0,.5)}
+.palette-input{font-size:15px}
+.palette-group>h3{font:600 10px "Segoe UI",system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase;font-style:normal;color:var(--muted)}
+.palette-row.active,.palette-row:hover{background:color-mix(in srgb,var(--ink) 8%,var(--panel))}
+.palette-row.active{box-shadow:inset 3px 0 0 var(--accent)}
+
+/* Quick Links */
+html body .quick-links-menu{border:1px solid color-mix(in srgb,var(--ink) 18%,var(--line));border-top:1px solid color-mix(in srgb,var(--ink) 18%,var(--line));border-radius:12px;box-shadow:0 18px 50px rgba(0,0,0,.45)}
+html body .quick-links-row{border-color:var(--line);background:color-mix(in srgb,var(--bg) 40%,var(--panel))}
+
+/* the Showroom photo viewer and Presentation: titles in Barlow, quiet controls */
+.showroom-viewer-head h2,.showroom-viewer-head strong{font-family:var(--font-cond);font-style:italic;font-weight:700;text-transform:uppercase;letter-spacing:.02em}
+.showroom-viewer-footer .btn:not(.primary){background:color-mix(in srgb,#fff 10%,transparent);color:#fff}
+.showroom-viewer-footer .btn:not(.primary):hover{background:color-mix(in srgb,#fff 18%,transparent)}
+html body dialog.showroom-viewer:not(.is-fullscreen){border:1px solid var(--line);border-top:1px solid var(--line);border-radius:14px;box-shadow:0 30px 80px rgba(0,0,0,.5)}
+
+/* the spreadsheet import grid: your own column headings stay as you wrote them */
+html body .sheet-grid th.sheet-source strong{font:600 13px "Segoe UI",system-ui,sans-serif;letter-spacing:0;text-transform:none;color:var(--ink)}
