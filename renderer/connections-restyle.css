@@ -1,0 +1,25 @@
+/* Connections, after SlotForgeRestyle.md: Dealership Mode and Paddock Portal side by side as two equal
+   cards, each with an eyebrow for what it connects, an On / Off state and its buttons at the foot. */
+.connections-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:stretch}
+.connections-grid>.panel{display:flex;flex-direction:column;min-width:0;margin:0;padding:0;border:1px solid var(--line);border-top:1px solid var(--line);border-radius:12px;background:var(--panel);box-shadow:none;overflow:hidden}
+.connections-grid .club-connections .panel-heading,.connections-grid .portal-heading{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:2px 12px;padding:16px 18px 12px;border-bottom:1px solid var(--line);background:none}
+.conn-eye{grid-column:1;font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.connections-grid .club-connections .panel-heading h2,.connections-grid .portal-heading h2{grid-column:1;display:flex;align-items:center;gap:10px;margin:0;font-size:24px;line-height:1.1}
+.connections-grid .club-connections .panel-heading h2 svg,.connections-grid .portal-heading h2 svg{width:30px;height:30px;padding:6px;border-radius:8px;color:var(--c);background:color-mix(in srgb,var(--c) 16%,var(--panel))}
+.connections-grid .club-connections{--c:var(--amber)}.connections-grid .portal-panel{--c:var(--blue)}
+.conn-state{grid-column:2;grid-row:1/3;align-self:center;display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;border:1px solid var(--line);font-size:12px;color:var(--muted)}
+.conn-state::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--muted)}
+.conn-state.on{color:var(--ink)}.conn-state.on::before{background:#3ecf8e}
+.connections-grid .club-connections .panel-body{display:flex;flex-direction:column;flex:1;padding:14px 18px 16px}
+.connections-grid .portal-panel>*:not(.portal-heading){margin-left:18px;margin-right:18px}
+.connections-grid .portal-panel>.portal-heading+*{margin-top:14px}
+.connections-grid .portal-panel{padding-bottom:16px}
+.connections-grid .club-connections .actions{order:5;margin:auto -18px -16px;padding:10px 18px;border-top:1px solid var(--line);background:color-mix(in srgb,var(--bg) 50%,var(--panel))}
+.connections-grid .club-connections .panel-body>.tiny.muted{order:4;margin:8px 0 14px}
+.connections-grid .portal-panel>.portal-foot{display:flex;flex-wrap:wrap;gap:8px;margin:auto 0 -16px;padding:10px 18px;border-top:1px solid var(--line);background:color-mix(in srgb,var(--bg) 50%,var(--panel))}
+.connections-grid .portal-qr{background:#fff}
+#main[data-page="Connections"] .integration-shortcut{margin-top:16px;padding:8px 4px 8px 14px;border:0;border-left:2px solid color-mix(in srgb,var(--accent) 55%,var(--line));border-radius:0;background:none;box-shadow:none}
+#main[data-page="Connections"] .integration-shortcut strong{font-weight:600}
+#main[data-page="Connections"] .integration-shortcut p{color:var(--muted);font-size:12.5px}
+@media(max-width:900px){.connections-grid{grid-template-columns:1fr}}
+#main[data-page="Connections"] .connections-grid+*{margin-top:16px}

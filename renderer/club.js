@@ -83,7 +83,7 @@ function renderDealershipHost(c) {
 }
 function renderClubConnections() {
   const c = clubState || {};
-  return `<section class="panel club-connections"><div class="panel-heading"><h2>${icon('share')} Dealership Mode</h2></div><div class="panel-body"><p>Keep one collection connected across your home or club computers. The dealership computer holds the official collection, reviews proposed changes and serves Timing.</p>${
+  return `<section class="panel club-connections"><div class="panel-heading"><span class="conn-eye">Your other computers · local network</span><h2>${icon('share')} Dealership Mode</h2><span class="conn-state ${c.active || c.role === 'coordinator' ? 'on' : ''}">${c.role === 'coordinator' ? 'Hosting' : c.active ? 'Connected' : 'Off'}</span></div><div class="panel-body"><p>Keep one collection connected across your home or club computers. The dealership computer holds the official collection, reviews proposed changes and serves Timing.</p>${
     c.role === 'coordinator'
       ? renderDealershipHost(c)
       : c.active
