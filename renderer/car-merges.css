@@ -1,4 +1,4 @@
-.merge-dialog{width:min(1180px,94vw);max-width:94vw;max-height:92vh;padding:0;border-top:3px solid var(--accent);}
+.merge-dialog{width:min(1180px,94vw);max-width:94vw;max-height:92vh;padding:0;}
 .merge-dialog .dialog-body{overflow:auto;max-height:70vh;padding:24px;}
 .merge-dialog .dialog-footer{flex-wrap:wrap;gap:8px;}
 .merge-dialog h2,.merge-dialog h3,.merge-dialog h4{overflow-wrap:anywhere;}

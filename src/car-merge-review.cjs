@@ -254,7 +254,7 @@ function nodeEntries(node) {
         value: media
           ? 'Attachment'
           : node[key] && typeof node[key] === 'object'
-            ? `${Object.keys(node[key]).length} items`
+            ? `${Object.keys(node[key]).length} ${Object.keys(node[key]).length === 1 ? 'item' : 'items'}`
             : text(node[key])
       };
     });

@@ -45,3 +45,21 @@ html body dialog.showroom-viewer:not(.is-fullscreen){border:1px solid var(--line
 
 /* the spreadsheet import grid: your own column headings stay as you wrote them */
 html body .sheet-grid th.sheet-source strong{font:600 13px "Segoe UI",system-ui,sans-serif;letter-spacing:0;text-transform:none;color:var(--ink)}
+
+/* row labels (a th at the start of a body row) read as labels, not column headings */
+html body tbody th:not(.sheet-row-number){font:600 13px "Segoe UI",system-ui,sans-serif;letter-spacing:0;text-transform:none;color:var(--ink);white-space:normal}
+
+/* car merges: the sections as a quiet switch, a changed field marked by a slim accent rule */
+html body .merge-tabs{gap:2px;width:fit-content;max-width:100%;padding:3px;border:1px solid var(--line);border-radius:10px;background:color-mix(in srgb,var(--bg) 60%,var(--panel))}
+html body .merge-tabs>button{min-height:30px;padding:4px 11px;border:0;border-radius:7px;background:transparent;box-shadow:none;color:var(--muted);font-size:13px;font-weight:400}
+html body .merge-tabs>button:hover{background:color-mix(in srgb,var(--ink) 6%,transparent);color:var(--ink)}
+html body .merge-tabs>button[aria-pressed="true"]{border:0;background:color-mix(in srgb,var(--ink) 12%,var(--panel));color:var(--ink);font-weight:600}
+html body .merge-different th{border-left:2px solid var(--accent)}
+html body .merge-dialog h3{font-size:18px}
+html body .merge-archive-grid .panel{border:1px solid var(--line);border-radius:10px;background:color-mix(in srgb,var(--bg) 22%,var(--panel))}
+
+/* the Dealership Mode banner: a quiet sheet with a slim blue rule (amber when the copy is out of date) */
+html body .club-banner{border:1px solid var(--line);border-left:2px solid var(--blue);border-radius:12px;box-shadow:none}
+html body .club-banner.club-outdated{border-color:var(--line);border-left-color:var(--amber);background:var(--panel)}
+html body .club-connections{border:1px solid var(--line);border-top:1px solid var(--line);border-radius:12px;box-shadow:none}
+html body .club-connections .panel-heading{background:none;border-bottom:1px solid var(--line)}

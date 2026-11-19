@@ -34,6 +34,22 @@ const CarMergeUI = (() => {
       /[&<>"']/g,
       c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]
     );
+  // stored timestamps (2026-10-31T10:01:00.000Z) read as a local date and time
+  const W = v =>
+    E(
+      String(v ?? '').replace(/\b\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?Z\b/g, m => {
+        const d = new Date(m);
+        return Number.isFinite(d.getTime())
+          ? d.toLocaleString(undefined, {
+              day: 'numeric',
+              month: 'short',
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
+            })
+          : m;
+      })
+    );
   const titles = {
     fields: 'Car details & configuration',
     settings: 'Timing settings',
@@ -157,9 +173,9 @@ const CarMergeUI = (() => {
     const cards = data.rows
       .map(r =>
         tab === 'archives'
-          ? `<article class="panel"><h3>${E(r.retiredName)} → ${E(r.mainName)}</h3><p>Original information preserved · ${E(r.date)}</p>${B('Retired car archive', 'archive', r.archives.retired)} ${B('Main car before merge', 'archive', r.archives.main)}</article>`
+          ? `<article class="panel"><h3>${E(r.retiredName)} → ${E(r.mainName)}</h3><p>Original information preserved · ${W(r.date)}</p>${B('Retired car archive', 'archive', r.archives.retired)} ${B('Main car before merge', 'archive', r.archives.main)}</article>`
           : tab === 'late'
-            ? `<article class="panel"><h3>${E(r.retiredName)} → ${E(r.mainName)}</h3><strong>${E(r.label)}</strong><p>${E(r.detail)}</p><p>${E(r.status)} · Only approved inclusion contributes to the main car.</p>${r.status === 'pending' ? B('Review inclusion', 'late', r.id) : ''}</article>`
+            ? `<article class="panel"><h3>${E(r.retiredName)} → ${E(r.mainName)}</h3><strong>${E(r.label)}</strong><p>${W(r.detail)}</p><p>${E(r.status)} · Only approved inclusion contributes to the main car.</p>${r.status === 'pending' ? B('Review inclusion', 'late', r.id) : ''}</article>`
             : `<article class="panel"><span class="badge">${E(r.status)}</span><h3>${E(r.retiredName)} → ${E(r.mainName)}</h3><p>Keep ${E(r.mainName)} as the main car · Revision ${r.revision}</p>${r.status === 'pending' ? B('Continue review', 'inspect', r.id) : r.archives ? B('View preserved original', 'archive', r.archives.retired) : '<p>The cars were not merged.</p>'}</article>`
       )
       .join('');
@@ -299,7 +315,7 @@ const CarMergeUI = (() => {
       : `<div class="merge-archive-grid">${data.rows.map((r, i) => `<article class="panel"><h4>${E(archiveLabel(r.key))}</h4><p>${E(r.value)}</p>${control(r, i)}</article>`).join('')}</div>`;
     frame(
       data.carName + ' · preserved original',
-      `<p class="note info">Read-only ${data.side === 'retired' ? 'retired duplicate' : 'main-car pre-merge'} snapshot · ${E(data.created)}. Includes information excluded from the merge.</p><p>Linked main car: <strong>${E(data.mainName)}</strong> ${B('Open main car', 'car', data.mainCarId)}</p><p>${E(['Archive', ...path.map(archiveLabel)].join(' / '))}</p>${path.length ? B('Up one level', 'up') : ''}${contents}${pager(data)}`,
+      `<p class="note info">Read-only ${data.side === 'retired' ? 'retired duplicate' : 'main-car pre-merge'} snapshot · ${W(data.created)}. Includes information excluded from the merge.</p><p>Linked main car: <strong>${E(data.mainName)}</strong> ${B('Open main car', 'car', data.mainCarId)}</p><p>${E(['Archive', ...path.map(archiveLabel)].join(' / '))}</p>${path.length ? B('Up one level', 'up') : ''}${contents}${pager(data)}`,
       B('Back to archives', 'hub', 'archives')
     );
     state.archiveRows = data.rows;
@@ -465,7 +481,7 @@ const CarMergeUI = (() => {
       state.inclusion = r;
       frame(
         'Review late old-car history',
-        `<h3>${E(r.retiredName)} → ${E(r.mainName)}</h3><p>${E(r.label)}</p><p>${E(r.detail)}</p><p>This evidence arrived after the merge. Include its contribution in the main car, or keep it excluded. The original evidence remains stored either way.</p>${r.canInclude === false ? '<p class="note warning">This session was withdrawn or the original participant is no longer present. Keep it excluded to close this review.</p>' : ''}`,
+        `<h3>${E(r.retiredName)} → ${E(r.mainName)}</h3><p>${E(r.label)}</p><p>${W(r.detail)}</p><p>This evidence arrived after the merge. Include its contribution in the main car, or keep it excluded. The original evidence remains stored either way.</p>${r.canInclude === false ? '<p class="note warning">This session was withdrawn or the original participant is no longer present. Keep it excluded to close this review.</p>' : ''}`,
         B('Inspect source evidence', 'late-evidence') +
           B('Decide later', 'hub', 'late') +
           B('Keep excluded', 'exclude') +
