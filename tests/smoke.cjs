@@ -20,6 +20,7 @@ module.exports=async(win,store,network,media,services={})=>{
   await wait(`document.body.textContent.includes('On the workbench')`);
   if(process.argv.includes('--car-actions-only')){const checks=await require('./car-actions-smoke.cjs')({store,js,wait,click,submit});assert.deepEqual(errors,[]);fs.writeFileSync(path.join(__dirname,'../.qa','car-actions-result.json'),JSON.stringify({passed:true,checks},null,2));console.log(checks);return;}
   if(process.argv.includes('--cars-browser-only')){const ctx={win,store,js,wait,click,fill,submit,qa:path.join(__dirname,'../.qa')};const checks=await require('./cars-browser-smoke.cjs')(ctx);assert.deepEqual(errors,[]);fs.writeFileSync(path.join(ctx.qa,'cars-browser-result.json'),JSON.stringify({passed:true,checks},null,2));console.log(checks);return;}
+  if(process.argv.includes('--bulk-edit-only')){const qa=path.join(__dirname,'../.qa'),checks=await require('./bulk-edit-smoke.cjs')({win,store,js,wait,click,fill,submit,qa});assert.deepEqual(errors,[]);fs.writeFileSync(path.join(qa,'bulk-edit-result.json'),JSON.stringify({passed:true,checks,rendererErrors:errors},null,2));console.log(checks);return;}
   if(process.argv.includes('--shopping-basket-only')){const qa=path.join(__dirname,'../.qa'),checks=await require('./shopping-basket-smoke.cjs')({win,store,js,wait,click,fill,submit,qa});assert.deepEqual(errors,[]);fs.writeFileSync(path.join(qa,'shopping-basket-result.json'),JSON.stringify({passed:true,checks,rendererErrors:errors},null,2));console.log(checks);return;}
   if(process.argv.includes('--job-window-only')){const qa=path.join(__dirname,'../.qa'),checks=await require('./job-window-smoke.cjs')({win,store,js,wait,click,fill,submit,qa});assert.deepEqual(errors,[]);fs.writeFileSync(path.join(qa,'job-window-result.json'),JSON.stringify({passed:true,checks,rendererErrors:errors},null,2));console.log(checks);return;}
   if(process.argv.includes('--part-sheet-only')){const qa=path.join(__dirname,'../.qa'),checks=await require('./part-sheet-smoke.cjs')({win,store,js,wait,click,fill,submit,qa});assert.deepEqual(errors,[]);fs.writeFileSync(path.join(qa,'part-sheet-result.json'),JSON.stringify({passed:true,checks,rendererErrors:errors},null,2));console.log(checks);return;}
@@ -134,6 +135,7 @@ module.exports=async(win,store,network,media,services={})=>{
   reviewChecks.push(...await require('./part-sheet-smoke.cjs')({win,store,js,wait,click,fill,submit,qa}));
   reviewChecks.push(...await require('./job-window-smoke.cjs')({win,store,js,wait,click,fill,submit,qa}));
   reviewChecks.push(...await require('./shopping-basket-smoke.cjs')({win,store,js,wait,click,fill,submit,qa}));
+  reviewChecks.push(...await require('./bulk-edit-smoke.cjs')({win,store,js,wait,click,fill,submit,qa}));
   reviewChecks.push(...await require('./overview-panels-smoke.cjs')({win,store,network,js,wait,click,fill,submit,qa,dialog}));
   reviewChecks.push(...await require('./audit-regressions-smoke.cjs')({win,store,network,js,wait,click,fill,submit,qa,dialog}));
   reviewChecks.push(...await require('./build-smoke.cjs')({win,store,network,js,wait,click,fill,submit,qa,dialog}));

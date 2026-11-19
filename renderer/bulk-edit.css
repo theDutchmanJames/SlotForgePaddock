@@ -1,0 +1,89 @@
+/* Edit selected cars, after docs/ui-reference/bulk-edit-2026-11 option A: a strip of the selected cars, the
+   fields as a table with today's values and Keep / Set to… / Clear, and a live preview with one Apply. */
+#dialog:has(.bulk-sheet){width:min(1280px,96vw);max-width:96vw;height:min(880px,92vh);max-height:92vh;overflow:hidden}
+#dialog:has(.bulk-sheet)>form{display:flex;flex-direction:column;height:100%}
+#dialog:has(.bulk-sheet)>form>.dialog-head,#dialog:has(.bulk-sheet)>form>.dialog-footer{flex:none}
+#dialog:has(.bulk-sheet)>form>.dialog-body{display:flex;flex-direction:column;flex:1;min-height:0;max-height:none;padding:0;overflow:hidden}
+#dialog:has(.bulk-sheet) #form-error{flex:none;margin:6px 24px}
+#dialog:has(.bulk-sheet) .dialog-footer{align-items:center}
+.bk-summary{margin-right:auto;font-size:12.5px;color:var(--muted)}.bk-summary b{color:var(--ink)}
+.bulk-sheet{display:flex;flex-direction:column;flex:1;min-height:0}
+.bulk-sheet .eye{font:600 10px "Segoe UI",system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.bk-strip{display:flex;align-items:center;gap:6px;flex:none;padding:10px 20px;border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--bg) 30%,var(--panel));overflow:hidden}
+.bk-thumb{flex:none;width:56px;height:36px;border-radius:6px;overflow:hidden;border:1px solid color-mix(in srgb,var(--line) 70%,transparent);background:color-mix(in srgb,var(--ink) 6%,var(--panel))}
+.bk-thumb img{display:block;width:100%;height:100%;object-fit:cover}
+.bk-thumb .placeholder{min-height:0;height:100%;gap:0}.bk-thumb .placeholder svg{width:26px;height:18px}.bk-thumb .placeholder span{display:none}
+.bk-more{display:grid;place-items:center;flex:none;width:56px;height:36px;border-radius:6px;background:color-mix(in srgb,var(--ink) 8%,var(--panel));font-size:12px;font-weight:600}
+.bk-strip-text{margin-left:10px;font-size:12.5px;color:var(--muted)}.bk-strip-text b{color:var(--ink)}
+.bk-body{display:flex;flex:1;min-height:0}
+.bk-main{flex:1;min-width:0;overflow:auto}
+.bk-table{width:100%;border-collapse:separate;border-spacing:0}
+html body .bk-table th{position:sticky;top:0;z-index:2;padding:9px 14px;border-bottom:1px solid var(--line);background:var(--panel);text-align:left}
+.bk-table td{padding:9px 14px;border-top:0;border-bottom:1px solid color-mix(in srgb,var(--line) 65%,transparent);vertical-align:middle}
+.bk-table tbody tr:hover{background:none}
+.bk-group td{padding:14px 14px 6px!important;border-bottom:0!important;font:600 9.5px "Segoe UI",system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.bk-name{width:150px}.bk-name b{font-size:13px}
+.bk-dist{display:flex;flex-wrap:wrap;gap:4px}
+.bk-dist span{padding:1px 8px;border-radius:999px;background:color-mix(in srgb,var(--ink) 7%,var(--panel));font-size:11.5px;color:color-mix(in srgb,var(--ink) 85%,var(--muted));white-space:nowrap}
+.bk-dist b{margin-left:4px;font:600 11px var(--font-mono);color:var(--muted)}
+.bk-dist .empty{font-style:italic;color:var(--muted)}.bk-dist .more{background:none;color:var(--muted)}
+.bk-act{display:inline-flex;gap:2px;padding:3px;border:1px solid var(--line);border-radius:9px;background:color-mix(in srgb,var(--bg) 60%,var(--panel))}
+.bk-act>button{min-height:26px;padding:2px 10px;border:0;border-radius:6px;background:transparent;box-shadow:none;color:var(--muted);font-size:12px;white-space:nowrap}
+.bk-act>button:hover{background:color-mix(in srgb,var(--ink) 6%,transparent);color:var(--ink)}
+.bk-act>button.on{background:color-mix(in srgb,var(--ink) 12%,var(--panel));color:var(--ink);font-weight:600}
+.bk-row.changing .bk-act>button.on{background:color-mix(in srgb,var(--blue) 24%,var(--panel))}
+.bk-row.clearing .bk-act>button.on{background:color-mix(in srgb,var(--accent) 22%,var(--panel))}
+.bk-row.changing td{background:color-mix(in srgb,var(--blue) 5%,var(--panel))}
+.bk-row.changing td:first-child{box-shadow:inset 3px 0 0 var(--blue)}
+.bk-row.clearing td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+.bk-new{width:260px}
+.bk-new .field{display:grid;gap:0;font-size:0}
+#dialog .bk-new input{min-height:32px;font-size:13px}
+.bk-value,.bk-cleared{display:none}
+.bk-row.changing:not(.clearing) .bk-value{display:block}
+[data-bulk-labels].changing .bk-value{display:block}
+.bk-row.clearing .bk-cleared{display:block;font-size:12px;color:var(--muted)}
+.bk-known{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}
+.bk-known>button{min-height:22px;padding:0 8px;border:1px solid var(--line);border-radius:999px;background:transparent;font-size:11px;color:color-mix(in srgb,var(--ink) 85%,var(--muted))}
+.bk-known>button:hover{border-color:var(--blue);color:var(--blue)}
+.bk-foot-note{margin:0;padding:12px 14px 16px;font-size:12px;color:var(--muted)}
+.bk-side{display:flex;flex-direction:column;flex:none;width:380px;min-height:0;border-left:1px solid var(--line);background:color-mix(in srgb,var(--bg) 22%,var(--panel))}
+.bk-sh{flex:none;padding:14px 18px 10px;border-bottom:1px solid color-mix(in srgb,var(--line) 70%,transparent)}
+#dialog .bk-sh h3{margin:2px 0 0;font-size:20px;line-height:1.05}
+.bk-sh p{margin:3px 0 0;font-size:12px;color:var(--muted)}
+.bk-sb{flex:1;min-height:0;overflow:auto;padding:12px 18px}
+.bk-sf{flex:none;padding:12px 18px;border-top:1px solid color-mix(in srgb,var(--line) 70%,transparent)}
+.bk-sf .check-row{margin:0;font-size:12.5px}
+.bk-empty{padding:14px;border:1px dashed var(--line);border-radius:10px;font-size:12.5px;color:var(--muted)}
+.bk-error{margin:0;padding:8px 10px;border-left:2px solid var(--accent);font-size:12.5px}
+.bk-big{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.bk-big>div{padding:10px;border:1px solid color-mix(in srgb,var(--line) 70%,transparent);border-radius:10px;background:var(--panel)}
+.bk-big b{display:block;font-size:22px}.bk-big small{font-size:11.5px;color:var(--muted)}
+.bk-chg{margin-bottom:8px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+.bk-chg .h{display:flex;justify-content:space-between;gap:8px;font-size:12.5px}
+.bk-chg .h span{flex:none;font-size:11.5px;color:var(--muted)}
+.bk-chg .ex{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:2px 6px;align-items:center;margin-top:6px;font-size:11.5px}
+.bk-chg .ex .car{grid-column:1/-1;font-size:11px;color:var(--muted)}
+.bk-chg .ex s{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
+.bk-chg .ex em{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-style:normal;font-weight:600;color:var(--blue)}
+.bk-chg.clear .ex em{color:var(--accent)}
+.bk-chg .ex.none{display:block;color:var(--muted)}
+.bk-all{margin-top:6px}.bk-all summary{cursor:pointer;font-size:12.5px;color:var(--muted)}
+.bk-all .table-wrap{margin-top:8px}
+@media(max-width:1000px){.bk-side{width:320px}.bk-new{width:200px}}
+@media(max-width:820px){.bk-body{flex-direction:column;overflow:auto}.bk-main{overflow:visible}.bk-side{width:auto;border-left:0;border-top:1px solid var(--line)}}
+/* smaller windows: each field becomes a block, the new value under its switch, no sideways scrolling */
+@media(max-width:1100px){
+.bk-table thead{display:none}
+.bk-table tbody tr.bk-group{display:block}
+.bk-table tbody tr.bk-group td{display:block}
+.bk-table tbody tr.bk-row{display:grid;grid-template-columns:120px minmax(0,1fr);gap:6px 12px;padding:9px 14px;border-bottom:1px solid color-mix(in srgb,var(--line) 65%,transparent)}
+.bk-table tbody tr.bk-row td{padding:0;border:0;background:none}
+.bk-table tbody tr.bk-row td.bk-name{grid-row:span 3;align-self:start;padding-top:3px}
+.bk-row.changing{background:color-mix(in srgb,var(--blue) 5%,var(--panel));box-shadow:inset 3px 0 0 var(--blue)}
+.bk-row.clearing{box-shadow:inset 3px 0 0 var(--accent)}
+.bk-row.changing td:first-child{box-shadow:none}
+.bk-new{width:auto}
+.bk-row:not(.changing) .bk-new{display:none}
+}
+.bk-sf{display:flex;flex-direction:column;align-items:flex-start;gap:8px}

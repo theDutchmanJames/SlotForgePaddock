@@ -1060,6 +1060,7 @@ document.addEventListener('click', async event => {
     if (await spreadsheetAction(action, id)) return;
     if (newJobAction(action, id)) return;
     if (shopBasketAction(action, id)) return;
+    if (bulkAction(action, id)) return;
     if (await picturePreviewAction(action, id)) return;
     if (await pictureAction(action, id)) return;
     if (await historicalEvidenceAction(action, id)) return;

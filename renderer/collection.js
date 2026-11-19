@@ -156,40 +156,252 @@ async function previewChoice() {
     plan.merging ? 'Merge choices' : 'Rename choice'
   );
 }
+// Edit selected cars, after docs/ui-reference/bulk-edit-2026-11 (option A): every field as a row with what the
+// selected cars have now and Keep / Set to… / Clear; Usage labels and Tags with Keep / Add / Remove / Replace;
+// a live preview of what will change on the right, and one confirm and Apply instead of a second window.
+// Form names stay: use_<field> (checked = change it), value_<field>, mode_<labels>, labels_<labels>, confirmed.
+let bulkPreviewTimer = null,
+  bulkPreviewSerial = 0;
+const bulkGroups = [
+  ['Collection & ownership', ['owner', 'location', 'ownership', 'availability', 'condition', 'packaging']],
+  ['Racing', ['raceClass', 'category']]
+];
+function bulkSelectedCars() {
+  const ids = new Set(bulkDraft.ids);
+  return db.cars.filter(c => ids.has(c.id));
+}
+// "James 30 · Club 6 · empty 12" for the cars we have loaded.
+function bulkDistribution(cars, key, labels = false) {
+  const counts = new Map();
+  let empty = 0;
+  for (const c of cars) {
+    const v = c[key];
+    if (labels) {
+      if (!v?.length) empty++;
+      for (const x of v || []) counts.set(x, (counts.get(x) || 0) + 1);
+    } else if (v) counts.set(v, (counts.get(v) || 0) + 1);
+    else empty++;
+  }
+  const top = [...counts].sort((a, b) => b[1] - a[1]),
+    shown = top.slice(0, 4);
+  return `<div class="bk-dist">${shown.map(([v, n]) => `<span>${esc(v)}<b>${n}</b></span>`).join('')}${top.length > 4 ? `<span class="more">+${top.length - 4} more</span>` : ''}${empty ? `<span class="empty">empty<b>${empty}</b></span>` : ''}</div>`;
+}
+function bulkFieldRow(cars, k) {
+  return `<tr class="bk-row" data-bulk-field="${k}"><td class="bk-name"><b>${esc(fieldLabel(k))}</b></td><td>${bulkDistribution(cars, k)}</td><td><input type="checkbox" name="use_${k}" hidden><div class="bk-act" role="group" aria-label="${esc(fieldLabel(k))}">${[
+    ['keep', 'Keep'],
+    ['set', 'Set to…'],
+    ['clear', 'Clear']
+  ]
+    .map(
+      ([a, l]) =>
+        `<button type="button" class="${a === 'keep' ? 'on' : ''}" data-action="bk-act" data-id="${k}|${a}" aria-pressed="${a === 'keep'}">${l}</button>`
+    )
+    .join(
+      ''
+    )}</div></td><td class="bk-new"><div class="bk-value">${field('value_' + k, fieldLabel(k), '', 'text', db.cars.map(c => c[k]).filter(Boolean))}</div><span class="bk-cleared">Emptied on every selected car</span></td></tr>`;
+}
+function bulkLabelRow(cars, k) {
+  const known = [...new Set([...(db.choices[k] || []), ...cars.flatMap(c => c[k] || [])])].slice(0, 12);
+  return `<tr class="bk-row" data-bulk-labels="${k}"><td class="bk-name"><b>${esc(fieldLabel(k))}</b></td><td>${bulkDistribution(cars, k, true)}</td><td><input type="hidden" name="mode_${k}" value="keep"><div class="bk-act" role="group" aria-label="${esc(fieldLabel(k))}">${[
+    ['keep', 'Keep'],
+    ['add', 'Add'],
+    ['remove', 'Remove'],
+    ['replace', 'Replace']
+  ]
+    .map(
+      ([a, l]) =>
+        `<button type="button" class="${a === 'keep' ? 'on' : ''}" data-action="bk-mode" data-id="${k}|${a}" aria-pressed="${a === 'keep'}">${l}</button>`
+    )
+    .join(
+      ''
+    )}</div></td><td class="bk-new"><div class="bk-value">${field('labels_' + k, 'Labels, separated by commas', '', 'text', db.choices[k] || [])}${known.length ? `<div class="bk-known">${known.map(v => `<button type="button" data-action="bk-label" data-id="${esc(k + '|' + v)}">${esc(v)}</button>`).join('')}</div>` : ''}</div></td></tr>`;
+}
 function bulkEdit() {
   bulkDraft = { ids: [...selected], revision: db.revision };
+  const cars = bulkSelectedCars(),
+    n = bulkDraft.ids.length,
+    shown = cars.slice(0, 10);
   modal(
     'Edit selected cars',
-    `<p><strong>${bulkDraft.ids.length} cars selected.</strong> Only enabled fields change. An enabled empty field clears that value.</p><div class="form-grid">${collectionMeta.bulkFields.map(k => `<div><label class="check-row"><input name="use_${k}" type="checkbox">Change ${esc(fieldLabel(k))}</label>${field('value_' + k, fieldLabel(k), '', 'text', db.cars.map(c => c[k]).filter(Boolean))}</div>`).join('')}</div><div class="two-col mt">${['usage', 'tags'].map(k => panel(fieldLabel(k), field('mode_' + k, 'Action', 'keep', 'select', ['keep', 'add', 'remove', 'replace']) + field('labels_' + k, 'Values (comma separated)', '', 'text', db.choices[k] || []))).join('')}</div><p class="tiny muted">Replace with no labels clears the selected label list. Inventory and technical specifications are managed through the workshop.</p>${btn('Review changes →', 'preview-bulk', 'primary')}`,
-    null
+    `<div class="bulk-sheet"><div class="bk-strip">${shown.map(c => `<span class="bk-thumb" title="${esc(c.name)}">${photo(c, true)}</span>`).join('')}${n > shown.length ? `<span class="bk-more mono">+${n - shown.length}</span>` : ''}<span class="bk-strip-text"><b class="mono">${n}</b> ${n === 1 ? 'car' : 'cars'} selected · only the fields you change are touched${cars.length < n ? ` · current values shown for the <b class="mono">${cars.length}</b> on this page` : ''}</span></div><div class="bk-body"><div class="bk-main"><table class="bk-table"><thead><tr><th>Field</th><th>Now, across the selection</th><th>Change</th><th>New value</th></tr></thead><tbody>${bulkGroups
+      .map(
+        ([g, keys]) =>
+          `<tr class="bk-group"><td colspan="4">${esc(g)}</td></tr>${keys
+            .filter(k => collectionMeta.bulkFields.includes(k))
+            .map(k => bulkFieldRow(cars, k))
+            .join('')}`
+      )
+      .join('')}${collectionMeta.bulkFields
+      .filter(k => !bulkGroups.some(([, keys]) => keys.includes(k)))
+      .map(k => bulkFieldRow(cars, k))
+      .join(
+        ''
+      )}<tr class="bk-group"><td colspan="4">Labels</td></tr>${['usage', 'tags'].map(k => bulkLabelRow(cars, k)).join('')}</tbody></table><p class="bk-foot-note">Inventory and technical specifications are managed through the workshop. Replace with no labels clears the label list.</p></div><aside class="bk-side"><div class="bk-sh"><div class="eye">Live preview</div><h3>What will change</h3><p>Updated as you choose. Nothing is saved until you apply.</p></div><div class="bk-sb" id="bulk-preview"></div><div class="bk-sf">${btn('Refresh preview', 'preview-bulk', 'small ghost')}<label class="check-row"><input type="checkbox" name="confirmed" required>I confirm these changes to the selected cars</label></div></aside></div></div>`,
+    async values => {
+      const payload = bulkPayload(values);
+      if (!Object.keys(payload.updates).length && !Object.keys(payload.labels).length)
+        throw Error('Choose at least one change.');
+      await change('car.bulk', { ...payload, confirmed: !!values.confirmed });
+      toast('Bulk changes saved.');
+    },
+    'Apply changes'
   );
+  $('#dialog .dialog-footer').insertAdjacentHTML('afterbegin', '<span class="bk-summary" id="bulk-summary"></span>');
+  bulkSync();
+  clearTimeout(bulkPreviewTimer);
+  void bulkRefreshPreview();
 }
-async function previewBulk() {
-  const values = Object.fromEntries(new FormData($('#modal-form'))),
-    updates = {},
+function bulkPayload(values = Object.fromEntries(new FormData($('#modal-form')))) {
+  const updates = {},
     labels = {};
-  for (const k of collectionMeta.bulkFields) if (values['use_' + k]) updates[k] = values['value_' + k];
-  for (const k of ['usage', 'tags'])
-    if (values['mode_' + k] !== 'keep') labels[k] = { mode: values['mode_' + k], values: comma(values['labels_' + k]) };
-  const payload = { ...bulkDraft, updates, labels };
+  for (const k of collectionMeta.bulkFields) if (values['use_' + k]) updates[k] = values['value_' + k] || '';
+  for (const k of ['usage', 'tags']) {
+    const mode = values['mode_' + k],
+      list = comma(values['labels_' + k]);
+    if (mode && mode !== 'keep' && (list.length || mode === 'replace')) labels[k] = { mode, values: list };
+  }
+  return { ...bulkDraft, updates, labels };
+}
+// Rows, switches and the preview follow the form (also when a value is set from outside, as tests do).
+function bulkSync() {
+  const form = $('#modal-form');
+  if (!form?.querySelector('.bulk-sheet')) return;
+  for (const row of form.querySelectorAll('[data-bulk-field]')) {
+    const k = row.dataset.bulkField,
+      use = form.elements.namedItem('use_' + k).checked,
+      value = form.elements.namedItem('value_' + k).value,
+      act = !use ? 'keep' : row.dataset.clear === '1' && !value ? 'clear' : 'set';
+    row.classList.toggle('changing', use);
+    row.classList.toggle('clearing', act === 'clear');
+    row.querySelectorAll('[data-action="bk-act"]').forEach(b => {
+      const on = b.dataset.id === k + '|' + act;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-pressed', String(on));
+    });
+  }
+  for (const row of form.querySelectorAll('[data-bulk-labels]')) {
+    const k = row.dataset.bulkLabels,
+      mode = form.elements.namedItem('mode_' + k).value;
+    row.classList.toggle('changing', mode !== 'keep');
+    row.querySelectorAll('[data-action="bk-mode"]').forEach(b => {
+      const on = b.dataset.id === k + '|' + mode;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-pressed', String(on));
+    });
+  }
+  clearTimeout(bulkPreviewTimer);
+  bulkPreviewTimer = setTimeout(() => void bulkRefreshPreview(), 250);
+}
+async function bulkRefreshPreview() {
+  const box = $('#bulk-preview');
+  if (!box) return;
+  const payload = bulkPayload(),
+    serial = ++bulkPreviewSerial,
+    count = Object.keys(payload.updates).length + Object.keys(payload.labels).length,
+    submit = $('#dialog .dialog-footer [type=submit]'),
+    summary = $('#bulk-summary');
+  if (!count) {
+    box.innerHTML =
+      '<div class="bk-empty">Choose <b>Set to…</b>, <b>Clear</b> or a label action on the left. The cars that change appear here.</div>';
+    if (submit) submit.textContent = 'Apply changes';
+    if (summary) summary.textContent = 'Nothing chosen yet';
+    return;
+  }
   let plan;
   try {
     plan = await api('plan', 'bulk.preview', payload);
   } catch (e) {
-    $('#form-error').hidden = false;
-    $('#form-error').textContent = e.message;
+    if (serial === bulkPreviewSerial) box.innerHTML = `<p class="bk-error">${esc(e.message)}</p>`;
     return;
   }
-  modal(
-    'Review bulk edit',
-    `<p><strong>${plan.changed} of ${plan.selected} selected cars will change.</strong> These updates will be saved together.</p>${plan.rows.length ? `<div class="table-wrap"><table><thead><tr><th>Car</th><th>Field</th><th>Before</th><th>After</th></tr></thead><tbody>${plan.rows.flatMap(r => r.changes.map(c => `<tr><td>${esc(r.name)}</td><td>${esc(fieldLabel(c.key))}</td><td>${esc(Array.isArray(c.before) ? c.before.join(', ') : c.before || 'Empty')}</td><td>${esc(Array.isArray(c.after) ? c.after.join(', ') : c.after || 'Empty')}</td></tr>`)).join('')}</tbody></table></div>` : '<p>The selected records already match these changes.</p>'}<label class="check-row mt"><input type="checkbox" name="confirmed" required>I confirm these changes to the selected cars.</label>`,
-    async values => {
-      await change('car.bulk', { ...payload, confirmed: !!values.confirmed });
-      toast('Bulk changes saved.');
-    },
-    'Apply bulk changes'
-  );
+  if (serial !== bulkPreviewSerial || !$('#bulk-preview')) return;
+  const per = new Map();
+  for (const r of plan.rows)
+    for (const c of r.changes) {
+      if (!per.has(c.key)) per.set(c.key, { count: 0, examples: [] });
+      const p = per.get(c.key);
+      p.count++;
+      if (p.examples.length < 2) p.examples.push({ name: r.name, ...c });
+    }
+  const show = v => (Array.isArray(v) ? v.join(', ') : v) || 'empty',
+    title = k => {
+      if (k in payload.updates)
+        return payload.updates[k] ? `${fieldLabel(k)} → ${payload.updates[k]}` : `${fieldLabel(k)} cleared`;
+      const l = payload.labels[k];
+      return `${fieldLabel(k)} ${{ add: '+', remove: '−', replace: '=' }[l.mode]} ${l.values.join(', ') || 'none'}`;
+    };
+  box.innerHTML = `<div class="bk-big"><div><b class="mono">${plan.changed}</b><small>${plan.changed === 1 ? 'car changes' : 'cars change'}</small></div><div><b class="mono">${plan.selected - plan.changed}</b><small>already match</small></div></div>${[
+    ...Object.keys(payload.updates),
+    ...Object.keys(payload.labels)
+  ]
+    .map(k => {
+      const p = per.get(k) || { count: 0, examples: [] },
+        cleared = k in payload.updates && !payload.updates[k];
+      return `<div class="bk-chg ${cleared ? 'clear' : ''}"><div class="h"><b>${esc(title(k))}</b><span class="mono">${p.count} ${p.count === 1 ? 'car' : 'cars'}</span></div>${p.examples.map(x => `<div class="ex"><span class="car">${esc(x.name)}</span><s>${esc(show(x.before))}</s><span aria-hidden="true">→</span><em>${esc(show(x.after))}</em></div>`).join('') || '<div class="ex none">Already matches on every selected car</div>'}</div>`;
+    })
+    .join(
+      ''
+    )}${plan.rows.length ? `<details class="bk-all"><summary>See every car (${plan.rows.length})</summary><div class="table-wrap"><table><thead><tr><th>Car</th><th>Field</th><th>Before</th><th>After</th></tr></thead><tbody>${plan.rows.flatMap(r => r.changes.map(c => `<tr><td>${esc(r.name)}</td><td>${esc(fieldLabel(c.key))}</td><td>${esc(show(c.before))}</td><td>${esc(show(c.after))}</td></tr>`)).join('')}</tbody></table></div></details>` : ''}`;
+  if (submit)
+    submit.textContent = plan.changed
+      ? `Apply to ${plan.changed} ${plan.changed === 1 ? 'car' : 'cars'}`
+      : 'Apply changes';
+  if (summary)
+    summary.innerHTML = `<b>${count} ${count === 1 ? 'change' : 'changes'}</b> on <b>${plan.changed} ${plan.changed === 1 ? 'car' : 'cars'}</b> · saved together, in one step`;
 }
+// "Review changes" from earlier versions now simply refreshes the preview in the same window.
+async function previewBulk() {
+  bulkSync();
+  clearTimeout(bulkPreviewTimer);
+  await bulkRefreshPreview();
+}
+function bulkAction(action, id) {
+  if (!['bk-act', 'bk-mode', 'bk-label'].includes(action) || !$('.bulk-sheet')) return false;
+  const [k, value] = [id.slice(0, id.indexOf('|')), id.slice(id.indexOf('|') + 1)],
+    form = $('#modal-form');
+  if (action === 'bk-act') {
+    const row = $(`[data-bulk-field="${k}"]`),
+      use = form.elements.namedItem('use_' + k),
+      input = form.elements.namedItem('value_' + k);
+    use.checked = value !== 'keep';
+    row.dataset.clear = value === 'clear' ? '1' : '';
+    if (value === 'clear') input.value = '';
+    bulkSync();
+    if (value === 'set') input.focus();
+  }
+  if (action === 'bk-mode') {
+    form.elements.namedItem('mode_' + k).value = value;
+    bulkSync();
+    if (value !== 'keep') form.elements.namedItem('labels_' + k).focus();
+  }
+  if (action === 'bk-label') {
+    const input = form.elements.namedItem('labels_' + k),
+      list = comma(input.value);
+    if (!list.includes(value)) input.value = [...list, value].join(', ');
+    if (form.elements.namedItem('mode_' + k).value === 'keep') form.elements.namedItem('mode_' + k).value = 'add';
+    bulkSync();
+  }
+  return true;
+}
+document.addEventListener('input', e => {
+  if (!e.target.closest?.('.bulk-sheet')) return;
+  const name = e.target.name || '';
+  // Typing a value means "Set to…" this field.
+  if (name.startsWith('value_')) {
+    const k = name.slice(6),
+      use = $('#modal-form').elements.namedItem('use_' + k);
+    use.checked = true;
+    $(`[data-bulk-field="${k}"]`).dataset.clear = '';
+  }
+  if (name.startsWith('labels_') && e.target.value.trim()) {
+    const mode = $('#modal-form').elements.namedItem('mode_' + name.slice(7));
+    if (mode.value === 'keep') mode.value = 'add';
+  }
+  bulkSync();
+});
+document.addEventListener('change', e => {
+  if (e.target.closest?.('.bulk-sheet') && e.target.name !== 'confirmed') bulkSync();
+});
 function renderDocuments(c) {
   if (!local()) return '';
   const docs = db.documents.filter(d => d.carId === c.id);

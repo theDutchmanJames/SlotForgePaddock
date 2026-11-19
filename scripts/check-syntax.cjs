@@ -16,7 +16,7 @@ const files=[
   "scripts/build-startup-splash.cjs",
   "tests/application-frame.test.cjs",
   "tests/startup-feedback.test.cjs",
-  "tests/startup-window-smoke.cjs", "tests/part-sheet-smoke.cjs", "tests/job-window-smoke.cjs", "tests/shopping-basket-smoke.cjs",
+  "tests/startup-window-smoke.cjs", "tests/part-sheet-smoke.cjs", "tests/job-window-smoke.cjs", "tests/shopping-basket-smoke.cjs", "tests/bulk-edit-smoke.cjs",
   "tests/windows-installer.test.cjs",
   "src/catalogue-pricing.cjs",
   "tests/catalogue-pricing.test.cjs",
