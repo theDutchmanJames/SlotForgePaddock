@@ -1063,6 +1063,7 @@ document.addEventListener('click', async event => {
     if (bulkAction(action, id)) return;
     if (setupAction(action, id)) return;
     if (carPickerAction(action, id)) return;
+    if (fieldArrangerAction(action, id)) return;
     if (await picturePreviewAction(action, id)) return;
     if (await pictureAction(action, id)) return;
     if (await historicalEvidenceAction(action, id)) return;

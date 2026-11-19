@@ -24,10 +24,7 @@ function renderOverviewPanel(c, section) {
   return `<section class="panel section-panel overview-details-panel" data-overview-panel="${section}"><div class="panel-heading"><h2>${icon(uiPanelIcon(title))}${title}</h2>${local() ? btn(icon('edit') + ' Choose fields', 'overview-fields', 'small ghost', section) : ''}</div><div class="panel-content">${keys.length ? dl(keys.map(k => [k === 'price' && slotforgeDomain.isWishlist(c) ? 'Price' : overviewFieldLabel(k), overviewFieldValue(c, k)])) : '<p class="muted">No fields selected. Choose fields to personalise this panel.</p>'}${section === 'configuration' ? btn('View technical details ' + icon('next'), 'section', 'small ghost', 'Technical & parts') : ''}</div></section>`;
 }
 function overviewEditorBody() {
-  const { section, layout } = overviewDraft,
-    keys = layout[section],
-    available = OverviewLayout.fields(collectionMeta.columns, section).filter(f => !keys.includes(f.key));
-  return `<p class="muted">Choose up to 16 fields and arrange their order. This panel layout applies to every car in your local collection.</p><div class="overview-field-order">${keys.map((key, index) => `<div class="list-row"><strong>${esc(overviewFieldLabel(key))}</strong><div class="actions"><button type="button" class="btn small" data-action="overview-up" data-id="${index}" aria-label="Move ${esc(overviewFieldLabel(key))} up" ${index === 0 ? 'disabled' : ''}>↑</button><button type="button" class="btn small" data-action="overview-down" data-id="${index}" aria-label="Move ${esc(overviewFieldLabel(key))} down" ${index === keys.length - 1 ? 'disabled' : ''}>↓</button>${btn('Remove', 'overview-remove', 'small', String(index))}</div></div>`).join('') || '<p class="muted">No fields selected.</p>'}</div><div class="overview-add-field mt"><label class="field">Available fields<select id="overview-field-add" ${available.length && keys.length < 16 ? '' : 'disabled'}>${available.map(f => `<option value="${esc(f.key)}">${esc(overviewFieldLabel(f.key))}</option>`).join('')}</select></label><button type="button" class="btn" data-action="overview-add" ${available.length && keys.length < 16 ? '' : 'disabled'}>Add field</button></div><div class="actions mt">${btn('Restore default fields', 'overview-defaults', 'small')}</div>`;
+  return faBody(faContext('overview'));
 }
 function editOverviewFields(section) {
   if (!local() || !Object.hasOwn(overviewPanelTitles, section)) return;
@@ -41,6 +38,7 @@ function editOverviewFields(section) {
     },
     'Save layout'
   );
+  faOpen();
 }
 function overviewAction(action, id) {
   if (action === 'overview-fields') {

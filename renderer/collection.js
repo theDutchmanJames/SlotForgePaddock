@@ -51,10 +51,7 @@ function renderCollectionTable(list, check) {
     .join('')}</tbody></table></div>`;
 }
 function columnEditorBody() {
-  return `<p class="muted">Choose up to 16 columns. Name remains available so you can open a car. Saved views remember their own column order.</p><div id="column-order">${columnDraft.map((key, index) => `<div class="list-row"><strong>${esc(columnLabel(key))}</strong><div class="actions">${index ? btn('↑', 'column-up', 'small', String(index)) : ''}${index < columnDraft.length - 1 ? btn('↓', 'column-down', 'small', String(index)) : ''}${key !== 'name' ? btn('Remove', 'column-remove', 'small', String(index)) : ''}</div></div>`).join('')}</div><div class="row mt"><label class="field">Add a column<select id="column-add-select">${collectionMeta.columns
-    .filter(c => !columnDraft.includes(c.key))
-    .map(c => `<option value="${c.key}">${esc(c.group + ' · ' + columnLabel(c.key))}</option>`)
-    .join('')}</select></label>${btn('Add column', 'column-add')}</div>`;
+  return faBody(faContext('columns'));
 }
 function configureColumns() {
   columnDraft = [...tableColumns];
@@ -67,8 +64,9 @@ function configureColumns() {
       tableColumns = [...columnDraft];
       mode = 'table';
     },
-    'Save column order'
+    'Save columns'
   );
+  faOpen();
 }
 function refreshColumnEditor() {
   $('#columns-editor').innerHTML = columnEditorBody();

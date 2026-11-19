@@ -1,0 +1,72 @@
+/* The field arranger (Table columns, Choose fields), after docs/ui-reference/field-arranger-2026-11 option B:
+   chips in order on top, the real table or panel below, the fields you can add in a tray at the bottom. */
+#dialog:has(.fa-win){width:min(1260px,96vw);max-width:96vw;height:min(860px,92vh);max-height:92vh;overflow:hidden}
+#dialog:has(.fa-win)>form{display:flex;flex-direction:column;height:100%}
+#dialog:has(.fa-win)>form>.dialog-head,#dialog:has(.fa-win)>form>.dialog-footer{flex:none}
+#dialog:has(.fa-win)>form>.dialog-body{display:flex;flex-direction:column;flex:1;min-height:0;max-height:none;padding:0;overflow:hidden}
+#dialog:has(.fa-win) #columns-editor,#dialog:has(.fa-win) #overview-fields-editor{display:flex;flex-direction:column;flex:1;min-height:0}
+#dialog:has(.fa-win) #form-error{flex:none;margin:6px 22px}
+#dialog:has(.fa-win) .dialog-footer{align-items:center}
+.fa-win{display:flex;flex-direction:column;flex:1;min-height:0}
+.fa-win .eye{font:600 10px "Segoe UI",system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.fa-stage{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:7px;padding:16px 22px}
+.fa-stage>.eye:not(:first-child){margin-top:10px}
+
+/* your fields, in order */
+.fa-hdr{display:flex;flex-wrap:wrap;align-items:center;gap:6px;min-height:48px;padding:8px;border:1px dashed var(--line);border-radius:11px}
+.fa-none{padding:0 6px;font-size:12.5px}
+.fa-count{margin-left:auto;padding:0 6px;font-size:12px;color:var(--muted)}.fa-count b{color:var(--ink)}
+.fa-chip{position:relative;display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 4px 0 9px;border:1px solid color-mix(in srgb,var(--blue) 45%,var(--line));border-radius:8px;background:color-mix(in srgb,var(--blue) 10%,var(--panel));font-size:12.5px;font-weight:600;cursor:grab;user-select:none}
+.fa-chip.lock{border-color:var(--line);background:color-mix(in srgb,var(--ink) 6%,var(--panel))}
+.fa-chip.drag{opacity:.45}
+.fa-chip.before::before,.fa-chip.after::after{content:'';position:absolute;top:3px;bottom:3px;width:3px;border-radius:3px;background:var(--blue)}
+.fa-chip.before::before{left:-6px}.fa-chip.after::after{right:-6px}
+.fa-grip{color:var(--muted);letter-spacing:-2px;opacity:.7}
+.fa-name{white-space:nowrap}
+.fa-move{display:inline-flex;width:0;overflow:hidden;transition:width .12s}
+.fa-chip:hover .fa-move,.fa-chip:focus-within .fa-move{width:44px}
+#dialog .fa-mini{display:inline-grid;place-items:center;width:22px;height:24px;min-height:0;padding:0;border:0;border-radius:6px;background:transparent;box-shadow:none;color:var(--muted);font-size:14px;font-weight:400;line-height:1}
+#dialog .fa-mini:hover:not(:disabled){background:color-mix(in srgb,var(--ink) 10%,transparent);color:var(--ink)}
+#dialog .fa-mini:disabled{opacity:.3}
+#dialog .fa-x:hover{color:var(--accent)}
+
+/* the preview */
+.fa-preview{min-width:0}
+.fa-table{overflow:auto;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+.fa-table table{width:100%;border-collapse:collapse;font-size:12.5px}
+.fa-table th{padding:8px 12px;text-align:left;font:600 10px "Segoe UI",system-ui,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line);white-space:nowrap;background:transparent}
+.fa-table td{padding:6px 12px;border-bottom:1px solid color-mix(in srgb,var(--line) 60%,transparent);white-space:nowrap;max-width:260px;overflow:hidden;text-overflow:ellipsis}
+.fa-table tr:last-child td{border-bottom:0}
+.fa-nm{font-weight:600}.fa-nm>*{vertical-align:middle}
+.fa-nm img,.fa-pic{width:46px;height:29px;margin-right:8px;object-fit:cover;border-radius:5px}
+.fa-table th.hot{color:var(--blue);background:color-mix(in srgb,var(--blue) 10%,transparent)}
+.fa-car{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.fa-car img{width:96px;height:60px;object-fit:cover;border-radius:8px}
+.fa-car b{font:italic 700 18px var(--font-cond);text-transform:uppercase;letter-spacing:.02em}
+.fa-panel{border:1px solid var(--line);border-radius:12px;background:var(--panel);overflow:hidden}
+.fa-panel h4{margin:0;padding:12px 16px;border-bottom:1px solid color-mix(in srgb,var(--line) 70%,transparent);font:italic 700 17px var(--font-cond);text-transform:uppercase;letter-spacing:.02em}
+.fa-panel>p{margin:12px 16px}
+.fa-panel dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));margin:0}
+.fa-panel dl div{min-width:0;padding:9px 16px;border-bottom:1px solid color-mix(in srgb,var(--line) 60%,transparent)}
+.fa-panel dt{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.fa-panel dd{margin:2px 0 0;font-size:13px;font-weight:600;white-space:pre-wrap;overflow-wrap:anywhere}
+.fa-panel dl div.hot{background:color-mix(in srgb,var(--blue) 9%,transparent)}
+
+/* fields to add */
+.fa-tray{flex:none;max-height:min(270px,38vh);overflow:auto;padding:10px 22px 14px;border-top:1px solid var(--line);background:color-mix(in srgb,var(--bg) 30%,var(--panel))}
+.fa-tray-head{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-bottom:4px}
+.fa-q{position:relative;width:min(260px,100%);margin:0}
+.fa-q::before{content:'';position:absolute;left:11px;top:50%;width:10px;height:10px;margin-top:-7px;border:2px solid var(--muted);border-radius:50%;pointer-events:none}
+.fa-q::after{content:'';position:absolute;left:21px;top:50%;width:5px;height:2px;margin-top:3px;background:var(--muted);transform:rotate(45deg);pointer-events:none}
+#dialog .fa-q input{width:100%;min-height:32px;padding-left:32px}
+.fa-row{display:grid;grid-template-columns:170px minmax(0,1fr);gap:12px;align-items:start;padding:5px 0}
+.fa-row[hidden]{display:none}
+.fa-row>.eye{padding-top:8px}
+.fa-chips{display:flex;flex-wrap:wrap;gap:6px}
+#dialog .fa-add{display:inline-flex;align-items:center;gap:6px;height:28px;min-height:0;padding:0 11px;border:1px solid var(--line);border-radius:999px;background:var(--panel);box-shadow:none;color:var(--ink);font-size:12.5px;font-weight:400;cursor:pointer}
+#dialog .fa-add[hidden]{display:none}
+#dialog .fa-add i{font-style:normal;font-weight:700;color:var(--blue)}
+#dialog .fa-add:hover:not(:disabled){border-color:color-mix(in srgb,var(--blue) 50%,var(--line))}
+#dialog .fa-add:disabled{opacity:.4;cursor:not-allowed}
+#dialog .fa-add.drag{opacity:.45}
+@media (max-width:760px){.fa-row{grid-template-columns:1fr;gap:4px}.fa-row>.eye{padding-top:0}}
