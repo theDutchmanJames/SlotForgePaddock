@@ -1,0 +1,38 @@
+/* Settings, after SlotForgeRestyle.md (Double Rail, Settings Sheet): a quiet section list, each panel a quiet
+   sheet with a small title, label / value rows as slim two-half rows, paths in Roboto Mono, small print muted. */
+#main[data-page="Settings"] .settings-layout{grid-template-columns:220px minmax(0,1fr);gap:22px}
+#main[data-page="Settings"] .settings-rail{position:sticky;top:12px;gap:2px;padding:12px 8px;border:1px solid var(--line);border-radius:12px;background:color-mix(in srgb,var(--bg) 55%,var(--panel))}
+#main[data-page="Settings"] .settings-rail button{min-height:36px;padding:7px 10px;border:0;border-radius:8px;background:transparent;box-shadow:none;color:color-mix(in srgb,var(--ink) 82%,var(--muted));font-size:13.5px;font-weight:400}
+#main[data-page="Settings"] .settings-rail button:hover{background:color-mix(in srgb,var(--ink) 6%,transparent)}
+#main[data-page="Settings"] .settings-rail button.active{background:color-mix(in srgb,var(--ink) 10%,var(--panel));border:0;box-shadow:none;color:var(--ink);font-weight:600}
+#main[data-page="Settings"] .settings-rail button svg{width:17px;height:17px;color:var(--muted)}
+#main[data-page="Settings"] .settings-rail button.active svg{color:var(--accent)}
+#main[data-page="Settings"] .settings-content{gap:16px}
+
+/* every panel a quiet sheet */
+#main[data-page="Settings"] .settings-content .panel{border:1px solid var(--line);border-top:1px solid var(--line);border-radius:12px;box-shadow:none}
+#main[data-page="Settings"] .settings-content .panel-heading{padding:14px 18px 4px;border:0;background:none}
+#main[data-page="Settings"] .settings-content .panel-heading h2{font-size:20px}
+#main[data-page="Settings"] .settings-content .panel-heading h2 svg{width:20px;height:20px;padding:3px;border-radius:6px;color:var(--muted);background:color-mix(in srgb,var(--ink) 8%,var(--panel))}
+#main[data-page="Settings"] .settings-content .panel-content{padding:6px 18px 16px}
+#main[data-page="Settings"] .settings-content .panel-content>p:first-child{margin-top:0;color:var(--muted);font-size:13px}
+#main[data-page="Settings"] .settings-content h3{margin:14px 0 6px;font:600 10.5px "Segoe UI",system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase;font-style:normal;color:var(--muted)}
+
+/* label / value rows */
+#main[data-page="Settings"] .details{margin:6px 0 10px;border:1px solid var(--line);border-radius:10px;background:color-mix(in srgb,var(--bg) 22%,var(--panel));overflow:hidden}
+#main[data-page="Settings"] .details>div{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:6px 20px;min-height:40px;padding:8px 14px;border-bottom:1px solid var(--line)}
+#main[data-page="Settings"] .details>div:last-child{border-bottom:0}
+#main[data-page="Settings"] .details dt{max-width:none;font-size:13px;font-weight:600;color:var(--ink)}
+#main[data-page="Settings"] .details dd{font-size:13px;color:var(--ink);text-align:right}
+
+/* paths and small print */
+#main[data-page="Settings"] .code{margin:4px 0 8px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);font:500 12px var(--font-mono);letter-spacing:0}
+#main[data-page="Settings"] .settings-content .tiny.muted{font-size:11.5px;line-height:1.5}
+#main[data-page="Settings"] .settings-content .actions{flex-wrap:wrap;gap:8px;margin:10px 0}
+#main[data-page="Settings"] .settings-content details>summary{cursor:pointer;font-weight:600}
+@media(max-width:900px){#main[data-page="Settings"] .settings-layout{grid-template-columns:1fr}#main[data-page="Settings"] .settings-rail{position:static}}
+/* the banner preview looks like the welcome card on Overview */
+.banner-preview{padding:18px 20px;border:1px solid var(--line);border-top:1px solid var(--line);border-radius:12px;background:var(--panel);box-shadow:none}
+.banner-preview .label{font:700 11px "Segoe UI",system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+#main .banner-preview h1,#dialog .banner-preview h1{margin:4px 0;font:italic 700 30px/1 var(--font-cond);text-transform:uppercase;letter-spacing:.02em}
+.banner-preview p{margin:0;color:var(--muted);font-size:13.5px}

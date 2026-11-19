@@ -207,7 +207,7 @@ function renderExchangeDesign() {
   if (catalogueReview?.active) return renderCatalogueReview();
   const cards = [
     [
-      'Import spreadsheet',
+      'Import car spreadsheet',
       'list',
       'blue',
       'Import CSV or Excel (.xlsx) car tables. Match columns to editable car fields and review the rows before saving. Resume unfinished imports from Review.',

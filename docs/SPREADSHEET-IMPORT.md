@@ -1,6 +1,6 @@
 # Import cars from CSV or Excel
 
-Open **Import & Export → Import spreadsheet → Choose CSV / XLSX**.
+Open **Import & Export → Import car spreadsheet → Choose CSV / XLSX**.
 
 1. **Check file:** choose the worksheet and the row containing column headings. CSV imports also let you choose comma, semicolon or tab separation. Use **Refresh file preview** to see changes. Date order, decimal separator and label separator are under **Date, number and label formats**. Click **Match columns**.
 2. **Match columns:** the spreadsheet keeps its original headings, row numbers and cell alignment. Each column has a Paddock field button directly below its heading. Click it to search every editable field or filter by field group. **Do not import this column** greys out that column. Map one column to **Identity → Display name**; duplicate assignments are flagged before continuing. Scroll sideways for additional columns, then click **Choose cars**.
