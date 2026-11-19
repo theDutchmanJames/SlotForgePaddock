@@ -1,0 +1,44 @@
+/* Workshop, after SlotForgeRestyle.md: one switch for the three views, neutral cards (no coloured top
+   borders; colour only on chips and tiles), supplies as Garage Cards with only the filled rows. */
+.workshop-strip{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:0 0 20px}
+.workshop-tabs .btn svg{width:15px;height:15px}
+
+/* jobs */
+#main[data-page="Workshop"] .job-queue-card,#main[data-page="Workshop"] .job-queue-card[class*="job-tone-"]{border:1px solid var(--line);border-top:1px solid var(--line);border-radius:12px;box-shadow:none;background:var(--panel)}
+#main[data-page="Workshop"] .job-queue-card:hover{border-color:color-mix(in srgb,var(--job-tone,var(--ink)) 45%,var(--line))}
+#main[data-page="Workshop"] .job-queue-card .job-kind{border:0;background:color-mix(in srgb,var(--job-tone,var(--amber)) 16%,transparent)}
+#main[data-page="Workshop"] .job-car-name{font:italic 700 21px/1.05 var(--font-cond);text-transform:uppercase;letter-spacing:.02em}
+#main[data-page="Workshop"] .job-queue-footer{margin:auto -18px -18px;padding:9px 18px;border-top:1px solid var(--line);border-radius:0 0 12px 12px;background:color-mix(in srgb,var(--bg) 50%,var(--panel))}
+#main[data-page="Workshop"] .job-queue-heading h2 .badge{font-family:var(--font-mono)}
+#main[data-page="Workshop"] .workshop-panels .panel,#main[data-page="Workshop"] .section-panel{border-top:1px solid var(--line);box-shadow:none}
+
+/* an open job */
+#main[data-page="Workshop"] .job-plan-panel,#main[data-page="Workshop"] .rebuild-link,#main[data-page="Workshop"] .rebuild-planner,#main[data-page="Workshop"] .purchase-card{border-top:1px solid var(--line);box-shadow:none}
+#main[data-page="Workshop"] .job-plan-panel .panel-heading h2,#main[data-page="Workshop"] .job-plan-panel h3{font-size:18px}
+
+/* supplies */
+#main[data-page="Workshop"] .toolbox-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px;align-items:stretch}
+.toolbox-grid .panel.supply-card{display:flex;flex-direction:column;padding:0;border:1px solid var(--line);border-top:1px solid var(--line);border-radius:12px;background:var(--panel);box-shadow:none;overflow:hidden}
+.toolbox-grid .supply-card:hover{border-color:color-mix(in srgb,var(--ink) 26%,var(--line))}
+.toolbox-grid .supply-card.is-low{border-color:color-mix(in srgb,var(--amber) 55%,var(--line))}
+.supply-pic{position:relative;flex:none;height:120px;border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--ink) 5%,var(--panel));overflow:hidden}
+.supply-pic .item-visual{position:absolute;inset:0;width:auto;height:auto;margin:0;border:0;border-radius:0;background:none;display:grid;place-items:center}
+.supply-pic .item-visual img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.supply-pic .item-visual svg{width:46px;height:46px}
+.supply-flag{position:absolute;left:8px;top:8px;padding:2px 8px;border-radius:999px;background:color-mix(in srgb,var(--bg) 88%,transparent);color:var(--amber);font-size:11px;font-weight:700}
+.supply-body{display:flex;flex-direction:column;gap:3px;flex:1;min-width:0;padding:11px 13px 12px}
+.supply-eye{font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);overflow-wrap:anywhere}
+#main .supply-body h2{margin:1px 0 6px;font-size:17px;line-height:1.1;overflow-wrap:anywhere}
+.supply-body .card-row b.mono{font-weight:500}
+.supply-body details{margin-top:6px;font-size:12px}
+.supply-body details summary{color:var(--muted);cursor:pointer}
+.supply-notes{margin:6px 0 0;font-size:12px}
+.supply-foot{display:flex;align-items:center;gap:6px;padding:8px 10px;border-top:1px solid var(--line);background:color-mix(in srgb,var(--bg) 50%,var(--panel))}
+.supply-foot .btn.danger{margin-left:auto}
+.supply-card>details{margin:0;padding:8px 13px;border-top:1px solid var(--line);font-size:12px}
+.supply-card>details summary{color:var(--muted);cursor:pointer}
+
+/* guides */
+#main[data-page="Workshop"] .guide-card,#main[data-page="Workshop"] .guide-wall{box-shadow:none}
+#main[data-page="Workshop"] .shopping-section.is-embedded>.plan-section-heading h3{color:var(--ink)}
+#main[data-page="Workshop"] .rebuild-link-kicker,#main[data-page="Workshop"] .rebuild-planner h2,#main[data-page="Workshop"] .job-rebuild h2{display:flex;align-items:center;gap:8px}

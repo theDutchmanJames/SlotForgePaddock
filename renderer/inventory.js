@@ -527,23 +527,26 @@ function renderStock() {
 
 function toolboxTabs() {
   return (
-    '<div class="tabs">' +
+    '<div class="workshop-strip"><span class="segment workshop-tabs" role="group" aria-label="Workshop">' +
     ['Jobs', 'Workshop supplies', 'Manuals and Part Guides']
       .map(
-        t =>
-          '<button data-action="toolbox-tab" data-id="' +
-          t +
-          '" class="' +
-          (toolboxTab === t ? 'active' : '') +
+        tab =>
+          '<button type="button" data-action="toolbox-tab" data-id="' +
+          tab +
+          '" class="btn ' +
+          (toolboxTab === tab ? 'on active' : '') +
+          '" aria-pressed="' +
+          (toolboxTab === tab) +
           '">' +
-          icon(t === 'Jobs' ? 'tool' : t === 'Workshop supplies' ? 'box' : 'photos') +
-          t +
+          icon(tab === 'Jobs' ? 'tool' : tab === 'Workshop supplies' ? 'box' : 'photos') +
+          tab +
           '</button>'
       )
       .join('') +
-    '</div>'
+    '</span></div>'
   );
 }
+
 function renderWorkshop() {
   if (!local()) return empty('Workshop records are local', 'Switch to your local database to use your toolbox.');
   if (workshopJob) return renderJob();
@@ -575,30 +578,34 @@ function supplyCards() {
         list
           .map(
             s =>
-              '<section class="panel"><div class="item-row">' +
+              '<section class="panel supply-card ' +
+              (lowSupply(s) ? 'is-low' : '') +
+              '"><div class="supply-pic">' +
               itemVisual(s) +
-              '<div><h2>' +
+              (lowSupply(s) ? '<span class="supply-flag">Low stock</span>' : '') +
+              '</div><div class="supply-body"><span class="supply-eye">' +
+              esc([s.category, s.partType || s.kind].filter(Boolean).join(' · ')) +
+              '</span><h2>' +
               esc(s.name) +
-              '</h2><div class="tiny muted">' +
-              esc(s.category) +
-              ' · ' +
-              esc(s.partType || s.kind) +
-              '</div></div></div><div class="row mt">' +
-              badge(supplyAmount(s), lowSupply(s) ? 'low-stock' : '') +
-              (lowSupply(s) ? badge('Low stock', 'low-stock') : '') +
-              '</div>' +
-              dl([
-                ['Quantity', String(s.quantity)],
-                ['Location', s.location],
-                ['Condition', s.condition],
-                ['Low-stock threshold', s.minimum === null ? 'Not set' : s.minimum + ' ' + s.unit]
-              ]) +
+              '</h2>' +
+              [
+                s.kind === 'Consumable' && s.remaining !== null ? ['Amount', supplyAmount(s), 'mono'] : null,
+                ['Quantity', String(s.quantity), 'mono'],
+                ['Location', s.location, ''],
+                ['Condition', s.condition, ''],
+                ['Low stock at', s.minimum === null ? '' : s.minimum + ' ' + s.unit, 'mono']
+              ]
+                .filter(r => r && r[1])
+                .map(
+                  ([l, v, k]) =>
+                    '<div class="card-row"><span>' + l + '</span><b class="' + k + '">' + esc(v) + '</b></div>'
+                )
+                .join('') +
               catalogueDetails(s) +
-              '<p class="prewrap muted">' +
-              esc(s.notes) +
-              '</p><div class="actions">' +
-              btn(s.kind === 'Consumable' ? 'Update amount / edit' : 'Edit item', 'edit-supply', 'small', s.id) +
-              btn(s.archived ? 'Restore' : 'Archive…', 'archive-supply', 'small', s.id) +
+              (s.notes ? '<p class="prewrap muted supply-notes">' + esc(s.notes) + '</p>' : '') +
+              '</div><div class="supply-foot">' +
+              btn(s.kind === 'Consumable' ? 'Update amount' : 'Edit', 'edit-supply', 'small', s.id) +
+              btn(s.archived ? 'Restore' : 'Archive…', 'archive-supply', 'small ghost', s.id) +
               binBtn('Delete supply…', 'delete-supply', s.id) +
               '</div>' +
               (s.history.length
