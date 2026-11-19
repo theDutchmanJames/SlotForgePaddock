@@ -23,3 +23,14 @@
 #main[data-page="Connections"] .integration-shortcut p{color:var(--muted);font-size:12.5px}
 @media(max-width:900px){.connections-grid{grid-template-columns:1fr}}
 #main[data-page="Connections"] .connections-grid+*{margin-top:16px}
+
+/* the Dealership host details: small grey labels, the address and password as compact Roboto Mono rows */
+#main .club-connections .panel-body h3{margin:14px 0 6px;font:600 10.5px "Segoe UI",system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase;font-style:normal;color:var(--muted)}
+.club-connections .panel-body .code{margin:0 0 6px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);font:500 12.5px var(--font-mono);letter-spacing:0;color:var(--ink);overflow-wrap:anywhere}
+.club-connections .panel-body .code+.tiny{margin-top:4px}
+.club-connections .panel-body .actions{flex-wrap:wrap;gap:8px;margin-top:12px}
+/* Turn off Dealership Mode: a quiet sheet like the cards above */
+.club-exit{padding:16px 18px;border:1px solid var(--line);border-top:1px solid var(--line);border-radius:12px;box-shadow:none}
+#main .club-exit h3{margin:0 0 4px;font-size:20px}
+.club-exit>p:not(.tiny){margin:0 0 12px;color:var(--muted);font-size:13.5px}
+.club-exit>.tiny{margin:10px 0 0}

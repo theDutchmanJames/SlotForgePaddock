@@ -48,7 +48,7 @@ function dealershipPasswordFields() {
 }
 function renderDealershipExit() {
   if (!db.club || db.club.replica || clubState?.active) return '';
-  return `<div class="panel mt"><h3>Turn off Dealership Mode</h3><p class="muted">Return this collection to ordinary local use. Your cars, history and shared local library with Timing stay available.</p>${btn('Turn off Dealership Mode…', 'club-disable')}<p class="tiny muted">Stopping hosting only pauses network access. Turning the mode off also removes its banner and dealership review rules.</p></div>`;
+  return `<div class="panel mt club-exit"><h3>Turn off Dealership Mode</h3><p class="muted">Return this collection to ordinary local use. Your cars, history and shared local library with Timing stay available.</p>${btn('Turn off Dealership Mode…', 'club-disable')}<p class="tiny muted">Stopping hosting only pauses network access. Turning the mode off also removes its banner and dealership review rules.</p></div>`;
 }
 function renderDealershipHost(c) {
   const hosting = net.sharing && net.hostingMode === 'dealership';
@@ -303,6 +303,9 @@ async function clubAction(action, id) {
   }
   if (action === 'club-start' || action === 'club-stop') {
     await api('club', action === 'club-start' ? 'start' : 'stop');
+    // a "could not start" message from an earlier try is out of date once this succeeds
+    const t = $('#toast');
+    if (t?.className === 'error') t.hidden = true;
     await reloadClub();
     render();
     return true;
