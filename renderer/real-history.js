@@ -328,3 +328,6 @@ async function historyAction(action, id, target) {
   }
   return false;
 }
+document.addEventListener('mousedown', e => {
+  if (e.target.closest?.('[data-action="history-driver-remove"]')) e.preventDefault();
+});

@@ -446,7 +446,7 @@ function renderRecentWork() {
       ? '<div class="recent-work-footer"><p class="tiny muted" role="status">Showing ' +
         shown +
         ' of ' +
-        events.length +
+        total +
         ' entries</p><div class="actions">' +
         (shown < total && recentWorkLimit < 200 ? btn('Show more', 'recent-work-more', 'small') : '') +
         (recentWorkLimit > 3 ? btn('Show less', 'recent-work-less', 'small') : '') +

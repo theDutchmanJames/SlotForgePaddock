@@ -200,6 +200,14 @@ document.addEventListener('keydown', e => {
   } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
     e.preventDefault();
     items[(at + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length]?.focus();
-  } else if (e.key === 'Tab') closeCarMore();
+  } else if (e.key === 'Tab') closeCarMore(true);
 });
 addEventListener('resize', () => placeCarMore());
+addEventListener(
+  'scroll',
+  e => {
+    const menu = document.getElementById('car-more-menu');
+    if (menu && !menu.contains(e.target)) closeCarMore();
+  },
+  true
+);

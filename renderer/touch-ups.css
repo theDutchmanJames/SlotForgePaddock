@@ -116,3 +116,4 @@
 .tu-plan .field>.tu-seg,.tu-showroom .field>.tu-seg{justify-self:start;align-self:flex-start;width:max-content;max-width:100%}
 #dialog .tu-step-x{min-width:28px;padding:2px 8px;font-size:15px;color:var(--muted)}
 #dialog .tu-step-x:hover{color:var(--accent)}
+@media (max-width:1100px) and (min-width:861px){.tu-print-side{width:340px}}

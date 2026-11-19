@@ -118,6 +118,7 @@ function partSheetSync(name) {
   partSheetTitle();
 }
 function editPart(id, defaults = {}) {
+  partAgain = false;
   const fromLibrary = page === 'Library' && libraryTab === 'parts',
     revision = db.revision,
     p = id

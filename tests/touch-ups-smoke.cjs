@@ -39,7 +39,9 @@ module.exports=async({win,store,js,wait,click,fill,submit,qa})=>{
  await js(`(()=>{const e=document.querySelector('[data-step-done]');e.checked=true;e.dispatchEvent(new Event('change',{bubbles:true}))})()`);
  assert.equal(await js('document.querySelector("#tu-plan-count").textContent'),'1 of 3 steps done');
  await capture('touch-plan.png');
- await submit();await idle();const plan=store.data.planning.jobs.find(j=>j.jobId===job);assert.equal(plan.priority,'High');assert.deepEqual(plan.checklist.map(s=>[s.text,s.done]),[['Strip the chassis',true],['Fit the new motor',false],['Test on the club track',false]]);
+ // A step typed but not added with Enter is kept when saving.
+ await js("document.querySelector('#tu-new-step').value='Typed, not added'");
+ await submit();await idle();const plan=store.data.planning.jobs.find(j=>j.jobId===job);assert.equal(plan.priority,'High');assert.deepEqual(plan.checklist.map(s=>[s.text,s.done]),[['Strip the chassis',true],['Fit the new motor',false],['Test on the club track',false],['Typed, not added',false]]);
  // AI instructions: large box and a Copy button.
  await js("(async()=>{page='Import & Export';acceptSnapshot((await api('read',{queryView:{page}})).data);render()})()");await idle();
  await click('[data-action="catalogue-instructions"]');await wait('!!document.querySelector(".tu-prompt")');
@@ -53,6 +55,10 @@ module.exports=async({win,store,js,wait,click,fill,submit,qa})=>{
  await click(`[data-action="tu-cover-car"][data-id="${car}"]`);assert.equal(await js('document.querySelector("[name=carId]").value'),car);
  await capture('touch-cover.png');
  await submit();await idle();assert.equal(await js('showroom.preferences.cover.mode'),'fixed');assert.equal(await js('showroom.preferences.cover.carId'),car);
+ // The Cover options width does not stay on later windows.
+ await js("modal('Plain window','<p>Check</p>',null)");assert.equal(await js('document.querySelector("#dialog").classList.contains("tu-showroom")'),false);await click('[data-action="close-modal"]');
+ // Start a rebuild opened without a car asks for one instead of doing nothing.
+ await js('startRebuildDialog()');await js("document.querySelector('#modal-form').requestSubmit()");await wait("!document.querySelector('#form-error').hidden");assert.match(await js("document.querySelector('#form-error').textContent"),/Choose the car/);await click('[data-action="close-modal"]');
  await store.whenIdle();
  return ['Record work: type tiles, quick dates and intervals; the reminder saves only when switched on','Print & PDF: report cards drive the preview and options','Start a rebuild shows the car it was opened from; Change car opens the picker','Plan & checklist: priority, quick date, Enter adds steps, progress','AI instructions: large box with Copy','Cover options: mode cards and photo car picker'];
 };

@@ -438,7 +438,12 @@ function sheetPickerResults() {
 function sheetPlacePicker() {
   const pop = $('#sheet-field-pop'),
     anchor = $(`.sx-pick[data-id="${pop?.dataset.column}"]`) || $(`.sx-tip[data-id="${pop?.dataset.column}"]`);
-  if (!pop || !anchor) return;
+  if (!pop) return;
+  if (!anchor) {
+    pop.style.left = Math.max(8, (innerWidth - pop.offsetWidth) / 2) + 'px';
+    pop.style.top = Math.max(8, (innerHeight - pop.offsetHeight) / 2) + 'px';
+    return;
+  }
   const r = anchor.getBoundingClientRect(),
     h = pop.offsetHeight,
     below = innerHeight - r.bottom - 12;

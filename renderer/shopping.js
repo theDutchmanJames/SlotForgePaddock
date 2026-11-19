@@ -239,7 +239,8 @@ function shoppingOptional(s = {}, jobId = '') {
 // Form names stay as before: kind, finderQuery, stockId, quantity (the line you touched last, or your own
 // item's number), listId, jobId, supplier, unitPrice, currency, url and notes.
 let shopBasket = [],
-  shopBasketActive = -1;
+  shopBasketActive = -1,
+  shopBasketSaved = false;
 function shopBasketLines() {
   const box = $('#sb-lines');
   if (!box) return;
@@ -332,6 +333,7 @@ function addShopping(partId = '', jobId = '', quantity = 1) {
     lists = shoppingLists().map(l => [l.id, l.name]),
     listValue = page === 'Shopping List' ? shoppingFilters.listId || 'general' : '',
     automatic = jobId ? 'Automatic: linked job list' : null;
+  shopBasketSaved = false;
   shopBasket = part
     ? [
         {
@@ -393,8 +395,16 @@ function addShopping(partId = '', jobId = '', quantity = 1) {
             : [])
         ];
       // The first add checks the revision the window opened with; the rest follow on from it.
-      for (const [i, x] of items.entries())
-        await change('planning.shopping.add', { revision: i ? db.revision : revision, ...x, ...extra });
+      for (const [i, x] of items.entries()) {
+        await change('planning.shopping.add', { revision: i || shopBasketSaved ? db.revision : revision, ...x, ...extra });
+        shopBasketSaved = true;
+        if (x.item.kind !== 'free') {
+          shopBasket = shopBasket.filter(l => !(l.kind === x.item.kind && l.id === x.item.id));
+          shopBasketActive = Math.min(shopBasketActive, shopBasket.length - 1);
+          if ($('#sb-lines')) shopBasketLines();
+        }
+      }
+      shopBasketSaved = false;
       shopBasket = [];
       shopBasketActive = -1;
       viewOffset = 0;

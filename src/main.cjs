@@ -10,7 +10,8 @@ const {
   Tray,
   Menu,
   powerMonitor,
-  net
+  net,
+  session
 } = require('electron');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -171,6 +172,20 @@ function reply(fn) {
       };
     }
   };
+}
+// The PDF window gets its own in-memory session that serves only the report being printed.
+let reportPrintPage = null,
+  reportPrintSession = null;
+function reportSession() {
+  if (!reportPrintSession) {
+    reportPrintSession = session.fromPartition('paddock-report-print');
+    reportPrintSession.protocol.handle('paddock-report', () =>
+      reportPrintPage === null
+        ? new Response(null, { status: 404 })
+        : new Response(reportPrintPage, { headers: { 'content-type': 'text/html; charset=utf-8' } })
+    );
+  }
+  return reportPrintSession;
 }
 async function files(action, p = {}) {
   if (action === 'library.move-choose' || action === 'library.move-request') {
@@ -398,11 +413,19 @@ async function files(action, p = {}) {
     if (result.canceled) return null;
     const printWindow = new BrowserWindow({
       show: false,
-      webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false, javascript: false }
+      webPreferences: {
+        session: reportSession(),
+        sandbox: true,
+        contextIsolation: true,
+        nodeIntegration: false,
+        javascript: false
+      }
     });
     printWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
     try {
-      await printWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(report.html));
+      // Served from memory through a report-only channel: a data: address over 2 MB (photos, many sheets) fails.
+      reportPrintPage = report.html;
+      await printWindow.loadURL('paddock-report://report/');
       const bytes = await printWindow.webContents.printToPDF({
         printBackground: true,
         pageSize: 'A4',
@@ -414,6 +437,7 @@ async function files(action, p = {}) {
       return exportBytes(result.filePath, bytes, protectedFiles);
     } finally {
       printWindow.destroy();
+      reportPrintPage = null;
     }
   }
 

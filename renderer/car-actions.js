@@ -131,9 +131,11 @@ async function carActionsAction(action, id) {
       async () => {
         const failed = [];
         let done = 0;
-        for (const p of plans) {
+        // A retry after a partial failure only tries the cars that are still there.
+        for (const p of plans.filter(p => !p.deleted)) {
           try {
             await deleteCarNow(p.id);
+            p.deleted = true;
             done++;
           } catch (e) {
             failed.push(`${p.name}: ${e.message}`);

@@ -662,6 +662,7 @@ function modal(title, body, onSubmit, submitLabel = 'Save') {
   const dialog = $('#dialog');
   if (dialog.open) dialog.close();
   modalSubmit = onSubmit;
+  dialog.classList.remove('tu-showroom');
   dialog.innerHTML = `<form id="modal-form"><div class="dialog-head"><h2>${esc(title)}</h2><button type="button" class="btn ghost small" data-action="close-modal" aria-label="Close">✕</button></div><div class="dialog-body">${body}<div class="form-error" role="alert" id="form-error" hidden></div></div><div class="dialog-footer"><button type="button" class="btn" data-action="close-modal">Cancel</button>${onSubmit ? `<button type="submit" class="btn primary">${esc(submitLabel)}</button>` : ''}</div></form>`;
   // A window that removes something gets the "cannot be undone" badge before its title.
   dialog.classList.toggle('dialog-danger', !!onSubmit && /delete|remove|discard|reset|dismantle/i.test(submitLabel));
@@ -871,11 +872,16 @@ function installPart(fixedCarId, fixedPartId) {
     'Install part'
   );
 }
+function localDay(offset = 0) {
+  const d = new Date();
+  d.setDate(d.getDate() + offset);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
 function addWork(id) {
   const c = db.cars.find(c => c.id === id),
     revision = db.revision,
     today = slotforgeDomain.today(),
-    yesterday = new Date(Date.now() - 864e5).toISOString().slice(0, 10),
+    yesterday = localDay(-1),
     tasks = [...new Set(db.events.filter(e => e.carId === id && e.task).map(e => e.task))];
   // Record work, touched up after docs/ui-reference/touch-ups-2026-11: the kind of work as tiles (the same as New
   // workshop job), quick dates and the service reminder as a switch. The form keeps its field names.
@@ -959,7 +965,7 @@ function recordWorkAction(action, id) {
     const from = form.querySelector('[name="performedDate"]').value || slotforgeDomain.today(),
       d = new Date(from + 'T12:00:00');
     d.setMonth(d.getMonth() + Number(id));
-    form.querySelector('[name="nextDue"]').value = d.toISOString().slice(0, 10);
+    form.querySelector('[name="nextDue"]').value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     $('#rw-remind').checked = true;
   }
   if (action === 'rw-laps') {

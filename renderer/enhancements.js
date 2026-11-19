@@ -474,7 +474,9 @@ async function enhancementAction(action, id, target) {
       page = 'Cars';
       carId = comparisonCarId;
       section = 'Performance';
-      render();
+      // Wait for the Performance page to load before scrolling to the test.
+      if (local()) await loadView();
+      else render();
       document
         .querySelector('[data-action="test-snapshot"][data-id="' + CSS.escape(id) + '"]')
         ?.closest('.panel')

@@ -119,7 +119,7 @@ function startRebuildDialog(id) {
   const first = cars.some(c => c.id === id) ? id : '';
   modal(
     'Start a rebuild',
-    `<div class="tu-win tu-rebuild"><p class="tu-hint">Keep the original car's history and plan a new, linked configuration.</p><select name="carId" required hidden><option value="">Choose a car</option>${cars.map(c => `<option value="${esc(c.id)}" ${c.id === first ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select><div id="tu-rebuild-car"></div><div class="tu-rebuild-pick" id="tu-rebuild-pick" ${first ? 'hidden' : ''}><div class="tu-grp">Which car</div><div class="tu-cover-grid">${cars.map(c => carPickCard(c, { action: 'tu-rebuild-car', on: c.id === first })).join('')}</div></div><div class="tu-grp">What happens next</div><div class="tu-flow"><div><b>1 · A Workshop job</b>Checklist, shopping and progress for the rebuild</div><span aria-hidden="true">→</span><div><b>2 · A build draft</b>Choose parts to reuse and replace</div><span aria-hidden="true">→</span><div><b>3 · Complete</b>The new car is created; inventory changes only then</div></div><p class="tu-hint">Already rebuilding this car? This opens the same job. No car or inventory changes until completion.</p></div>`,
+    `<div class="tu-win tu-rebuild"><p class="tu-hint">Keep the original car's history and plan a new, linked configuration.</p><select name="carId" hidden><option value="">Choose a car</option>${cars.map(c => `<option value="${esc(c.id)}" ${c.id === first ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select><div id="tu-rebuild-car"></div><div class="tu-rebuild-pick" id="tu-rebuild-pick" ${first ? 'hidden' : ''}><div class="tu-grp">Which car</div><div class="tu-cover-grid">${cars.map(c => carPickCard(c, { action: 'tu-rebuild-car', on: c.id === first })).join('')}</div></div><div class="tu-grp">What happens next</div><div class="tu-flow"><div><b>1 · A Workshop job</b>Checklist, shopping and progress for the rebuild</div><span aria-hidden="true">→</span><div><b>2 · A build draft</b>Choose parts to reuse and replace</div><span aria-hidden="true">→</span><div><b>3 · Complete</b>The new car is created; inventory changes only then</div></div><p class="tu-hint">Already rebuilding this car? This opens the same job. No car or inventory changes until completion.</p></div>`,
     async values => {
       if (!values.carId) throw Error('Choose the car to rebuild.');
       const draft = await change('rebuild.start', { carId: values.carId, revision });
@@ -175,6 +175,11 @@ function planTouch() {
   waiting.insertBefore(document.createElement('i'), waiting.firstChild.nextSibling);
   waiting.querySelector('i').setAttribute('aria-hidden', 'true');
   const editor = $('#checklist-editor');
+  const save = modalSubmit;
+  modalSubmit = async values => {
+    if (!planAddTyped()) throw Error('A checklist can have up to 50 steps.');
+    return save(values);
+  };
   editor.insertAdjacentHTML('beforebegin', '<div class="tu-progress"><i id="tu-plan-bar"></i></div><p class="tu-hint" id="tu-plan-count"></p>');
   const addButton = form.querySelector('[data-action="checklist-add"]');
   if (addButton) addButton.hidden = true;
@@ -191,7 +196,7 @@ function planTouch() {
   form.querySelectorAll('[data-tu-days]').forEach(b =>
     b.addEventListener('click', () => {
       const days = Number(b.dataset.tuDays);
-      target.value = days ? new Date(Date.now() + days * 864e5).toISOString().slice(0, 10) : '';
+      target.value = days ? localDay(days) : '';
       planSync();
     })
   );
@@ -218,20 +223,25 @@ function planSync() {
 document.addEventListener('change', e => {
   if (e.target.closest?.('.tu-plan')) planSync();
 });
+function planAddTyped() {
+  const input = $('#tu-new-step'),
+    text = input?.value.trim();
+  if (!text) return true;
+  const editor = $('#checklist-editor');
+  if (editor.querySelectorAll('.checklist-editor-row').length >= 50) {
+    toast('A checklist can have up to 50 steps.', true);
+    return false;
+  }
+  editor.insertAdjacentHTML('beforeend', checklistEditorRow({ id: '', text, done: false }));
+  input.value = '';
+  planSync();
+  return true;
+}
 document.addEventListener('keydown', e => {
   if (e.target.id !== 'tu-new-step' || e.key !== 'Enter') return;
   e.preventDefault();
-  const text = e.target.value.trim();
-  if (!text) return;
-  $('[data-action="checklist-add"]')?.click();
-  setTimeout(() => {
-    const rows = document.querySelectorAll('#checklist-editor .checklist-editor-row'),
-      last = rows[rows.length - 1]?.querySelector('[data-step-text]');
-    if (last && !last.value) last.value = text;
-    e.target.value = '';
-    e.target.focus();
-    planSync();
-  }, 0);
+  planAddTyped();
+  e.target.focus();
 });
 // Drag steps into order.
 let planDrag = null;

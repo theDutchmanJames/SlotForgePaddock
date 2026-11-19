@@ -252,7 +252,12 @@ function bulkEdit() {
 function bulkPayload(values = Object.fromEntries(new FormData($('#modal-form')))) {
   const updates = {},
     labels = {};
-  for (const k of collectionMeta.bulkFields) if (values['use_' + k]) updates[k] = values['value_' + k] || '';
+  for (const k of collectionMeta.bulkFields)
+    if (values['use_' + k]) {
+      const value = values['value_' + k] || '',
+        row = document.querySelector(`[data-bulk-field="${k}"]`);
+      if (value || !row || row.dataset.clear === '1') updates[k] = value;
+    }
   for (const k of ['usage', 'tags']) {
     const mode = values['mode_' + k],
       list = comma(values['labels_' + k]);
