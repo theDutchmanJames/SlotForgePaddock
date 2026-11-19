@@ -278,39 +278,8 @@ function shelfControls() {
   if (!local()) return '';
   return `<div class="toolbar"><label class="field">Group<select id="showroom-shelf"><option value="">Entire collection</option>${db.planning.shelves.map(s => `<option value="${esc(s.id)}" ${showroom.shelf === s.id ? 'selected' : ''}>${esc(s.name)}</option>`).join('')}</select></label>${btn('New group', 'shelf-new')}${showroom.shelf ? btn('Edit group', 'shelf-edit', '', showroom.shelf) + btn('Delete group', 'shelf-delete', '', showroom.shelf) : ''}</div>`;
 }
-function shelfEditorRows() {
-  return editingShelfIds
-    .map(
-      (id, i) =>
-        `<div class="list-row"><strong>${i + 1}. ${esc(db.cars.find(c => c.id === id)?.name)}</strong><div class="actions">${btn('↑', 'shelf-up', 'small', id)}${btn('↓', 'shelf-down', 'small', id)}${btn('Remove', 'shelf-car-remove', 'small', id)}</div></div>`
-    )
-    .join('');
-}
-function editShelf(id = '') {
-  const s = db.planning.shelves.find(s => s.id === id),
-    revision = db.revision;
-  editingShelfId = id;
-  editingShelfIds = [...(s?.carIds || [])];
-  modal(
-    s ? 'Edit group' : 'New showroom group',
-    field('name', 'Group name', s?.name || '') +
-      `<div class="row mt"><label class="field">Add car<select id="shelf-car">${db.cars
-        .filter(slotforgeDomain.activeCar)
-        .map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`)
-        .join(
-          ''
-        )}</select></label>${btn('Add car', 'shelf-car-add')}</div><p class="muted">Order cars with the arrows. Archived cars stay saved in a group but are hidden in the showroom.</p><div id="shelf-editor">${shelfEditorRows()}</div>`,
-    async v => {
-      showroom.shelf = await change('planning.shelf.save', {
-        revision,
-        id: editingShelfId,
-        name: v.name,
-        carIds: editingShelfIds
-      });
-    },
-    'Save group'
-  );
-}
+// (moved to car-picker.js)
+// (moved to car-picker.js)
 function applyPhotoFocus() {
   for (const img of document.querySelectorAll('[data-focus-car]')) {
     const f = local()
@@ -520,12 +489,12 @@ async function enhancementAction(action, id, target) {
     case 'shelf-car-add': {
       const value = $('#shelf-car').value;
       if (value && !editingShelfIds.includes(value)) editingShelfIds.push(value);
-      $('#shelf-editor').innerHTML = shelfEditorRows();
+      shelfRefresh();
       return true;
     }
     case 'shelf-car-remove':
       editingShelfIds = editingShelfIds.filter(x => x !== id);
-      $('#shelf-editor').innerHTML = shelfEditorRows();
+      shelfRefresh();
       return true;
     case 'shelf-up':
     case 'shelf-down': {
@@ -533,7 +502,7 @@ async function enhancementAction(action, id, target) {
         next = i + (action === 'shelf-up' ? -1 : 1);
       if (i >= 0 && next >= 0 && next < editingShelfIds.length)
         [editingShelfIds[i], editingShelfIds[next]] = [editingShelfIds[next], editingShelfIds[i]];
-      $('#shelf-editor').innerHTML = shelfEditorRows();
+      shelfRefresh();
       return true;
     }
   }

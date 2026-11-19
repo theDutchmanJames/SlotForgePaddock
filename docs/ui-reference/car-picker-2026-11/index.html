@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Car picker redesign</title>
+<!-- Car photos come from .qa/preview-cars (ignored by git), made from the local library; they are not part of the repository. -->
+<style>
+@font-face{font-family:'SF Barlow Condensed';src:url('../../../renderer/fonts/barlowcondensed/BarlowCondensed-BoldItalic.ttf') format('truetype');font-weight:700;font-style:italic}
+@font-face{font-family:'SF Roboto Mono';src:url('../../../renderer/fonts/robotomono/RobotoMono[wght].ttf') format('truetype');font-weight:100 700}
+:root{--bg:#171b21;--panel:#222831;--raised:#2a313b;--ink:#e8e6e1;--ink2:#c4c8ce;--muted:#98a0ab;--faint:#6b7380;--line:#343b47;--line2:#2b313b;--accent:#e5484d;--ok:#3ecf8e;--amber:#edbd6a;--blue:#79b5ed;--violet:#a88cda;--green:#67c79b;
+  --cond:'SF Barlow Condensed','Bahnschrift',sans-serif;--mono:'SF Roboto Mono',Consolas,monospace;--ui:'Segoe UI',system-ui,sans-serif;color-scheme:dark}
+[data-theme=light]{--bg:#f1efea;--panel:#fff;--raised:#f0eee9;--ink:#1d2229;--ink2:#3a414c;--muted:#656c76;--faint:#8a929d;--line:#d9d6cf;--line2:#e6e3dd;--accent:#c92424;--amber:#a7741c;--blue:#236db4;--ok:#1f9a62;--green:#187a50;--violet:#7950a6;color-scheme:light}
+*{box-sizing:border-box}html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:13.5px/1.45 var(--ui);overflow:hidden}
+button,input{font:inherit;color:inherit}
+.mono{font-family:var(--mono);font-weight:500}
+h1,h2,h3,h4{font-family:var(--cond);font-style:italic;font-weight:700;text-transform:uppercase;letter-spacing:.02em;margin:0}
+.eye{font:600 10px var(--ui);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.muted{color:var(--muted)}.grow{flex:1}
+.switch{position:relative;z-index:50;display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;height:46px;padding:0 20px;background:var(--bg);border-bottom:1px solid var(--line2)}
+.switch b{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.switch p{margin:0 0 0 auto;font-size:12px;color:var(--faint)}
+.seg{display:inline-flex;gap:2px;padding:3px;border:1px solid var(--line);border-radius:9px;background:color-mix(in srgb,var(--bg) 60%,var(--panel))}
+.seg button{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 11px;border:0;border-radius:6px;background:transparent;color:var(--muted);font-size:12.5px;cursor:pointer;white-space:nowrap}
+.seg button.on{background:color-mix(in srgb,var(--ink) 12%,var(--panel));color:var(--ink);font-weight:600}
+.app{position:absolute;inset:46px 0 0;filter:blur(2px);opacity:.45}
+.chrome{display:flex;align-items:center;gap:12px;height:56px;padding:0 20px;background:var(--panel);border-bottom:1px solid var(--line)}
+.logo{width:36px;height:36px;border-radius:9px;background:var(--accent)}
+.backdrop{position:absolute;inset:46px 0 0;background:rgba(5,7,10,.55)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:32px;padding:5px 12px;border:1px solid transparent;border-radius:8px;background:color-mix(in srgb,var(--ink) 8%,var(--panel));color:var(--ink);font-size:13px;white-space:nowrap;cursor:pointer}
+.btn.primary{background:var(--accent);color:#fff;font-weight:600}.btn.ghost{background:transparent;color:var(--muted)}.btn.small{min-height:27px;padding:3px 10px;font-size:12.5px}
+input.f{width:100%;min-height:34px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);outline:none}
+.fl{display:grid;gap:5px;font-size:12px;color:var(--muted)}
+.win{position:absolute;left:50%;top:calc(46px + 26px);transform:translateX(-50%);width:min(1260px,calc(100vw - 40px));height:calc(100vh - 46px - 52px);display:flex;flex-direction:column;border:1px solid var(--line);border-radius:14px;background:var(--panel);box-shadow:0 30px 80px rgba(0,0,0,.5);overflow:hidden}
+.whead{display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid var(--line)}
+.whead h2{font-size:24px;line-height:1}.whead p{margin:0;font-size:12.5px;color:var(--muted)}.whead .x{margin-left:auto;color:var(--muted);font-size:18px}
+.wbody{flex:1;min-height:0;display:flex}
+.wfoot{display:flex;align-items:center;gap:10px;padding:11px 20px;border-top:1px solid var(--line);background:color-mix(in srgb,var(--bg) 40%,var(--panel))}
+.wfoot .sum{font-size:12.5px;color:var(--muted)}.wfoot .sum b{color:var(--ink)}
+/* the shared car picker */
+.picker{flex:1;min-width:0;display:flex;flex-direction:column}
+.ptool{display:flex;align-items:center;gap:10px;padding:12px 18px;border-bottom:1px solid var(--line2)}
+.ptool .q{position:relative;width:300px}.ptool .q input{padding-left:34px}.ptool .q::before{content:'⌕';position:absolute;left:11px;top:5px;font-size:18px;color:var(--muted)}
+.ptool .count{margin-left:auto;font-size:12px;color:var(--muted)}.ptool .count b{color:var(--ink);font-family:var(--mono)}
+.grid{flex:1;min-height:0;overflow:auto;padding:14px 18px;display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;align-content:start}
+.cc{position:relative;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--panel);cursor:pointer}
+.cc img{display:block;width:100%;aspect-ratio:16/10;object-fit:cover}
+.cc .t{padding:7px 9px 8px}
+.cc b{display:block;font:italic 700 14px/1.05 var(--cond);text-transform:uppercase;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cc small{font-size:11px;color:var(--muted)}
+.cc .badge{position:absolute;top:8px;right:8px;min-width:24px;height:24px;padding:0 7px;border-radius:999px;display:grid;place-items:center;font:700 12px var(--mono);color:#fff;background:var(--c)}
+.cc .info{position:absolute;top:8px;left:8px;padding:1px 8px;border-radius:999px;font-size:10.5px;font-weight:700;background:color-mix(in srgb,var(--bg) 80%,transparent);color:var(--ink)}
+.cc.on{border-color:var(--c);box-shadow:0 0 0 2px color-mix(in srgb,var(--c) 45%,transparent)}
+.cc.off{cursor:not-allowed}.cc.off img{filter:grayscale(.9) brightness(.55)}.cc.off .t{opacity:.55}
+.side{width:380px;flex:none;border-left:1px solid var(--line);background:color-mix(in srgb,var(--bg) 22%,var(--panel));display:flex;flex-direction:column}
+.side .sh{padding:14px 18px 10px;border-bottom:1px solid var(--line2)}
+.side .sh h3{font-size:20px;line-height:1.05;margin-top:2px}
+.side .sh p{margin:3px 0 0;font-size:12px;color:var(--muted)}
+.side .sb{flex:1;min-height:0;overflow:auto;padding:12px 18px}
+/* compare: two slots */
+.slot{display:flex;gap:12px;align-items:center;padding:10px;border:1px solid var(--line);border-radius:11px;background:var(--panel);margin-bottom:8px}
+.slot .tag{flex:none;width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font:700 14px var(--mono);color:#fff;background:var(--c)}
+.slot img{width:84px;height:52px;object-fit:cover;border-radius:7px}
+.slot b{display:block;font-size:13px}.slot small{font-size:11.5px;color:var(--muted)}
+.slot.empty{border-style:dashed}.slot.empty .ph{width:84px;height:52px;border-radius:7px;background:color-mix(in srgb,var(--ink) 6%,var(--panel))}
+.swap{display:flex;justify-content:center;margin:-2px 0 6px}
+.hint{font-size:12px;color:var(--muted);margin:10px 0 0}
+/* pace: sessions under each slot */
+.sess{display:grid;gap:4px;margin:0 0 12px 42px}
+.se{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:6px 10px;border:1px solid var(--line2);border-radius:8px;font-size:12px;cursor:pointer;background:var(--panel)}
+.se small{display:block;color:var(--muted);font-size:11px}
+.se b{font:600 12.5px var(--mono)}
+.se.on{border-color:var(--c);background:color-mix(in srgb,var(--c) 9%,var(--panel))}
+/* showroom group: ordered list */
+.ord{display:grid;gap:5px;margin-top:10px}
+.oi{display:grid;grid-template-columns:18px 24px 64px 1fr auto;gap:9px;align-items:center;padding:6px 8px;border:1px solid var(--line);border-radius:9px;background:var(--panel);font-size:12.5px}
+.oi .grip{color:var(--faint);cursor:grab;letter-spacing:-2px}
+.oi .n{font:700 12px var(--mono);color:var(--violet)}
+.oi img{width:64px;height:40px;object-fit:cover;border-radius:6px}
+.oi .x{color:var(--muted)}
+.oi.drag{border-color:var(--violet);box-shadow:0 8px 24px rgba(0,0,0,.35);transform:translateX(6px)}
+</style>
+</head>
+<body>
+<div class="switch">
+ <b>Window</b><div class="seg" id="wSeg"><button data-w="compare" class="on">Compare cars</button><button data-w="pace">Compare pace</button><button data-w="group">New showroom group</button></div>
+ <b>Theme</b><div class="seg" id="tSeg"><button data-t="dark" class="on">Dark</button><button data-t="light">Light</button></div>
+ <p>One car picker for all three · your own car photos</p>
+</div>
+<div class="app"><div class="chrome"><div class="logo"></div></div></div>
+<div class="backdrop"></div>
+<div class="win" id="win"></div>
+<script>
+const CARS=[["car-0.jpg","Audi R8 GT2","","1:32"],["car-1.jpg","Mosler MT900R","NSR","1:32"],["car-2.jpg","BMW Z4","NSR","1:32"],["car-3.jpg","Mclaren 720S","NSR","1:32"],["car-4.jpg","Mosler MT900R Black","NSR","1:32"],["car-5.jpg","Nissan R390","Slot.it","1:32"],["car-6.jpg","Lotus F1","Policar","1:32"],["car-7.jpg","Ferrari F1","Policar","1:32"],["car-8.jpg","March 83G BT","Revell","1:32"],["car-9.jpg","Porsche 952KH","Slot.it","1:32"],["car-10.jpg","British Barn 88C","Slot.it","1:32"],["car-11.jpg","Ferrari 521M","Slot.it","1:32"]];
+let w='compare';
+const $=s=>document.querySelector(s);
+const img=f=>'../../../.qa/preview-cars/'+f;
+const card=(i,o={})=>{const [f,n,m,s]=CARS[i];return `<div class="cc ${o.on?'on':''} ${o.off?'off':''}" style="--c:${o.c||'var(--accent)'}"><img src="${img(f)}" alt="">${o.badge?`<span class="badge">${o.badge}</span>`:''}${o.info?`<span class="info">${o.info}</span>`:''}<div class="t"><b>${n}</b><small>${[m,s].filter(Boolean).join(' · ')}</small></div></div>`};
+const tool=(ph,count,extra='')=>`<div class="ptool"><div class="q"><input class="f" placeholder="${ph}"></div>${extra}<span class="count">${count}</span></div>`;
+const head=(t,p)=>`<div class="whead"><h2>${t}</h2><p>${p}</p><span class="x">×</span></div>`;
+const slot=(tag,c,i,sub)=>i==null?`<div class="slot empty" style="--c:${c}"><span class="tag">${tag}</span><span class="ph"></span><span><b class="muted">Pick a car</b><small>Click a car on the left</small></span></div>`:`<div class="slot" style="--c:${c}"><span class="tag">${tag}</span><img src="${img(CARS[i][0])}" alt=""><span><b>${CARS[i][1]}</b><small>${sub||[CARS[i][2],CARS[i][3]].filter(Boolean).join(' · ')}</small></span><span class="grow"></span><button class="btn small ghost">×</button></div>`;
+function compare(){return head('Compare cars','Pick two cars to compare their specifications and measured pace')+`<div class="wbody"><div class="picker">${tool('Find a car…','<b>12</b> cars','<div class="seg"><button class="on">All</button><button>Favourites</button><button>Selected on Cars</button></div>')}<div class="grid">${CARS.map((_,i)=>card(i,i===2?{on:1,badge:'A',c:'var(--blue)'}:i===9?{on:1,badge:'B',c:'var(--amber)'}:{})).join('')}</div></div>
+ <aside class="side"><div class="sh"><div class="eye">Comparing</div><h3>BMW Z4 vs Porsche 952KH</h3><p>The first click sets A, the next sets B. Click a chosen car again to clear it.</p></div><div class="sb">${slot('A','var(--blue)',2)}<div class="swap"><button class="btn small">⇅ Swap A and B</button></div>${slot('B','var(--amber)',9)}<p class="hint">You can choose recorded runs to compare measured pace on the next screen.</p></div></aside></div>
+ <div class="wfoot"><span class="sum"><b>BMW Z4</b> vs <b>Porsche 952KH</b></span><span class="grow"></span><button class="btn ghost">Cancel</button><button class="btn primary">Compare</button></div>`}
+function pace(){const ses=(c,list,on)=>`<div class="sess" style="--c:${c}">${list.map(([t,d,b],k)=>`<div class="se ${k===on?'on':''}"><span>${t}<small>${d}</small></span><b>${b}</b></div>`).join('')}</div>`;
+ return head('Compare pace','Two recorded sessions, from the same car or different cars')+`<div class="wbody"><div class="picker">${tool('Find a car with recorded pace…','<b>8</b> cars with accepted history','<div class="seg"><button class="on">With history</button><button>All cars</button></div>')}<div class="grid">${CARS.map((_,i)=>{const s=[3,0,4,2,0,1,6,0,2,5,0,1][i];return card(i,{off:!s,info:s?s+' sessions':'no sessions',...(i===2?{on:1,badge:'A',c:'var(--blue)'}:i===9?{on:1,badge:'B',c:'var(--amber)'}:{})})}).join('')}</div></div>
+ <aside class="side"><div class="sh"><div class="eye">Compare</div><h3>Pick a session for each</h3><p>Fastest lap shown. Lane and driver can be narrowed after.</p></div><div class="sb">
+  ${slot('A','var(--blue)',2,'4 sessions')}${ses('var(--blue)',[['Club circuit · lane 2','16 Nov 2026 · Bjornie','5.351 s'],['Club circuit · lane 1','9 Nov 2026 · Bjornie','5.402 s'],['Home track','2 Nov 2026','6.110 s']],0)}
+  ${slot('B','var(--amber)',9,'5 sessions')}${ses('var(--amber)',[['Club circuit · lane 2','16 Nov 2026 · James','5.298 s'],['Club circuit · lane 3','16 Nov 2026 · James','5.330 s']],0)}
+ </div></aside></div>
+ <div class="wfoot"><span class="sum">Same track and lane · B is <b>0.053 s</b> faster on the best lap</span><span class="grow"></span><button class="btn ghost">Close</button><button class="btn primary">Compare pace</button></div>`}
+function group(){const order=[2,9,5,10];return head('New showroom group','Pick the cars, then drag them into the order you want')+`<div class="wbody"><div class="picker">${tool('Find a car…','<b>4</b> of 12 picked','<div class="seg"><button class="on">All</button><button>Not picked</button><button>Picked</button></div>')}<div class="grid">${CARS.map((_,i)=>{const k=order.indexOf(i);return card(i,k>=0?{on:1,badge:k+1,c:'var(--violet)'}:{})}).join('')}</div></div>
+ <aside class="side"><div class="sh"><div class="eye">Your group</div><h3>Le Mans legends</h3><p>Click cars to add or remove them. Drag to change the order.</p></div><div class="sb"><label class="fl">Group name<input class="f" value="Le Mans legends"></label>
+  <div class="ord">${order.map((i,k)=>`<div class="oi ${k===1?'drag':''}"><span class="grip">⋮⋮</span><span class="n">${k+1}</span><img src="${img(CARS[i][0])}" alt=""><span><b>${CARS[i][1]}</b></span><span class="x">×</span></div>`).join('')}</div><p class="hint">Archived cars stay saved in a group but are hidden in the Showroom.</p></div></aside></div>
+ <div class="wfoot"><span class="sum"><b>4 cars</b> in this group</span><span class="grow"></span><button class="btn ghost">Cancel</button><button class="btn primary">Save group</button></div>`}
+function render(){$('#win').innerHTML=w==='compare'?compare():w==='pace'?pace():group();for(const[id,k,v]of[['#wSeg','w',w],['#tSeg','t',document.documentElement.dataset.theme]])document.querySelectorAll(id+' button').forEach(b=>b.classList.toggle('on',b.dataset[k]===v));}
+document.addEventListener('click',e=>{const b=e.target.closest('.switch button');if(!b)return;if(b.dataset.w)w=b.dataset.w;if(b.dataset.t)document.documentElement.dataset.theme=b.dataset.t;render();});
+function fromHash(){const q=new URLSearchParams(location.hash.slice(1));w=q.get('w')||w;document.documentElement.dataset.theme=q.get('t')||document.documentElement.dataset.theme;render();}
+addEventListener('hashchange',fromHash);fromHash();
+</script>
+</body>
+</html>

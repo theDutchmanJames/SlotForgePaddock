@@ -17,27 +17,7 @@ function comparisonChoose(id) {
   carComparison = { choices: cars, ids: [first, second], databaseId: db.id };
   showComparisonChooser();
 }
-function showComparisonChooser() {
-  const s = carComparison;
-  modal(
-    'Choose two cars',
-    `<p>Compare their current specifications and optionally choose recorded runs to compare measured pace.</p><div class="form-grid">${['First car', 'Second car'].map((label, i) => `<label class="field">${label}<select name="compare-${i}" required>${s.choices.map(c => `<option value="${esc(c.id)}" ${s.ids[i] === c.id ? 'selected' : ''}>${esc(c.name)}${c.archived ? ' · Archived' : ''}</option>`).join('')}</select></label>`).join('')}</div>`,
-    async values => {
-      const ids = [values['compare-0'], values['compare-1']];
-      if (ids[0] === ids[1]) throw Error('Choose two different cars.');
-      const result = await api('plan', 'car.compare', { ids });
-      if (result.databaseId !== s.databaseId || db.id !== s.databaseId)
-        throw Error('The collection changed. Choose the cars again.');
-      Object.assign(s, result, {
-        ids,
-        differences: false,
-        runIds: ids.map(id => result.runs.find(r => r.carId === id)?.id || '')
-      });
-      setTimeout(showCarComparison, 0);
-    },
-    'Compare'
-  );
-}
+// (moved to car-picker.js)
 function comparisonRows(rows, differences) {
   const visible = rows.filter(([, a, b]) => !differences || JSON.stringify(a ?? '') !== JSON.stringify(b ?? ''));
   return visible.length

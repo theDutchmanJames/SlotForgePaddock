@@ -1,0 +1,116 @@
+/* The shared car picker, after docs/ui-reference/car-picker-2026-11: Compare cars, Compare pace and showroom
+   groups. Photo cards on the left, what you picked on the right, all in one fixed-size window. */
+#dialog:has(.cp-win){width:min(1260px,96vw);max-width:96vw;height:min(860px,92vh);max-height:92vh;overflow:hidden}
+#dialog:has(.cp-win)>form{display:flex;flex-direction:column;height:100%}
+#dialog:has(.cp-win)>form>.dialog-head,#dialog:has(.cp-win)>form>.dialog-footer{flex:none}
+#dialog:has(.cp-win)>form>.dialog-body{display:flex;flex-direction:column;flex:1;min-height:0;max-height:none;padding:0;overflow:hidden}
+#dialog:has(.cp-win) #form-error{flex:none;margin:6px 22px}
+#dialog:has(.cp-win) .dialog-footer{align-items:center}
+.cp-summary{margin-right:auto;font-size:12.5px;color:var(--muted)}.cp-summary b{color:var(--ink)}
+.cp-win{--cp-c:var(--blue);display:flex;flex:1;min-height:0}
+.cp-win .eye{font:600 10px "Segoe UI",system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.cp-win [data-tone="blue"]{--cp-c:var(--blue)}
+.cp-win [data-tone="amber"]{--cp-c:var(--amber)}
+.cp-win [data-tone="violet"]{--cp-c:var(--purple)}
+
+/* left: search and the cards */
+.cp-main{flex:1;min-width:0;display:flex;flex-direction:column}
+.cp-tool{display:flex;flex-wrap:wrap;align-items:center;gap:10px;flex:none;padding:12px 18px;border-bottom:1px solid color-mix(in srgb,var(--line) 70%,transparent)}
+.cp-q{position:relative;width:min(300px,100%);margin:0}
+.cp-q::before{content:'';position:absolute;left:11px;top:50%;width:11px;height:11px;margin-top:-7px;border:2px solid var(--muted);border-radius:50%;pointer-events:none}
+.cp-q::after{content:'';position:absolute;left:22px;top:50%;width:6px;height:2px;margin-top:4px;background:var(--muted);transform:rotate(45deg);pointer-events:none}
+#dialog .cp-q input{width:100%;min-height:34px;padding-left:34px}
+.cp-filter{display:inline-flex;gap:2px;padding:3px;border:1px solid var(--line);border-radius:9px;background:color-mix(in srgb,var(--bg) 60%,var(--panel))}
+.cp-filter>button{min-height:26px;padding:0 11px;border:0;border-radius:6px;background:transparent;box-shadow:none;color:var(--muted);font-size:12.5px;white-space:nowrap}
+.cp-filter>button:hover{color:var(--ink)}
+.cp-filter>button.on{background:color-mix(in srgb,var(--ink) 12%,var(--panel));color:var(--ink);font-weight:600}
+.cp-count{margin-left:auto;font-size:12px;color:var(--muted)}.cp-count b{color:var(--ink)}
+.cp-grid{flex:1;min-height:0;overflow:auto;padding:14px 18px;display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));grid-auto-rows:max-content;gap:10px;align-content:start}
+.cp-none,.cp-empty{grid-column:1/-1;margin:20px 4px;color:var(--muted);font-size:13px}
+.cp-card{position:relative;display:block;width:100%;min-width:0;padding:0;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--panel);box-shadow:none;color:var(--ink);text-align:left;cursor:pointer;transition:border-color .12s,box-shadow .12s}
+.cp-card[hidden]{display:none}
+.cp-card:hover{border-color:color-mix(in srgb,var(--cp-c) 50%,var(--line))}
+.cp-card:focus-visible{outline:2px solid var(--cp-c);outline-offset:2px}
+.cp-card.on{border-color:var(--cp-c);box-shadow:0 0 0 2px color-mix(in srgb,var(--cp-c) 45%,transparent)}
+.cp-card.off{cursor:not-allowed}.cp-card.off .cp-photo{filter:grayscale(.9) brightness(.6)}.cp-card.off .cp-text{opacity:.55}
+.cp-photo{position:relative;display:block;aspect-ratio:16/10;overflow:hidden;background:color-mix(in srgb,var(--ink) 6%,var(--panel))}
+.cp-photo img{display:block;width:100%;height:100%;object-fit:cover}
+.cp-photo .placeholder,.cp-slot-pic .placeholder,.cp-order-pic .placeholder{min-height:0;height:100%;gap:0}
+.cp-photo .placeholder span,.cp-slot-pic .placeholder span,.cp-order-pic .placeholder span{display:none}
+.cp-slot-pic .placeholder svg,.cp-order-pic .placeholder svg{width:24px;height:16px}
+.cp-text{display:block;padding:7px 9px 8px}
+.cp-text b{display:block;font:italic 700 14px/1.1 var(--font-cond);text-transform:uppercase;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cp-text small{display:block;font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cp-badge{position:absolute;top:8px;right:8px;min-width:24px;height:24px;padding:0 7px;border-radius:999px;display:grid;place-items:center;font:700 12px var(--font-mono);color:#fff;background:var(--cp-c);box-shadow:0 2px 8px rgba(0,0,0,.3)}
+.cp-info{position:absolute;top:8px;left:8px;padding:1px 8px;border-radius:999px;font-size:10.5px;font-weight:700;background:color-mix(in srgb,var(--bg) 82%,transparent);color:var(--ink)}
+
+/* right: what you picked */
+.cp-side{width:380px;flex:none;display:flex;flex-direction:column;min-height:0;border-left:1px solid var(--line);background:color-mix(in srgb,var(--bg) 22%,var(--panel))}
+.cp-sh{flex:none;padding:14px 18px 10px;border-bottom:1px solid color-mix(in srgb,var(--line) 70%,transparent)}
+.cp-sh h3{margin:2px 0 0;font-size:20px;line-height:1.05;overflow-wrap:anywhere}
+.cp-sh p{margin:3px 0 0;font-size:12px;color:var(--muted)}
+.cp-sb{flex:1;min-height:0;overflow:auto;padding:12px 18px}
+.cp-sb .field{display:grid;gap:5px;margin:0}
+.cp-hint{margin:10px 0 0;font-size:12px;color:var(--muted)}
+
+/* Compare cars: A and B */
+.cp-slot{display:flex;gap:12px;align-items:center;padding:10px;border:1px solid var(--line);border-radius:11px;background:var(--panel);margin-bottom:8px}
+.cp-slot.empty{border-style:dashed}
+.cp-slot.active{border-color:var(--cp-c);box-shadow:0 0 0 2px color-mix(in srgb,var(--cp-c) 30%,transparent)}
+.cp-tag{flex:none;width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font:700 14px var(--font-mono);color:#fff;background:var(--cp-c)}
+.cp-slot-pic{flex:none;width:84px;height:52px;border-radius:7px;overflow:hidden;background:color-mix(in srgb,var(--ink) 6%,var(--panel))}
+.cp-slot-pic img{display:block;width:100%;height:100%;object-fit:cover}
+.cp-slot-text{flex:1;min-width:0}
+.cp-slot-text b{display:block;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cp-slot-text small{display:block;font-size:11.5px;color:var(--muted)}
+.cp-swap{display:flex;justify-content:center;margin:-2px 0 6px}
+
+/* showroom group: the numbered order */
+.cp-order{display:grid;gap:5px;margin-top:12px}
+.cp-order-row{display:grid;grid-template-columns:14px 22px 60px minmax(0,1fr) auto;gap:8px;align-items:center;padding:5px 6px 5px 8px;border:1px solid var(--line);border-radius:9px;background:var(--panel);font-size:12.5px}
+.cp-order-row b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.cp-order-row b small{color:var(--muted);font-weight:400}
+.cp-grip{color:var(--muted);cursor:grab;letter-spacing:-2px;user-select:none}
+.cp-n{font-weight:700;font-size:12px;color:var(--purple)}
+.cp-order-pic{width:60px;height:38px;border-radius:6px;overflow:hidden;background:color-mix(in srgb,var(--ink) 6%,var(--panel))}
+.cp-order-pic img{display:block;width:100%;height:100%;object-fit:cover}
+.cp-order-acts{display:flex;gap:1px}
+.cp-order-acts .btn{min-width:26px;padding:2px 6px}
+.cp-order-row.drag{opacity:.5}
+.cp-order-row.over{border-color:var(--purple);box-shadow:0 0 0 2px color-mix(in srgb,var(--purple) 30%,transparent)}
+.cp-order .cp-empty{margin:6px 2px}
+
+/* Compare pace: sessions under each slot */
+.cp-pace-filter{display:flex;gap:6px;margin:0 0 6px 42px}
+.cp-pace-filter input{flex:1;min-width:0;min-height:30px}
+.cp-sess{display:grid;gap:4px;margin:0 0 6px 42px}
+.cp-se{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;width:100%;padding:6px 10px;border:1px solid color-mix(in srgb,var(--line) 70%,transparent);border-radius:8px;background:var(--panel);box-shadow:none;color:var(--ink);font-size:12px;text-align:left}
+.cp-se:hover{border-color:var(--line)}
+.cp-se>span{min-width:0}
+.cp-se>span>*{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cp-se small{color:var(--muted);font-size:11px}
+.cp-se>b{font:600 11.5px var(--font-mono);color:var(--muted)}
+.cp-se.on{border-color:var(--cp-c);background:color-mix(in srgb,var(--cp-c) 9%,var(--panel))}
+.cp-se.on>b{color:var(--cp-c)}
+.cp-pace-more{display:flex;gap:6px;justify-content:space-between;margin:0 0 6px 42px}
+.cp-pace-run{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 14px 42px}
+.cp-pace-run .field{display:grid;gap:4px;margin:0;font-size:11.5px}
+.cp-pace-run select{min-height:30px}
+.cp-pace-note{margin:0 0 12px 42px;font-size:12px;color:var(--muted)}
+.cp-paging{display:flex;align-items:center;gap:6px;flex:none;padding:8px 18px;border-top:1px solid color-mix(in srgb,var(--line) 70%,transparent);font-size:12px;color:var(--muted)}
+.cp-paging .grow{flex:1}
+
+/* the results page of Compare pace keeps the full window and scrolls */
+.cp-results{flex:1;min-height:0;overflow:auto;padding:16px 22px}
+
+@media (max-width:980px){
+  .cp-side{width:320px}
+  .cp-grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
+}
+@media (max-width:760px){
+  .cp-win{flex-direction:column;overflow:auto}
+  .cp-main{flex:none;min-height:360px}
+  .cp-side{width:auto;border-left:0;border-top:1px solid var(--line)}
+}
+#dialog .cp-pace-filter input,#dialog .cp-pace-run select{min-height:30px;height:30px;padding:3px 10px;font-size:12.5px}
+#dialog .cp-pace-filter .btn{min-height:30px}

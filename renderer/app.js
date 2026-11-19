@@ -1062,6 +1062,7 @@ document.addEventListener('click', async event => {
     if (shopBasketAction(action, id)) return;
     if (bulkAction(action, id)) return;
     if (setupAction(action, id)) return;
+    if (carPickerAction(action, id)) return;
     if (await picturePreviewAction(action, id)) return;
     if (await pictureAction(action, id)) return;
     if (await historicalEvidenceAction(action, id)) return;
