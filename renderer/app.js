@@ -721,6 +721,8 @@ function modal(title, body, onSubmit, submitLabel = 'Save') {
   if (dialog.open) dialog.close();
   modalSubmit = onSubmit;
   dialog.innerHTML = `<form id="modal-form"><div class="dialog-head"><h2>${esc(title)}</h2><button type="button" class="btn ghost small" data-action="close-modal" aria-label="Close">✕</button></div><div class="dialog-body">${body}<div class="form-error" role="alert" id="form-error" hidden></div></div><div class="dialog-footer"><button type="button" class="btn" data-action="close-modal">Cancel</button>${onSubmit ? `<button type="submit" class="btn primary">${esc(submitLabel)}</button>` : ''}</div></form>`;
+  // A window that removes something gets the "cannot be undone" badge before its title.
+  dialog.classList.toggle('dialog-danger', !!onSubmit && /delete|remove|discard|reset|dismantle/i.test(submitLabel));
   dialog.showModal();
   dialog.querySelector('input:not([type=hidden]),select,textarea')?.focus();
 }

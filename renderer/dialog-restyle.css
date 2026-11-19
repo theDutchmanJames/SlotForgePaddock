@@ -1,0 +1,32 @@
+/* Every window (dialog), after SlotForgeRestyle.md's Workshop Window: no coloured top bar, a big Barlow title
+   with a line under it, quiet section tabs, 34px fields, the buttons bottom right with the main one last. */
+dialog:not(.showroom-viewer){border:1px solid var(--line);border-top:1px solid var(--line);border-radius:14px;background:var(--panel);box-shadow:0 30px 80px rgba(0,0,0,.5)}
+dialog::backdrop{background:rgba(5,7,10,.62);backdrop-filter:blur(2px)}
+.shopping-dialog .dialog-head,dialog .dialog-head{display:flex;align-items:center;gap:14px;padding:18px 22px 14px;border-top:0;border-bottom:1px solid var(--line);background:none}
+dialog .dialog-head h2{margin:0;font-size:24px;line-height:1.1}
+dialog .dialog-head [data-action="close-modal"]{width:32px;min-width:32px;padding:0;color:var(--muted)}
+dialog .dialog-body{padding:18px 22px}
+dialog .dialog-body>p.muted:first-child,dialog .dialog-body>p:first-child{margin-top:0}
+dialog .dialog-footer{padding:12px 22px;border-top:1px solid var(--line);background:color-mix(in srgb,var(--bg) 40%,var(--panel))}
+
+/* section tabs in a form (Add a car, Edit details): a quiet side list */
+dialog .dialog-body:has(>[data-form-panel])>.tabs{gap:2px;padding:6px;border:1px solid var(--line);border-radius:10px;background:color-mix(in srgb,var(--bg) 55%,var(--panel))}
+dialog .dialog-body:has(>[data-form-panel])>.tabs button{display:flex;align-items:center;gap:9px;min-height:34px;padding:6px 10px;border:0;border-radius:7px;background:transparent;box-shadow:none;color:color-mix(in srgb,var(--ink) 82%,var(--muted));font-size:13px;font-weight:400}
+dialog .dialog-body:has(>[data-form-panel])>.tabs button:hover{background:color-mix(in srgb,var(--ink) 6%,transparent)}
+dialog .dialog-body:has(>[data-form-panel])>.tabs button.active{background:color-mix(in srgb,var(--ink) 10%,var(--panel));border:0;box-shadow:none;color:var(--ink);font-weight:600}
+dialog .dialog-body:has(>[data-form-panel])>.tabs button svg{width:16px;height:16px;color:var(--muted)}
+dialog .dialog-body:has(>[data-form-panel])>.tabs button.active svg{color:var(--accent)}
+
+/* fields */
+dialog .field{font-size:12.5px;color:var(--muted)}
+dialog :is(input[type=text],input[type=number],input[type=date],input[type=search],input[type=url],input:not([type]),select,textarea){min-height:34px;border-radius:7px;box-shadow:none;font-size:14px;color:var(--ink)}
+dialog textarea{min-height:76px}
+dialog h3{font-size:17px}
+
+/* notes and tables inside windows */
+dialog .note.info{border:0;border-left:2px solid color-mix(in srgb,var(--accent) 55%,var(--line));border-radius:0;background:none;box-shadow:none;padding:4px 0 4px 12px;color:var(--muted)}
+dialog .table-wrap{border:1px solid var(--line);border-radius:10px;box-shadow:none}
+dialog th{background:none;color:var(--muted);font:600 10px "Segoe UI",system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase;white-space:nowrap}
+/* a window that removes something: the "!" badge before its title (Flag Dialog) */
+dialog.dialog-danger .dialog-head h2{display:flex;align-items:center;gap:12px}
+dialog.dialog-danger .dialog-head h2::before{content:'!';display:grid;place-items:center;flex:none;width:32px;height:32px;border-radius:9px;background:color-mix(in srgb,var(--accent) 18%,var(--panel));color:var(--accent);font:700 18px "Segoe UI",system-ui,sans-serif;font-style:normal}
