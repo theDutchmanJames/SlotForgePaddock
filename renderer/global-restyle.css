@@ -43,11 +43,9 @@ html body .quick-links-row{border-color:var(--line);background:color-mix(in srgb
 .showroom-viewer-footer .btn:not(.primary):hover{background:color-mix(in srgb,#fff 18%,transparent)}
 html body dialog.showroom-viewer:not(.is-fullscreen){border:1px solid var(--line);border-top:1px solid var(--line);border-radius:14px;box-shadow:0 30px 80px rgba(0,0,0,.5)}
 
-/* the spreadsheet import grid: your own column headings stay as you wrote them */
-html body .sheet-grid th.sheet-source strong{font:600 13px "Segoe UI",system-ui,sans-serif;letter-spacing:0;text-transform:none;color:var(--ink)}
 
 /* row labels (a th at the start of a body row) read as labels, not column headings */
-html body tbody th:not(.sheet-row-number){font:600 13px "Segoe UI",system-ui,sans-serif;letter-spacing:0;text-transform:none;color:var(--ink);white-space:normal}
+html body tbody th{font:600 13px "Segoe UI",system-ui,sans-serif;letter-spacing:0;text-transform:none;color:var(--ink);white-space:normal}
 
 /* car merges: the sections as a quiet switch, a changed field marked by a slim accent rule */
 html body .merge-tabs{gap:2px;width:fit-content;max-width:100%;padding:3px;border:1px solid var(--line);border-radius:10px;background:color-mix(in srgb,var(--bg) 60%,var(--panel))}

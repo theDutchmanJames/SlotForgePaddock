@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Spreadsheet import redesign</title>
+<style>
+@font-face{font-family:'SF Barlow Condensed';src:url('../../../renderer/fonts/barlowcondensed/BarlowCondensed-BoldItalic.ttf') format('truetype');font-weight:700;font-style:italic}
+@font-face{font-family:'SF Roboto Mono';src:url('../../../renderer/fonts/robotomono/RobotoMono[wght].ttf') format('truetype');font-weight:100 700}
+:root{--bg:#171b21;--panel:#222831;--panel2:#1c2129;--raised:#2a313b;--ink:#e8e6e1;--ink2:#c4c8ce;--muted:#98a0ab;--faint:#6b7380;--line:#343b47;--line2:#2b313b;--accent:#e5484d;--on-accent:#fff;--ok:#3ecf8e;--amber:#edbd6a;--blue:#79b5ed;
+  --cond:'SF Barlow Condensed','Bahnschrift',sans-serif;--mono:'SF Roboto Mono',Consolas,monospace;--ui:'Segoe UI',system-ui,sans-serif}
+[data-theme=light]{--bg:#f1efea;--panel:#fff;--panel2:#f7f6f3;--raised:#f0eee9;--ink:#1d2229;--ink2:#3a414c;--muted:#656c76;--faint:#8a929d;--line:#d9d6cf;--line2:#e6e3dd;--accent:#c92424;--amber:#a7741c;--blue:#236db4;--ok:#1f9a62}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:13.5px/1.45 var(--ui);overflow:hidden}
+button,input,select{font:inherit;color:inherit}
+.mono{font-family:var(--mono);font-weight:500}
+h1,h2,h3,h4{font-family:var(--cond);font-style:italic;font-weight:700;text-transform:uppercase;letter-spacing:.02em;margin:0}
+.eye{font-size:10px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.muted{color:var(--muted)}
+/* preview switcher */
+.switch{position:relative;z-index:50;display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;height:46px;padding:0 20px;background:var(--bg);border-bottom:1px solid var(--line2)}
+.switch b{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.switch p{margin:0 0 0 auto;font-size:12px;color:var(--faint)}
+.seg{display:inline-flex;gap:2px;padding:3px;border:1px solid var(--line);border-radius:9px;background:color-mix(in srgb,var(--bg) 60%,var(--panel))}
+.seg button{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 11px;border:0;border-radius:6px;background:transparent;color:var(--muted);font-size:12.5px;cursor:pointer;white-space:nowrap}
+.seg button.on{background:color-mix(in srgb,var(--ink) 12%,var(--panel));color:var(--ink);font-weight:600}
+.seg button .n{font:500 11px var(--mono);color:var(--faint)}
+.seg button.on .n{color:var(--ink2)}
+/* app behind */
+.app{position:absolute;inset:46px 0 0;filter:blur(2px);opacity:.5}
+.chrome{display:flex;align-items:center;gap:12px;height:56px;padding:0 20px;background:var(--panel);border-bottom:1px solid var(--line)}
+.logo{width:36px;height:36px;border-radius:9px;background:var(--accent)}
+.navg{display:flex;gap:2px;padding:3px;border-radius:10px;background:color-mix(in srgb,var(--ink) 5%,var(--bg));font-size:12.5px;color:var(--ink2)}
+.navg span{padding:6px 10px;border-radius:7px}
+.backdrop{position:absolute;inset:46px 0 0;background:rgba(5,7,10,.55)}
+/* buttons, chips */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:32px;padding:5px 12px;border:1px solid transparent;border-radius:8px;background:color-mix(in srgb,var(--ink) 8%,var(--panel));color:var(--ink);font-size:13px;white-space:nowrap;cursor:pointer}
+.btn.primary{background:var(--accent);color:var(--on-accent);font-weight:600}
+.btn.ghost{background:transparent;color:var(--muted)}
+.btn.small{min-height:27px;padding:3px 10px;font-size:12.5px}
+.chip{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 8px;border-radius:999px;font-size:11.5px;font-weight:600;white-space:nowrap;border:1px solid transparent}
+.chip::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor}
+.chip.ok{color:var(--ok);background:color-mix(in srgb,var(--ok) 12%,transparent)}
+.chip.warn{color:var(--amber);background:color-mix(in srgb,var(--amber) 14%,transparent)}
+.chip.off{color:var(--faint);background:color-mix(in srgb,var(--ink) 6%,transparent)}
+.chip.bad{color:var(--accent);background:color-mix(in srgb,var(--accent) 13%,transparent)}
+.chip.blue{color:var(--blue);background:color-mix(in srgb,var(--blue) 13%,transparent)}
+.letter{display:inline-grid;place-items:center;min-width:24px;height:22px;padding:0 5px;border-radius:6px;background:color-mix(in srgb,var(--ink) 9%,var(--panel));font:600 11.5px var(--mono);color:var(--ink2)}
+.sample{display:inline-block;max-width:150px;padding:1px 7px;border-radius:5px;background:color-mix(in srgb,var(--bg) 55%,var(--panel));border:1px solid var(--line2);font:500 11.5px var(--mono);color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;vertical-align:middle}
+.check{width:16px;height:16px;border-radius:4px;border:1.5px solid var(--faint);display:inline-grid;place-items:center;flex:none}
+.check.on{background:var(--accent);border-color:var(--accent)}
+.check.on::after{content:'';width:8px;height:4px;border:2px solid #fff;border-top:0;border-right:0;transform:rotate(-45deg) translate(1px,-1px)}
+input.field{height:32px;padding:0 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);outline:none}
+/* the import window: one fixed size for every step */
+.win{position:absolute;left:50%;top:calc(46px + 22px);transform:translateX(-50%);width:min(1480px,calc(100vw - 40px));height:calc(100vh - 46px - 44px);display:flex;flex-direction:column;border:1px solid var(--line);border-radius:14px;background:var(--panel);box-shadow:0 30px 80px rgba(0,0,0,.5);overflow:hidden}
+.whead{display:flex;align-items:center;gap:16px;padding:14px 20px;border-bottom:1px solid var(--line)}
+.whead h2{font-size:24px;line-height:1}
+.file{display:flex;align-items:center;gap:10px;padding:5px 10px 5px 8px;border:1px solid var(--line);border-radius:9px;background:color-mix(in srgb,var(--bg) 40%,var(--panel));font-size:12px;color:var(--muted)}
+.file .ico{width:22px;height:22px;border-radius:5px;background:color-mix(in srgb,var(--ok) 20%,var(--panel));color:var(--ok);display:grid;place-items:center;font:700 10px var(--mono)}
+.file b{font:500 12px var(--mono);color:var(--ink)}
+.whead .x{margin-left:auto;width:32px;height:32px;display:grid;place-items:center;color:var(--muted);font-size:18px}
+.stepper{display:flex;align-items:center;gap:0;padding:0 20px;border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--bg) 30%,var(--panel))}
+.step{display:flex;align-items:center;gap:9px;height:46px;padding:0 4px;margin-right:22px;color:var(--muted);font-size:13px;border-bottom:2px solid transparent;cursor:pointer}
+.step i{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--raised);font:700 11px var(--mono);font-style:normal}
+.step.on{color:var(--ink);font-weight:600;border-bottom-color:var(--accent)}
+.step.on i{background:var(--accent);color:#fff}
+.step.done i{background:color-mix(in srgb,var(--ok) 22%,var(--panel));color:var(--ok)}
+.step small{font-weight:400;color:var(--faint);font-size:11.5px}
+.stepper .settings{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:12px;color:var(--muted)}
+.stepper .settings .mono{color:var(--ink2);font-size:11.5px}
+.wbody{flex:1;min-height:0;display:flex}
+.wfoot{display:flex;align-items:center;gap:12px;padding:11px 20px;border-top:1px solid var(--line);background:color-mix(in srgb,var(--bg) 40%,var(--panel))}
+.wfoot .sum{font-size:13px}.wfoot .sum b{font-family:var(--mono);font-weight:600}
+.wfoot .sum small{display:block;color:var(--muted);font-size:11.5px}
+.wfoot .acts{margin-left:auto;display:flex;gap:8px}
+.meter{display:flex;gap:2px;width:180px;height:6px;border-radius:3px;overflow:hidden;background:var(--line2)}
+.meter span{display:block;height:100%}
+/* panes */
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+.side{width:380px;flex:none;border-left:1px solid var(--line);display:flex;flex-direction:column;background:color-mix(in srgb,var(--bg) 22%,var(--panel));min-height:0}
+.tool{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line2)}
+.tool .grow{flex:1}
+.scroll{flex:1;min-height:0;overflow:auto}
+.side .sh{padding:14px 18px 10px;border-bottom:1px solid var(--line2)}
+.side .sh h3{font-size:20px;line-height:1.05}
+.side .sh p{margin:4px 0 0;font-size:12px;color:var(--muted)}
+.side .sb{flex:1;min-height:0;overflow:auto;padding:10px 18px 16px}
+.side .sf{padding:10px 18px;border-top:1px solid var(--line2);display:flex;gap:8px;align-items:center}
+/* option A: one row per spreadsheet column */
+.cols{width:100%;border-collapse:separate;border-spacing:0}
+.cols th{position:sticky;top:0;z-index:2;background:var(--panel);text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);font:600 10px var(--ui);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.cols td{padding:8px 12px;border-bottom:1px solid var(--line2);vertical-align:middle}
+.cols tr.sel td{background:color-mix(in srgb,var(--blue) 7%,var(--panel))}
+.cols tr.sel td:first-child{box-shadow:inset 3px 0 0 var(--blue)}
+.cols tr.out td:not(:last-child){opacity:.5}
+.cols .head b{display:block;font-size:13px}
+.cols .head small{font-size:11.5px;color:var(--faint)}
+.cols .arrow{color:var(--faint);width:20px;padding:0;text-align:center}
+.pick{display:flex;align-items:center;justify-content:space-between;gap:8px;width:250px;height:38px;padding:0 10px;border:1px solid var(--line);border-radius:8px;background:var(--panel);cursor:pointer}
+.pick b{display:block;font-size:12.5px;line-height:1.2}
+.pick small{display:block;font-size:11px;color:var(--muted);line-height:1.2}
+.pick.none{border-style:dashed;background:transparent}
+.pick.none b{color:var(--muted);font-weight:500}
+.pick.open{border-color:var(--blue);box-shadow:0 0 0 3px color-mix(in srgb,var(--blue) 22%,transparent)}
+.pick .chev{color:var(--faint)}
+.popwrap{position:relative}
+.pop{position:absolute;z-index:5;top:42px;left:0;width:330px;border:1px solid color-mix(in srgb,var(--ink) 18%,var(--line));border-radius:11px;background:var(--panel);box-shadow:0 20px 50px rgba(0,0,0,.45);overflow:hidden}
+.pop input{width:100%;height:38px;padding:0 12px;border:0;border-bottom:1px solid var(--line);background:transparent;outline:none}
+.pop .grp{padding:7px 12px 3px;font:600 9.5px var(--ui);letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
+.pop .opt{display:flex;justify-content:space-between;gap:8px;padding:6px 12px;font-size:12.5px}
+.pop .opt small{color:var(--muted);font-size:11px}
+.pop .opt.hi{background:color-mix(in srgb,var(--ink) 8%,var(--panel));box-shadow:inset 3px 0 0 var(--accent)}
+.pop .opt.used{color:var(--faint)}
+.pop .foot{display:flex;gap:6px;padding:8px 10px;border-top:1px solid var(--line2);background:color-mix(in srgb,var(--bg) 35%,var(--panel))}
+/* car preview card (option A side) */
+.carp{border:1px solid var(--line);border-radius:12px;background:var(--panel);overflow:hidden}
+.carp .ph{height:92px;background:linear-gradient(135deg,color-mix(in srgb,var(--ink) 6%,var(--panel)),color-mix(in srgb,var(--ink) 2%,var(--panel)));display:grid;place-items:center;color:var(--faint);font-size:11.5px;border-bottom:1px solid var(--line2)}
+.carp .ct{padding:12px 14px 6px}
+.carp .ct h4{font-size:22px;line-height:1}
+.carp .ct p{margin:3px 0 0;font-size:12px;color:var(--muted)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:0 14px;padding:4px 14px 10px}
+.kv .g{grid-column:1/-1;padding:10px 0 3px;font:600 9.5px var(--ui);letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
+.kv dt,.kv dd{margin:0;padding:5px 0;border-bottom:1px solid var(--line2);font-size:12.5px}
+.kv dt{color:var(--muted)}
+.kv dd{text-align:right;font-weight:600}
+.kv dd.hl{color:var(--blue)}
+.kv dd .from{font:500 10.5px var(--mono);color:var(--faint);margin-left:6px;font-weight:400}
+.rownav{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+.rownav .btn{min-height:26px;width:26px;padding:0}
+.tip{display:flex;gap:10px;padding:10px 12px;margin:0 0 10px;border:1px solid var(--line);border-left:2px solid var(--amber);border-radius:9px;font-size:12.5px;background:color-mix(in srgb,var(--amber) 5%,var(--panel))}
+.tip b{display:block}
+.tip small{color:var(--muted)}
+/* car list (choose cars) */
+.cars{width:100%;border-collapse:separate;border-spacing:0}
+.cars th{position:sticky;top:0;z-index:2;background:var(--panel);text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);font:600 10px var(--ui);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.cars td{padding:0 12px;height:46px;border-bottom:1px solid var(--line2);vertical-align:middle}
+.cars .rn{font:500 11.5px var(--mono);color:var(--faint);width:40px}
+.cars .nm b{display:block;font-size:13px}
+.cars .nm small{font-size:11.5px;color:var(--muted)}
+.cars tr.sel td{background:color-mix(in srgb,var(--blue) 7%,var(--panel))}
+.cars tr.sel td:first-child{box-shadow:inset 3px 0 0 var(--blue)}
+.cars tr.skip td:not(:first-child){opacity:.5}
+.choice{display:flex;gap:2px;padding:3px;border:1px solid var(--line);border-radius:9px;background:color-mix(in srgb,var(--bg) 60%,var(--panel));margin:10px 0 4px}
+.choice span{flex:1;text-align:center;padding:5px 6px;border-radius:6px;font-size:12px;color:var(--muted)}
+.choice span.on{background:color-mix(in srgb,var(--ink) 12%,var(--panel));color:var(--ink);font-weight:600}
+.diff{width:100%;border-collapse:collapse;margin-top:8px}
+.diff th{text-align:left;padding:6px 4px;font:600 9.5px var(--ui);letter-spacing:.12em;text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line)}
+.diff td{padding:6px 4px;border-bottom:1px solid var(--line2);font-size:12px;vertical-align:top}
+.diff td:first-child{color:var(--muted)}
+.diff tr.ch td:nth-child(3){color:var(--blue);font-weight:600}
+.diff tr.same td{color:var(--faint)}
+.matchcard{display:flex;gap:12px;align-items:center;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+.matchcard .th{width:64px;height:44px;border-radius:7px;background:color-mix(in srgb,var(--ink) 7%,var(--panel));flex:none}
+.matchcard b{display:block;font-size:13px}
+.matchcard small{color:var(--muted);font-size:11.5px}
+/* option B: the spreadsheet itself */
+.sheet{border-collapse:separate;border-spacing:0;font-size:12.5px}
+.sheet th,.sheet td{border-right:1px solid var(--line2);border-bottom:1px solid var(--line2);white-space:nowrap}
+.sheet thead th{position:sticky;z-index:3;background:var(--panel)}
+.sheet thead tr:nth-child(1) th{top:0;height:24px;padding:0 10px;font:600 10.5px var(--mono);color:var(--faint);text-align:left;background:color-mix(in srgb,var(--bg) 40%,var(--panel))}
+.sheet thead tr:nth-child(2) th{top:24px;padding:8px 10px 9px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line);min-width:170px;max-width:200px;cursor:pointer}
+.sheet thead tr:nth-child(2) th .yh{display:block;font-size:12.5px;font-weight:600;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sheet .tag{display:flex;align-items:center;gap:6px;height:26px;padding:0 8px;border-radius:7px;font-size:11.5px;font-weight:600;background:color-mix(in srgb,var(--ok) 13%,var(--panel));color:var(--ink);border:1px solid color-mix(in srgb,var(--ok) 35%,var(--line))}
+.sheet .tag::before{content:'→';color:var(--ok);font-weight:700}
+.sheet .tag.warn{background:color-mix(in srgb,var(--amber) 13%,var(--panel));border-color:color-mix(in srgb,var(--amber) 40%,var(--line))}
+.sheet .tag.warn::before{content:'?';color:var(--amber)}
+.sheet .tag.off{background:transparent;border:1px dashed var(--line);color:var(--faint);font-weight:500}
+.sheet .tag.off::before{content:'×';color:var(--faint)}
+.sheet th.selc{background:color-mix(in srgb,var(--blue) 10%,var(--panel));box-shadow:inset 0 -2px 0 var(--blue)}
+.sheet td.selc{background:color-mix(in srgb,var(--blue) 5%,transparent)}
+.sheet td{height:34px;padding:0 10px;max-width:200px;overflow:hidden;text-overflow:ellipsis;color:var(--ink2)}
+.sheet td.out,.sheet th.out{background:repeating-linear-gradient(135deg,transparent 0 6px,color-mix(in srgb,var(--ink) 4%,transparent) 6px 12px)}
+.sheet td.out{color:var(--faint)}
+.sheet .rh{position:sticky;left:0;z-index:2;min-width:46px;width:46px;text-align:center;font:500 11px var(--mono);color:var(--faint);background:color-mix(in srgb,var(--bg) 40%,var(--panel))}
+.sheet thead .rh{z-index:4}
+.sheet .st{position:sticky;left:46px;z-index:2;min-width:150px;background:var(--panel);border-right:1px solid var(--line)}
+.sheet thead .st{z-index:4}
+.sheet tr.selr td{background:color-mix(in srgb,var(--blue) 7%,var(--panel))}
+.sheet tr.selr .rh{box-shadow:inset 3px 0 0 var(--blue)}
+.sheet td.val-bad{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--amber) 60%,transparent);color:var(--amber)}
+.sheet .cb{display:flex;align-items:center;gap:8px}
+.insp-field{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--panel);margin:6px 0 10px}
+.insp-field b{display:block}.insp-field small{color:var(--muted);font-size:11.5px}
+.sugg{display:flex;flex-direction:column;gap:2px;margin-top:6px}
+.sugg div{display:flex;justify-content:space-between;align-items:center;padding:7px 10px;border-radius:7px;font-size:12.5px}
+.sugg div:hover,.sugg div.hi{background:color-mix(in srgb,var(--ink) 7%,var(--panel))}
+.sugg small{color:var(--muted);font-size:11px}
+.vals{display:flex;flex-wrap:wrap;gap:5px;margin:6px 0 12px}
+.stat{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0 12px}
+.stat div{padding:8px 10px;border:1px solid var(--line2);border-radius:9px;background:var(--panel)}
+.stat b{display:block;font:600 17px var(--mono)}
+.stat small{font-size:11px;color:var(--muted)}
+.lbl{margin:12px 0 4px;font:600 9.5px var(--ui);letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
+.v{display:none}.v.on{display:flex}
+:root{color-scheme:dark}[data-theme=light]{color-scheme:light}
+.sheet thead tr:nth-child(2) th.rh{min-width:46px;max-width:46px;vertical-align:middle;text-align:center}
+.sheet thead tr:nth-child(2) th.st{min-width:150px;max-width:170px}
+.carp .ph{height:64px}
+.note{font-size:12px;color:var(--muted);margin:8px 0 0}
+</style>
+</head>
+<body>
+<div class="switch">
+  <b>Option</b><div class="seg" id="optSeg"><button data-o="a" class="on">A · Column list</button><button data-o="b">B · Spreadsheet + side panel</button></div>
+  <b>Step</b><div class="seg" id="stepSeg"><button data-s="match" class="on">1 · Match columns</button><button data-s="cars">2 · Choose cars</button></div>
+  <b>Theme</b><div class="seg" id="themeSeg"><button data-t="dark" class="on">Dark</button><button data-t="light">Light</button></div>
+  <p>Preview with example data · the window keeps one size in every step</p>
+</div>
+<div class="app"><div class="chrome"><div class="logo"></div><div class="navg"><span>Overview</span><span>Showroom</span><span>Cars</span><span>Parts</span><span>Shopping List</span><span>Build from Scratch</span><span>Workshop</span><span>Library</span><span>Connections</span><span>Import &amp; Export</span><span>Settings</span></div></div></div>
+<div class="backdrop"></div>
+
+<div class="win">
+  <div class="whead">
+    <h2>Import cars</h2>
+    <div class="file"><span class="ico">XLS</span><b>my-collection-2026.xlsx</b><span>Sheet “Cars” · 48 car rows · 11 columns</span></div>
+    <span class="x">×</span>
+  </div>
+  <div class="stepper">
+    <div class="step" data-go="match" id="st1"><i>1</i>Match columns <small id="st1s">9 matched · 1 to check · 1 left out</small></div>
+    <div class="step" data-go="cars" id="st2"><i>2</i>Choose cars <small>46 of 48 ticked</small></div>
+    <div class="settings"><span>Headings in row <span class="mono">1</span> · dates <span class="mono">DD-MM-YYYY</span> · decimals <span class="mono">1.234,50</span></span><button class="btn small">File settings…</button></div>
+  </div>
+  <div class="wbody" id="body"></div>
+  <div class="wfoot" id="foot"></div>
+</div>
+
+<script>
+const COLS=[
+ {l:'A',h:'Name',s:['BMW M1 Procar','Porsche 917K','Ford GT40 Mk II'],f:'Display name',g:'Identity',st:'ok',v:'BMW M1 Procar'},
+ {l:'B',h:'Brand',s:['Fly','Scalextric','NSR'],f:'Slot-car manufacturer',g:'Identity',st:'ok',v:'Fly'},
+ {l:'C',h:'Ref',s:['C2911','A1154','0085'],f:'Product reference',g:'Identity',st:'ok',v:'C2911'},
+ {l:'D',h:'Scale',s:['1:32','1:32','1:24'],f:'Scale',g:'Identity',st:'ok',v:'1:32'},
+ {l:'E',h:'Year',s:['1979','1970','1966'],f:'Vehicle year',g:'Identity',st:'ok',v:'1979'},
+ {l:'F',h:'Livery',s:['BASF #80','Gulf #2','Shell #1'],f:'Livery',g:'Identity',st:'ok',v:'BASF #80'},
+ {l:'G',h:'Motor',s:['Flat-6 22k','FC-130','King 21k'],f:'Motor',g:'Current specifications',st:'warn',why:'Could also be the factory motor',v:'Flat-6 22k'},
+ {l:'H',h:'Bought',s:['12-03-2021','04-11-2019','2018'],f:'Purchase date',g:'Collection & ownership',st:'ok',v:'12 Mar 2021'},
+ {l:'I',h:'Paid',s:['€ 54,90','€ 39,00','€ 72,50'],f:'Purchase price',g:'Collection & ownership',st:'ok',v:'€ 54.90'},
+ {l:'J',h:'Box?',s:['Yes','No','Yes'],f:'',g:'',st:'off',why:'No Paddock field yet'},
+ {l:'K',h:'Notes',s:['Front tyres sanded','Needs new guide','—'],f:'Private notes',g:'Collection & ownership',st:'ok',v:'Front tyres sanded'}
+];
+const CARS=[
+ [2,'BMW M1 Procar','Fly · C2911','new'],[3,'Porsche 917K','Scalextric · A1154','match'],[4,'Ford GT40 Mk II','NSR · 0085','new'],[5,'Lancia Stratos HF','Fly · 88132','new'],
+ [6,'Audi R8 LMP','Slot.it · CA04','update'],[7,'Ferrari 312 PB','Policar · CAR02','new'],[8,'(no name)','Ninco · 50212','bad'],[9,'McLaren M8D','Scalextric · C3420','new'],
+ [10,'Porsche 936','Slot.it · CA15','new'],[11,'Ford Capri RS','Fly · 07063','dupe'],[12,'Chevron B19','MRRC · 3002','new'],[13,'Mercedes C9','Slot.it · CA09','update'],
+ [14,'Alfa Romeo 33','Policar · CAR05','new'],[15,'Toyota GT-One','Scaleauto · SC6024','new'],[16,'Jaguar XJR-9','Slot.it · CA03','new']
+];
+const ST={new:['ok','Add new car'],update:['blue','Update existing'],match:['warn','Possible match'],bad:['bad','Needs a name'],dupe:['off','Repeated row · left out']};
+let opt='a',step='match';
+const $=s=>document.querySelector(s);
+const chip=(c,t)=>`<span class="chip ${c}">${t}</span>`;
+const stChip=c=>c.st==='ok'?chip('ok','Matched'):c.st==='warn'?chip('warn','Check'):chip('off','Left out');
+
+function popover(){return `<div class="pop"><input value="mot" placeholder="Search Paddock fields…">
+ <div class="grp">Best matches for “Motor”</div>
+ <div class="opt hi"><span>Motor</span><small>Current specifications</small></div>
+ <div class="opt"><span>Motor</span><small>Factory specifications</small></div>
+ <div class="grp">Other fields</div>
+ <div class="opt"><span>Motor pod</span><small>Current specifications</small></div>
+ <div class="opt"><span>Motor torque (gf·cm)</span><small>Current specifications</small></div>
+ <div class="opt"><span>Motor type</span><small>Factory specifications</small></div>
+ <div class="foot"><button class="btn small ghost">Leave column out</button><button class="btn small">New custom field “Motor”…</button></div></div>`}
+
+function matchA(){
+ const rows=COLS.map((c,i)=>`<tr class="${i===6?'sel':''} ${c.st==='off'?'out':''}">
+  <td><span class="letter">${c.l}</span></td>
+  <td class="head"><b>${c.h}</b><small>${c.st==='off'?c.why:c.st==='warn'?c.why:'48 filled'}</small></td>
+  <td>${c.s.map(x=>`<span class="sample">${x}</span>`).join(' ')}</td>
+  <td class="arrow">→</td>
+  <td><div class="popwrap"><div class="pick ${c.f?'':'none'} ${i===6?'open':''}"><span><b>${c.f||'Leave out'}</b><small>${c.g||'Not imported'}</small></span><span class="chev">⌄</span></div>${i===6?popover():''}</div></td>
+  <td>${stChip(c)}</td></tr>`).join('');
+ const kv=(g,items)=>`<div class="g">${g}</div>`+items.map(c=>`<dt>${c.f}</dt><dd class="${c.st==='warn'?'hl':''}">${c.v}<span class="from">${c.l}</span></dd>`).join('');
+ const by=g=>COLS.filter(c=>c.g===g&&c.f&&!['Display name'].includes(c.f));
+ return `<div class="main">
+  <div class="tool"><div class="seg"><button class="on">All <span class="n">11</span></button><button>To check <span class="n">1</span></button><button>Left out <span class="n">1</span></button></div>
+   <span class="grow"></span><input class="field" placeholder="Find a column…" style="width:200px"><button class="btn small">Leave out all unmatched</button></div>
+  <div class="scroll"><table class="cols"><thead><tr><th style="width:44px">Col</th><th>Your heading</th><th>Examples from your file</th><th></th><th>Goes to Paddock field</th><th style="width:110px">Status</th></tr></thead><tbody>${rows}</tbody></table>
+  <p class="note" style="padding:0 16px 16px">One row per column of your spreadsheet. Blank cells never erase details you already saved.</p></div>
+ </div>
+ <aside class="side">
+  <div class="sh"><div class="eye">Live preview</div><h3>How your cars will look</h3><p>Every assignment shows here at once. Step through rows to check them.</p></div>
+  <div class="sb">
+   <div class="tip"><span>?</span><div><b>Check column G “Motor”</b><small>It could be the current or the factory motor. Pick one, or keep the suggestion.</small></div></div>
+   <div class="carp"><div class="ph">No photo in the spreadsheet</div><div class="ct"><h4>BMW M1 Procar</h4><p>Fly · C2911 · 1:32</p></div>
+   <dl class="kv">${kv('Identity',by('Identity'))}${kv('Current specifications',by('Current specifications'))}${kv('Collection & ownership',by('Collection & ownership'))}</dl></div>
+  </div>
+  <div class="sf"><div class="rownav"><button class="btn">‹</button><span>Row <b class="mono">2</b> of <span class="mono">48</span></span><button class="btn">›</button></div><span style="flex:1"></span><span class="muted" style="font-size:11.5px">Blue = still to check</span></div>
+ </aside>`;
+}
+
+function carsA(){
+ const rows=CARS.map(([r,n,m,s])=>{const [c,t]=ST[s];return `<tr class="${r===3?'sel':''} ${s==='dupe'||s==='bad'?'skip':''}">
+  <td style="width:36px"><span class="check ${s==='dupe'||s==='bad'?'':'on'}"></span></td><td class="rn">${r}</td>
+  <td class="nm"><b>${n}</b><small>${m}</small></td><td>${chip(c,t)}</td></tr>`}).join('');
+ return `<div class="main">
+  <div class="tool"><div class="seg"><button class="on">All <span class="n">48</span></button><button>New <span class="n">39</span></button><button>Updates <span class="n">5</span></button><button>Possible matches <span class="n">2</span></button><button>Needs attention <span class="n">2</span></button></div>
+   <span class="grow"></span><input class="field" placeholder="Find a car…" style="width:180px"><button class="btn small">Tick all new</button><button class="btn small ghost">Untick all</button></div>
+  <div class="scroll"><table class="cars"><thead><tr><th></th><th>Row</th><th>Car from your file</th><th style="width:220px">What happens</th></tr></thead><tbody>${rows}</tbody></table></div>
+ </div>
+ <aside class="side" style="width:440px">
+  <div class="sh"><div class="eye">Row 3 · possible match</div><h3>Porsche 917K</h3><p>Scalextric · A1154 looks like a car you already have.</p></div>
+  <div class="sb">
+   <div class="matchcard"><div class="th"></div><div><b>Porsche 917K Gulf</b><small>In your collection · Scalextric · A1154 · added 2023</small></div></div>
+   <div class="choice"><span class="on">Update this car</span><span>Add as a separate car</span><span>Leave out</span></div>
+   <table class="diff"><thead><tr><th>Field</th><th>In Paddock</th><th>From your file</th></tr></thead><tbody>
+    <tr class="same"><td>Display name</td><td>Porsche 917K Gulf</td><td>Porsche 917K <small>(kept)</small></td></tr>
+    <tr class="same"><td>Reference</td><td>A1154</td><td>A1154</td></tr>
+    <tr class="ch"><td>Livery</td><td>—</td><td>Gulf #2</td></tr>
+    <tr class="ch"><td>Motor</td><td>FC-130</td><td>King 21k</td></tr>
+    <tr class="ch"><td>Purchase date</td><td>—</td><td>4 Nov 2019</td></tr>
+    <tr class="ch"><td>Purchase price</td><td>—</td><td>€ 39.00</td></tr>
+    <tr class="same"><td>Private notes</td><td>Needs new guide</td><td>Needs new guide</td></tr>
+   </tbody></table>
+   <p class="note">Blue values are new or changed. Fitted parts and photos stay as they are.</p>
+  </div>
+  <div class="sf"><button class="btn small">‹ Previous match</button><span style="flex:1"></span><button class="btn small">Next to review ›</button></div>
+ </aside>`;
+}
+
+function sheetB(cars){
+ const rows=[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14];
+ const data=[['BMW M1 Procar','Fly','C2911','1:32','1979','BASF #80','Flat-6 22k','12-03-2021','€ 54,90','Yes','Front tyres sanded'],
+ ['Porsche 917K','Scalextric','A1154','1:32','1970','Gulf #2','King 21k','04-11-2019','€ 39,00','No','Needs new guide'],
+ ['Ford GT40 Mk II','NSR','0085','1:32','1966','Shell #1','FC-130','2018','€ 72,50','Yes',''],
+ ['Lancia Stratos HF','Fly','88132','1:32','1976','Alitalia #1','FC-130','03-02-2020','€ 44,00','Yes',''],
+ ['Audi R8 LMP','Slot.it','CA04','1:32','2000','#8','V12 21.5k','15-06-2022','€ 49,95','Yes','Magnet removed'],
+ ['Ferrari 312 PB','Policar','CAR02','1:32','1972','#3','Flat-6 22k','21-08-2021','€ 52,00','No',''],
+ ['','Ninco','50212','1:32','1990','','NC-1','','€ 25,00','No','Box only?'],
+ ['McLaren M8D','Scalextric','C3420','1:32','1970','#5','FC-130','2017','€ 35,00','Yes',''],
+ ['Porsche 936','Slot.it','CA15','1:32','1977','Martini #4','V12 21.5k','09-09-2023','€ 59,00','Yes',''],
+ ['Ford Capri RS','Fly','07063','1:32','1974','#21','FC-130','2019','€ 41,00','No','Repeated'],
+ ['Chevron B19','MRRC','3002','1:32','1971','#12','FC-130','','€ 48,00','Yes',''],
+ ['Mercedes C9','Slot.it','CA09','1:32','1989','Sauber #61','V12 21.5k','2020','€ 55,00','Yes',''],
+ ['Alfa Romeo 33','Policar','CAR05','1:32','1975','#2','Flat-6 22k','2021','€ 51,00','Yes',''],
+ ['Toyota GT-One','Scaleauto','SC6024','1:32','1998','#3','V12 21.5k','2022','€ 69,00','Yes',''],
+ ['Jaguar XJR-9','Slot.it','CA03','1:32','1988','Silk Cut #2','V12 21.5k','2020','€ 54,00','Yes','']];
+ const selCol=cars?-1:6;
+ const head1=`<tr><th class="rh"></th>${cars?'<th class="st"></th>':''}${COLS.map(c=>`<th class="${COLS.indexOf(c)===selCol?'selc':''}">${c.l}</th>`).join('')}</tr>`;
+ const head2=`<tr><th class="rh">#</th>${cars?'<th class="st" style="vertical-align:middle;font:600 10px var(--ui);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)">Paddock will…</th>':''}${COLS.map((c,i)=>`<th class="${i===selCol?'selc':''} ${c.st==='off'?'out':''}"><span class="yh">${c.h}</span><span class="tag ${c.st==='warn'?'warn':c.st==='off'?'off':''}">${c.f||'Left out'}</span></th>`).join('')}</tr>`;
+ const body=rows.map(i=>{const r=CARS[i],s=r[3],[cc,tt]=ST[s];return `<tr class="${cars&&i===1?'selr':''}"><td class="rh">${r[0]}</td>${cars?`<td class="st"><div class="cb"><span class="check ${s==='dupe'||s==='bad'?'':'on'}"></span>${chip(cc,tt.replace('Repeated row · left out','Repeated'))}</div></td>`:''}${data[i].map((v,j)=>`<td class="${j===selCol?'selc':''} ${COLS[j].st==='off'?'out':''} ${(!cars&&j===7&&v.length===4)||(cars&&j===0&&!v)?'val-bad':''}">${v||(j===0&&cars?'— no name —':'')}</td>`).join('')}</tr>`}).join('');
+ return `<table class="sheet"><thead>${head1}${head2}</thead><tbody>${body}</tbody></table>`;
+}
+function matchB(){
+ const c=COLS[6];
+ return `<div class="main">
+  <div class="tool"><div class="seg"><button class="on">All columns <span class="n">11</span></button><button>To check <span class="n">1</span></button><button>Left out <span class="n">1</span></button></div><span class="grow"></span><span class="muted" style="font-size:12px">Click a column heading to change where it goes</span></div>
+  <div class="scroll">${sheetB(false)}</div>
+ </div>
+ <aside class="side">
+  <div class="sh"><div class="eye">Column G · selected</div><h3>“Motor”</h3><p>48 filled · 6 different values</p></div>
+  <div class="sb">
+   <div class="lbl">Goes to</div>
+   <div class="insp-field"><div><b>Motor</b><small>Current specifications</small></div>${chip('warn','Check')}</div>
+   <div class="tip" style="margin-top:0"><span>?</span><div><b>Current or factory motor?</b><small>Paddock has both. Most collectors list the motor that is fitted now.</small></div></div>
+   <input class="field" style="width:100%" placeholder="Search all Paddock fields…">
+   <div class="sugg"><div class="hi"><span>Motor</span><small>Current specifications</small></div><div><span>Motor</span><small>Factory specifications</small></div><div><span>Motor type</span><small>Factory specifications</small></div><div><span>Motor pod</span><small>Current specifications</small></div></div>
+   <div class="lbl">Values in this column</div>
+   <div class="vals"><span class="sample">V12 21.5k ×14</span><span class="sample">FC-130 ×12</span><span class="sample">Flat-6 22k ×9</span><span class="sample">King 21k ×7</span><span class="sample">NC-1 ×4</span><span class="sample">S-Can ×2</span></div>
+  </div>
+  <div class="sf"><button class="btn small ghost">Leave column out</button><span style="flex:1"></span><button class="btn small">‹</button><button class="btn small">Next column to check ›</button></div>
+ </aside>`;
+}
+function carsB(){
+ return `<div class="main">
+  <div class="tool"><div class="seg"><button class="on">All <span class="n">48</span></button><button>New <span class="n">39</span></button><button>Updates <span class="n">5</span></button><button>Possible matches <span class="n">2</span></button><button>Needs attention <span class="n">2</span></button></div><span class="grow"></span><button class="btn small">Tick all new</button><button class="btn small ghost">Untick all</button></div>
+  <div class="scroll">${sheetB(true)}</div>
+ </div>
+ <aside class="side" style="width:420px">
+  <div class="sh"><div class="eye">Row 3 · possible match</div><h3>Porsche 917K</h3><p>Looks like a car you already have.</p></div>
+  <div class="sb">
+   <div class="matchcard"><div class="th"></div><div><b>Porsche 917K Gulf</b><small>In your collection · Scalextric · A1154</small></div></div>
+   <div class="choice"><span class="on">Update this car</span><span>Add separately</span><span>Leave out</span></div>
+   <div class="stat"><div><b>4</b><small>new details</small></div><div><b>1</b><small>changed</small></div><div><b>3</b><small>the same</small></div></div>
+   <table class="diff"><thead><tr><th>Field</th><th>Now</th><th>After import</th></tr></thead><tbody>
+    <tr class="ch"><td>Livery</td><td>—</td><td>Gulf #2</td></tr><tr class="ch"><td>Motor</td><td>FC-130</td><td>King 21k</td></tr>
+    <tr class="ch"><td>Purchase date</td><td>—</td><td>4 Nov 2019</td></tr><tr class="ch"><td>Purchase price</td><td>—</td><td>€ 39.00</td></tr></tbody></table>
+  </div>
+  <div class="sf"><button class="btn small">‹ Previous</button><span style="flex:1"></span><button class="btn small">Next to review ›</button></div>
+ </aside>`;
+}
+function foot(){
+ if(step==='match') return `<div class="sum"><b>10</b> of <b>11</b> columns used · <b>1</b> to check<small>You can change any column later. Nothing is imported yet.</small></div>
+  <div class="meter"><span style="width:82%;background:var(--ok)"></span><span style="width:9%;background:var(--amber)"></span><span style="width:9%;background:var(--faint)"></span></div>
+  <div class="acts"><button class="btn ghost">Save for later</button><button class="btn primary">Choose cars →</button></div>`;
+ return `<div class="sum"><b>46</b> cars ticked · <b>39</b> new · <b>5</b> updates · <b>2</b> to review<small>Progress is saved after each car. Pausing keeps your place in Review.</small></div>
+  <div class="acts"><button class="btn ghost">Save for later</button><button class="btn">← Columns</button><button class="btn primary">Import 46 cars…</button></div>`;
+}
+function render(){
+ $('#body').innerHTML=opt==='a'?(step==='match'?matchA():carsA()):(step==='match'?matchB():carsB());
+ $('#foot').innerHTML=foot();
+ $('#st1').className='step '+(step==='match'?'on':'done');$('#st2').className='step '+(step==='cars'?'on':'');
+ document.querySelectorAll('#optSeg button').forEach(b=>b.classList.toggle('on',b.dataset.o===opt));
+ document.querySelectorAll('#stepSeg button').forEach(b=>b.classList.toggle('on',b.dataset.s===step));
+ document.querySelectorAll('#themeSeg button').forEach(b=>b.classList.toggle('on',b.dataset.t===document.documentElement.dataset.theme));
+}
+document.addEventListener('click',e=>{const b=e.target.closest('button,[data-go]');if(!b)return;
+ if(b.dataset.o)opt=b.dataset.o;if(b.dataset.s)step=b.dataset.s;if(b.dataset.go)step=b.dataset.go;if(b.dataset.t)document.documentElement.dataset.theme=b.dataset.t;render();});
+function fromHash(){const q=new URLSearchParams(location.hash.slice(1));opt=q.get('o')||opt;step=q.get('s')||step;document.documentElement.dataset.theme=q.get('t')||document.documentElement.dataset.theme;render();}
+addEventListener('hashchange',fromHash);fromHash();
+</script>
+</body>
+</html>
