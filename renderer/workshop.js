@@ -96,17 +96,13 @@ function stockEditAction(p) {
 }
 function renderParts() {
   if (!local()) return renderStock();
-  const tabs = `<div class="tabs"><button data-action="parts-tab" data-id="Stock" class="${partsTab === 'Stock' ? 'active' : ''}">${icon('box')}Stock</button><button data-action="parts-tab" data-id="Assemblies" class="${partsTab === 'Assemblies' ? 'active' : ''}">${icon('assembly')}Assemblies (${db._view?.assemblies ?? liveAssemblies().length})</button></div>`;
-  if (partsTab === 'Stock') return renderStock(tabs);
-  if (partsTab === 'Build from Scratch') return renderBuild(tabs);
+  if (partsTab === 'Stock') return renderStock();
+  if (partsTab === 'Build from Scratch') return renderBuild('');
   return (
-    heading(
-      'Assemblies',
-      'Combine components into a physical unit, ready to install.',
-      btn(icon('plus') + ' Build assembly', 'add-assembly', 'primary') +
-        btn('Import Parts List', 'nav', 'outline', 'Import & Export')
-    ) +
-    tabs +
+    partsHeading() +
+    '<div class="parts-strip">' +
+    partsScopeSwitch() +
+    '</div>' +
     `<div class="note info">Assembly components are reserved from your stock. Install, transfer or remove the whole group, or dismantle it to work with its parts separately.</div>` +
     (liveAssemblies().length
       ? `<div class="two-col mt">${liveAssemblies()

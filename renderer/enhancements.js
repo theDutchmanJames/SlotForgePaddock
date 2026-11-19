@@ -377,6 +377,7 @@ async function enhancementAction(action, id, target) {
         return true;
       }
       stockScope = id;
+      partsTab = 'Stock';
       partMakerFilter = '';
       partCategory = '';
       partTypeFilter = '';

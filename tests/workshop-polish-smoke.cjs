@@ -37,12 +37,12 @@ module.exports=async({win,store,js,wait,click,fill,submit,qa})=>{
   checks.push('job summary, progress and purchases fit narrow windows and both dark and light themes');
 
   await js(`page='Parts';partsTab='Stock';stockScope='owned';partId=null;partCategory='';partQuery='';render()`);
-  const stockColour=await js(`getComputedStyle(document.querySelector('.part-group-card:not(.is-empty)')).borderTopColor`);
+  const stockColour=await js(`getComputedStyle(document.querySelector('.part-group-card:not(.is-empty) .item-visual')).backgroundColor`);
   await click('[data-action="stock-scope"][data-id="catalogue"]');
-  const catalogueColour=await js(`getComputedStyle(document.querySelector('.part-group-card:not(.is-empty)')).borderTopColor`);
+  const catalogueColour=await js(`getComputedStyle(document.querySelector('.part-group-card:not(.is-empty) .item-visual')).backgroundColor`);
   assert.notEqual(catalogueColour,stockColour);assert.equal(await js(`document.querySelectorAll('.catalogue-groups .part-group-card').length>0`),true);
   await js(`(async()=>{await change('settings.save',{revision:db.revision,theme:'dark'});render();})()`);
   fs.writeFileSync(path.join(qa,'workshop-polish-catalogue.png'),(await win.webContents.capturePage()).toPNG());
-  checks.push('catalogue group accents differ from owned stock and follow theme colours');
+  checks.push('catalogue group icon tiles differ from owned stock and follow theme colours');
   return checks;
 };

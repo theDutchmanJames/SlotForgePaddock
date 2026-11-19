@@ -1,0 +1,120 @@
+/* Parts page, after SlotForgeRestyle.md: Control Strip, Gear Selector, Entry Cards for the main groups,
+   a Paddock Rail inside a group, a Race Sheet list or Garage Cards, and a quiet details panel. */
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* the one control row */
+.parts-strip{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;margin:0 0 20px}
+.parts-scope .btn .mono{margin-left:4px;font-size:12px;color:var(--muted)}
+.parts-scope .btn.on .mono{color:var(--ink)}
+.parts-strip-tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-left:auto;min-width:0}
+.parts-strip .parts-search{width:min(380px,100%);margin:0}
+.parts-strip .parts-search input{width:100%;min-height:34px}
+.parts-field select{min-height:34px;max-width:220px}
+
+/* overview: Entry Cards for the main groups */
+.parts-groups-head{display:flex;align-items:baseline;gap:12px}
+.parts-groups-head>span{margin-left:auto;font-size:12px}
+.part-group-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+.part-group-card,.catalogue-groups .part-group-card{display:flex;flex-direction:column;align-items:stretch;gap:10px;min-width:0;padding:14px;border:1px solid var(--line);border-top:1px solid var(--line);border-radius:12px;background:var(--panel);box-shadow:none;color:var(--ink);font:inherit;text-align:left;cursor:pointer}
+.part-group-card:hover,.part-group-card:focus-visible{border-color:color-mix(in srgb,var(--ink) 26%,var(--line));transform:none}
+.part-group-card:focus-visible{outline:3px solid #4c9aff;outline-offset:2px}
+.pg-head{display:flex;align-items:center;gap:12px;min-width:0}
+.stock-groups .part-group-card{--c:var(--amber)}.catalogue-groups .part-group-card{--c:var(--blue)}
+.part-group-card .item-visual{width:44px;height:44px;flex:none;border-radius:10px;background:color-mix(in srgb,var(--c,var(--ink)) 16%,var(--panel))}
+.part-group-card .item-visual svg{width:26px;height:26px}
+.pg-title{display:flex;flex-direction:column;min-width:0}
+.pg-eye{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.pg-title strong{font:italic 700 19px/1.1 var(--font-cond);text-transform:uppercase;letter-spacing:.02em;overflow-wrap:anywhere}
+.pg-types{min-height:2.9em;font-size:12.5px;line-height:1.45;color:var(--muted)}
+.pg-facts{display:flex;flex-direction:column;gap:3px;padding-top:10px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted)}
+.pg-count{color:var(--ink)}
+.pg-count b{font-size:15px}
+.pg-foot{display:flex;align-items:center;justify-content:flex-end;gap:6px;margin:auto -14px -14px;padding:8px 14px;border-top:1px solid var(--line);border-radius:0 0 12px 12px;background:color-mix(in srgb,var(--bg) 50%,var(--panel));font-size:12.5px;color:var(--muted)}
+.pg-foot svg{width:14px;height:14px}
+.part-group-card:hover .pg-foot{color:var(--ink)}
+.part-group-card.is-empty .pg-count{color:var(--muted)}
+
+/* inside a group: side list + page */
+.parts-shell{display:grid;grid-template-columns:230px minmax(0,1fr);gap:22px;align-items:start}
+.parts-rail{position:sticky;top:12px;display:flex;flex-direction:column;gap:2px;padding:14px 10px;border:1px solid var(--line);border-radius:12px;background:color-mix(in srgb,var(--bg) 55%,var(--panel))}
+.parts-rail-label{margin:0 8px 8px;font-size:10.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.parts-rail-item{display:flex;align-items:center;gap:10px;width:100%;min-height:36px;padding:6px 8px;border:0;border-radius:8px;background:transparent;color:color-mix(in srgb,var(--ink) 82%,var(--muted));font:inherit;font-size:13px;line-height:1.25;text-align:left;cursor:pointer}
+.parts-rail-item:hover{background:color-mix(in srgb,var(--ink) 6%,transparent)}
+.parts-rail-item.on{background:color-mix(in srgb,var(--ink) 10%,var(--panel));color:var(--ink);font-weight:600}
+.parts-rail-item>span{flex:1;min-width:0;overflow-wrap:anywhere}
+.parts-rail-item>b{font-size:12px;font-weight:500;color:var(--muted)}
+.parts-rail-item>svg{width:18px;height:18px;flex:none;color:var(--muted)}
+.parts-rail-item .item-visual{width:24px;height:24px;flex:none;border-radius:6px;background:none}
+.parts-rail-item .item-visual svg{width:18px;height:18px}
+.parts-rail-item:not(.on) .item-visual{filter:grayscale(1);opacity:.75}
+.parts-main{min-width:0}
+.parts-group-head{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px 18px;margin-bottom:14px}
+.parts-group-head h2{margin:2px 0 2px;font-size:28px;line-height:1}
+.parts-group-eye{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.parts-group-head>div:first-child>span.muted{font-size:12.5px}
+.parts-group-tools{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px;margin-left:auto}
+.parts-group-tools .field{margin:0;font-size:11.5px;color:var(--muted)}
+.parts-group-tools select{min-height:32px;max-width:210px}
+.parts-group-tools .seg .btn svg{width:14px;height:14px}
+
+/* Race Sheet list */
+.part-sheet{border:1px solid var(--line);border-radius:12px;background:var(--panel);overflow:auto}
+.part-sheet table{width:100%;border-collapse:collapse;font-size:13px}
+.part-sheet th{padding:9px 12px;border-bottom:1px solid var(--line);background:none;color:var(--muted);font:600 10px "Segoe UI",system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase;text-align:left;white-space:nowrap}
+.part-sheet td{padding:8px 12px;border-bottom:1px solid color-mix(in srgb,var(--line) 65%,transparent);vertical-align:middle}
+.part-sheet tr:last-child td{border-bottom:0}
+.part-sheet .num{text-align:right}
+.part-sheet td.mono{font-size:12.5px}
+.part-sheet .item-row{display:flex;align-items:center;gap:12px}
+.part-sheet .item-visual{width:38px;height:38px;flex:none;border-radius:8px}
+.part-sheet .item-visual svg{width:24px;height:24px}
+.part-sheet .item-visual img{width:100%;height:100%;object-fit:cover;border-radius:inherit}
+.part-sheet .part-select-row{cursor:pointer}
+.part-sheet .part-select-row:hover td{background:color-mix(in srgb,var(--ink) 4%,transparent)}
+.part-sheet .part-select-row.selected td{background:color-mix(in srgb,var(--ink) 9%,var(--panel))}
+.part-sheet .part-select-row.selected{box-shadow:none}
+.part-sheet .part-select-row.selected td:first-child{box-shadow:inset 3px 0 var(--accent)}
+.part-sheet .table-name.btn{font-weight:600;color:var(--ink)}
+.part-sheet .part-select-row .table-name.btn:hover{color:var(--ink);text-decoration:underline}
+
+/* Garage Cards */
+.part-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px}
+.part-card{display:flex;flex-direction:column;min-width:0;padding:0;border:1px solid var(--line);border-radius:12px;background:var(--panel);color:var(--ink);font:inherit;text-align:left;overflow:hidden;cursor:pointer}
+.part-card:hover,.part-card:focus-visible{border-color:color-mix(in srgb,var(--ink) 30%,var(--line))}
+.part-card.selected{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.part-card-visual{display:block;aspect-ratio:16/10;border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--ink) 5%,var(--panel))}
+.part-card-visual .item-visual{width:100%;height:100%;border-radius:0;background:none;display:grid;place-items:center}
+.part-card-visual .item-visual img{width:100%;height:100%;object-fit:cover}
+.part-card-visual .item-visual svg{width:54px;height:54px}
+.part-card-body{display:flex;flex-direction:column;gap:3px;padding:10px 12px 12px;min-width:0}
+.part-card-body strong{margin-bottom:4px;font:italic 700 17px/1.1 var(--font-cond);text-transform:uppercase;letter-spacing:.02em;overflow-wrap:anywhere}
+
+/* details panel */
+.part-layout{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(290px,.9fr);gap:16px;align-items:start}
+.part-inspector{position:sticky;top:12px;display:flex;flex-direction:column;border:1px solid var(--line);border-radius:12px;background:var(--panel);overflow:hidden}
+.part-inspector>.item-visual.large{height:170px;border-radius:0;border-bottom:1px solid var(--line);display:grid;place-items:center}
+.part-inspector>.item-visual.large img{width:100%;height:100%;object-fit:cover}
+.part-inspector-body{display:flex;flex-direction:column;gap:3px;padding:14px 16px}
+.part-inspector-eye{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.part-inspector h3{margin:2px 0 8px;font-size:22px;line-height:1.05;overflow-wrap:anywhere}
+.part-inspector-notes{margin:10px 0 0;font-size:13px;color:var(--muted)}
+.part-inspector-actions{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:10px 12px;border-top:1px solid var(--line);background:color-mix(in srgb,var(--bg) 50%,var(--panel))}
+.part-inspector-actions>.btn{min-height:28px;padding:3px 10px;font-size:12.5px}
+.part-inspector-actions>.btn.danger{margin-left:auto}
+.part-inspector-history{padding:12px 16px 14px;border-top:1px solid var(--line)}
+.part-inspector-history h4{margin:0 0 6px;font-size:10.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.part-inspector-history .list-row{padding:6px 0}
+
+@media(max-width:1250px){.part-layout{grid-template-columns:1fr}.part-inspector{position:static}}
+@media(max-width:900px){
+  .parts-shell{grid-template-columns:1fr}
+  .parts-rail{position:static;flex-direction:row;flex-wrap:wrap;padding:8px}
+  .parts-rail-label{display:none}
+  .parts-rail-item{width:auto}
+  .parts-rail-item>b{margin-left:2px}
+  .parts-strip-tools{margin-left:0;width:100%}
+  .parts-strip .parts-search{flex:1 1 220px;width:auto}
+}
+.parts-empty-note{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;margin:0 0 14px;padding:10px 14px;border-left:2px solid color-mix(in srgb,var(--accent) 55%,var(--line));background:color-mix(in srgb,var(--ink) 4%,var(--panel));border-radius:0 10px 10px 0}
+.parts-empty-note>div{display:flex;flex-direction:column;gap:2px;flex:1 1 260px;font-size:13px}
+.parts-empty-note span{color:var(--muted)}

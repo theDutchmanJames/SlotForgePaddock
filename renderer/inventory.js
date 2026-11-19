@@ -120,28 +120,39 @@ function editPart(id) {
   quantityInput.required = true;
   quantityInput.step = '1';
 }
-let stockScope = 'owned';
+let stockScope = 'owned',
+  partsLayout = 'list';
 const stockItems = () => db.parts.filter(p => stockScope !== 'owned' || p.quantity > 0);
+// The one control row of the Parts page (Control Strip): what to show, then search and manufacturer.
+function partsScopeSwitch() {
+  const assemblies = db._view?.assemblies ?? liveAssemblies().length,
+    on = (kind, id) =>
+      kind === 'tab'
+        ? id === 'Stock'
+          ? partsTab === 'Stock' && stockScope === 'owned'
+          : partsTab === id
+        : partsTab === 'Stock' && stockScope === id;
+  const one = (kind, id, label, extra = '') =>
+    `<button type="button" class="btn ${on(kind, id) ? 'on active' : ''}" data-action="${kind === 'tab' ? 'parts-tab' : 'stock-scope'}" data-id="${id}" aria-pressed="${on(kind, id)}">${label}${extra}</button>`;
+  return `<span class="segment parts-scope" role="group" aria-label="Show">${one('tab', 'Stock', 'My stock')}${one('scope', 'catalogue', 'Catalogue')}${one('tab', 'Assemblies', 'Assemblies', ` <span class="mono">${assemblies}</span>`)}</span>`;
+}
 function stockTabs() {
-  return (
-    '<div class="tabs">' +
-    [
-      ['owned', 'My stock'],
-      ['catalogue', 'Catalogue']
-    ]
-      .map(
-        ([id, name]) =>
-          '<button data-action="stock-scope" data-id="' +
-          id +
-          '" class="' +
-          (id === stockScope ? 'active' : '') +
-          '">' +
-          name +
-          '</button>'
-      )
-      .join('') +
-    '</div>'
-  );
+  return partsScopeSwitch();
+}
+function partsHeading() {
+  const note =
+    partsTab === 'Assemblies'
+      ? 'Components joined into one physical unit, ready to install, transfer or dismantle.'
+      : stockScope === 'catalogue'
+        ? 'Every part record, owned or not: references, manufacturers and catalogue details.'
+        : 'The parts you own, sorted into main groups. Open a group, or search everything at once.';
+  const actions =
+    partsTab === 'Assemblies'
+      ? btn(icon('plus') + ' Build assembly', 'add-assembly', 'primary') +
+        btn('Import Parts List', 'nav', 'outline', 'Import & Export')
+      : btn(icon('plus') + ' Add parts', 'add-part', 'primary') +
+        btn('Import Parts List', 'nav', 'outline', 'Import & Export');
+  return heading('Parts', note, actions);
 }
 function partGroups() {
   return [
@@ -151,6 +162,15 @@ function partGroups() {
     ])
   ];
 }
+function partGroupFigures(category) {
+  const items = stockItems().filter(p => p.category === category),
+    g = db._view?.groups?.find(g => g.category === category),
+    count = g?.count ?? items.length,
+    free = g?.available ?? items.reduce((n, p) => n + available(p), 0),
+    total = g?.quantity ?? items.reduce((n, p) => n + p.quantity, 0);
+  return { count, free, fitted: total - free };
+}
+// The overview: one Entry Card per main group.
 function partGroupCards() {
   return (
     '<div class="part-group-grid ' +
@@ -158,49 +178,231 @@ function partGroupCards() {
     '">' +
     partGroups()
       .map(category => {
-        const items = stockItems().filter(p => p.category === category),
-          free = items.reduce((n, p) => n + available(p), 0),
-          total = items.reduce((n, p) => n + p.quantity, 0),
-          types = slotforgeCatalogue.parts[category] || [],
-          g = db._view?.groups?.find(g => g.category === category),
-          count = g?.count ?? items.length,
-          freeCount = g?.available ?? free,
-          totalCount = g?.quantity ?? total;
+        const types = slotforgeCatalogue.parts[category] || [],
+          { count, free, fitted } = partGroupFigures(category);
         return (
           '<button type="button" class="part-group-card ' +
           (count ? '' : 'is-empty') +
           '" data-action="part-group" data-id="' +
           esc(category) +
-          '">' +
+          '"><span class="pg-head">' +
           itemVisual({ category, partType: types[0] || '' }) +
-          '<span class="part-group-copy"><strong>' +
+          '<span class="pg-title"><span class="pg-eye">' +
+          types.length +
+          ' part ' +
+          (types.length === 1 ? 'type' : 'types') +
+          '</span><strong>' +
           esc(category) +
-          '</strong><span class="tiny muted">' +
-          esc(types.slice(0, 3).join(' · ')) +
-          (types.length > 3 ? '…' : '') +
-          '</span></span><span class="part-group-arrow">' +
-          icon('next') +
-          '</span><span class="part-group-summary"><span class="badge">' +
+          '</strong></span></span><span class="pg-types">' +
+          esc(types.slice(0, 4).join(' · ')) +
+          (types.length > 4 ? '…' : '') +
+          '</span><span class="pg-facts"><span class="pg-count"><b class="mono">' +
           count +
-          ' part record' +
+          '</b> part record' +
           (count === 1 ? '' : 's') +
-          '</span><span class="tiny muted">' +
+          '</span><span class="pg-stock">' +
           (count
-            ? freeCount + ' available · ' + (totalCount - freeCount) + ' fitted / reserved'
-            : 'Ready for your first part') +
-          '</span></span></button>'
+            ? '<span class="mono">' +
+              free +
+              '</span> available · <span class="mono">' +
+              fitted +
+              '</span> fitted / reserved'
+            : stockScope === 'catalogue'
+              ? 'No catalogue entries yet'
+              : 'Ready for your first part') +
+          '</span></span><span class="pg-foot">Open' +
+          icon('next') +
+          '</span></button>'
         );
       })
       .join('') +
     '</div>'
   );
 }
-function renderStock(tabs = '') {
+// Inside a group: the main groups as a side list (Paddock Rail).
+function partGroupRail() {
+  const current = !partQuery.trim() ? partCategory : '';
+  return (
+    '<nav class="parts-rail" aria-label="Main groups"><span class="parts-rail-label">Main groups</span>' +
+    '<button type="button" class="parts-rail-item" data-action="part-groups">' +
+    icon('grid') +
+    '<span>All groups</span></button>' +
+    partGroups()
+      .map(category => {
+        const { count } = partGroupFigures(category),
+          on = category === current;
+        return (
+          '<button type="button" class="parts-rail-item ' +
+          (on ? 'on' : '') +
+          '" data-action="part-group" data-id="' +
+          esc(category) +
+          '" aria-current="' +
+          (on ? 'true' : 'false') +
+          '">' +
+          itemVisual({ category, partType: (slotforgeCatalogue.parts[category] || [])[0] || '' }) +
+          '<span>' +
+          esc(category) +
+          '</span><b class="mono">' +
+          count +
+          '</b></button>'
+        );
+      })
+      .join('') +
+    '</nav>'
+  );
+}
+function partLayoutSwitch() {
+  return (
+    '<span class="segment" role="group" aria-label="Layout">' +
+    [
+      ['list', 'List', 'list'],
+      ['grid', 'Grid', 'grid']
+    ]
+      .map(
+        ([id, label, ic]) =>
+          '<button type="button" class="btn ' +
+          (partsLayout === id ? 'on' : '') +
+          '" data-action="parts-layout" data-id="' +
+          id +
+          '" aria-pressed="' +
+          (partsLayout === id) +
+          '">' +
+          icon(ic) +
+          label +
+          '</button>'
+      )
+      .join('') +
+    '</span>'
+  );
+}
+function partSubline(p, searching) {
+  return [searching ? p.category : '', p.location].filter(Boolean).join(' · ');
+}
+function partList(list, searching) {
+  if (partsLayout === 'grid')
+    return (
+      '<div class="part-cards">' +
+      list
+        .map(
+          p =>
+            '<button type="button" class="part-card part-select-row ' +
+            (p.id === partId ? 'selected' : '') +
+            '" data-action="select-part" data-id="' +
+            esc(p.id) +
+            '"><span class="part-card-visual">' +
+            itemVisual(p) +
+            '</span><span class="part-card-body"><strong>' +
+            esc(p.name) +
+            '</strong>' +
+            [
+              ['Type', p.partType, ''],
+              ['Manufacturer', p.maker, ''],
+              ['Reference', p.reference, 'mono'],
+              ['Available', String(available(p)), 'mono']
+            ]
+              .filter(([, v]) => v)
+              .map(
+                ([l, v, k]) =>
+                  '<span class="card-row"><span>' + l + '</span><b class="' + k + '">' + esc(v) + '</b></span>'
+              )
+              .join('') +
+            '</span></button>'
+        )
+        .join('') +
+      '</div>'
+    );
+  return (
+    '<div class="table-wrap part-sheet"><table><thead><tr><th>Part</th><th>Type</th><th>Manufacturer</th><th>Reference</th><th class="num">Available</th><th class="num">Fitted / reserved</th></tr></thead><tbody>' +
+    list
+      .map(
+        p =>
+          '<tr data-action="select-part" data-id="' +
+          esc(p.id) +
+          '" class="part-select-row ' +
+          (p.id === partId ? 'selected' : '') +
+          '"><td><div class="item-row">' +
+          itemVisual(p) +
+          '<div>' +
+          btn(esc(p.name), 'select-part', 'table-name', p.id) +
+          (partSubline(p, searching) ? '<div class="tiny muted">' + esc(partSubline(p, searching)) + '</div>' : '') +
+          '</div></div></td><td>' +
+          esc(p.partType || '—') +
+          '</td><td>' +
+          esc(p.maker || '—') +
+          '</td><td class="mono">' +
+          esc(p.reference || '—') +
+          '</td><td class="num mono">' +
+          available(p) +
+          '</td><td class="num mono">' +
+          (p.quantity - available(p)) +
+          '</td></tr>'
+      )
+      .join('') +
+    '</tbody></table></div>'
+  );
+}
+function partInspector(p) {
+  if (!p)
+    return '<aside class="part-inspector is-empty"><p class="muted">Choose a part to see its photograph, specifications, stock and where it is fitted.</p></aside>';
+  const rows = [
+    ['Manufacturer', p.maker, ''],
+    ['Reference', p.reference, 'mono'],
+    ['Scale', p.scale, 'mono'],
+    ['Dimensions', p.dimensions, 'mono'],
+    ['Material / compound', p.material, ''],
+    ['Compatibility', p.compatibility, ''],
+    ['Condition', p.condition, ''],
+    ['Tracking', p.tracking, ''],
+    ['Location', p.location, ''],
+    ['Available', String(available(p)), 'mono'],
+    ['Fitted / reserved', String(p.quantity - available(p)), 'mono']
+  ].filter(([, v]) => v);
+  const history = db.installations.filter(i => i.partId === p.id);
+  return (
+    '<aside class="part-inspector">' +
+    itemVisual(p, true) +
+    '<div class="part-inspector-body"><span class="part-inspector-eye">' +
+    esc([p.category, p.partType].filter(Boolean).join(' · ')) +
+    '</span><h3>' +
+    esc(p.name) +
+    '</h3>' +
+    rows
+      .map(([l, v, k]) => '<div class="card-row"><span>' + l + '</span><b class="' + k + '">' + esc(v) + '</b></div>')
+      .join('') +
+    catalogueDetails(p) +
+    (p.notes ? '<p class="prewrap part-inspector-notes">' + esc(p.notes) + '</p>' : '') +
+    '</div><div class="part-inspector-actions">' +
+    (available(p) > 0 ? btn('Install on car', 'install-stock', 'primary small', p.id) : '') +
+    stockEditAction(p) +
+    purchaseStockActions(p) +
+    btn('Icon & colour', 'part-appearance', 'small ghost', p.id) +
+    binBtn('Delete part…', 'delete-part', p.id) +
+    '</div><div class="part-inspector-history"><h4>Installation history</h4>' +
+    (history.length
+      ? history
+          .map(
+            i =>
+              '<div class="list-row"><div>' +
+              esc(db.cars.find(c => c.id === i.carId)?.name) +
+              '<div class="tiny muted">' +
+              i.quantity +
+              ' piece(s) · ' +
+              date(i.installed) +
+              ' · ' +
+              (i.removed ? 'Removed' : 'Installed') +
+              '</div></div></div>'
+          )
+          .join('')
+      : '<p class="tiny muted">Not fitted to a car yet.</p>') +
+    viewPager(db._view?.partHistory) +
+    '</div></aside>'
+  );
+}
+function renderStock() {
   if (!local()) return empty('Inventory stays with its owner', 'Switch to your local database to manage parts.');
   if (stockScope === 'shopping')
     return (
       heading('Shopping list', 'Plan purchases, then record parts as they arrive.') +
-      tabs +
       stockTabs() +
       shoppingList() +
       viewPager(db._view?.list)
@@ -219,21 +421,6 @@ function renderStock(tabs = '') {
           .includes(partQuery.trim().toLowerCase())
     ),
     p = folders ? null : db.parts.find(p => p.id === partId);
-  const search =
-    '<label class="search">' +
-    icon('search') +
-    '<input id="part-search" value="' +
-    esc(partQuery) +
-    '" placeholder="Search all parts, references or locations…" aria-label="Search all parts"></label>';
-  const head =
-    heading(
-      'Parts',
-      'Owned stock and catalogue references, organised into main groups',
-      btn(icon('plus') + ' Add parts', 'add-part', 'primary') +
-        btn('Import Parts List', 'nav', 'outline', 'Import & Export')
-    ) +
-    tabs +
-    stockTabs();
   const makers =
     db._view?.partMakers ||
     [
@@ -244,81 +431,75 @@ function renderStock(tabs = '') {
       ).values()
     ].sort((a, b) => a.localeCompare(b));
   const makerFilter =
-    '<label class="field">Manufacturer<select id="part-maker-filter"><option value="">All manufacturers</option>' +
+    '<label class="parts-field"><span class="sr-only">Manufacturer</span><select id="part-maker-filter" aria-label="Manufacturer"><option value="">All manufacturers</option>' +
     [...new Map([...makers, ...(partMakerFilter ? [partMakerFilter] : [])].map(m => [m.toLowerCase(), m])).values()]
       .map(
         m => '<option value="' + esc(m) + '" ' + (m === partMakerFilter ? 'selected' : '') + '>' + esc(m) + '</option>'
       )
       .join('') +
     '</select></label>';
+  const strip =
+    '<div class="parts-strip">' +
+    stockTabs() +
+    '<div class="parts-strip-tools"><label class="search parts-search">' +
+    icon('search') +
+    '<input id="part-search" value="' +
+    esc(partQuery) +
+    '" placeholder="' +
+    (stockScope === 'catalogue' ? 'Search the catalogue…' : 'Search all parts, references or locations…') +
+    '" aria-label="Search all parts"></label>' +
+    makerFilter +
+    '</div></div>';
+  const total = db._view?.groups?.reduce((n, g) => n + g.count, 0) ?? stockItems().length;
   if (folders)
     return (
-      head +
-      '<div class="toolbar">' +
-      search +
-      makerFilter +
-      '</div><div class="section-heading"><h2>Main groups</h2><span class="muted tiny">' +
-      (db._view?.groups?.reduce((n, g) => n + g.count, 0) ?? stockItems().length) +
-      ' part records · ' +
+      partsHeading() +
+      strip +
+      '<div class="section-heading parts-groups-head"><h2>Main groups</h2><span class="muted"><span class="mono">' +
+      total +
+      '</span> part records · <span class="mono">' +
       partGroups().length +
-      ' groups</span></div>' +
+      '</span> groups</span></div>' +
+      (stockScope === 'owned' && !total
+        ? '<div class="parts-empty-note"><div><strong>No parts in your stock yet</strong><span>Add the parts you own, or find them in the catalogue and choose Add to my stock.</span></div>' +
+          btn('Browse the catalogue', 'stock-scope', 'outline', 'catalogue') +
+          '</div>'
+        : '') +
       partGroupCards() +
-      '<p class="footer-note">Open a group to browse its parts. Counts show part records; stock quantities count individual pieces. Assemblies stay in their own tab.</p>'
+      '<p class="footer-note">Counts show part records; stock quantities count individual pieces. Assemblies have their own view.</p>'
     );
-  const filters =
-    '<div class="toolbar">' +
-    search +
+  const shown = db._view?.list?.total ?? list.length;
+  const types = (
+    db._view?.partTypes ||
+    [
+      ...new Set(
+        db.parts
+          .filter(p => !partCategory || p.category === partCategory)
+          .map(p => p.partType)
+          .filter(Boolean)
+      )
+    ].sort()
+  )
+    .map(t => '<option ' + (t === partTypeFilter ? 'selected' : '') + '>' + esc(t) + '</option>')
+    .join('');
+  const groupHead =
+    '<div class="parts-group-head"><div><span class="parts-group-eye">' +
+    (stockScope === 'catalogue' ? 'Catalogue' : 'My stock') +
+    '</span><h2>' +
+    (searching ? 'Search results' : esc(partCategory || 'All parts')) +
+    '</h2><span class="muted"><span class="mono">' +
+    shown +
+    '</span> part record' +
+    (shown === 1 ? '' : 's') +
+    '</span></div><div class="parts-group-tools">' +
     categorySelect('part-category-filter', 'Group', partCategory, partGroups(), true) +
     '<label class="field">Part type<select id="part-type-filter"><option value="">All types</option>' +
-    (
-      db._view?.partTypes ||
-      [
-        ...new Set(
-          db.parts
-            .filter(p => !partCategory || p.category === partCategory)
-            .map(p => p.partType)
-            .filter(Boolean)
-        )
-      ].sort()
-    )
-      .map(t => '<option ' + (t === partTypeFilter ? 'selected' : '') + '>' + esc(t) + '</option>')
-      .join('') +
+    types +
     '</select></label>' +
-    makerFilter +
-    '</div>';
-  const breadcrumb =
-    '<div class="part-breadcrumb">' +
-    btn(icon('arrow') + ' All groups', 'part-groups', 'small ghost') +
-    '<span aria-hidden="true">/</span><strong>' +
-    (searching ? 'Search results' : esc(partCategory || 'All parts')) +
-    '</strong><span class="badge">' +
-    (db._view?.list?.total ?? list.length) +
-    ' part record' +
-    ((db._view?.list?.total ?? list.length) === 1 ? '' : 's') +
-    '</span></div>';
-  const table = list.length
-    ? '<div class="table-wrap"><table><thead><tr><th>Part</th><th>Available</th><th>Fitted / reserved</th></tr></thead><tbody>' +
-      list
-        .map(
-          p =>
-            '<tr data-action="select-part" data-id="' +
-            esc(p.id) +
-            '" class="part-select-row ' +
-            (p.id === partId ? 'selected' : '') +
-            '"><td><div class="item-row">' +
-            itemVisual(p) +
-            '<div>' +
-            btn(esc(p.name), 'select-part', 'table-name', p.id) +
-            '<div class="tiny muted">' +
-            esc([searching ? p.category : '', p.partType, p.reference, p.location].filter(Boolean).join(' · ')) +
-            '</div></div></div></td><td>' +
-            available(p) +
-            '</td><td>' +
-            (p.quantity - available(p)) +
-            '</td></tr>'
-        )
-        .join('') +
-      '</tbody></table></div>'
+    partLayoutSwitch() +
+    '</div></div>';
+  const body = list.length
+    ? partList(list, searching)
     : empty(
         searching || partTypeFilter || partMakerFilter ? 'No matching parts' : 'This group is empty',
         searching || partTypeFilter
@@ -327,62 +508,20 @@ function renderStock(tabs = '') {
         btn('Add parts', 'add-part', 'primary')
       );
   return (
-    head +
-    breadcrumb +
-    filters +
+    partsHeading() +
+    strip +
+    '<div class="parts-shell">' +
+    partGroupRail() +
+    '<div class="parts-main">' +
+    groupHead +
     '<div class="part-layout ' +
     (p ? '' : 'no-selection') +
     '"><div>' +
-    table +
+    body +
     viewPager(db._view?.list) +
-    '</div><div>' +
-    (p
-      ? panel(
-          p.name,
-          itemVisual(p, true) +
-            dl([
-              ['Category', p.category],
-              ['Type', p.partType],
-              ['Manufacturer', p.maker],
-              ['Reference', p.reference],
-              ['Scale', p.scale],
-              ['Dimensions', p.dimensions],
-              ['Material / compound', p.material],
-              ['Compatibility', p.compatibility],
-              ['Condition', p.condition],
-              ['Tracking', p.tracking],
-              ['Available', String(available(p))],
-              ['Location', p.location]
-            ]) +
-            catalogueDetails(p) +
-            '<p class="prewrap">' +
-            esc(p.notes) +
-            '</p><div class="actions">' +
-            stockEditAction(p) +
-            purchaseStockActions(p) +
-            btn('Icon & colour', 'part-appearance', '', p.id) +
-            (available(p) > 0 ? btn('Install on car', 'install-stock', 'primary', p.id) : '') +
-            btn('Delete part…', 'delete-part', 'danger', p.id) +
-            '</div><h3 class="mt">Installation history</h3>' +
-            db.installations
-              .filter(i => i.partId === p.id)
-              .map(
-                i =>
-                  '<div class="list-row"><div>' +
-                  esc(db.cars.find(c => c.id === i.carId)?.name) +
-                  '<div class="tiny muted">' +
-                  i.quantity +
-                  ' piece(s) · ' +
-                  date(i.installed) +
-                  ' · ' +
-                  (i.removed ? 'Removed' : 'Installed') +
-                  '</div></div></div>'
-              )
-              .join('') +
-            viewPager(db._view?.partHistory)
-        )
-      : panel('Select a part', '<p class="muted">Inspect its photograph, specifications and stock history.</p>')) +
-    '</div></div><p class="footer-note">Stock quantities count individual pieces. Build ready-to-install assemblies in the Assemblies tab. Tools and consumables live in Workshop → Workshop supplies.</p>'
+    '</div>' +
+    partInspector(p) +
+    '</div></div></div><p class="footer-note">Stock quantities count individual pieces. Tools and consumables live in Workshop → Workshop supplies.</p>'
   );
 }
 
@@ -586,6 +725,10 @@ function editSupply(id) {
 }
 async function inventoryAction(action, id) {
   switch (action) {
+    case 'parts-layout':
+      partsLayout = id === 'grid' ? 'grid' : 'list';
+      render();
+      return true;
     case 'part-groups':
       partMakerFilter = '';
       partCategory = '';

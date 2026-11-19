@@ -1314,7 +1314,18 @@ document.addEventListener('click', async event => {
       }
       case 'parts-tab':
         if (id === 'Build from Scratch') page = id;
-        else partsTab = id;
+        else {
+          // My stock: the Stock view of the parts you own.
+          if (id === 'Stock' && stockScope !== 'owned') {
+            stockScope = 'owned';
+            partCategory = '';
+            partTypeFilter = '';
+            partMakerFilter = '';
+            partQuery = '';
+            partId = null;
+          }
+          partsTab = id;
+        }
         break;
       case 'add-assembly':
         createAssembly();
