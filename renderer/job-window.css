@@ -1,0 +1,70 @@
+/* New workshop job, after docs/ui-reference/new-job-2026-11 option A: your cars as photo cards on the left;
+   the kind of work as tiles, the plan as three cards and quick-pick names on the right; one fixed size. */
+#dialog:has(.new-job){width:min(1240px,96vw);max-width:96vw;height:min(860px,92vh);max-height:92vh;overflow:hidden}
+#dialog:has(.new-job)>form{display:flex;flex-direction:column;height:100%}
+#dialog:has(.new-job)>form>.dialog-head,#dialog:has(.new-job)>form>.dialog-footer{flex:none}
+#dialog:has(.new-job)>form>.dialog-body{display:flex;flex-direction:column;flex:1;min-height:0;max-height:none;padding:0;overflow:hidden}
+#dialog:has(.new-job) #form-error{flex:none;margin:6px 24px}
+#dialog:has(.new-job) .dialog-footer{align-items:center}
+.nj-summary{margin-right:auto;font-size:12.5px;color:var(--muted)}.nj-summary b{color:var(--ink)}
+.new-job{display:flex;flex:1;min-height:0}
+.new-job .eye{font:600 10px "Segoe UI",system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.new-job .grow{flex:1}
+
+/* left: the cars */
+.nj-left{display:flex;flex-direction:column;flex:none;width:470px;min-height:0;border-right:1px solid var(--line);background:color-mix(in srgb,var(--bg) 22%,var(--panel))}
+.nj-tool{display:flex;align-items:center;gap:8px;flex:none;padding:12px 14px;border-bottom:1px solid color-mix(in srgb,var(--line) 70%,transparent)}
+#nj-car-search{width:200px;min-height:32px;padding:5px 10px}
+.nj-cars{flex:1;min-height:0;overflow:auto;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;align-content:start;padding:12px 14px}
+.nj-car{position:relative;display:flex;flex-direction:column;min-width:0;padding:0;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--ink);text-align:left;overflow:hidden}
+.nj-car:hover:not(:disabled){border-color:color-mix(in srgb,var(--ink) 30%,var(--line))}
+.nj-car-photo{position:relative;display:block;aspect-ratio:16/10;background:color-mix(in srgb,var(--ink) 6%,var(--panel))}
+.nj-car-photo img{display:block;width:100%;height:100%;object-fit:cover}
+.nj-car-photo .placeholder{min-height:0;height:100%}
+.nj-car-photo .placeholder svg{width:48px;height:32px}
+.nj-car-photo .placeholder span{display:none}
+.nj-car-text{display:block;padding:7px 9px 8px}
+#dialog .nj-car-text b{display:block;font:italic 700 14px/1.05 var(--font-cond);text-transform:uppercase;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nj-car-text small{display:block;font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nj-car.on{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 45%,transparent)}
+.nj-car.on::after{content:'✓';position:absolute;top:8px;right:8px;display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--accent);color:var(--on-accent);font-size:12px;font-weight:700}
+.nj-car.busy{opacity:1;cursor:not-allowed}
+.nj-car.busy img{filter:grayscale(.85) brightness(.6)}
+.nj-car.busy .nj-car-text{opacity:.6}
+.nj-tag{position:absolute;top:8px;left:8px;padding:2px 8px;border-radius:999px;background:color-mix(in srgb,var(--amber) 85%,#000);color:#1a1400;font-size:10.5px;font-weight:700}
+.nj-none{grid-column:1/-1;margin:20px 0;text-align:center;color:var(--muted)}
+.nj-busy-note{flex:none;margin:0;padding:8px 14px 10px;border-top:1px solid color-mix(in srgb,var(--line) 70%,transparent);font-size:11.5px;color:var(--muted)}
+
+/* right: the work */
+.nj-right{flex:1;min-width:0;overflow:auto;padding:4px 24px 18px}
+.nj-sec{padding:16px 0 12px;border-bottom:1px solid color-mix(in srgb,var(--line) 70%,transparent)}
+.nj-sec:last-child{border-bottom:0}
+#dialog .nj-sec>h3{display:flex;align-items:baseline;gap:10px;margin:0 0 10px;font-size:17px}
+.nj-sec>h3 small{font:400 12px "Segoe UI",system-ui,sans-serif;font-style:normal;letter-spacing:0;text-transform:none;color:var(--muted)}
+.nj-kinds{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:6px}
+.nj-kind{--t:var(--amber);display:flex;align-items:center;gap:8px;min-height:40px;padding:6px 9px;border:1px solid var(--line);border-radius:9px;background:var(--panel);color:color-mix(in srgb,var(--ink) 85%,var(--muted));font-size:12.5px;text-align:left}
+.nj-kind[data-tone=blue]{--t:var(--blue)}.nj-kind[data-tone=green]{--t:var(--green)}.nj-kind[data-tone=violet]{--t:var(--purple,#a88cda)}
+.nj-kind i{display:grid;place-items:center;flex:none;width:24px;height:24px;border-radius:6px;color:var(--t);background:color-mix(in srgb,var(--t) 16%,var(--panel));font-style:normal}
+.nj-kind i svg{width:15px;height:15px}
+.nj-kind:hover{border-color:color-mix(in srgb,var(--t) 50%,var(--line))}
+.nj-kind.on{border-color:var(--t);background:color-mix(in srgb,var(--t) 10%,var(--panel));color:var(--ink);font-weight:600}
+.nj-plans{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.nj-plan{padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel);text-align:left}
+.nj-plan>b{display:block;font-size:13px}
+.nj-plan small{display:block;margin-top:2px;font-size:11.5px;color:var(--muted)}
+.nj-plan.on{border-color:var(--blue);box-shadow:0 0 0 2px color-mix(in srgb,var(--blue) 22%,transparent)}
+.nj-plan.dim:not(.on){opacity:.6}
+.new-job #general-job-fields{display:grid;gap:10px}
+.new-job #general-job-fields[hidden]{display:none}
+.new-job .field{display:grid;gap:5px}
+#dialog .nj-name input{min-height:40px;font-size:16px;font-weight:600}
+.nj-ideas{display:flex;flex-wrap:wrap;gap:5px;margin-top:-3px}
+.nj-ideas:empty{display:none}
+.nj-ideas>button{min-height:24px;padding:1px 10px;border:1px solid var(--line);border-radius:999px;background:transparent;color:color-mix(in srgb,var(--ink) 85%,var(--muted));font-size:11.5px}
+.nj-ideas>button:hover{border-color:color-mix(in srgb,var(--blue) 50%,var(--line))}
+.nj-ideas>button.on{border-color:var(--blue);background:color-mix(in srgb,var(--blue) 12%,transparent);color:var(--blue);font-weight:600}
+.new-job textarea{min-height:84px}
+.new-job #setup-job-fields{display:grid;gap:8px}
+.new-job #setup-job-fields[hidden]{display:none}
+@media(max-width:900px){.new-job{flex-direction:column;overflow:auto}.nj-left{width:auto;max-height:46%;border-right:0;border-bottom:1px solid var(--line)}.nj-cars{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}.nj-right{overflow:visible}.nj-plans{grid-template-columns:1fr}}
+@media(max-width:1100px) and (min-width:901px){.nj-left{width:340px}.nj-cars{grid-template-columns:repeat(2,minmax(0,1fr))}#nj-car-search{width:150px}.nj-plans{grid-template-columns:1fr}}

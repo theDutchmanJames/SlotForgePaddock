@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>New job redesign</title>
+<!-- Car photos come from .qa/preview-cars (ignored by git), made from the local library; they are not part of the repository. -->
+<style>
+@font-face{font-family:'SF Barlow Condensed';src:url('../../../renderer/fonts/barlowcondensed/BarlowCondensed-BoldItalic.ttf') format('truetype');font-weight:700;font-style:italic}
+@font-face{font-family:'SF Roboto Mono';src:url('../../../renderer/fonts/robotomono/RobotoMono[wght].ttf') format('truetype');font-weight:100 700}
+:root{--bg:#171b21;--panel:#222831;--raised:#2a313b;--ink:#e8e6e1;--ink2:#c4c8ce;--muted:#98a0ab;--faint:#6b7380;--line:#343b47;--line2:#2b313b;--accent:#e5484d;--ok:#3ecf8e;--amber:#edbd6a;--blue:#79b5ed;--violet:#a88cda;--green:#67c79b;
+  --cond:'SF Barlow Condensed','Bahnschrift',sans-serif;--mono:'SF Roboto Mono',Consolas,monospace;--ui:'Segoe UI',system-ui,sans-serif;color-scheme:dark}
+[data-theme=light]{--bg:#f1efea;--panel:#fff;--raised:#f0eee9;--ink:#1d2229;--ink2:#3a414c;--muted:#656c76;--faint:#8a929d;--line:#d9d6cf;--line2:#e6e3dd;--accent:#c92424;--amber:#a7741c;--blue:#236db4;--ok:#1f9a62;--green:#187a50;--violet:#7950a6;color-scheme:light}
+*{box-sizing:border-box}html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:13.5px/1.45 var(--ui);overflow:hidden}
+button,input,select,textarea{font:inherit;color:inherit}
+.mono{font-family:var(--mono);font-weight:500}
+h1,h2,h3,h4{font-family:var(--cond);font-style:italic;font-weight:700;text-transform:uppercase;letter-spacing:.02em;margin:0}
+.eye{font:600 10px var(--ui);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.muted{color:var(--muted)}.grow{flex:1}
+.switch{position:relative;z-index:50;display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;height:46px;padding:0 20px;background:var(--bg);border-bottom:1px solid var(--line2)}
+.switch b{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.switch p{margin:0 0 0 auto;font-size:12px;color:var(--faint)}
+.seg{display:inline-flex;gap:2px;padding:3px;border:1px solid var(--line);border-radius:9px;background:color-mix(in srgb,var(--bg) 60%,var(--panel))}
+.seg button{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 11px;border:0;border-radius:6px;background:transparent;color:var(--muted);font-size:12.5px;cursor:pointer;white-space:nowrap}
+.seg button.on{background:color-mix(in srgb,var(--ink) 12%,var(--panel));color:var(--ink);font-weight:600}
+.app{position:absolute;inset:46px 0 0;filter:blur(2px);opacity:.45}
+.chrome{display:flex;align-items:center;gap:12px;height:56px;padding:0 20px;background:var(--panel);border-bottom:1px solid var(--line)}
+.logo{width:36px;height:36px;border-radius:9px;background:var(--accent)}
+.navg{display:flex;gap:2px;padding:3px;border-radius:10px;background:color-mix(in srgb,var(--ink) 5%,var(--bg));font-size:12.5px;color:var(--ink2)}.navg span{padding:6px 10px;border-radius:7px}
+.backdrop{position:absolute;inset:46px 0 0;background:rgba(5,7,10,.55)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:32px;padding:5px 12px;border:1px solid transparent;border-radius:8px;background:color-mix(in srgb,var(--ink) 8%,var(--panel));color:var(--ink);font-size:13px;white-space:nowrap;cursor:pointer}
+.btn.primary{background:var(--accent);color:#fff;font-weight:600}.btn.ghost{background:transparent;color:var(--muted)}.btn.small{min-height:27px;padding:3px 10px;font-size:12.5px}
+input.f,textarea.f{width:100%;min-height:34px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);outline:none}
+textarea.f{min-height:76px;resize:none}
+input.f.big{min-height:40px;font-size:16px;font-weight:600}
+.fl{display:grid;gap:5px;font-size:12px;color:var(--muted)}
+.win{position:absolute;left:50%;top:calc(46px + 26px);transform:translateX(-50%);width:min(1240px,calc(100vw - 40px));height:calc(100vh - 46px - 52px);display:flex;flex-direction:column;border:1px solid var(--line);border-radius:14px;background:var(--panel);box-shadow:0 30px 80px rgba(0,0,0,.5);overflow:hidden}
+.whead{display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid var(--line)}
+.whead h2{font-size:24px;line-height:1}.whead .x{margin-left:auto;color:var(--muted);font-size:18px}
+.wbody{flex:1;min-height:0;display:flex}
+.wfoot{display:flex;align-items:center;gap:10px;padding:11px 20px;border-top:1px solid var(--line);background:color-mix(in srgb,var(--bg) 40%,var(--panel))}
+.wfoot .sum{font-size:12.5px;color:var(--muted)}.wfoot .sum b{color:var(--ink)}
+/* car picker */
+.carpane{display:flex;flex-direction:column;min-height:0;border-right:1px solid var(--line);background:color-mix(in srgb,var(--bg) 22%,var(--panel))}
+.carpane .tool{display:flex;gap:8px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line2)}
+.carpane .grid{flex:1;min-height:0;overflow:auto;padding:12px 14px;display:grid;gap:10px;align-content:start}
+.carc{position:relative;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--panel);cursor:pointer}
+.carc img{display:block;width:100%;aspect-ratio:16/10;object-fit:cover}
+.carc .t{padding:7px 9px 8px}
+.carc b{display:block;font:italic 700 14px/1.05 var(--cond);text-transform:uppercase;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.carc small{font-size:11px;color:var(--muted)}
+.carc.on{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 45%,transparent)}
+.carc.on::after{content:'✓';position:absolute;top:8px;right:8px;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:var(--accent);color:#fff;font-size:12px;font-weight:700}
+.carc.busy{cursor:not-allowed}.carc.busy img{filter:grayscale(.85) brightness(.6)}
+.carc.busy .tag{position:absolute;top:8px;left:8px;padding:2px 8px;border-radius:999px;background:color-mix(in srgb,var(--amber) 85%,#000);color:#1a1400;font-size:10.5px;font-weight:700}
+/* job content */
+.jobpane{flex:1;min-width:0;overflow:auto;padding:6px 24px 18px}
+.sec{padding:16px 0 12px;border-bottom:1px solid var(--line2)}.sec:last-child{border-bottom:0}
+.sec>h3{display:flex;align-items:baseline;gap:10px;margin-bottom:10px;font-size:17px}
+.sec>h3 small{font:400 12px var(--ui);font-style:normal;letter-spacing:0;text-transform:none;color:var(--muted)}
+.cats{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:6px}
+.cat{display:flex;align-items:center;gap:8px;min-height:40px;padding:6px 9px;border:1px solid var(--line);border-radius:9px;background:var(--panel);font-size:12.5px;color:var(--ink2);cursor:pointer}
+.cat i{flex:none;width:24px;height:24px;border-radius:6px;display:grid;place-items:center;font-style:normal;font-size:12px;color:var(--c);background:color-mix(in srgb,var(--c) 16%,var(--panel))}
+.cat.on{border-color:var(--c);background:color-mix(in srgb,var(--c) 10%,var(--panel));color:var(--ink);font-weight:600}
+.plans{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.plan{padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel);cursor:pointer}
+.plan>b{display:block;font-size:13px}.plan small{display:block;margin-top:2px;font-size:11.5px;color:var(--muted)}
+.plan.on{border-color:var(--blue);box-shadow:0 0 0 2px color-mix(in srgb,var(--blue) 22%,transparent)}
+.plan.off{opacity:.5}
+.sugg{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
+.sugg span{padding:2px 10px;border:1px solid var(--line);border-radius:999px;font-size:11.5px;color:var(--ink2);cursor:pointer}
+.sugg span.on{border-color:var(--blue);color:var(--blue);background:color-mix(in srgb,var(--blue) 10%,transparent)}
+.note{font-size:12px;color:var(--muted);margin:8px 0 0}
+/* ticket (option B) */
+.ticket{width:330px;flex:none;border-left:1px solid var(--line);background:color-mix(in srgb,var(--bg) 22%,var(--panel));padding:18px;display:flex;flex-direction:column;gap:12px}
+.tk{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--panel)}
+.tk img{display:block;width:100%;aspect-ratio:16/9;object-fit:cover}
+.tk .b{padding:12px 14px}
+.tk h4{font-size:20px;line-height:1.05}
+.tk .r{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid var(--line2);font-size:12.5px}
+.tk .r:last-child{border-bottom:0}.tk .r span{color:var(--muted)}
+.tk .empty{color:var(--faint);font-style:italic}
+.chip{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 9px;border-radius:999px;font-size:11.5px;font-weight:600;white-space:nowrap;color:var(--c);background:color-mix(in srgb,var(--c) 15%,transparent)}
+.stepper{display:flex;align-items:center;padding:0 20px;border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--bg) 30%,var(--panel))}
+.step{display:flex;align-items:center;gap:9px;height:46px;padding:0 4px;margin-right:22px;color:var(--muted);font-size:13px;border-bottom:2px solid transparent}
+.step i{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--raised);font:700 11px var(--mono);font-style:normal}
+.step.on{color:var(--ink);font-weight:600;border-bottom-color:var(--accent)}.step.on i{background:var(--accent);color:#fff}
+.step.done i{background:color-mix(in srgb,var(--ok) 22%,var(--panel));color:var(--ok)}
+.step small{font-weight:400;color:var(--faint);font-size:11.5px}
+.bigtool{display:flex;gap:10px;align-items:center;padding:14px 20px 4px}
+</style>
+</head>
+<body>
+<div class="switch">
+ <b>Option</b><div class="seg" id="oSeg"><button data-o="a" class="on">A · One screen</button><button data-o="b">B · Two steps</button></div>
+ <b>Step (B)</b><div class="seg" id="sSeg"><button data-s="1" class="on">1 · Car</button><button data-s="2">2 · The work</button></div>
+ <b>Theme</b><div class="seg" id="tSeg"><button data-t="dark" class="on">Dark</button><button data-t="light">Light</button></div>
+ <p>Preview · your own car photos, example job</p>
+</div>
+<div class="app"><div class="chrome"><div class="logo"></div><div class="navg"><span>Overview</span><span>Showroom</span><span>Cars</span><span>Parts</span><span>Shopping List</span><span>Build from Scratch</span><span>Workshop</span><span>Library</span><span>Connections</span><span>Import &amp; Export</span><span>Settings</span></div></div></div>
+<div class="backdrop"></div>
+<div class="win" id="win"></div>
+<script>
+const CARS=[["car-0.jpg","Audi R8 GT2","","1:32"],["car-1.jpg","Mosler MT900R","NSR","1:32"],["car-2.jpg","BMW Z4","NSR","1:32"],["car-3.jpg","Mclaren 720S","NSR","1:32"],["car-4.jpg","Mosler MT900R Black","NSR","1:32"],["car-5.jpg","Nissan R390","Slot.it","1:32"],["car-6.jpg","Lotus F1","Policar","1:32"],["car-7.jpg","Ferrari F1","Policar","1:32"],["car-8.jpg","March 83G BT","Revell","1:32"],["car-9.jpg","Porsche 952KH","Slot.it","1:32"],["car-10.jpg","British Barn 88C","Slot.it","1:32"],["car-11.jpg","Ferrari 521M","Slot.it","1:32"]];
+const BUSY=new Set([6,9,10]),SEL=2;
+const TYPES=[['General Work','⚒','var(--amber)'],['Maintenance','⚒','var(--blue)'],['Upgrades','+','var(--green)'],['Overhaul','⚒','var(--violet)'],['Rebuild','⬡','var(--amber)'],['Chassis','▢','var(--blue)'],['Tyres','◎','var(--green)'],['Motor','⚙','var(--amber)'],['Braids','≡','var(--blue)'],['Balancing','⚖','var(--violet)'],['Front Assembly','⬡','var(--blue)'],['Rear Assembly','⬡','var(--green)'],['Bodywork','▱','var(--violet)']];
+const SUGG=['Clean and oil bearings','Replace braids','Clean motor and check brushes','True and glue tyres','Check guide and wires','Full service before race day'];
+let opt='a',step='1';
+const $=s=>document.querySelector(s);
+const img=f=>'../../../.qa/preview-cars/'+f;
+const head=t=>`<div class="whead"><h2>${t}</h2><span class="x">×</span></div>`;
+function grid(cols){return `<div class="grid" style="grid-template-columns:repeat(${cols},1fr)">${CARS.map(([f,n,m,s],i)=>`<div class="carc ${i===SEL?'on':''} ${BUSY.has(i)?'busy':''}"><img src="${img(f)}" alt="">${BUSY.has(i)?'<span class="tag">Active job</span>':''}<div class="t"><b>${n}</b><small>${[m,s].filter(Boolean).join(' · ')}</small></div></div>`).join('')}</div>`}
+function cats(on){return `<div class="cats">${TYPES.map(([l,i,c])=>`<div class="cat ${l===on?'on':''}" style="--c:${c}"><i>${i}</i>${l}</div>`).join('')}</div>`}
+function plans(){return `<div class="plans"><div class="plan on"><b>Free-form work</b><small>Write what you plan to do; tick it off as you go.</small></div><div class="plan"><b>Towards a saved setup</b><small>BMW Z4 has <b class="mono">1</b> setup: “Club night gearing”.</small></div><div class="plan"><b>Rebuild</b><small>Turn this car into a linked new car; its history stays.</small></div></div>`}
+function details(){return `<label class="fl">Job name<input class="f big" value="Clean motor and check brushes"></label><div class="sugg">${SUGG.map((s,i)=>`<span class="${i===2?'on':''}">${s}</span>`).join('')}</div>
+ <label class="fl" style="margin-top:12px">Planned work / instructions<textarea class="f">Motor was getting hot after 10 laps. Clean comm, check brush length, re-oil bushings.</textarea></label>`}
+function A(){return head('New workshop job')+`<div class="wbody">
+ <div class="carpane" style="width:470px;flex:none"><div class="tool"><span class="eye">Which car</span><span class="grow"></span><input class="f" style="width:200px" placeholder="Find a car…"></div>${grid(3)}</div>
+ <div class="jobpane">
+  <div class="sec"><h3>What kind of work</h3>${cats('Maintenance')}</div>
+  <div class="sec"><h3>How you plan it</h3>${plans()}</div>
+  <div class="sec"><h3>The job <small>Quick picks for Maintenance</small></h3>${details()}</div>
+ </div></div>
+ <div class="wfoot"><span class="sum"><b>BMW Z4</b> · Maintenance · Free-form work. Starting a job changes nothing on the car and moves no stock.</span><span class="grow"></span><button class="btn ghost">Cancel</button><button class="btn primary">Start job</button></div>`}
+function ticket(done){const c=CARS[SEL];return `<aside class="ticket"><div class="eye">Your job</div><div class="tk"><img src="${img(c[0])}" alt=""><div class="b"><h4>${done?'Clean motor and check brushes':'<span class="muted">New job</span>'}</h4>
+ <div class="r"><span>Car</span><b>${c[1]}</b></div><div class="r"><span>Kind</span>${done?'<span class="chip" style="--c:var(--blue)">Maintenance</span>':'<span class="empty">next step</span>'}</div><div class="r"><span>Plan</span>${done?'<b>Free-form</b>':'<span class="empty">next step</span>'}</div></div></div>
+ <p class="note">Starting a job changes nothing on the car and moves no stock. You can leave and resume it later.</p></aside>`}
+function B(){const one=step==='1';return head('New workshop job')+`<div class="stepper"><div class="step ${one?'on':'done'}"><i>${one?'1':'✓'}</i>Car <small>${one?'':'BMW Z4'}</small></div><div class="step ${one?'':'on'}"><i>2</i>The work</div></div>
+ <div class="wbody">${one?`<div class="carpane" style="flex:1;border-right:0;background:none"><div class="tool"><input class="f" style="width:280px" placeholder="Find a car…"><span class="seg"><button class="on">All cars</button><button>Recently worked on</button></span><span class="grow"></span><span class="muted" style="font-size:12px"><b class="mono" style="color:var(--ink)">3</b> cars already have an active job</span></div>${grid(4)}</div>`
+ :`<div class="jobpane"><div class="sec"><h3>What kind of work</h3>${cats('Maintenance')}</div><div class="sec"><h3>How you plan it</h3>${plans()}</div><div class="sec"><h3>The job</h3>${details()}</div></div>`}${ticket(!one)}</div>
+ <div class="wfoot"><span class="sum">${one?'Pick the car this job is for.':'Ready to start.'}</span><span class="grow"></span><button class="btn ghost">Cancel</button>${one?'<button class="btn primary">Next: the work →</button>':'<button class="btn">← Car</button><button class="btn primary">Start job</button>'}</div>`}
+function render(){$('#win').innerHTML=opt==='a'?A():B();for(const[id,k,v]of[['#oSeg','o',opt],['#sSeg','s',step],['#tSeg','t',document.documentElement.dataset.theme]])document.querySelectorAll(id+' button').forEach(b=>b.classList.toggle('on',b.dataset[k]===v));}
+document.addEventListener('click',e=>{const b=e.target.closest('.switch button');if(!b)return;if(b.dataset.o)opt=b.dataset.o;if(b.dataset.s)step=b.dataset.s;if(b.dataset.t)document.documentElement.dataset.theme=b.dataset.t;render();});
+function fromHash(){const q=new URLSearchParams(location.hash.slice(1));opt=q.get('o')||opt;step=q.get('s')||step;document.documentElement.dataset.theme=q.get('t')||document.documentElement.dataset.theme;render();}
+addEventListener('hashchange',fromHash);fromHash();
+</script>
+</body>
+</html>

@@ -159,6 +159,50 @@ function startJob(id) {
     'Start job'
   );
 }
+// New workshop job, after docs/ui-reference/new-job-2026-11 (option A, one screen): your cars as photo cards,
+// the kind of work as tiles, the plan as three cards and quick-pick job names. The car, category and plan stay
+// in hidden form controls (#job-car, [name=category], #job-kind) that the cards set, so saving is unchanged.
+const jobNameIdeas = {
+  general: ['Check and clean', 'Fix a fault', 'Prepare for club night'],
+  maintenance: [
+    'Clean and oil bearings',
+    'Replace braids',
+    'Clean motor and check brushes',
+    'Full service before race day'
+  ],
+  upgrades: ['Fit a new motor', 'Upgrade gearing', 'Fit new tyres and rims'],
+  overhaul: ['Strip, clean and rebuild', 'Full overhaul after the season'],
+  rebuild: ['Winter rebuild', 'Rebuild into a racer'],
+  chassis: ['Straighten and check chassis', 'Adjust body float', 'Change motor pod'],
+  tyres: ['True and glue tyres', 'Fit new rear tyres', 'Clean and treat tyres'],
+  motor: ['Run in new motor', 'Clean motor and check brushes', 'Replace motor'],
+  braids: ['Replace braids', 'Clean and flatten braids'],
+  balancing: ['Add lead weight', 'Balance the car'],
+  'front-assembly': ['True front tyres', 'Check front axle and hubs'],
+  'rear-assembly': ['Check gear mesh', 'Replace rear axle', 'Check bearings'],
+  bodywork: ['Repair body', 'Refit body mounts', 'Touch up paint and decals']
+};
+function newJobPicker(cars, first, busy) {
+  return `<div class="nj-cars" role="group" aria-label="Car">${cars
+    .map(
+      c =>
+        `<button type="button" class="nj-car ${c.id === first.id ? 'on' : ''} ${busy(c.id) ? 'busy' : ''}" data-action="nj-car" data-id="${esc(c.id)}" data-search="${esc([c.name, c.maker, c.reference, c.number].filter(Boolean).join(' ').toLowerCase())}" aria-pressed="${c.id === first.id}" ${busy(c.id) ? 'disabled' : ''}><span class="nj-car-photo">${photo(c, true)}${busy(c.id) ? '<span class="nj-tag">Active job</span>' : ''}</span><span class="nj-car-text"><b>${esc(c.name)}</b><small>${esc([c.maker, c.scale].filter(Boolean).join(' · ')) || '&nbsp;'}</small></span></button>`
+    )
+    .join('')}<p class="nj-none" hidden>No car matches your search.</p></div>`;
+}
+function newJobTiles(value) {
+  return `<div class="nj-kinds" role="group" aria-label="What kind of work">${JobTypes.types
+    .map(
+      t =>
+        `<button type="button" class="nj-kind ${t.id === value ? 'on' : ''}" data-action="nj-category" data-id="${t.id}" data-tone="${t.tone}" aria-pressed="${t.id === value}"><i aria-hidden="true">${icon(t.icon)}</i>${esc(t.label)}</button>`
+    )
+    .join('')}</div>`;
+}
+function newJobPlans() {
+  const card = (id, title, text) =>
+    `<button type="button" class="nj-plan" data-action="nj-kind" data-id="${id}" aria-pressed="false"><b>${title}</b><small${id === 'setup' ? ' id="nj-setup-note"' : ''}>${text}</small></button>`;
+  return `<div class="nj-plans" role="group" aria-label="How you plan it">${card('general', 'Free-form work', 'Write what you plan to do and record your progress as you go.')}${card('setup', 'Towards a saved setup', '')}${card('rebuild', 'Rebuild', 'Turn this car into a linked new car. Its history stays.')}</div>`;
+}
 function newWorkshopJob(preferredCarId, task = '') {
   const cars = db.cars.filter(slotforgeDomain.activeCar),
     revision = db.revision;
@@ -180,9 +224,11 @@ function newWorkshopJob(preferredCarId, task = '') {
     );
     return;
   }
+  const category = task ? 'maintenance' : 'general',
+    busyCount = cars.filter(c => busy(c.id)).length;
   modal(
     'New workshop job',
-    `<div class="form-grid"><label class="field wide">Car<select name="carId" id="job-car" required>${cars.map(c => `<option value="${esc(c.id)}" ${c.id === first.id ? 'selected' : ''} ${busy(c.id) ? 'disabled' : ''}>${esc(c.name)}${busy(c.id) ? ' · Active job already' : ''}</option>`).join('')}</select></label>${jobCategoryField(task ? 'maintenance' : 'general')}<label class="field wide">Work plan<select name="kind" id="job-kind"><option value="general">Free-form work</option><option value="setup">Work towards a saved setup</option><option value="rebuild">Rebuild into a linked new car</option></select></label><div class="field wide" id="general-job-fields"><label class="field">Job name<input name="name" maxlength="200" required placeholder="For example: Replace braids and clean motor"></label>${field('notes', 'Planned work / instructions', '', 'textarea')}</div><div class="field wide" id="setup-job-fields" hidden></div></div><p class="muted mt">Starting a job records your plan. It does not change the car or move stock. You can leave and resume the job later.</p>`,
+    `<div class="new-job"><aside class="nj-left"><div class="nj-tool"><span class="eye">Which car</span><span class="grow"></span><input type="search" id="nj-car-search" placeholder="Find a car…" aria-label="Find a car" autocomplete="off"></div>${newJobPicker(cars, first, busy)}${busyCount ? `<p class="nj-busy-note">${busyCount === 1 ? '1 car already has' : busyCount + ' cars already have'} an active job. Resume or close it to start another.</p>` : ''}</aside><div class="nj-right"><select name="carId" id="job-car" required hidden>${cars.map(c => `<option value="${esc(c.id)}" ${c.id === first.id ? 'selected' : ''} ${busy(c.id) ? 'disabled' : ''}>${esc(c.name)}${busy(c.id) ? ' · Active job already' : ''}</option>`).join('')}</select><select name="category" hidden>${JobTypes.types.map(t => `<option value="${t.id}" ${t.id === category ? 'selected' : ''}>${t.label}</option>`).join('')}</select><select name="kind" id="job-kind" hidden><option value="general">Free-form work</option><option value="setup">Work towards a saved setup</option><option value="rebuild">Rebuild into a linked new car</option></select><section class="nj-sec"><h3>What kind of work</h3>${newJobTiles(category)}</section><section class="nj-sec"><h3>How you plan it</h3>${newJobPlans()}</section><section class="nj-sec"><h3>The job <small id="nj-ideas-label"></small></h3><div class="field wide" id="general-job-fields"><label class="field nj-name">Job name<input name="name" maxlength="200" required placeholder="For example: Replace braids and clean motor"></label><div class="nj-ideas" id="nj-ideas"></div>${field('notes', 'Planned work / instructions', '', 'textarea')}</div><div class="field wide" id="setup-job-fields" hidden></div></section></div></div>`,
     async values => {
       if (values.kind === 'rebuild') {
         const draftId = await change('rebuild.start', {
@@ -201,9 +247,73 @@ function newWorkshopJob(preferredCarId, task = '') {
     },
     'Start job'
   );
+  $('#dialog .dialog-footer').insertAdjacentHTML('afterbegin', '<span class="nj-summary" id="nj-summary"></span>');
   if (task) $('#dialog [name=name]').value = task.slice(0, 200);
   updateJobChoices();
+  $('.nj-car.on')?.scrollIntoView({ block: 'nearest' });
 }
+// Bring the cards, tiles, quick picks and summary in line with the hidden controls.
+function syncNewJob() {
+  if (!$('.new-job')) return;
+  const car = $('#job-car').value,
+    category = $('#dialog [name=category]').value,
+    kind = $('#job-kind').value,
+    on = (el, yes) => {
+      el.classList.toggle('on', yes);
+      el.setAttribute('aria-pressed', String(yes));
+    };
+  document.querySelectorAll('.nj-car').forEach(b => on(b, b.dataset.id === car));
+  document.querySelectorAll('.nj-kind').forEach(b => on(b, b.dataset.id === category));
+  document.querySelectorAll('.nj-plan').forEach(b => on(b, b.dataset.id === kind));
+  const carName = db.cars.find(c => c.id === car)?.name || '',
+    setups = db.setups.filter(s => s.carId === car).length,
+    type = JobTypes.get(category);
+  $('#nj-setup-note').textContent = setups
+    ? `${carName} has ${setups} saved ${setups === 1 ? 'setup' : 'setups'} to work towards.`
+    : `${carName} has no saved setups yet.`;
+  document.querySelector('.nj-plan[data-id="setup"]').classList.toggle('dim', !setups);
+  const ideas = jobNameIdeas[category] || [],
+    name = $('#dialog [name=name]')?.value || '';
+  $('#nj-ideas-label').textContent = ideas.length && kind !== 'setup' ? 'Quick picks for ' + type.label : '';
+  $('#nj-ideas').innerHTML = ideas
+    .map(
+      n =>
+        `<button type="button" class="${n === name ? 'on' : ''}" data-action="nj-name" data-id="${esc(n)}" aria-pressed="${n === name}">${esc(n)}</button>`
+    )
+    .join('');
+  $('#nj-summary').innerHTML =
+    `<b>${esc(carName)}</b> · ${esc(type.label)} · ${{ general: 'Free-form work', setup: 'Towards a saved setup', rebuild: 'Rebuild' }[kind]}. Starting a job changes nothing on the car and moves no stock.`;
+}
+function newJobAction(action, id) {
+  if (!['nj-car', 'nj-category', 'nj-kind', 'nj-name'].includes(action) || !$('.new-job')) return false;
+  const set = (selector, value) => {
+    const el = $(selector);
+    el.value = value;
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+  };
+  if (action === 'nj-car') set('#job-car', id);
+  if (action === 'nj-category') set('#dialog [name=category]', id);
+  if (action === 'nj-kind') set('#job-kind', id);
+  if (action === 'nj-name') {
+    const input = $('#dialog [name=name]');
+    input.value = id;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    syncNewJob();
+  }
+  return true;
+}
+document.addEventListener('input', event => {
+  if (event.target.id === 'nj-car-search') {
+    const q = event.target.value.trim().toLowerCase();
+    let shown = 0;
+    document.querySelectorAll('.nj-car').forEach(b => {
+      b.hidden = !!q && !b.dataset.search.includes(q);
+      if (!b.hidden) shown++;
+    });
+    $('.nj-none').hidden = shown > 0;
+  }
+  if (event.target.name === 'name' && $('.new-job')) syncNewJob();
+});
 function updateJobChoices() {
   const general = $('#job-kind').value !== 'setup',
     car = $('#job-car').value,
@@ -219,6 +329,7 @@ function updateJobChoices() {
   $('#setup-job-fields').hidden = general;
   $('#setup-job-fields').innerHTML =
     `<label class="field">Saved setup<select name="setupId" ${general ? 'disabled' : 'required'}><option value="">Choose a setup</option>${setups.map(s => `<option value="${esc(s.id)}">${esc(s.name)} · ${date(s.date)}</option>`).join('')}</select></label>${setups.length ? '' : '<p class="muted">This car has no saved setups. Use General work, or save a configuration from the car’s Setups section first.</p>'}`;
+  syncNewJob();
 }
 function recordJobProgress() {
   const { job, revision } = workshopJob;

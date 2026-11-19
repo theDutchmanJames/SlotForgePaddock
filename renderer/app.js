@@ -1058,6 +1058,7 @@ document.addEventListener('click', async event => {
     if (await carBrowserAction(action, id)) return;
     if (await carActionsAction(action, id)) return;
     if (await spreadsheetAction(action, id)) return;
+    if (newJobAction(action, id)) return;
     if (await picturePreviewAction(action, id)) return;
     if (await pictureAction(action, id)) return;
     if (await historicalEvidenceAction(action, id)) return;
