@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Touch-ups preview</title>
+<!-- Car photos come from .qa/preview-cars (ignored by git), made from the local library; they are not part of the repository. -->
+<style>
+@font-face{font-family:'SF Barlow Condensed';src:url('../../../renderer/fonts/barlowcondensed/BarlowCondensed-BoldItalic.ttf') format('truetype');font-weight:700;font-style:italic}
+@font-face{font-family:'SF Roboto Mono';src:url('../../../renderer/fonts/robotomono/RobotoMono[wght].ttf') format('truetype');font-weight:100 700}
+:root{--bg:#171b21;--panel:#222831;--raised:#2a313b;--ink:#e8e6e1;--ink2:#c4c8ce;--muted:#98a0ab;--faint:#6b7380;--line:#343b47;--line2:#2b313b;--accent:#e5484d;--ok:#3ecf8e;--amber:#edbd6a;--blue:#79b5ed;--violet:#a88cda;--green:#67c79b;
+  --cond:'SF Barlow Condensed','Bahnschrift',sans-serif;--mono:'SF Roboto Mono',Consolas,monospace;--ui:'Segoe UI',system-ui,sans-serif;color-scheme:dark}
+[data-theme=light]{--bg:#f1efea;--panel:#fff;--raised:#f0eee9;--ink:#1d2229;--ink2:#3a414c;--muted:#656c76;--faint:#8a929d;--line:#d9d6cf;--line2:#e6e3dd;--accent:#c92424;--amber:#a7741c;--blue:#236db4;--ok:#1f9a62;--green:#187a50;--violet:#7950a6;color-scheme:light}
+*{box-sizing:border-box}html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:13.5px/1.45 var(--ui);overflow:hidden}
+button,input{font:inherit;color:inherit}
+.mono{font-family:var(--mono);font-weight:500}
+h1,h2,h3,h4{font-family:var(--cond);font-style:italic;font-weight:700;text-transform:uppercase;letter-spacing:.02em;margin:0}
+.eye{font:600 10px var(--ui);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.muted{color:var(--muted)}.grow{flex:1}
+.switch{position:relative;z-index:50;display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;height:46px;padding:0 20px;background:var(--bg);border-bottom:1px solid var(--line2)}
+.switch b{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.switch p{margin:0 0 0 auto;font-size:12px;color:var(--faint)}
+.seg{display:inline-flex;gap:2px;padding:3px;border:1px solid var(--line);border-radius:9px;background:color-mix(in srgb,var(--bg) 60%,var(--panel))}
+.seg button{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 11px;border:0;border-radius:6px;background:transparent;color:var(--muted);font-size:12.5px;cursor:pointer;white-space:nowrap}
+.seg button.on{background:color-mix(in srgb,var(--ink) 12%,var(--panel));color:var(--ink);font-weight:600}
+.app{position:absolute;inset:46px 0 0;filter:blur(2px);opacity:.45}
+.chrome{display:flex;align-items:center;gap:12px;height:56px;padding:0 20px;background:var(--panel);border-bottom:1px solid var(--line)}
+.logo{width:36px;height:36px;border-radius:9px;background:var(--accent)}
+.backdrop{position:absolute;inset:46px 0 0;background:rgba(5,7,10,.55)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:32px;padding:5px 12px;border:1px solid transparent;border-radius:8px;background:color-mix(in srgb,var(--ink) 8%,var(--panel));color:var(--ink);font-size:13px;white-space:nowrap;cursor:pointer}
+.btn.primary{background:var(--accent);color:#fff;font-weight:600}.btn.ghost{background:transparent;color:var(--muted)}.btn.small{min-height:27px;padding:3px 10px;font-size:12.5px}
+input.f{width:100%;min-height:34px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);outline:none}
+.fl{display:grid;gap:5px;font-size:12px;color:var(--muted)}
+.win{position:absolute;left:50%;top:calc(46px + 26px);transform:translateX(-50%);width:min(1260px,calc(100vw - 40px));height:calc(100vh - 46px - 52px);display:flex;flex-direction:column;border:1px solid var(--line);border-radius:14px;background:var(--panel);box-shadow:0 30px 80px rgba(0,0,0,.5);overflow:hidden}
+.whead{display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid var(--line)}
+.whead h2{font-size:24px;line-height:1}.whead p{margin:0;font-size:12.5px;color:var(--muted)}.whead .x{margin-left:auto;color:var(--muted);font-size:18px}
+.wbody{flex:1;min-height:0;display:flex}
+.wfoot{display:flex;align-items:center;gap:10px;padding:11px 20px;border-top:1px solid var(--line);background:color-mix(in srgb,var(--bg) 40%,var(--panel))}
+.wfoot .sum{font-size:12.5px;color:var(--muted)}.wfoot .sum b{color:var(--ink)}
+/* touch-ups */
+.win.sm{width:min(860px,calc(100vw - 40px));height:auto;max-height:calc(100vh - 46px - 52px);top:calc(46px + 60px)}
+.win.md,.win.auto{width:min(1080px,calc(100vw - 40px));height:auto;max-height:calc(100vh - 46px - 210px)}
+.win.auto{width:min(1260px,calc(100vw - 40px));height:640px}
+.cb{flex:1;min-height:0;overflow:auto;padding:16px 22px}
+.hint{font-size:12px;color:var(--muted)}
+.grp{display:flex;align-items:center;gap:10px;margin:16px 0 8px;font:600 9.5px var(--ui);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}.grp::after{content:'';flex:1;height:1px;background:var(--line2)}.grp:first-child{margin-top:0}
+.row{display:grid;gap:12px;align-items:start}.r2{grid-template-columns:1fr 1fr}.r3{grid-template-columns:repeat(3,1fr)}
+textarea.f{display:block;width:100%;min-height:90px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit;resize:none;outline:none}
+.sugg{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}.sugg span{padding:1px 9px;border-radius:99px;border:1px solid var(--line);font-size:11.5px;color:var(--muted);white-space:nowrap}.sugg span.on{border-color:var(--blue);color:var(--ink);background:color-mix(in srgb,var(--blue) 12%,var(--panel))}
+.cards{display:grid;gap:8px}.c3{grid-template-columns:repeat(3,1fr)}.c4{grid-template-columns:repeat(4,1fr)}.c2{grid-template-columns:repeat(2,1fr)}
+.tc{padding:11px 12px;border:1px solid var(--line);border-radius:11px;background:var(--panel)}
+.tc .em{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;margin-bottom:7px;background:color-mix(in srgb,var(--c,var(--blue)) 16%,var(--panel));color:var(--c,var(--blue));font-size:15px}
+.tc b{display:block;font-size:13px}.tc small{display:block;font-size:11.5px;color:var(--muted);margin-top:2px;line-height:1.35}
+.tc.on{border-color:var(--c,var(--blue));background:color-mix(in srgb,var(--c,var(--blue)) 8%,var(--panel));box-shadow:0 0 0 2px color-mix(in srgb,var(--c,var(--blue)) 30%,transparent)}
+.sw{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel);font-size:13px}
+.sw i{flex:none;position:relative;width:32px;height:18px;border-radius:99px;background:color-mix(in srgb,var(--ink) 22%,var(--panel))}.sw i::after{content:'';position:absolute;left:2px;top:2px;width:14px;height:14px;border-radius:50%;background:#fff}
+.sw.on i{background:var(--green)}.sw.on i::after{left:16px}
+.sw small{display:block;color:var(--muted);font-size:11.5px}
+.seg2{display:inline-flex;gap:2px;padding:3px;border:1px solid var(--line);border-radius:9px;background:color-mix(in srgb,var(--bg) 60%,var(--panel))}
+.seg2 span{padding:5px 12px;border-radius:6px;font-size:12.5px;color:var(--muted)}.seg2 span.on{background:color-mix(in srgb,var(--ink) 12%,var(--panel));color:var(--ink);font-weight:600}
+.what{position:absolute;left:20px;bottom:16px;max-width:360px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--raised);font-size:12.5px;z-index:40;box-shadow:0 10px 30px rgba(0,0,0,.4)}
+.what b{display:block;margin-bottom:4px;font:italic 700 15px var(--cond);text-transform:uppercase}
+.what ul{margin:0;padding-left:16px;color:var(--ink2)}.what li{margin:2px 0}
+/* print */
+.pv{border:1px solid var(--line);border-radius:10px;background:#fff;padding:14px;color:#222;display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.pcard{border:1px solid #ddd;border-radius:6px;padding:8px;display:grid;grid-template-columns:60px 1fr 34px;gap:8px;align-items:center;font-size:10px}
+.pcard img{width:60px;height:38px;object-fit:cover;border-radius:3px}.pcard b{display:block;font-size:11px}.qr{width:34px;height:34px;background:repeating-conic-gradient(#222 0 25%,#fff 0 50%) 0 0/8px 8px;border:2px solid #222}
+.paper{display:flex;gap:6px;align-items:center;margin-top:8px}
+/* AI */
+.prompt{flex:1;min-height:0;margin:0;padding:14px 16px;border:1px solid var(--line);border-radius:10px;background:var(--bg);font:12px/1.55 var(--mono);color:var(--ink2);white-space:pre-wrap;overflow:auto}
+.copied{display:inline-flex;align-items:center;gap:6px;color:var(--green);font-size:12.5px;font-weight:600}
+/* rebuild */
+.carbig{display:grid;grid-template-columns:200px 1fr;gap:16px;align-items:center;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+.carbig img{width:200px;height:125px;object-fit:cover;border-radius:9px}.carbig b{display:block;font:italic 700 24px var(--cond);text-transform:uppercase}
+.flow{display:grid;grid-template-columns:1fr 26px 1fr 26px 1fr;align-items:center;gap:6px;margin-top:6px}
+.fl2{padding:10px 12px;border:1px solid var(--line2);border-radius:10px;background:color-mix(in srgb,var(--bg) 40%,var(--panel));font-size:12px}.fl2 b{display:block;font-size:12.5px;margin-bottom:2px}
+.arr{text-align:center;color:var(--muted)}
+/* checklist */
+.prog{height:8px;border-radius:9px;background:var(--line2);overflow:hidden;margin:6px 0 10px}.prog i{display:block;height:100%;width:40%;background:var(--green)}
+.step{display:grid;grid-template-columns:14px 20px minmax(0,1fr) auto;gap:10px;align-items:center;padding:7px 10px;border:1px solid var(--line);border-radius:9px;background:var(--panel);margin-bottom:5px;font-size:13px}
+.step .g{color:var(--faint);letter-spacing:-2px}.step .bx{width:18px;height:18px;border-radius:6px;border:1.5px solid var(--line);display:grid;place-items:center;font-size:11px;color:#fff}
+.step.done .bx{background:var(--green);border-color:var(--green)}.step.done span:nth-child(3){color:var(--muted);text-decoration:line-through}
+.step.drag{border-color:var(--blue);box-shadow:0 8px 22px rgba(0,0,0,.35);transform:translateX(6px)}
+.step .x{color:var(--muted)}
+.newstep{display:flex;gap:8px;align-items:center;padding:6px 10px;border:1px dashed var(--line);border-radius:9px;color:var(--muted);font-size:13px}
+.cover{display:grid;grid-template-columns:220px 1fr;gap:16px}
+.cover img{width:220px;height:138px;object-fit:cover;border-radius:10px}
+</style>
+</head>
+<body>
+<div class="switch">
+ <b>Window</b><div class="seg" id="wSeg"><button data-w="work" class="on">Record work</button><button data-w="print">Print &amp; PDF</button><button data-w="cover">Cover options</button><button data-w="ai">AI instructions</button><button data-w="rebuild">Start a rebuild</button><button data-w="plan">Plan &amp; checklist</button></div>
+ <b>Theme</b><div class="seg" id="tSeg"><button data-t="dark" class="on">Dark</button><button data-t="light">Light</button></div>
+</div>
+<div class="app"><div class="chrome"><div class="logo"></div></div></div>
+<div class="backdrop"></div>
+<div class="win" id="win"></div>
+<div class="what" id="what"></div>
+<script>
+let w='work';
+const $=s=>document.querySelector(s);
+const img=f=>'../../../.qa/preview-cars/'+f;
+const head=(t,p)=>`<div class="whead"><h2>${t}</h2><p>${p}</p><span class="x">×</span></div>`;
+const fld=(l,v,ph='',extra='')=>`<label class="fl">${l}<input class="f" value="${v}" placeholder="${ph}">${extra}</label>`;
+const foot=(sum,btn)=>`<div class="wfoot"><span class="sum">${sum}</span><span class="grow"></span><button class="btn ghost">Cancel</button><button class="btn primary">${btn}</button></div>`;
+const V={
+ work:{size:'md',what:['The kind of work as cards, with Rebuild clearly set apart','Date with Today / Yesterday buttons','The service reminder as a switch, with quick intervals instead of a hidden section'],html:()=>head('Record work','Porsche 952KH · work you have already done')+`<div class="cb"><div class="grp">What kind of work</div><div class="cards c3"><div class="tc on" style="--c:var(--green)"><span class="em">✓</span><b>Maintenance</b><small>Cleaning, oiling, new braids or tyres</small></div><div class="tc" style="--c:var(--blue)"><span class="em">⚙</span><b>Modification</b><small>A change to how the car is built</small></div><div class="tc" style="--c:var(--amber)"><span class="em">↻</span><b>Rebuild</b><small>Start a linked new car in Workshop</small></div></div>
+  <div class="grp">The work</div><div class="row" style="grid-template-columns:1fr 220px">${fld('Work performed','Cleaned and oiled, new braids')}${fld('Date','19 Nov 2026','','<span class="sugg"><span class="on">Today</span><span>Yesterday</span></span>')}</div><div style="margin-top:10px"><label class="fl">Work, parts and observations<textarea class="f">Front axle bushings were dry. Braids were worn flat.</textarea></label></div>
+  <div class="grp">Service reminder</div><div class="sw on"><i></i><span>Remind me to do this again<small>Whichever comes first: a date or a number of laps (Timing races and manual tests count)</small></span></div><div class="row r2" style="margin-top:10px">${fld('Next due','19 Feb 2027','','<span class="sugg"><span>1 month</span><span class="on">3 months</span><span>6 months</span></span>')}${fld('Or after laps','500','','<span class="sugg"><span>250</span><span class="on">500</span><span>1000</span></span>')}</div></div>`+foot('Maintenance · reminder in 3 months or 500 laps','Save work')},
+ print:{size:'auto',what:['The four reports as cards with a small picture of the page','Only the options that belong to the chosen report','A larger live preview of the first page'],html:()=>head('Print & PDF','3 selected cars · preview before saving, open the PDF to print')+`<div class="wbody" style="display:flex"><div class="cb" style="max-width:470px;border-right:1px solid var(--line)"><div class="grp">Report</div><div class="cards c2"><div class="tc on" style="--c:var(--green)"><span class="em">▦</span><b>Car cards</b><small>With QR links that open the car in Paddock</small></div><div class="tc"><span class="em">☰</span><b>Setup sheets</b><small>Specification and parts of each car</small></div><div class="tc" style="--c:var(--amber)"><span class="em">✓</span><b>Scrutineering</b><small>Club check sheet per car</small></div><div class="tc" style="--c:var(--purple,#a88cda)"><span class="em">≡</span><b>Collection inventory</b><small>A list of the selected cars</small></div></div><div class="grp">Options for car cards</div><p class="hint">QR links open this collection in the installed desktop app. They are not public web pages.</p><p class="hint">Setup sheets let you choose a saved setup; the inventory can include purchase details.</p></div><div class="cb"><div class="grp">Preview · page 1 of 1</div><div class="pv">${['car-9.jpg','car-2.jpg','car-5.jpg'].map((f,i)=>`<div class="pcard"><img src="${img(f)}" alt=""><span><b>${['Porsche 952KH','BMW Z4','Nissan R390'][i]}</b>${['Slot.it','NSR','Slot.it'][i]} · 1:32</span><span class="qr"></span></div>`).join('')}</div></div></div>`+foot('<b>Car cards</b> · 3 cars · 1 page','Save PDF')},
+ cover:{size:'md',what:['How the cover changes as four cards','The current cover car shown with its photo','The car picker with photos when you choose one fixed car'],html:()=>head('Cover options','The car above your collection in the Showroom · saved on this computer')+`<div class="cb"><div class="cover"><img src="${img('car-9.jpg')}" alt=""><div><div class="eye">Cover now</div><b style="display:block;font:italic 700 24px var(--cond);text-transform:uppercase">Porsche 952KH</b><p class="hint">Slot.it · 1:32 · chosen from All slotcars</p></div></div><div class="grp">Change the cover</div><div class="cards c4"><div class="tc"><span class="em">■</span><b>Always the same</b><small>One car you pick</small></div><div class="tc on"><span class="em">⟳</span><b>Each app start</b><small>A new car when Paddock opens</small></div><div class="tc"><span class="em">→</span><b>Each visit</b><small>A new car each time you open the Showroom</small></div><div class="tc"><span class="em">◷</span><b>On a timer</b><small>Every few minutes</small></div></div><div class="grp">Choose from</div><span class="seg2"><span class="on">All slotcars</span><span>Usage labels</span><span>Group</span><span>Favourites</span></span></div>`+foot('A new cover car each time Paddock starts','Save')},
+ ai:{size:'md',what:['The instructions in a large, readable box','A Copy button that says when it has copied','What to give your AI as three short steps'],html:()=>head('Instructions for your AI','Standard Catalogue · product information')+`<div class="cb" style="display:flex;flex-direction:column;gap:12px"><div class="cards c3"><div class="tc"><span class="em">1</span><b>Copy these instructions</b><small>Paste them into your AI chat</small></div><div class="tc"><span class="em">2</span><b>Attach the JSON kit</b><small>Plus manufacturer or shop links</small></div><div class="tc"><span class="em">3</span><b>Open the finished file</b><small>Review it in Paddock before anything changes</small></div></div><pre class="prompt">You are helping a slot car collector fill in a product catalogue.
+
+Read the attached JSON kit. For every product, find the manufacturer's or retailer's page and fill in:
+- the exact product name and manufacturer reference,
+- the category and part type, using only the values listed in the kit,
+- pack size and contents,
+- the specifications listed for that part type.
+
+Rules
+- Use English. Do not guess: leave a field empty when no source says it.
+- Record each source URL and the date you checked it.
+- Return one JSON file in the format "slotforge-catalogue", version 1.
+…</pre></div>`+`<div class="wfoot"><span class="sum">2,418 characters · English</span><span class="grow"></span><span class="copied">✓ Copied</span><button class="btn">Download kit</button><button class="btn primary">Copy instructions</button></div>`},
+ rebuild:{size:'md',what:['Opened from a car, it shows that car instead of a drop-down','What happens next, as three steps','Change car opens the photo car picker'],html:()=>head('Start a rebuild','Plan a new, linked configuration; the original keeps its history')+`<div class="cb"><div class="carbig"><img src="${img('car-2.jpg')}" alt=""><div><div class="eye">Rebuilding</div><b>BMW Z4</b><p class="hint">NSR · 1:32 · 14 tests, 6 setups, 3 workshop jobs stay with this car</p><button class="btn small ghost">Change car…</button></div></div><div class="grp">What happens next</div><div class="flow"><div class="fl2"><b>1 · A Workshop job</b>Checklist, shopping and progress for the rebuild</div><span class="arr">→</span><div class="fl2"><b>2 · A build draft</b>Choose parts to reuse and replace</div><span class="arr">→</span><div class="fl2"><b>3 · Complete</b>The new car is created; inventory changes only now</div></div><p class="hint" style="margin-top:10px">Already rebuilding this car? This opens the same job.</p></div>`+foot('BMW Z4 · nothing changes until you complete the rebuild','Start rebuild')},
+ plan:{size:'md',what:['Priority as a switch, target date with quick buttons','Waiting for parts as a switch','Checklist with progress, tick boxes, drag to order and a quick add line'],html:()=>head('Plan & checklist','Rebuild BMW Z4 · Workshop job')+`<div class="cb"><div class="row" style="grid-template-columns:auto 240px 1fr;align-items:end"><div class="fl">Priority<span class="seg2"><span>Low</span><span>Normal</span><span class="on">High</span></span></div>${fld('Target date','6 Dec 2026','','<span class="sugg"><span>This weekend</span><span class="on">In 2 weeks</span><span>None</span></span>')}<div class="sw"><i></i><span>Waiting for parts<small>Marks the job as blocked</small></span></div></div>
+  <div class="grp">Checklist · 2 of 5 done</div><div class="prog"><i></i></div>${[['Strip the body and chassis',1],['Order new motor pod and pinion',1],['Fit the Shark 25K and set gear mesh',0,1],['True the rear tyres',0],['Test session on the club track',0]].map(([t,d,dr])=>`<div class="step ${d?'done':''} ${dr?'drag':''}"><span class="g">⋮⋮</span><span class="bx">${d?'✓':''}</span><span>${t}</span><span class="x">×</span></div>`).join('')}<div class="newstep">+ <span>Add a step and press Enter</span></div><p class="hint" style="margin-top:10px">The job can be completed when every step is done and it is not waiting for parts.</p></div>`+foot('<b>High</b> · due in 2 weeks · 2 of 5 steps','Save plan')}
+};
+function paint(){document.documentElement.dataset.theme=document.querySelector('#tSeg .on').dataset.t;const v=V[w];$('#win').className='win '+v.size;$('#win').innerHTML=v.html();$('#what').innerHTML=`<b>What changes</b><ul>${v.what.map(x=>`<li>${x}</li>`).join('')}</ul>`;}
+function segc(id,attr,set){document.querySelectorAll(`#${id} button`).forEach(b=>b.onclick=()=>{document.querySelectorAll(`#${id} button`).forEach(x=>x.classList.toggle('on',x===b));set(b.dataset[attr]);paint();});}
+segc('wSeg','w',v=>w=v);segc('tSeg','t',()=>{});
+function fromHash(){const h=new URLSearchParams(location.hash.slice(1));if(h.get('w'))w=h.get('w');const t=h.get('t')||'dark';document.querySelectorAll('#wSeg button').forEach(b=>b.classList.toggle('on',b.dataset.w===w));document.querySelectorAll('#tSeg button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));paint();}
+addEventListener('hashchange',fromHash);fromHash();
+</script>
+</body>
+</html>

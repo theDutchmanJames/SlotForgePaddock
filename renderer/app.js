@@ -910,31 +910,31 @@ function installPart(fixedCarId, fixedPartId) {
 }
 function addWork(id) {
   const c = db.cars.find(c => c.id === id),
-    revision = db.revision;
+    revision = db.revision,
+    today = slotforgeDomain.today(),
+    yesterday = new Date(Date.now() - 864e5).toISOString().slice(0, 10),
+    tasks = [...new Set(db.events.filter(e => e.carId === id && e.task).map(e => e.task))];
+  // Record work, touched up after docs/ui-reference/touch-ups-2026-11: the kind of work as tiles (the same as New
+  // workshop job), quick dates and the service reminder as a switch. The form keeps its field names.
   modal(
     'Record work · ' + c.name,
-    jobCategoryField('maintenance') +
-      '<div id="record-work-fields"><p class="muted">Record work you have already completed. To plan future work, create a Workshop job.</p><div class="form-grid">' +
-      field('title', 'Work performed', '') +
-      field('performedDate', 'Date', slotforgeDomain.today(), 'date') +
-      field('notes', 'Work, parts and observations', '', 'textarea') +
-      '</div><details class="shopping-optional"><summary>Optional service reminder</summary><div class="form-grid">' +
-      field(
-        'task',
-        'Reminder task (reuse the same name)',
-        '',
-        'text',
-        db.events.filter(e => e.carId === id && e.task).map(e => e.task)
-      ) +
-      field('nextDue', 'Next due date', '', 'date') +
-      field('nextDueLaps', 'Or after this many laps', '', 'number').replace('step="any" min="0"', 'step="1" min="1"') +
-      '<p class="tiny muted wide">Laps from SlotForge Timing races and manual track tests count from the start of the day of this work (do not also record Timing races as manual tests). Whichever comes first makes the reminder due.</p>' +
-      '</div></details></div><div id="record-rebuild-fields" class="note info mt" hidden>Start a rebuild project in Workshop. The original car and its history stay intact. Choose parts later in the rebuild editor; inventory changes only when the rebuild is completed.</div>',
+    `<div class="tu-win tu-work">${jobCategoryField('maintenance').replace('<label class="field wide">', '<label class="field wide" hidden>')}<div class="tu-grp">What kind of work</div>${JobTypes.types
+      .map(t => t)
+      .reduce(
+        (html, t) =>
+          html +
+          `<button type="button" class="nj-kind ${t.id === 'maintenance' ? 'on' : ''}" data-action="rw-category" data-id="${t.id}" data-tone="${t.tone}" aria-pressed="${t.id === 'maintenance'}"><i aria-hidden="true">${icon(t.icon)}</i>${esc(t.label)}</button>`,
+        '<div class="nj-kinds tu-kinds" role="group" aria-label="What kind of work">'
+      )}</div><div id="record-work-fields"><p class="tu-hint">Record work you have already completed. To plan future work, create a Workshop job.</p><div class="tu-grp">The work</div><div class="tu-row tu-work-top">${field('title', 'Work performed', '')}<label class="field">Date<input name="performedDate" type="date" value="${today}"><span class="tu-chips"><button type="button" class="on" data-action="rw-date" data-id="${today}">Today</button><button type="button" data-action="rw-date" data-id="${yesterday}">Yesterday</button></span></label></div>${field('notes', 'Work, parts and observations', '', 'textarea')}<div class="tu-grp">Service reminder</div><label class="tu-switch"><input type="checkbox" id="rw-remind"><i aria-hidden="true"></i><span>Remind me to do this again<small>Whichever comes first: a date or a number of laps. Laps from SlotForge Timing races and manual track tests count from the start of the day of this work (do not also record Timing races as manual tests).</small></span></label><div class="tu-remind" id="rw-reminder" hidden>${field('task', 'Reminder task (reuse the same name)', '', 'text', tasks)}<div class="tu-row">${field('nextDue', 'Next due date', '', 'date').replace('</label>', `<span class="tu-chips">${[1, 3, 6].map(m => `<button type="button" data-action="rw-months" data-id="${m}">${m} ${m === 1 ? 'month' : 'months'}</button>`).join('')}</span></label>`)}${field('nextDueLaps', 'Or after this many laps', '', 'number')
+      .replace('step="any" min="0"', 'step="1" min="1"')
+      .replace('</label>', `<span class="tu-chips">${[250, 500, 1000].map(n => `<button type="button" data-action="rw-laps" data-id="${n}">${n}</button>`).join('')}</span></label>`)}</div></div></div><div id="record-rebuild-fields" class="note info mt" hidden>Start a rebuild project in Workshop. The original car and its history stay intact. Choose parts later in the rebuild editor; inventory changes only when the rebuild is completed.</div></div>`,
     async values => {
       if (values.category === 'rebuild') {
         await openRebuildJob(await change('rebuild.start', { carId: id, revision }));
         return;
       }
+      // With the reminder switched off, no reminder is saved.
+      if (!$('#rw-remind')?.checked) for (const k of ['task', 'nextDue', 'nextDueLaps']) delete values[k];
       await change('work.add', {
         carId: id,
         revision,
@@ -953,11 +953,58 @@ function addWork(id) {
   $('#dialog [name=category]').id = 'record-work-category';
 }
 function updateRecordWork() {
-  const rebuild = $('#record-work-category').value === 'rebuild';
+  const value = $('#record-work-category').value,
+    rebuild = value === 'rebuild';
   $('#record-work-fields').hidden = rebuild;
   $('#record-rebuild-fields').hidden = !rebuild;
   for (const el of $('#record-work-fields').querySelectorAll('input,textarea,select')) el.disabled = rebuild;
   $('#dialog button[type=submit]').textContent = rebuild ? 'Start rebuild' : 'Save work';
+  document.querySelectorAll('[data-action="rw-category"]').forEach(b => {
+    b.classList.toggle('on', b.dataset.id === value);
+    b.setAttribute('aria-pressed', String(b.dataset.id === value));
+  });
+}
+function recordWorkSync(typed = false) {
+  const form = $('#modal-form');
+  if (!form?.querySelector('.tu-work')) return;
+  const remind = $('#rw-remind'),
+    any = ['task', 'nextDue', 'nextDueLaps'].some(k => form.querySelector(`[name="${k}"]`).value.trim());
+  if (typed && any && !remind.checked) remind.checked = true;
+  $('#rw-reminder').hidden = !remind.checked;
+  const date = form.querySelector('[name="performedDate"]').value;
+  form.querySelectorAll('[data-action="rw-date"]').forEach(b => b.classList.toggle('on', b.dataset.id === date));
+  const laps = form.querySelector('[name="nextDueLaps"]').value;
+  form.querySelectorAll('[data-action="rw-laps"]').forEach(b => b.classList.toggle('on', b.dataset.id === laps));
+}
+document.addEventListener('input', e => {
+  if (e.target.closest?.('.tu-work')) recordWorkSync(['task', 'nextDue', 'nextDueLaps'].includes(e.target.name));
+});
+document.addEventListener('change', e => {
+  if (e.target.id === 'rw-remind') recordWorkSync();
+});
+function recordWorkAction(action, id) {
+  if (!['rw-category', 'rw-date', 'rw-months', 'rw-laps'].includes(action)) return false;
+  const form = $('#modal-form');
+  if (!form?.querySelector('.tu-work')) return true;
+  if (action === 'rw-category') {
+    const select = $('#record-work-category');
+    select.value = id;
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  if (action === 'rw-date') form.querySelector('[name="performedDate"]').value = id;
+  if (action === 'rw-months') {
+    const from = form.querySelector('[name="performedDate"]').value || slotforgeDomain.today(),
+      d = new Date(from + 'T12:00:00');
+    d.setMonth(d.getMonth() + Number(id));
+    form.querySelector('[name="nextDue"]').value = d.toISOString().slice(0, 10);
+    $('#rw-remind').checked = true;
+  }
+  if (action === 'rw-laps') {
+    form.querySelector('[name="nextDueLaps"]').value = id;
+    $('#rw-remind').checked = true;
+  }
+  recordWorkSync();
+  return true;
 }
 async function saveSetup(id) {
   await setupSuggestionEditor(id);
@@ -1044,6 +1091,8 @@ document.addEventListener('click', async event => {
     if (carPickerAction(action, id)) return;
     if (fieldArrangerAction(action, id)) return;
     if (manualTestAction(action, id)) return;
+    if (recordWorkAction(action, id)) return;
+    if (touchUpAction(action, id)) return;
     if (await picturePreviewAction(action, id)) return;
     if (await pictureAction(action, id)) return;
     if (await historicalEvidenceAction(action, id)) return;

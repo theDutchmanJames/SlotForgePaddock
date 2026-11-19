@@ -1,0 +1,118 @@
+/* Small touch-ups after docs/ui-reference/touch-ups-2026-11: Record work, Print & PDF, Cover options,
+   AI instructions, Start a rebuild and Plan & checklist. */
+.tu-win{display:block}
+.tu-hint{margin:6px 0 0;font-size:12px;color:var(--muted)}
+.tu-eye{font:600 10px "Segoe UI",system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.tu-grp{display:flex;align-items:center;gap:10px;margin:16px 0 8px;font:600 9.5px "Segoe UI",system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.tu-grp::after{content:'';flex:1;height:1px;background:color-mix(in srgb,var(--line) 70%,transparent)}
+.tu-win>.tu-grp:first-child,.tu-win>[hidden]+.tu-grp{margin-top:2px}
+.tu-wide{grid-column:1/-1}
+.tu-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:start}
+.tu-win .field{display:grid;gap:5px;margin:0;align-content:start}
+.tu-chips{display:flex;flex-wrap:wrap;gap:5px}
+#dialog .tu-chips button{min-height:0;height:24px;padding:0 9px;border:1px solid var(--line);border-radius:99px;background:var(--panel);box-shadow:none;color:var(--muted);font-size:11.5px;font-weight:400;white-space:nowrap}
+#dialog .tu-chips button:hover{color:var(--ink)}
+#dialog .tu-chips button.on{border-color:var(--blue);background:color-mix(in srgb,var(--blue) 12%,var(--panel));color:var(--ink)}
+.tu-seg{display:inline-flex;flex-wrap:wrap;gap:2px;padding:3px;border:1px solid var(--line);border-radius:9px;background:color-mix(in srgb,var(--bg) 60%,var(--panel));justify-self:start}
+#dialog .tu-seg button{min-height:0;padding:6px 12px;border:0;border-radius:6px;background:transparent;box-shadow:none;color:var(--muted);font-size:12.5px;font-weight:400;white-space:nowrap}
+#dialog .tu-seg button:hover{color:var(--ink)}
+#dialog .tu-seg button.on{background:color-mix(in srgb,var(--ink) 12%,var(--panel));color:var(--ink);font-weight:600}
+/* a switch made from a checkbox label: <label class="tu-switch"><input><i></i>text</label> */
+#dialog .tu-switch{display:flex;align-items:center;gap:10px;margin:0;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel);font-size:13px;cursor:pointer}
+#dialog .tu-switch>input{position:absolute;opacity:0;pointer-events:none}
+.tu-switch>i{flex:none;position:relative;width:32px;height:18px;border-radius:99px;background:color-mix(in srgb,var(--ink) 22%,var(--panel));transition:background .12s}
+.tu-switch>i::after{content:'';position:absolute;left:2px;top:2px;width:14px;height:14px;border-radius:50%;background:#fff;transition:left .12s}
+.tu-switch>input:checked+i{background:var(--green)}
+.tu-switch>input:checked+i::after{left:16px}
+.tu-switch>input:focus-visible+i{outline:2px solid var(--blue);outline-offset:2px}
+.tu-switch small{display:block;margin-top:1px;font-size:11.5px;color:var(--muted)}
+/* cards */
+.tu-cards{display:grid;gap:8px}
+.tu-c2{grid-template-columns:repeat(2,minmax(0,1fr))}.tu-c3{grid-template-columns:repeat(3,minmax(0,1fr))}.tu-c4{grid-template-columns:repeat(4,minmax(0,1fr))}
+#dialog .tu-card{--t:var(--blue);display:block;min-width:0;min-height:0;padding:11px 12px;border:1px solid var(--line);border-radius:11px;background:var(--panel);box-shadow:none;color:var(--ink);text-align:left;font-weight:400}
+#dialog .tu-card[data-tone=green]{--t:var(--green)}#dialog .tu-card[data-tone=amber]{--t:var(--amber)}#dialog .tu-card[data-tone=violet]{--t:var(--purple,#a88cda)}
+#dialog .tu-card b{display:block;font-size:13px;font-weight:600}
+#dialog .tu-card small{display:block;margin-top:2px;font-size:11.5px;line-height:1.35;color:var(--muted)}
+.tu-em{width:30px;height:30px;margin-bottom:7px;border-radius:9px;display:grid;place-items:center;background:color-mix(in srgb,var(--t,var(--blue)) 16%,var(--panel));color:var(--t,var(--blue));font:700 13px var(--font-mono)}
+.tu-em svg{width:16px;height:16px}
+#dialog .tu-card:not(.static):hover:not(.on){border-color:color-mix(in srgb,var(--t) 45%,var(--line))}
+#dialog .tu-card.on{border-color:var(--t);background:color-mix(in srgb,var(--t) 8%,var(--panel));box-shadow:0 0 0 2px color-mix(in srgb,var(--t) 30%,transparent)}
+#dialog .tu-card.static{cursor:default}
+
+/* Record work */
+#dialog:has(.tu-work){width:min(980px,96vw)}
+.tu-kinds{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
+.tu-work-top{grid-template-columns:minmax(0,1fr) 220px}
+.tu-work .field.wide,.tu-work textarea{width:100%}
+.tu-work .field.wide{margin-top:12px}
+.tu-remind{display:grid;gap:12px;margin-top:12px}
+
+/* Print & PDF */
+#dialog:has(.tu-print){width:min(1240px,96vw);max-width:96vw;height:min(860px,92vh);max-height:92vh;overflow:hidden}
+#dialog:has(.tu-print)>form{display:flex;flex-direction:column;height:100%}
+#dialog:has(.tu-print)>form>.dialog-body{flex:1;min-height:0;max-height:none;padding:0;overflow:hidden}
+#dialog:has(.tu-print) .tu-print{display:flex;height:100%}
+.tu-print-side{width:440px;flex:none;overflow:auto;padding:14px 20px 18px;border-right:1px solid var(--line)}
+.tu-print-side .field,.tu-print-side .check-row{margin-top:10px}
+.tu-print-main{flex:1;min-width:0;display:flex;flex-direction:column;padding:14px 20px 18px;background:color-mix(in srgb,var(--bg) 30%,var(--panel))}
+.tu-print-main>.tu-grp{margin-top:0}
+#dialog .tu-print .report-preview{flex:1;min-height:0;max-height:none;margin-top:0;box-shadow:0 10px 30px rgba(0,0,0,.18)}
+
+/* Cover options and Presentation */
+#dialog.tu-showroom{width:min(1040px,96vw)}
+.tu-cover-now{display:flex;gap:16px;align-items:center;margin-bottom:12px}
+.tu-cover-pic{flex:none;width:200px;height:125px;border-radius:10px;overflow:hidden;background:color-mix(in srgb,var(--ink) 6%,var(--panel))}
+.tu-cover-pic img{display:block;width:100%;height:100%;object-fit:cover}
+.tu-cover-pic .placeholder{min-height:0;height:100%}
+.tu-cover-now b{display:block;font:italic 700 24px/1.05 var(--font-cond);text-transform:uppercase;letter-spacing:.02em}
+.tu-cover-now small{color:var(--muted);font-size:12px}
+.tu-cover-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));grid-auto-rows:max-content;gap:8px;max-height:300px;overflow:auto;padding:2px}
+.tu-cover-grid .cp-card{--cp-c:var(--blue)}
+
+/* AI instructions */
+#dialog:has(.tu-ai){width:min(1080px,96vw);max-width:96vw;height:min(820px,92vh);max-height:92vh;overflow:hidden}
+#dialog:has(.tu-ai)>form{display:flex;flex-direction:column;height:100%}
+#dialog:has(.tu-ai)>form>.dialog-body{flex:1;min-height:0;max-height:none;overflow:hidden}
+#dialog .tu-ai{display:flex;flex-direction:column;gap:12px;height:100%}
+#dialog .tu-prompt{flex:1;min-height:200px;width:100%;padding:14px 16px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font:12.5px/1.55 var(--font-mono);resize:none}
+#dialog:has(.tu-ai) .dialog-footer{align-items:center}
+.tu-copied{margin-right:auto;color:var(--green);font-size:12.5px;font-weight:600}
+.tu-copied:empty{display:none}
+#dialog:has(.tu-ai) .cp-summary{margin-right:12px}
+
+/* Start a rebuild */
+#dialog:has(.tu-rebuild){width:min(960px,96vw)}
+#dialog:has(.tu-rebuild) .dialog-footer{align-items:center}
+.tu-carbig{display:grid;grid-template-columns:200px minmax(0,1fr);gap:16px;align-items:center;margin-top:10px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+.tu-carbig-pic{width:200px;height:125px;border-radius:9px;overflow:hidden;background:color-mix(in srgb,var(--ink) 6%,var(--panel))}
+.tu-carbig-pic img{display:block;width:100%;height:100%;object-fit:cover}
+.tu-carbig-pic .placeholder{min-height:0;height:100%}
+.tu-carbig b{display:block;font:italic 700 24px/1.05 var(--font-cond);text-transform:uppercase;letter-spacing:.02em}
+.tu-carbig small{display:block;margin:3px 0 6px;color:var(--muted);font-size:12px}
+.tu-flow{display:grid;grid-template-columns:minmax(0,1fr) 20px minmax(0,1fr) 20px minmax(0,1fr);gap:6px;align-items:center}
+.tu-flow>div{padding:10px 12px;border:1px solid color-mix(in srgb,var(--line) 70%,transparent);border-radius:10px;background:color-mix(in srgb,var(--bg) 40%,var(--panel));font-size:12px;color:var(--muted)}
+.tu-flow>div b{display:block;margin-bottom:2px;font-size:12.5px;color:var(--ink)}
+.tu-flow>span{text-align:center;color:var(--muted)}
+
+/* Plan & checklist */
+#dialog:has(.tu-plan){width:min(920px,96vw)}
+.tu-plan .form-grid{align-items:start}
+.tu-plan .field>span:first-child{font-size:inherit}
+.tu-plan .tu-switch{margin-top:12px!important}
+.tu-progress{height:8px;margin:4px 0 0;border-radius:9px;background:color-mix(in srgb,var(--line) 70%,transparent);overflow:hidden}
+.tu-progress i{display:block;width:0;height:100%;background:var(--green);transition:width .2s}
+#tu-plan-count{margin:6px 0 8px}
+.tu-plan .checklist-editor-row{display:grid;grid-template-columns:14px auto minmax(0,1fr) auto;gap:10px;align-items:center;margin-bottom:5px;padding:5px 8px;border:1px solid var(--line);border-radius:9px;background:var(--panel)}
+.tu-plan .checklist-editor-row::before{content:'⋮⋮';color:var(--muted);letter-spacing:-2px;cursor:grab}
+.tu-plan .checklist-editor-row .check-row{margin:0}
+#dialog .tu-plan .checklist-editor-row [data-step-text]{min-height:30px;border-color:transparent;background:transparent}
+#dialog .tu-plan .checklist-editor-row [data-step-text]:focus{border-color:var(--blue);background:var(--bg)}
+.tu-plan .checklist-editor-row:has([data-step-done]:checked) [data-step-text]{color:var(--muted);text-decoration:line-through}
+.tu-plan .checklist-editor-row.drag{opacity:.5}
+.tu-newstep{display:flex;align-items:center;gap:8px;margin:0 0 6px;padding:4px 10px;border:1px dashed var(--line);border-radius:9px;color:var(--muted)}
+#dialog .tu-newstep input{flex:1;min-height:30px;border:0;background:transparent;box-shadow:none;outline:none}
+
+@media (max-width:860px){.tu-c4{grid-template-columns:repeat(2,minmax(0,1fr))}.tu-c3,.tu-flow{grid-template-columns:1fr}.tu-flow>span{display:none}.tu-print-side{width:300px}.tu-work-top,.tu-row{grid-template-columns:1fr}.tu-carbig{grid-template-columns:1fr}}
+.tu-plan .field>.tu-seg,.tu-showroom .field>.tu-seg{justify-self:start;align-self:flex-start;width:max-content;max-width:100%}
+#dialog .tu-step-x{min-width:28px;padding:2px 8px;font-size:15px;color:var(--muted)}
+#dialog .tu-step-x:hover{color:var(--accent)}

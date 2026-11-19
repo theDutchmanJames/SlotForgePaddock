@@ -329,11 +329,7 @@ async function catalogueAction(action, id) {
   if (action === 'catalogue-kit') await catalogueKitDialog();
   if (action === 'catalogue-instructions') {
     const prompt = await api('file', 'catalogue.instructions');
-    modal(
-      'Instructions for your AI',
-      `<p>Give your AI the downloaded JSON kit and the manufacturer or retailer URLs. For corrections, also attach the existing catalogue. The kit includes English output requirements and classification guidance.</p><textarea class="catalogue-prompt" readonly aria-label="AI instructions">${esc(prompt)}</textarea><p class="tiny muted">Select the text to copy it, or provide the complete kit file directly.</p>`,
-      null
-    );
+    aiInstructionsDialog(prompt);
   }
   if (action === 'catalogue-pick') {
     if (catalogueReview) {

@@ -187,6 +187,7 @@ function editJobPlan(id) {
     },
     'Save plan'
   );
+  planTouch();
 }
 let comparisonCarId = '';
 function openSetupComparison(id) {
@@ -249,6 +250,21 @@ function reportOptions() {
 async function reportPreview() {
   $('#report-setup').closest('label').hidden = $('#report-kind').value !== 'setup';
   $('#report-purchase').closest('label').hidden = $('#report-kind').value !== 'inventory';
+  const kind = $('#report-kind').value,
+    note = $('#report-note');
+  if (note)
+    note.textContent =
+      kind === 'cards'
+        ? 'QR links open this collection in the installed desktop app. They are not public web pages.'
+        : kind === 'setup'
+          ? 'Choose the current configuration or one of the saved setups.'
+          : kind === 'inventory'
+            ? 'Purchase details are left out unless you include them.'
+            : 'One sheet per car, for club technical checks.';
+  document.querySelectorAll('[data-action="report-pick"]').forEach(b => {
+    b.classList.toggle('on', b.dataset.id === kind);
+    b.setAttribute('aria-checked', String(b.dataset.id === kind));
+  });
   const ticket = ++reportPreviewRequest,
     r = await api('file', 'report.preview', reportOptions());
   if (ticket === reportPreviewRequest && $('#report-preview')) $('#report-preview').innerHTML = r.body;
@@ -263,7 +279,17 @@ async function openReports(ids) {
   const setups = ids.length === 1 ? db.setups.filter(s => s.carId === ids[0]) : [];
   modal(
     'Print & PDF',
-    `<p>${ids.length} selected car(s). Preview before saving; open the PDF to print.</p><div class="form-grid"><label class="field">Report<select id="report-kind"><option value="cards">Car cards with QR links</option><option value="setup">Setup sheets</option><option value="scrutineering">Club scrutineering sheets</option><option value="inventory">Collection inventory</option></select></label><label class="field">Setup sheet configuration<select id="report-setup"><option value="">Current configuration</option>${setups.map(s => `<option value="${esc(s.id)}">${esc(s.name)}</option>`).join('')}</select></label></div><label class="check-row mt"><input id="report-purchase" type="checkbox">Include purchase details in collection inventory</label><p class="tiny muted">QR links open this collection in the installed desktop app. They are not public web pages.</p><div id="report-preview" class="report-preview"></div>`,
+    `<div class="tu-win tu-print"><div class="tu-print-side"><p class="tu-hint">${ids.length === 1 ? '1 car' : ids.length + ' cars'} selected. Preview before saving; open the PDF to print.</p><div class="tu-grp">Report</div><select id="report-kind" hidden><option value="cards">Car cards with QR links</option><option value="setup">Setup sheets</option><option value="scrutineering">Club scrutineering sheets</option><option value="inventory">Collection inventory</option></select><div class="tu-cards tu-c2" role="radiogroup" aria-label="Report">${[
+      ['cards', 'green', 'grid', 'Car cards', 'With QR links that open the car in Paddock'],
+      ['setup', 'blue', 'list', 'Setup sheets', 'Specification and parts of each car'],
+      ['scrutineering', 'amber', 'check', 'Scrutineering', 'A club check sheet per car'],
+      ['inventory', 'violet', 'box', 'Collection inventory', 'A list of the selected cars']
+    ]
+      .map(
+        ([value, tone, symbol, title, text], n) =>
+          `<button type="button" class="tu-card ${n ? '' : 'on'}" role="radio" aria-checked="${!n}" data-tone="${tone}" data-action="report-pick" data-id="${value}"><span class="tu-em">${icon(symbol)}</span><b>${title}</b><small>${text}</small></button>`
+      )
+      .join('')}</div><div class="tu-grp">Options</div><label class="field">Setup sheet configuration<select id="report-setup"><option value="">Current configuration</option>${setups.map(s => `<option value="${esc(s.id)}">${esc(s.name)}</option>`).join('')}</select></label><label class="check-row"><input id="report-purchase" type="checkbox">Include purchase details in collection inventory</label><p class="tu-hint" id="report-note">QR links open this collection in the installed desktop app. They are not public web pages.</p></div><div class="tu-print-main"><div class="tu-grp">Preview</div><div id="report-preview" class="report-preview"></div></div></div>`,
     async () => {
       const result = await api('file', 'report.pdf', reportOptions());
       if (result) toast('PDF saved. Open it in your PDF viewer to print.');
@@ -453,6 +479,10 @@ async function enhancementAction(action, id, target) {
         .querySelector('[data-action="test-snapshot"][data-id="' + CSS.escape(id) + '"]')
         ?.closest('.panel')
         ?.scrollIntoView({ block: 'center' });
+      return true;
+    case 'report-pick':
+      $('#report-kind').value = id;
+      await reportPreview();
       return true;
     case 'reports':
       await openReports(id ? [id] : selected.size ? [...selected] : filteredCars().map(c => c.id));

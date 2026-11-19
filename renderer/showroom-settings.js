@@ -205,6 +205,7 @@ function showroomOptions(kind) {
       ? ''
       : ShowroomModel.candidates(all, groups, selected).length + ' cars match these options.';
   }
+  showroomOptionsTouch(form, presentation, all);
   form.addEventListener('change', update);
   update();
 }

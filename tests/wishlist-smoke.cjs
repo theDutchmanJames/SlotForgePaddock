@@ -16,7 +16,7 @@ module.exports=async({win,store,js,wait,click,fill,submit,qa})=>{
  await click('[data-action="edit-car"]');await click('[data-action="form-tab"][data-id="Collection"]');assert.equal(await js('document.querySelector("[name=price]").parentElement.textContent.trim()'),'Price');
  await fill({ownership:'Owned',price:'75',model:'Updated model','technical.motor':'Desired motor'});await submit();await wait('!viewPendingKey');
  const saved=store.data.cars.find(c=>c.id===wish);assert.equal(saved.collectionStatus,'wishlist');assert.equal(saved.price,'75');assert.ok(saved.picture);assert.equal(saved.technical.motor,'Desired motor');
- await click('[data-action="car-more"]');assert.equal(await js('!!document.querySelector("#dialog [data-action=export-car]")'),true);assert.equal(await js('!!document.querySelector("#dialog [data-action=rebuild-start]")'),false);await click('[data-action="close-modal"]');
+ await click('[data-action="car-more"]');assert.equal(await js('!!document.querySelector("#car-more-menu [data-action=export-car]")'),true);assert.equal(await js('!!document.querySelector("#car-more-menu [data-action=rebuild-start]")'),false);await js("closeCarMore()");
  await click('[data-action="back-cars"]');assert.equal(await js('carScope'),'wishlist');assert.equal(await js('filteredCars().length'),1);
  await click('[data-action="select-filtered"]');assert.deepEqual(await js('[...selected]'),[wish]);assert.equal(await js('!!document.querySelector("[data-action=export-selected]")'),true);
  await click('[data-action="mode"][data-id="table"]');assert.equal(await js('!!document.querySelector(".table-name")'),true);

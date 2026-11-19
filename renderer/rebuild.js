@@ -60,20 +60,7 @@ async function openRebuildDraft(id) {
   $('#dialog').close();
   render();
 }
-function startRebuildDialog(id) {
-  const cars = db.cars.filter(c => slotforgeDomain.activeCar(c) && !c.rebuild?.to),
-    revision = db.revision;
-  if (!cars.length) throw Error('Add an active car before starting a rebuild.');
-  modal(
-    'Start a rebuild',
-    `<p>Keep the original car’s history and plan a new, linked configuration.</p><label class="field">Original car<select name="carId" required>${cars.map(c => `<option value="${esc(c.id)}" ${c.id === id ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></label><p class="note info mt">Start in Workshop to organise your checklist, shopping and progress. A saved build draft is linked to the job. No car or inventory changes until completion. An existing rebuild opens the same job.</p>`,
-    async values => {
-      const draft = await change('rebuild.start', { carId: values.carId, revision });
-      await openRebuildJob(draft);
-    },
-    'Start rebuild'
-  );
-}
+// startRebuildDialog lives in touch-ups.js.
 async function openRebuildJob(draftId) {
   const draft = await api('plan', 'build.draft', { id: draftId }),
     jobId = draft?.data.rebuild?.jobId;
