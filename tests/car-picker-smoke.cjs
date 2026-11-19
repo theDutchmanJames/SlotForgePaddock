@@ -10,6 +10,8 @@ module.exports=async({win,store,js,wait,click,fill,submit,qa})=>{
  await js(`(async()=>{source='local';page='Cars';carId='';section='Overview';await loadView()})()`);await idle();
  // Compare cars: the first click sets A, the next B, a chosen car clears on a second click.
  await click('[data-action="car-compare"]');await wait(`!!document.querySelector('[data-picker="compare"]')`);
+ const pressEnter=async sel=>{await js('document.querySelector('+JSON.stringify(sel)+').focus()');win.webContents.sendInputEvent({type:'keyDown',keyCode:'Enter'});win.webContents.sendInputEvent({type:'char',keyCode:String.fromCharCode(13)});win.webContents.sendInputEvent({type:'keyUp',keyCode:'Enter'});await new Promise(r=>setTimeout(r,250));};
+ await pressEnter("#cp-search");assert.equal(await js('document.querySelector("[data-picker=compare]")!==null&&document.querySelector("#dialog").open'),true);
  await js(`document.querySelector('[name="compare-0"]').value='';document.querySelector('[name="compare-1"]').value='';compareSync()`);
  assert.equal(await js('document.querySelector("#cp-summary").textContent'),'Pick two cars');
  await click(`[data-action="cp-compare"][data-id="${ids[1]}"]`);await click(`[data-action="cp-compare"][data-id="${ids[2]}"]`);

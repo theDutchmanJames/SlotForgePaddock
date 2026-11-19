@@ -95,14 +95,14 @@ function shelfEditorRows() {
     editingShelfIds
       .map((id, i) => {
         const c = db.cars.find(c => c.id === id);
-        return `<div class="cp-order-row" draggable="true" data-shelf-car="${esc(id)}"><span class="cp-grip" aria-hidden="true">⋮⋮</span><span class="cp-n mono">${i + 1}</span><span class="cp-order-pic">${c ? photo(c, true) : ''}</span><b>${esc(c?.name || 'Car not in this view')}${c?.archived ? ' <small>· archived, hidden in the Showroom</small>' : ''}</b><span class="cp-order-acts">${btn('↑', 'shelf-up', 'small ghost', id)}${btn('↓', 'shelf-down', 'small ghost', id)}${btn('×', 'shelf-car-remove', 'small ghost', id)}</span></div>`;
+        return `<div class="cp-order-row" draggable="true" data-shelf-car="${esc(id)}"><span class="cp-grip" aria-hidden="true">⋮⋮</span><span class="cp-n mono">${i + 1}</span><span class="cp-order-pic">${c ? photo(c, true) : ''}</span><b>${esc(c?.name || 'Car not in this view')}${c?.archived ? ' <small>· archived, hidden in the Showroom</small>' : ''}</b><span class="cp-order-acts">${[['↑', 'shelf-up', 'Move ' + (c?.name || 'car') + ' up'], ['↓', 'shelf-down', 'Move ' + (c?.name || 'car') + ' down'], ['×', 'shelf-car-remove', 'Remove ' + (c?.name || 'car') + ' from the group']].map(([sign, act, aria]) => `<button type="button" class="btn small ghost" data-action="${act}" data-id="${esc(id)}" aria-label="${esc(aria)}">${sign}</button>`).join('')}</span></div>`;
       })
       .join('') || '<p class="cp-empty">No cars yet. Click cars on the left to add them.</p>'
   );
 }
 function shelfRefresh() {
   const box = $('#shelf-editor');
-  if (box) box.innerHTML = shelfEditorRows();
+  if (box) keepFocus(() => (box.innerHTML = shelfEditorRows()));
   document.querySelectorAll('[data-picker="shelf"] .cp-card').forEach(b => {
     const at = editingShelfIds.indexOf(b.dataset.id);
     b.classList.toggle('on', at >= 0);
@@ -125,7 +125,7 @@ function editShelf(id = '') {
   editingShelfIds = [...(s?.carIds || [])];
   modal(
     s ? 'Edit group' : 'New showroom group',
-    `<div class="cp-win" data-picker="shelf"><select id="shelf-car" hidden>${cars.map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select><button type="button" data-action="shelf-car-add" hidden>Add car</button><div class="cp-main">${carPickTool(
+    `<div class="cp-win" data-picker="shelf"><div class="cp-main">${carPickTool(
       'Find a car…',
       '',
       carPickFilterSeg([
@@ -133,7 +133,7 @@ function editShelf(id = '') {
         ['unpicked', 'Not picked'],
         ['picked', 'Picked']
       ])
-    )}<div class="cp-grid">${cars.map(c => carPickCard(c, { action: 'cp-shelf', tone: 'violet' })).join('')}<p class="cp-none" hidden>No car matches.</p></div></div><aside class="cp-side"><div class="cp-sh"><div class="eye">Your group</div><h3 id="cp-shelf-title">${esc(s?.name || 'New group')}</h3><p>Click cars to add or remove them. Drag to change the order.</p></div><div class="cp-sb">${field('name', 'Group name', s?.name || '')}<div id="shelf-editor" class="cp-order">${shelfEditorRows()}</div><p class="cp-hint">Archived cars stay saved in a group but are hidden in the Showroom.</p></div></aside></div>`,
+    )}<div class="cp-grid">${cars.map(c => carPickCard(c, { action: 'cp-shelf', tone: 'violet' })).join('')}<p class="cp-none" hidden>No car matches.</p></div></div><aside class="cp-side"><div class="cp-sh"><div class="eye">Your group</div><h3 id="cp-shelf-title">${esc(s?.name || 'New group')}</h3><p>Click cars to add or remove them. Drag to change the order.</p></div><div class="cp-sb">${field('name', 'Group name', s?.name || '')}<div id="shelf-editor" class="cp-order">${shelfEditorRows()}</div><p class="cp-hint">Archived cars stay saved in a group but are hidden in the Showroom.</p></div></aside><select id="shelf-car" hidden>${cars.map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select><button type="button" data-action="shelf-car-add" hidden>Add car</button></div>`,
     async v => {
       showroom.shelf = await change('planning.shelf.save', {
         revision,

@@ -68,6 +68,6 @@ function overviewAction(action, id) {
   }
   if (action === 'overview-defaults')
     overviewDraft.layout[overviewDraft.section] = [...OverviewLayout.defaults[overviewDraft.section]];
-  $('#overview-fields-editor').innerHTML = overviewEditorBody();
+  keepFocus(() => ($('#overview-fields-editor').innerHTML = overviewEditorBody()));
   return true;
 }

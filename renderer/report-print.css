@@ -74,3 +74,5 @@
 .report-preview .report{padding:20px 22px}
 .report-preview .rp-doc+.rp-doc{margin-top:24px;padding-top:20px;border-top:2px dashed #d5dae0}
 .report-preview{background:#fff}
+.report .rp-gap{margin-top:10px}
+.report tr.rp-lane-0{--lane:#e5484d}.report tr.rp-lane-1{--lane:#3b82f6}.report tr.rp-lane-2{--lane:#f2c230}.report tr.rp-lane-3{--lane:#34c77b}.report tr.rp-lane-4{--lane:#a855f7}.report tr.rp-lane-5{--lane:#f97316}

@@ -69,7 +69,7 @@ function pictureRender() {
   if (!box) return;
   const focus = document.activeElement?.id,
     caret = focus === 'pictures-query' ? $('#pictures-query').selectionStart : null;
-  box.innerHTML = pictureBody();
+  keepFocus(() => (box.innerHTML = pictureBody()));
   box.querySelectorAll('.pq-bar i').forEach(i => (i.style.width = i.dataset.w + '%'));
   if (focus === 'pictures-query') {
     const q = $('#pictures-query');
@@ -164,6 +164,7 @@ async function pictureAction(action, id) {
     if (action === 'pictures-include') $('#pictures-missing').checked = !$('#pictures-include').checked;
     action = 'pictures-filter';
   }
+  if (action === 'pictures-filter' && !$('#pictures-maker')) return true;
   if (action === 'pictures-filter') {
     const manufacturer = $('#pictures-maker').value,
       missing = $('#pictures-missing').checked;

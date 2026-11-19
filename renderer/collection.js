@@ -69,7 +69,7 @@ function configureColumns() {
   faOpen();
 }
 function refreshColumnEditor() {
-  $('#columns-editor').innerHTML = columnEditorBody();
+  keepFocus(() => ($('#columns-editor').innerHTML = columnEditorBody()));
 }
 async function loadChoices() {
   choiceCatalogue = await api('plan', 'choices.catalogue');

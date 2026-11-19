@@ -16,7 +16,7 @@ const files=[
   "scripts/build-startup-splash.cjs",
   "tests/application-frame.test.cjs",
   "tests/startup-feedback.test.cjs",
-  "tests/startup-window-smoke.cjs", "tests/part-sheet-smoke.cjs", "tests/job-window-smoke.cjs", "tests/shopping-basket-smoke.cjs", "tests/bulk-edit-smoke.cjs", "tests/car-more-smoke.cjs", "tests/setup-sheet-smoke.cjs", "tests/car-picker-smoke.cjs", "tests/field-arranger-smoke.cjs", "tests/picture-request-smoke.cjs", "tests/manual-test-smoke.cjs", "tests/real-history-smoke.cjs", "tests/touch-ups-smoke.cjs",
+  "tests/startup-window-smoke.cjs", "tests/part-sheet-smoke.cjs", "tests/job-window-smoke.cjs", "tests/shopping-basket-smoke.cjs", "tests/bulk-edit-smoke.cjs", "tests/car-more-smoke.cjs", "tests/setup-sheet-smoke.cjs", "tests/car-picker-smoke.cjs", "tests/field-arranger-smoke.cjs", "tests/picture-request-smoke.cjs", "tests/manual-test-smoke.cjs", "tests/real-history-smoke.cjs", "tests/touch-ups-smoke.cjs", "tests/audit-sweep-smoke.cjs",
   "tests/windows-installer.test.cjs",
   "src/catalogue-pricing.cjs",
   "tests/catalogue-pricing.test.cjs",

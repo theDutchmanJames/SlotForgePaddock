@@ -12,6 +12,9 @@ module.exports=async({win,store,js,wait,click,fill,submit,qa})=>{
  await js(`(async()=>{source='local';page='Cars';carId='';section='Overview';collectionMeta=(await api('read')).collection;await loadView()})()`);await idle();
  // Table columns: the chips and the preview follow the same order.
  await click('[data-action="configure-columns"]');await wait('!!document.querySelector(\'[data-arranger="columns"]\')');
+ const pressEnter=async sel=>{await js('document.querySelector('+JSON.stringify(sel)+').focus()');win.webContents.sendInputEvent({type:'keyDown',keyCode:'Enter'});win.webContents.sendInputEvent({type:'char',keyCode:String.fromCharCode(13)});win.webContents.sendInputEvent({type:'keyUp',keyCode:'Enter'});await new Promise(r=>setTimeout(r,250));};
+ // Enter in the search box searches; it does not save and close the window.
+ await pressEnter("#fa-search");assert.equal(await js('document.querySelector("#dialog").open'),true);
  const start=await chips();assert.deepEqual(await heads(),start);assert.match(await js('document.querySelector("#fa-summary").textContent'),new RegExp(start.length+' of 16 columns'));
  await click('[data-action="fa-add"][data-id="tech_motor"]');assert.deepEqual(await chips(),[...start,'tech_motor']);assert.deepEqual(await heads(),[...start,'tech_motor']);
  assert.equal(await js('!!document.querySelector(\'.fa-tray [data-id="tech_motor"]\')'),false);
@@ -28,7 +31,9 @@ module.exports=async({win,store,js,wait,click,fill,submit,qa})=>{
  await js(`(()=>{const from=document.querySelector('.fa-tray [data-id="reference"]'),to=document.querySelectorAll('#fa-chips .fa-chip')[2],r=to.getBoundingClientRect(),dt=new DataTransfer(),o={bubbles:true,cancelable:true,dataTransfer:dt,clientX:r.left+2,clientY:r.top+r.height/2};from.dispatchEvent(new DragEvent('dragstart',{bubbles:true,dataTransfer:dt}));to.dispatchEvent(new DragEvent('dragover',o));to.dispatchEvent(new DragEvent('drop',o));document.dispatchEvent(new DragEvent('dragend',{bubbles:true}))})()`);
  assert.equal((await chips())[2],'reference');
  // The arrows still work, and Name cannot be removed.
- await click('[data-action="column-down"][data-id="1"]');assert.equal((await chips())[2],'tech_motor');
+ await js(`(()=>{const b=document.querySelector('[data-action="column-down"][data-id="1"]');b.focus();b.click()})()`);await new Promise(r=>setTimeout(r,150));
+ // Focus stays on the moved chip's button.
+ assert.equal(await js('document.activeElement.dataset.action'),'column-down');assert.equal((await chips())[2],'tech_motor');
  assert.equal(await js('!!document.querySelector(\'#fa-chips [data-key="name"] [data-action="column-remove"]\')'),false);
  await shoot('field-arranger-table');
  win.setSize(860,720);await capture('field-arranger-table-narrow.png');assert.equal(await js('document.querySelector(".dialog-body").scrollWidth<=document.querySelector(".dialog-body").clientWidth+1'),true);win.setSize(1440,980);

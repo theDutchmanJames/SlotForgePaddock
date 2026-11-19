@@ -666,7 +666,28 @@ function modal(title, body, onSubmit, submitLabel = 'Save') {
   // A window that removes something gets the "cannot be undone" badge before its title.
   dialog.classList.toggle('dialog-danger', !!onSubmit && /delete|remove|discard|reset|dismantle/i.test(submitLabel));
   dialog.showModal();
-  dialog.querySelector('input:not([type=hidden]),select,textarea')?.focus();
+  [...dialog.querySelectorAll('input:not([type=hidden]),select,textarea')].find(el => !el.hidden && !el.closest('[hidden]'))?.focus();
+}
+// Enter in a search box searches; it never submits (saves and closes) the window around it.
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.target.matches?.('#modal-form input[type="search"]')) e.preventDefault();
+});
+// Keep keyboard focus on the same control when part of a window is redrawn: the button with the same action
+// inside the same item (data-key, data-shelf-car, data-id of an ancestor card), else the same action and id.
+function keepFocus(redraw) {
+  const el = document.activeElement,
+    action = el?.dataset?.action,
+    id = el?.dataset?.id ?? '',
+    owner = el?.closest?.('[data-key],[data-shelf-car]'),
+    ownerSel = owner ? (owner.dataset.key !== undefined ? `[data-key="${CSS.escape(owner.dataset.key)}"]` : `[data-shelf-car="${CSS.escape(owner.dataset.shelfCar)}"]`) : '',
+    elId = el?.id;
+  redraw();
+  if (!el || el === document.body || (document.contains(el) && document.activeElement === el)) return;
+  let next = null;
+  if (action && ownerSel) next = document.querySelector(`${ownerSel} [data-action="${CSS.escape(action)}"]`);
+  if (!next && action) next = document.querySelector(`[data-action="${CSS.escape(action)}"][data-id="${CSS.escape(id)}"]`);
+  if (!next && elId) next = document.getElementById(elId);
+  if (next && !next.disabled) next.focus();
 }
 function simpleForm(title, fields, submit, label) {
   modal(title, `<div class="form-grid">${fields}</div>`, submit, label);
