@@ -250,13 +250,19 @@ function availableAssetMetadata(file, hashes) {
 function state(db, key) {
   return db.prepare('SELECT value FROM state WHERE key=?').get(key)?.value ?? null;
 }
+// One prepared statement per connection: building a sync snapshot read it once per record.
+const fieldStatements = new WeakMap();
+function fieldsOf(db) {
+  let statement = fieldStatements.get(db);
+  if (!statement) fieldStatements.set(db, (statement = db.prepare('SELECT path,json FROM record_fields WHERE record=?')));
+  return statement;
+}
 function recordEnvelope(db, key, json) {
   const entry = JSON.parse(json);
   return Object.hasOwn(entry, 'shape')
     ? fieldRecords.merge(
         json,
-        db
-          .prepare('SELECT path,json FROM record_fields WHERE record=?')
+        fieldsOf(db)
           .all(key)
           .map(r => [r.path, r.json])
       )
@@ -800,9 +806,27 @@ function assetMetadata(file, hashes) {
     db.close();
   }
 }
+// Sending or receiving a collection copy reads or writes hundreds of photos, one 1 MB piece per request.
+// The full structure check of open() cost more than the copy itself; these two calls only touch the
+// content-addressed assets table (every photo's hash is verified on arrival), so they use a plain
+// connection with the same safety settings.
+function assetConnection(file, readOnly) {
+  if (!fs.statSync(file).isFile()) throw Error('Choose a Paddock SQLite database file.');
+  const db = new DatabaseSync(file, { timeout: 5000, readOnly });
+  try {
+    db.exec('PRAGMA trusted_schema=OFF; PRAGMA busy_timeout=5000;' + (readOnly ? '' : ' PRAGMA foreign_keys=ON; PRAGMA synchronous=FULL;'));
+    const { application_id: application } = db.prepare('PRAGMA application_id').get(),
+      { user_version: version } = db.prepare('PRAGMA user_version').get();
+    if (application !== APPLICATION_ID || ![1, 2, FORMAT].includes(version)) throw Error('Unsupported Paddock SQLite storage version. Use a newer Paddock.');
+    return db;
+  } catch (e) {
+    db.close();
+    throw e;
+  }
+}
 function assetChunk(file, hash, offset = 0) {
   if (!/^[a-f0-9]{64}$/.test(hash) || !Number.isSafeInteger(offset) || offset < 0) throw Error('Invalid asset cursor.');
-  const db = open(file, true);
+  const db = assetConnection(file, true);
   try {
     const r = db
       .prepare('SELECT length(value) size,substr(value,?,1048576) bytes,meta FROM assets WHERE hash=?')
@@ -814,7 +838,7 @@ function assetChunk(file, hash, offset = 0) {
   }
 }
 function stageAsset(file, hash, value) {
-  const db = open(file, true);
+  const db = assetConnection(file, false);
   try {
     const meta = require('./lazy-assets.cjs').metadata(value);
     if (meta.hash !== hash) throw Error('Attachment verification failed.');

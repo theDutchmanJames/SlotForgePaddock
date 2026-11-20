@@ -34,14 +34,16 @@ function selection(s) {
     fail('INVALID_QUERY', 'Invalid lane.');
 }
 function cars(r, input) {
-  const where = `q.bucket='["cars"]' AND instr(sf_sort_text(json_extract(f.json,'$')),?)>0 AND EXISTS(SELECT 1 FROM query_sessions s JOIN json_each(s.json,'$.payload.participants') p WHERE ${owner()}=substr(rr.identity,4) AND ${active} AND json_extract(p.value,'$.kind')='physical')`;
+  const owners = `WITH owners AS MATERIALIZED (SELECT DISTINCT ${owner()} id FROM query_sessions s JOIN json_each(s.json,'$.payload.participants') p WHERE ${active} AND json_extract(p.value,'$.kind')='physical') `;
+  const where = `q.bucket='["cars"]' AND instr(sf_sort_text(json_extract(f.json,'$')),?)>0 AND substr(rr.identity,4) IN (SELECT id FROM owners)`;
   const from = ` FROM query_records q JOIN records rr ON rr.key=q.key JOIN record_fields f ON f.record=q.key AND f.path='["name"]' WHERE ${where}`,
     query = (input.query || '').toLowerCase(),
     offset = input.offset || 0;
-  const total = r.db.prepare('SELECT count(*) n' + from).get(query).n,
+  const total = r.db.prepare(owners + 'SELECT count(*) n' + from).get(query).n,
     rows = r.db
       .prepare(
-        "SELECT substr(rr.identity,4) id,json_extract(f.json,'$') name,q.archived" +
+        owners +
+          "SELECT substr(rr.identity,4) id,json_extract(f.json,'$') name,q.archived" +
           from +
           ' ORDER BY sf_sort_text(name),rr.identity LIMIT 20 OFFSET ?'
       )
@@ -267,4 +269,4 @@ function read(store, input) {
     return result;
   }).value;
 }
-module.exports = { read, measurements };
+module.exports = { read, measurements, cars };
