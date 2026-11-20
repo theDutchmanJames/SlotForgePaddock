@@ -68,32 +68,45 @@ function browse(store, p = {}) {
     if (p.expected) identity(active, p.expected);
     const offset = p.offset || 0;
     if (!Number.isSafeInteger(offset) || offset < 0) throw fault('INVALID_QUERY', 'Invalid page.');
-    const f = filters(p.filters),
-      total = r.db.prepare(`SELECT count(*) n FROM (${f.sql})`).get(...f.args).n;
-    const rows = r.db
-      .prepare(f.sql + ' ORDER BY sf_picture_normal(name),kind,id LIMIT 40 OFFSET ?')
-      .all(...f.args, offset)
-      .map(({ key, ...row }) => row);
-    const manufacturers = r.db
-      .prepare(
-        `SELECT min(manufacturer) name FROM (${projection}) WHERE sf_picture_normal(manufacturer)<>'' GROUP BY sf_picture_normal(manufacturer) ORDER BY sf_picture_normal(manufacturer)`
-      )
-      .all()
-      .map(x => x.name);
-    // Per manufacturer: how many products there are and how many already have a picture (for the maker list).
-    const makerStats = r.db
-      .prepare(
-        `SELECT min(manufacturer) name,count(*) total,sum(hasPicture) pictured FROM (${projection}) WHERE sf_picture_normal(manufacturer)<>'' GROUP BY sf_picture_normal(manufacturer) ORDER BY sf_picture_normal(manufacturer)`
-      )
-      .all()
-      .map(x => ({ name: x.name, total: x.total, pictured: x.pictured || 0 }));
-    const categories = r.db
-      .prepare(
-        `SELECT DISTINCT category FROM (${projection}) WHERE sf_picture_normal(manufacturer)=? ORDER BY category`
-      )
-      .all(normal(p.filters?.manufacturer))
-      .map(x => x.category)
-      .filter(Boolean);
+    filters(p.filters); // validates the filters exactly as before
+    // One scan of the products; the page, totals, manufacturer list and categories are worked out from it
+    // (this used to be five scans of every part and supply).
+    const f = p.filters || {},
+      binary = (a, b) => (a < b ? -1 : a > b ? 1 : 0),
+      everything = r.db
+        .prepare(projection)
+        .all()
+        .map(({ key, ...row }) => ({ ...row, maker: normal(row.manufacturer) })),
+      all = everything.filter(x => x.maker !== ''),
+      maker = f.manufacturer ? normal(f.manufacturer) : null,
+      query = f.query ? normal(f.query) : '',
+      matching = all
+        .filter(
+          x =>
+            (maker === null || x.maker === maker) &&
+            (!f.kind || x.kind === f.kind) &&
+            (!f.category || x.category === f.category) &&
+            (f.missing === false || !x.hasPicture) &&
+            (!query || normal(x.name + ' ' + x.reference + ' ' + x.partType).includes(query))
+        )
+        .map(x => ({ ...x, order: normal(x.name) }))
+        .sort((a, b) => binary(a.order, b.order) || binary(a.kind, b.kind) || binary(a.id, b.id)),
+      total = matching.length,
+      rows = matching.slice(offset, offset + 40).map(({ maker, order, ...row }) => row);
+    // Per manufacturer: the name (as stored, smallest spelling first), how many products and how many have a picture.
+    const groups = new Map();
+    for (const x of all) {
+      const g = groups.get(x.maker) || { key: x.maker, name: x.manufacturer, total: 0, pictured: 0 };
+      if (binary(x.manufacturer, g.name) < 0) g.name = x.manufacturer;
+      g.total++;
+      g.pictured += x.hasPicture ? 1 : 0;
+      groups.set(x.maker, g);
+    }
+    const ordered = [...groups.values()].sort((a, b) => binary(a.key, b.key)),
+      manufacturers = ordered.map(g => g.name),
+      makerStats = ordered.map(g => ({ name: g.name, total: g.total, pictured: g.pictured })),
+      chosen = normal(p.filters?.manufacturer),
+      categories = [...new Set(everything.filter(x => x.maker === chosen).map(x => x.category))].filter(Boolean).sort(binary);
     return {
       ...active,
       rows,

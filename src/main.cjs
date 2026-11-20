@@ -173,6 +173,62 @@ function reply(fn) {
     }
   };
 }
+// Report photos for the PDF: originals are often several MB, far more than print needs. Each photo is shrunk
+// once (about 1000 px wide for cards and sheets, 320 px for inventory thumbnails) and remembered by its hash.
+const reportPhotos = new Map();
+function reportPhoto(c, size) {
+  const a = require('./lazy-assets.cjs').property(c, 'picture'),
+    width = size === 'thumb' ? 320 : 1000,
+    key = a ? a.meta.hash + ':' + width : null;
+  if (key && reportPhotos.has(key)) return reportPhotos.get(key);
+  const original = a ? a.read() : c.picture || '';
+  if (!original) return '';
+  let small = original;
+  try {
+    const image = nativeImage.createFromDataURL(original);
+    if (!image.isEmpty()) {
+      const sized = image.getSize().width > width ? image.resize({ width, quality: 'good' }) : image;
+      // PNG stays PNG so transparent areas do not turn black.
+      small = original.startsWith('data:image/png')
+        ? 'data:image/png;base64,' + sized.toPNG().toString('base64')
+        : 'data:image/jpeg;base64,' + sized.toJPEG(85).toString('base64');
+      if (small.length > original.length) small = original;
+    }
+  } catch {
+    small = original;
+  }
+  if (key) {
+    if (reportPhotos.size >= 400) reportPhotos.delete(reportPhotos.keys().next().value);
+    reportPhotos.set(key, small);
+  }
+  return small;
+}
+// Reports read only what they print (the chosen cars, the setup, fitted parts) instead of loading the whole
+// collection; the first report after start used to take seconds on a large catalogue.
+async function reportData(p) {
+  await store.whenIdle();
+  const { Reader } = require('./sqlite-query.cjs'),
+    { relatedIds } = require('./page-query.cjs');
+  let r;
+  try {
+    r = new Reader(store.file);
+  } catch {
+    return store.snapshot(); // a collection that cannot be read directly yet
+  }
+  try {
+    const ids = Array.isArray(p.ids) ? p.ids.filter(id => typeof id === 'string' && /^[a-zA-Z0-9_-]{1,100}$/.test(id)) : [],
+      cars = ids.map(id => r.one('cars', id)).filter(Boolean),
+      setup = typeof p.setupId === 'string' && /^[a-zA-Z0-9_-]{1,100}$/.test(p.setupId) ? r.one('setups', p.setupId) : null,
+      installations =
+        p.kind === 'setup' && !p.setupId
+          ? cars.flatMap(c => relatedIds(r, 'installations', c.id, { active: true }).map(id => r.one('installations', id))).filter(Boolean)
+          : [],
+      parts = [...new Set(installations.map(i => i.partId).filter(Boolean))].map(id => r.one('parts', id)).filter(Boolean);
+    return { id: r.id, revision: r.revision, settings: r.scalar('settings') || {}, cars, setups: setup ? [setup] : [], installations, parts };
+  } finally {
+    r.close();
+  }
+}
 // The PDF window gets its own in-memory session that serves only the report being printed.
 let reportPrintPage = null,
   reportPrintSession = null;
@@ -400,11 +456,17 @@ async function files(action, p = {}) {
     return preview;
   }
   if (action === 'report.preview') {
-    const r = reports.render(store.snapshot(), p);
+    // The preview shows the app's small cached thumbnails; no original photo is read.
+    const r = reports.render(await reportData(p), p, {
+      photo: c => {
+        const a = require('./lazy-assets.cjs').property(c, 'picture');
+        return a ? media.register(a) + '?thumbnail=1' : c.picture || '';
+      }
+    });
     return { title: r.title, body: r.body };
   }
   if (action === 'report.pdf') {
-    const report = reports.render(store.snapshot(), p),
+    const report = reports.render(await reportData(p), p, { photo: reportPhoto }),
       result = await dialog.showSaveDialog(win, {
         title: 'Save printable PDF',
         defaultPath: 'SlotForge-' + p.kind + '.pdf',

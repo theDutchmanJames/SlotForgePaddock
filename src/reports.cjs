@@ -65,7 +65,10 @@ const labels = Object.fromEntries(Object.values(TechGroups).flat());
 const label = k => labels[k] || (k.charAt(0).toUpperCase() + k.slice(1).replace(/([A-Z])/g, ' $1').toLowerCase());
 const grams = v => (/^\d+(?:[.,]\d+)?$/.test(String(v ?? '').trim()) ? String(v).trim() + ' g' : v);
 const lanes = ['#e5484d', '#3b82f6', '#f2c230', '#34c77b', '#a855f7', '#f97316'];
-function render(db, p = {}) {
+// opts.photo(car, size) gives the image address for a car photo (size: 'card' or 'thumb'), or '' for none.
+// The app passes small versions; without it the stored photo is used as it is.
+function render(db, p = {}, opts = {}) {
+  const photoOf = (c, size) => (opts.photo ? opts.photo(c, size) : c.picture || '');
   if (p.revision !== undefined && p.revision !== db.revision)
     throw Error('The database changed. Reopen the report preview.');
   if (!['cards', 'inventory', 'setup', 'scrutineering'].includes(p.kind)) throw Error('Choose a report type.');
@@ -94,8 +97,8 @@ function render(db, p = {}) {
     `<div class="rp-rule"></div><div class="rp-head"><div><div class="rp-kick">${esc(kick)}</div><h1 class="rp-title">${esc(heading)}</h1><p class="rp-sub">${esc(sub)}</p></div><img class="rp-logo" src="${logoUrl()}" alt="SlotForge"><div class="rp-date"><b>${Number(dd)}</b><span>${months[Number(mm) - 1]} ${day.slice(0, 4)}</span></div></div><div class="rp-check"></div>`;
   const tile = (k, v, small = '') =>
     `<div class="rp-tile"><span class="rp-lab">${esc(k)}</span><b>${esc(v || '—')}</b>${small ? `<small>${esc(small)}</small>` : ''}</div>`;
-  const photoBox = (c, number = true) =>
-    `<div class="rp-photo ${c.picture ? '' : 'empty'}">${c.picture ? `<img src="${esc(c.picture)}" alt="${esc(c.name)}">` : 'No photo'}${number && c.number ? `<span class="rp-num">${esc(c.number)}</span>` : ''}</div>`;
+  const photoBox = (c, number = true, src = photoOf(c, 'card')) =>
+    `<div class="rp-photo ${src ? '' : 'empty'}">${src ? `<img src="${esc(src)}" alt="${esc(c.name)}">` : 'No photo'}${number && c.number ? `<span class="rp-num">${esc(c.number)}</span>` : ''}</div>`;
   const qrBlock = c =>
     `<div class="rp-qr"><a href="${esc(link(db, c))}">${qr(link(db, c))}</a><span>Open in Paddock on a computer<br>with this collection installed.</span></div>`;
   let body = '<div class="report">';
@@ -124,7 +127,7 @@ function render(db, p = {}) {
     body += `<section class="rp-doc">${head('Collection · inventory', title, `${collection} · ${count(cars.length)}${purchase ? ' · prices in their own currency' : ''}`)}<div class="rp-tiles four">${tile('Cars', String(cars.length))}${tile('Makers', String(makers.length), makers.slice(0, 3).join(' · '))}${purchase ? tile('Paid', paidText || '—', 'per currency, as recorded') : tile('Scales', String(new Set(cars.map(c => c.scale).filter(Boolean)).size))}${tile('Locations', String(places.length), places.slice(0, 3).join(' · '))}</div><div class="rp-lab rp-sec">Cars</div><table><thead><tr>${thumbs ? '<th></th>' : ''}${['Number', 'Car', 'Maker', 'Scale', 'Location', ...(purchase ? ['Acquired', 'Seller', 'Price', 'Currency'] : [])].map(x => `<th class="${x === 'Price' ? 'rp-r' : ''}">${x}</th>`).join('')}</tr></thead><tbody>${cars
       .map(
         (c, i) =>
-          `<tr class="rp-lane rp-lane-${i % lanes.length}">${thumbs ? `<td class="rp-thumb">${c.picture ? `<img src="${esc(c.picture)}" alt="">` : ''}</td>` : ''}<td class="rp-m">${esc(c.number || '—')}</td><td><b>${esc(c.name)}</b></td><td>${esc(c.maker || '—')}</td><td>${esc(c.scale || '—')}</td><td>${esc(c.location || '—')}</td>${purchase ? [longDate(c.acquired), c.seller].map(x => `<td>${esc(x || "—")}</td>`).join("") + `<td class="rp-m rp-r">${esc(c.price || '—')}</td><td>${esc(c.currency || '—')}</td>` : ''}</tr>`
+          `<tr class="rp-lane rp-lane-${i % lanes.length}">${thumbs ? ((src = photoOf(c, 'thumb')) => `<td class="rp-thumb">${src ? `<img src="${esc(src)}" alt="">` : ''}</td>`)() : ''}<td class="rp-m">${esc(c.number || '—')}</td><td><b>${esc(c.name)}</b></td><td>${esc(c.maker || '—')}</td><td>${esc(c.scale || '—')}</td><td>${esc(c.location || '—')}</td>${purchase ? [longDate(c.acquired), c.seller].map(x => `<td>${esc(x || "—")}</td>`).join("") + `<td class="rp-m rp-r">${esc(c.price || '—')}</td><td>${esc(c.currency || '—')}</td>` : ''}</tr>`
       )
       .join('')}</tbody></table><p class="rp-note">${count(cars.length)}. Monetary values retain their individual currencies; no conversion or valuation is inferred.</p></section>`;
   }
@@ -134,7 +137,8 @@ function render(db, p = {}) {
         meta = [c.maker, c.scale, c.number ? '#' + c.number : ''].filter(Boolean).join(' · ');
       body += '<section class="rp-doc report-sheet">';
       if (p.kind === 'setup') {
-        const config = setup ? setup.name : 'Current car',
+        const hero = photoOf(c, 'card'),
+          config = setup ? setup.name : 'Current car',
           configText = setup
             ? `Configuration: ${setup.name} · the specification saved on ${longDate(setup.date)}${setup.track ? ' · ' + setup.track : ''}, not the car as it is today.`
             : 'Configuration: Current car · the car as it is now.';
@@ -152,7 +156,7 @@ function render(db, p = {}) {
             ]);
         body +=
           head('Setup sheet · ' + config, c.name, [meta, setup ? 'saved ' + longDate(setup.date) : 'current configuration', setup?.track].filter(Boolean).join(' · ')) +
-          `<div class="rp-hero ${c.picture ? '' : 'nophoto'}">${c.picture ? photoBox(c, false) : ''}<div class="rp-tiles big">${tile('Ratio', gearRatioText(t.pinion, t.gear), [t.pinion, t.gear].filter(Boolean).join(' / '))}${tile('Weight', grams(t.weight))}${tile('Motor', t.motor)}${tile('Rear tyres', t.rearTyres)}${tile('Guide', t.guide)}${tile('Class', c.raceClass)}</div></div>` +
+          `<div class="rp-hero ${hero ? '' : 'nophoto'}">${hero ? photoBox(c, false, hero) : ''}<div class="rp-tiles big">${tile('Ratio', gearRatioText(t.pinion, t.gear), [t.pinion, t.gear].filter(Boolean).join(' / '))}${tile('Weight', grams(t.weight))}${tile('Motor', t.motor)}${tile('Rear tyres', t.rearTyres)}${tile('Guide', t.guide)}${tile('Class', c.raceClass)}</div></div>` +
           `<div class="rp-grid2 rp-gap">${groups.map(([g, rows]) => `<div class="rp-panel"><span class="rp-lab">${esc(g)}</span><div class="rp-kv">${rows.map(([k, v]) => `<div><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}</div></div>`).join('') || '<div class="rp-panel"><span class="rp-lab">Specifications</span><p class="rp-note">No specifications recorded.</p></div>'}<div class="rp-panel"><span class="rp-lab">Tracked parts</span>${installs ? (installs.length ? `<div class="rp-kv">${installs.map(([k, v]) => `<div><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}</div>` : '<p class="rp-note">No tracked parts installed.</p>') : '<p class="rp-note">This historical setup has no tracked-inventory snapshot.</p>'}</div></div><div class="rp-callout">${esc(configText)}</div>`;
       }
       if (p.kind === 'scrutineering') {

@@ -49,7 +49,11 @@ const focused = action =>
     'guide-edit',
     'guide-remove'
   ].includes(action);
+// Remembered per revision (see revision-memory.cjs): opening Add part again does not rescan the catalogue.
 function suggestions(r, section) {
+  return require('./revision-memory.cjs').remember(r, 'suggestions:' + section, () => scanSuggestions(r, section));
+}
+function scanSuggestions(r, section) {
   const fields =
     section === 'parts'
       ? ['name', 'maker', 'location', 'material', 'partType', 'category']
