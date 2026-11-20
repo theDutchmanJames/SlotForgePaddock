@@ -195,6 +195,28 @@ class Club {
     fs.mkdirSync(folder, { recursive: true });
     return path.join(folder, label + '-' + Date.now() + '-' + crypto.randomUUID() + '.sfpbackup');
   }
+  // Backups made automatically before a copy is replaced or updated are a full collection each (hundreds of MB
+  // with photos) and used to pile up forever. Only the newest few of those are kept. Backups made before a
+  // one-off step (sharing, joining, leaving, disabling) are never removed.
+  pruneBackups(label, keep = 3) {
+    if (!['before-sync-replacement', 'before-update'].includes(label)) return;
+    try {
+      const folder = path.join(this.folder, 'club-backups'),
+        pattern = new RegExp('^' + label + '-(\\d+)-[0-9a-f-]{36}\\.sfpbackup$');
+      const files = fs
+        .readdirSync(folder)
+        .map(name => ({ name, time: Number(pattern.exec(name)?.[1]) }))
+        .filter(f => f.time)
+        .sort((a, b) => b.time - a.time || (b.name < a.name ? -1 : 1));
+      for (const f of files.slice(keep)) {
+        const file = path.join(folder, f.name);
+        if (file === this.backupPath) continue;
+        try {
+          fs.unlinkSync(file);
+        } catch {}
+      }
+    } catch {}
+  }
   backupSource(store) {
     if (store.file) {
       if (!store.expectedIdentity) store.persist(store.data);
@@ -230,6 +252,7 @@ class Club {
           protectedFiles: store.protectedFiles()
         });
         this.backupPath = file;
+        this.pruneBackups(label);
         return file;
       } finally {
         if (source.temporary) fs.unlinkSync(source.file);
@@ -339,7 +362,16 @@ class Club {
         (action === 'setup.save' && payload.suggestion !== undefined))
         ? require('./physical-write.cjs').context(store, action, payload)
         : null;
-    const s = physical?.store || (scoped ? require('./scoped-write.cjs').context(store, action, payload) : new Store());
+    // Car detail edits and new cars are checked on the same workspace a normal save uses (the car and what is
+    // attached to it), not the whole stock: loading and checking all stock took about a second per check.
+    const detail =
+      scoped && !physical && action === 'car.save'
+        ? require('./car-detail-write.cjs').context(store, action, payload)
+        : null;
+    const s =
+      physical?.store ||
+      detail?.store ||
+      (scoped ? require('./scoped-write.cjs').context(store, action, payload) : new Store());
     const db = scoped ? s.data : store.data;
     s.data = db;
     const p = cloneJSON(payload);
@@ -368,7 +400,13 @@ class Club {
             )
           : M.summary(db, s.data, action);
     const prepared = scoped
-      ? require('./scoped-write.cjs').prepare(store, db, s.data, r.result, physical?.recordKeys || null)
+      ? require('./scoped-write.cjs').prepare(
+          store,
+          db,
+          s.data,
+          r.result,
+          physical?.recordKeys || (detail?.recordKeys.size ? detail.recordKeys : null)
+        )
       : null;
     return {
       data: prepared?.data || s.data,

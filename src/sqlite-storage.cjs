@@ -254,7 +254,8 @@ function state(db, key) {
 const fieldStatements = new WeakMap();
 function fieldsOf(db) {
   let statement = fieldStatements.get(db);
-  if (!statement) fieldStatements.set(db, (statement = db.prepare('SELECT path,json FROM record_fields WHERE record=?')));
+  if (!statement)
+    fieldStatements.set(db, (statement = db.prepare('SELECT path,json FROM record_fields WHERE record=?')));
   return statement;
 }
 function recordEnvelope(db, key, json) {
@@ -448,8 +449,19 @@ function write(file, packed, expected) {
     // the deduplicated fast path and do not rewrite unchanged originals.
     for (const [hash, value] of packed.assets)
       if (packed.refreshAssets || !assetExists.get(hash)) addAsset(hash, value);
-    for (const [hash, source] of packed.externalAssets || [])
-      if (packed.refreshAssets || !assetExists.get(hash)) addAsset(hash, readAsset(source, hash));
+    // Photos kept in another file (a Dealership staging copy, for instance) are read through one connection per
+    // file for the whole save; opening and checking a connection per photo made a first copy take tens of seconds.
+    const sources = new Map();
+    try {
+      for (const [hash, source] of packed.externalAssets || [])
+        if (packed.refreshAssets || !assetExists.get(hash)) {
+          let from = sources.get(source);
+          if (!from) sources.set(source, (from = assetConnection(source, false)));
+          addAsset(hash, assetValue(from, hash));
+        }
+    } finally {
+      for (const from of sources.values()) from.close();
+    }
     const putUndo = db.prepare('INSERT INTO undo_records(key,bucket,identity,json) VALUES(?,?,?,?)');
     const keepUndoAssets = db.prepare('INSERT OR IGNORE INTO undo_assets SELECT hash FROM asset_refs WHERE record=?');
     const deleteRefs = db.prepare('DELETE FROM asset_refs WHERE record=?'),
@@ -627,16 +639,20 @@ function read(file, previous = false, lazy = false, baseline = null) {
     db.close();
   }
 }
+function assetValue(db, hash) {
+  if (!/^[a-f0-9]{64}$/.test(hash)) throw Error('Invalid attachment identity.');
+  const row = db.prepare('SELECT value FROM assets WHERE hash=?').get(hash);
+  if (!row) throw Error('This attachment is no longer available. Reopen its collection.');
+  const bytes = Buffer.from(row.value);
+  if (crypto.createHash('sha256').update(bytes).digest('hex') !== hash)
+    throw Error('SQLite attachment integrity check failed.');
+  return bytes.toString('utf8');
+}
 function readAsset(file, hash) {
   if (!/^[a-f0-9]{64}$/.test(hash)) throw Error('Invalid attachment identity.');
   const db = open(file, true);
   try {
-    const row = db.prepare('SELECT value FROM assets WHERE hash=?').get(hash);
-    if (!row) throw Error('This attachment is no longer available. Reopen its collection.');
-    const bytes = Buffer.from(row.value);
-    if (crypto.createHash('sha256').update(bytes).digest('hex') !== hash)
-      throw Error('SQLite attachment integrity check failed.');
-    return bytes.toString('utf8');
+    return assetValue(db, hash);
   } finally {
     db.close();
   }
@@ -814,10 +830,14 @@ function assetConnection(file, readOnly) {
   if (!fs.statSync(file).isFile()) throw Error('Choose a Paddock SQLite database file.');
   const db = new DatabaseSync(file, { timeout: 5000, readOnly });
   try {
-    db.exec('PRAGMA trusted_schema=OFF; PRAGMA busy_timeout=5000;' + (readOnly ? '' : ' PRAGMA foreign_keys=ON; PRAGMA synchronous=FULL;'));
+    db.exec(
+      'PRAGMA trusted_schema=OFF; PRAGMA busy_timeout=5000;' +
+        (readOnly ? '' : ' PRAGMA foreign_keys=ON; PRAGMA synchronous=FULL;')
+    );
     const { application_id: application } = db.prepare('PRAGMA application_id').get(),
       { user_version: version } = db.prepare('PRAGMA user_version').get();
-    if (application !== APPLICATION_ID || ![1, 2, FORMAT].includes(version)) throw Error('Unsupported Paddock SQLite storage version. Use a newer Paddock.');
+    if (application !== APPLICATION_ID || ![1, 2, FORMAT].includes(version))
+      throw Error('Unsupported Paddock SQLite storage version. Use a newer Paddock.');
     return db;
   } catch (e) {
     db.close();
