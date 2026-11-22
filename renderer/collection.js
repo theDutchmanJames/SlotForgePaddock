@@ -90,6 +90,10 @@ function renderChoiceRows() {
 }
 function renderLibrary() {
   if (libraryTab === 'parts') return renderCatalogueManager();
+  if (libraryTab === 'fields')
+    return local()
+      ? renderCustomFieldLibrary()
+      : empty('Your custom fields are local', 'Switch to your own database to manage custom car fields.');
   if (!local())
     return empty('Your choice library is local', 'Switch to your own database to organise reusable values.');
   if (!choiceCatalogue)

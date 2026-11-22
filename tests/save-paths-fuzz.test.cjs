@@ -51,7 +51,8 @@ function actions(db, rnd) {
     setup = some(db.setups),
     supply = some(db.supplies),
     assembly = some(db.assemblies),
-    job = some(db.jobs);
+    job = some(db.jobs),
+    customField = some(db.customFields);
   const list = [
     () => ['car.save', { data: { name: word(), manufacturer: word(), scale: pick(['1:32', '1:24', '']) } }],
     () => ['car.save', { data: { name: word(), technical: { motor: word() }, tags: [word()] } }],
@@ -126,7 +127,20 @@ function actions(db, rnd) {
     job && (() => ['job.cancel', { id: job.id, revision: db.revision, confirmed: true }]),
     car && (() => ['rebuild.start', { carId: car.id, revision: db.revision }]),
     () => ['settings.save', { name: word() }],
-    () => ['custom.add', { label: word(), type: pick(['choice', 'text']) }]
+    () => [
+      'custom.add',
+      { label: word(), type: pick(['choice', 'text']), group: pick(['', 'Technical & parts', 'Maintenance']) }
+    ],
+    customField &&
+      (() => [
+        'custom.edit',
+        { id: customField.id, label: word(), group: pick(['Performance', 'Identity & ownership']) }
+      ]),
+    customField && (() => ['custom.move', { id: customField.id, direction: pick(['up', 'down']) }]),
+    customField &&
+      car &&
+      (() => ['car.save', { id: car.id, revision: car.revision, data: { custom: { [customField.id]: word() } } }]),
+    customField && (() => ['custom.delete', { id: customField.id, revision: db.revision, confirmed: true }])
   ].filter(Boolean);
   return pick(list)();
 }

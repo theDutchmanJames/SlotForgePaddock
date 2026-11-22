@@ -25,6 +25,9 @@ class Reader {
     this.db = new DatabaseSync(file, { readOnly: true, timeout: 5000 });
     this.reads = 0;
     this.db.function('sf_sort_text', { deterministic: true }, value => String(value || '').toLowerCase());
+    const CarSort = require('../renderer/car-sort.js');
+    for (const k of ['text', 'number', 'date', 'yesno'])
+      this.db.function('sf_sort_' + k + '_value', { deterministic: true }, value => CarSort.sortValue(value, k));
     try {
       this.db.exec('BEGIN');
       const value = this.db.prepare("SELECT value FROM state WHERE key='identity'").get();
@@ -141,9 +144,13 @@ class Reader {
       limit > 200 ||
       typeof query !== 'string' ||
       query.length > 500 ||
-      !['order', 'name', 'maker', 'updated', 'date', 'marque', 'model', 'scale', 'reference', 'created'].includes(
-        sort
+      !(
+        ['order', 'name', 'maker', 'updated', 'date', 'marque', 'model', 'scale', 'reference', 'created'].includes(
+          sort
+        ) ||
+        (bucket === 'cars' && require('../renderer/car-sort.js').valid(sort))
       ) ||
+      (options.sortKind !== undefined && !['text', 'number', 'date', 'yesno'].includes(options.sortKind)) ||
       (options.direction !== undefined && !['asc', 'desc'].includes(options.direction)) ||
       !Array.isArray(usage) ||
       usage.length > 100 ||
@@ -292,6 +299,23 @@ class Reader {
      FROM json_each((SELECT m.value FROM json_each((SELECT value FROM state WHERE key='manifest'),'$.object') m WHERE json_extract(m.value,'$[0]')=?),'$[1].array') a)
      SELECT r.key FROM ordinals o CROSS JOIN records r ON r.key=o.key CROSS JOIN query_records q ON q.key=r.key WHERE ${where.join(' AND ')} ORDER BY o.position${page}`;
         keys = this.db.prepare(sql).all(bucket, ...params, ...window);
+      } else if (
+        !['name', 'maker', 'updated', 'date', 'marque', 'model', 'scale', 'reference', 'created'].includes(sort)
+      ) {
+        // The added car sorts (years, prices, dates, custom fields) order numbers as
+        // numbers and yes/no as yes first; cars without a value always come last.
+        const CarSort = require('../renderer/car-sort.js'),
+          kind = options.sortKind || CarSort.kind(sort),
+          path = JSON.stringify(sort.startsWith('custom_') ? ['custom', sort.slice(7)] : [sort]);
+        if (!/^\["[\w-]+"(,"[\w-]+")?\]$/.test(path)) throw fault('INVALID_QUERY', 'Invalid sort.');
+        const value = `(SELECT sf_sort_${kind}_value(json_extract(f.json,'$')) FROM record_fields f WHERE f.record=r.key AND f.path='${path}')`;
+        keys = this.db
+          .prepare(
+            'SELECT r.key' +
+              from +
+              ` ORDER BY (${value} IS NULL) ASC,${value} ${options.direction === 'desc' ? 'DESC' : 'ASC'},r.identity ASC${page}`
+          )
+          .all(...params, ...window);
       } else {
         const scalar = ['marque', 'model', 'scale', 'reference', 'created'].includes(sort);
         const expression = scalar

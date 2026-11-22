@@ -24,7 +24,8 @@ function libraryTabs() {
     '<div class="library-strip"><span class="segment" role="group" aria-label="Library">' +
     [
       ['choices', 'Reusable choices', 'library'],
-      ['parts', 'Parts catalogue', 'box']
+      ['parts', 'Parts catalogue', 'box'],
+      ['fields', 'Custom fields', 'list']
     ]
       .map(
         ([id, label, ic]) =>
@@ -142,9 +143,10 @@ async function deleteCatalogueSelection() {
 async function workshopLibraryAction(action, id) {
   switch (action) {
     case 'library-tab':
-      if (!['choices', 'parts'].includes(id)) return true;
+      if (!['choices', 'parts', 'fields'].includes(id)) return true;
       libraryTab = id;
       if (id === 'choices') await loadChoices();
+      if (id === 'fields') await loadCustomFieldUsage();
       render();
       return true;
     case 'guide-add':

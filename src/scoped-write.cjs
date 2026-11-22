@@ -59,7 +59,18 @@ function context(store, action, p = {}) {
       ? state.read(r => [r.record(JSON.stringify(['supplies', 'id:' + p.id]), { assetHandle: true })].filter(Boolean))
       : [];
   else if (['submission.add', 'submission.cancelLocal'].includes(action)) data.submissions = source.submissions;
-  else if (['settings.save', 'view.save', 'view.delete', 'custom.add', 'choice.add', 'columns.save'].includes(action)) {
+  else if (
+    [
+      'settings.save',
+      'view.save',
+      'view.delete',
+      'custom.add',
+      'custom.edit',
+      'custom.move',
+      'choice.add',
+      'columns.save'
+    ].includes(action)
+  ) {
     if (p.showroomFeaturedId) data.cars = [oneCar(p.showroomFeaturedId)];
   } else if (action === '@club') data.club = source.club;
   else if (action === '@history-import') {

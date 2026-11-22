@@ -26,6 +26,8 @@ const uiIcons = {
   banner: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M7 14h10M7 17h6"/>',
   edit: '<path d="m4 16 12-12 4 4L8 20H4zM14 6l4 4"/>',
   next: '<path d="M4 12h16m-6-6 6 6-6 6"/>',
+  up: '<path d="m6 15 6-6 6 6"/>',
+  down: '<path d="m6 9 6 6 6-6"/>',
   inbox: '<path d="M3 4h18v16H3zM3 13h5l2 3h4l2-3h5"/>',
   upload: '<path d="M12 17V3m-5 5 5-5 5 5M4 17v4h16v-4"/>',
   assembly: '<path d="m3 7 4-2 4 2v5l-4 2-4-2zm10 0 4-2 4 2v5l-4 2-4-2zM8 16l4-2 4 2v5l-4 2-4-2z"/>',
@@ -350,7 +352,7 @@ function renderSettingsSection() {
   if (settingsSection === 'Custom fields')
     return panel(
       'Custom car fields',
-      `<p class="muted">Add the details that matter to your collection. Custom fields are private and included in complete backups.</p>${db.customFields.map(f => `<div class="list-row"><strong>${esc(f.label)}</strong><span class="badge">${esc(f.type)}</span></div>`).join('') || '<p class="muted">No custom fields yet.</p>'}<div class="actions mt">${btn(icon('plus') + ' Add custom field', 'custom-add', 'primary')}</div>`
+      `<p class="muted">Add the details that matter to your collection. Custom fields are private and included in complete backups. Choose the car section each one shows in, rename, reorder or delete them under Library › Custom fields.</p>${db.customFields.map(f => `<div class="list-row"><strong>${esc(f.label)}</strong><span class="tiny muted">${esc(CustomFields.section(f))}</span><span class="badge">${esc(CustomFields.TYPES[f.type] || f.type)}</span></div>`).join('') || '<p class="muted">No custom fields yet.</p>'}<div class="actions mt">${btn(icon('plus') + ' Add custom field', 'custom-add', 'primary')}${btn(icon('library') + ' Open in Library', 'custom-library')}</div>`
     );
   return panel(
     'Saved views',

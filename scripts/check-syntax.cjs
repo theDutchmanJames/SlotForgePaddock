@@ -213,6 +213,8 @@ const files=[
   "scripts/benchmark-result-worker.cjs",
   "renderer/job-types.js",
   "renderer/car-sort.js",
+  "renderer/custom-fields.js",
+  "renderer/custom-field-library.js",
   "renderer/ui-scale.js",
   "src/guides.cjs",
   "renderer/workshop-library.js",

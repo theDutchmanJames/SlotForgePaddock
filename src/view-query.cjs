@@ -18,6 +18,14 @@ const arrays = [
   'views',
   'customFields'
 ];
+// The Cars page sort: a custom field sorts by its type; a removed field falls back to Name.
+function carSort(db, request) {
+  const CarSort = require('../renderer/car-sort.js'),
+    sort = request.sort || 'name';
+  if (!CarSort.valid(sort) || (sort.startsWith('custom_') && !db.customFields.some(f => 'custom_' + f.id === sort)))
+    return { sort: 'name' };
+  return { sort, direction: request.sortDirection, sortKind: CarSort.kind(sort, db.customFields) };
+}
 function shell(db) {
   return {
     schema: db.schema,
@@ -306,8 +314,7 @@ function view(store, request = {}) {
         usage: request.usage || [],
         matchAll: !!request.matchAll,
         archived: !!request.archived,
-        sort: request.sort || 'name',
-        direction: request.sortDirection,
+        ...carSort(db, request),
         offset: request.offset || 0,
         limit: 48
       });

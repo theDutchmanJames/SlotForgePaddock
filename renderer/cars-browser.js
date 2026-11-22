@@ -64,15 +64,32 @@ function renderCarsBrowser() {
       ])
     ],
     i = carPageInfo();
-  const sortOptions = Object.entries(CarSort.fields)
-    .flatMap(([key, label]) =>
-      ['asc', 'desc'].map(direction => {
-        const temporal = ['created', 'updated'].includes(key),
-          name = key === 'created' ? 'Date added' : key === 'updated' ? 'Date changed' : label;
-        return `<option value="${key}:${direction}" ${sort === key && sortDirection === direction ? 'selected' : ''}>${esc(name)} · ${temporal ? (direction === 'desc' ? 'Newest first' : 'Oldest first') : direction === 'desc' ? 'Z–A' : 'A–Z'}</option>`;
+  // Built-in fields first, then your custom fields; a sort on a deleted field falls back to Name.
+  const sorts = CarSort.options(current().customFields);
+  if (!sorts.some(o => o.key === sort)) {
+    sort = 'name';
+    sortDirection = 'asc';
+  }
+  const orderName = (kind, direction) =>
+    ({
+      date: direction === 'desc' ? 'Newest first' : 'Oldest first',
+      number: direction === 'desc' ? 'High–low' : 'Low–high',
+      yesno: direction === 'desc' ? 'No first' : 'Yes first'
+    })[kind] || (direction === 'desc' ? 'Z–A' : 'A–Z');
+  const sortOption = ({ key, label, kind }) =>
+    ['asc', 'desc']
+      .map(direction => {
+        const name = key === 'created' ? 'Date added' : key === 'updated' ? 'Date changed' : label;
+        return `<option value="${esc(key)}:${direction}" ${sort === key && sortDirection === direction ? 'selected' : ''}>${esc(name)} · ${orderName(kind, direction)}</option>`;
       })
-    )
-    .join('');
+      .join('');
+  const custom = sorts.filter(o => o.custom);
+  const sortOptions =
+    sorts
+      .filter(o => !o.custom)
+      .map(sortOption)
+      .join('') +
+    (custom.length ? `<optgroup label="Your custom fields">${custom.map(sortOption).join('')}</optgroup>` : '');
   return `<section class="cars-browser" aria-label="Car collection browser"><div class="cars-heading"><div class="page-heading">${uiTile(wishlistTab() ? 'bookmark' : 'car', 'accent')}<div><h1>${wishlistTab() ? 'Wishlist' : 'Cars'}</h1><p>${wishlistTab() ? 'Plan your collection.' : 'Your collection, organised.'}</p></div></div>${carCollectionTabs()}${local() ? `<div class="cars-add">${btn(icon('plus') + (wishlistTab() ? ' Add to Wishlist' : ' Add car'), 'add-car', 'primary')}</div>` : ''}</div>
  <div class="cars-toolbar"><label class="search cars-search">${icon('search')}<input id="car-search" value="${esc(query)}" placeholder="Search name, manufacturer or reference…" aria-label="Search cars"></label><button type="button" class="btn" data-action="cars-filters" aria-expanded="${carFiltersOpen}" aria-controls="cars-filter-panel">${icon('sliders')} Filters</button><label class="cars-sort">Sort <select id="cars-sort" aria-label="Sort cars">${sortOptions}</select></label><div class="segment" aria-label="Car display"><button type="button" class="btn ${mode === 'gallery' ? 'on' : ''}" data-action="mode" data-id="gallery" aria-pressed="${mode === 'gallery'}">${icon('grid')} Gallery</button><button type="button" class="btn ${mode === 'table' ? 'on' : ''}" data-action="mode" data-id="table" aria-pressed="${mode === 'table'}">${icon('list')} Table</button></div></div>
  <div id="cars-filter-panel" class="cars-filter-panel" ${carFiltersOpen ? '' : 'hidden'}><label class="cars-saved-view">Saved view <select id="saved-view" aria-label="Saved view"><option value="">All cars</option>${current()

@@ -529,6 +529,7 @@ function validateDatabase(db, previous = null) {
     text(f.label, 160);
     assert(f.label.trim(), 'Missing custom field label.');
     assert(['text', 'choice', 'number', 'date', 'yesno', 'notes'].includes(f.type), 'Invalid custom field type.');
+    if (f.group !== undefined) text(f.group, 160);
   }
   for (const v of db.views) {
     if (v.collectionStatus !== undefined) membership.validate(v.collectionStatus);
@@ -962,6 +963,13 @@ class Store {
     if (action === 'part.delete') return inventory.deletion(this.data, p.id);
     if (action === 'job.view') return jobs.model(this.data, p.id, TECH_FIELDS);
     if (action === 'choices.catalogue') return collection.catalogue(this.data, collectionContext);
+    if (action === 'custom.usage') {
+      const { usage } = require('./custom-fields.cjs');
+      return {
+        revision: this.data.revision,
+        counts: Object.fromEntries(this.data.customFields.map(f => [f.id, usage(this.data.cars, f.id)]))
+      };
+    }
     if (action === 'setup.options') return workshop.setupOptions(this.data, p.id);
     if (['setup.preview', 'choice.preview', 'bulk.preview'].includes(action)) {
       const draft = this.snapshot(),
@@ -2047,16 +2055,12 @@ class Store {
         case 'view.delete':
           db.views = db.views.filter(v => v.id !== p.id);
           break;
-        case 'custom.add': {
-          assert(p.label?.trim(), 'Enter a field label.');
-          assert(['text', 'choice', 'number', 'date', 'yesno', 'notes'].includes(p.type), 'Invalid field type.');
-          assert(
-            !db.customFields.some(f => f.label.toLowerCase() === p.label.trim().toLowerCase()),
-            'That field already exists.'
-          );
-          db.customFields.push({ id: randomUUID(), label: text(p.label.trim(), 160), type: p.type });
+        case 'custom.add':
+        case 'custom.edit':
+        case 'custom.move':
+        case 'custom.delete':
+          result = require('./custom-fields.cjs').mutate(db, action, p);
           break;
-        }
         case 'submission.add': {
           const bundle = validatePackage(p.package);
           const sub = {

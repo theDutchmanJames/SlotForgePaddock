@@ -348,6 +348,7 @@ module.exports = {
   validateColumns,
   validateCollection,
   renameChoice,
+  journal,
   applyBulk,
   mutateCollection
 };

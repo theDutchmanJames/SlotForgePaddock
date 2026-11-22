@@ -34,7 +34,8 @@ const plans = new Set([
   'setup.preview',
   'build.preview',
   'car.delete',
-  'choices.catalogue'
+  'choices.catalogue',
+  'custom.usage'
 ]);
 function workspace(store) {
   const s = new (require('./store.cjs').Store)();
@@ -214,6 +215,19 @@ function plan(store, action, p) {
       return require('./workshop.cjs').setupOptions(s.data, p.id);
     }
     if (action.startsWith('part.delete')) return deletion(store, r, p, action === 'part.deleteMany').model;
+    if (action === 'custom.usage') {
+      // How many cars hold a value for each custom field, without loading the cars.
+      const ids = store.data.customFields.map(f => f.id),
+        counts = Object.fromEntries(ids.map(id => [id, 0]));
+      if (ids.length)
+        for (const row of r.db
+          .prepare(
+            "SELECT f.path,count(*) n FROM records r JOIN record_fields f ON f.record=r.key WHERE r.bucket='[\"cars\"]' AND f.path IN (SELECT value FROM json_each(?)) AND trim(COALESCE(json_extract(f.json,'$'),''))<>'' GROUP BY f.path"
+          )
+          .all(JSON.stringify(ids.map(id => JSON.stringify(['custom', id])))))
+          counts[JSON.parse(row.path)[1]] = row.n;
+      return { revision: store.data.revision, counts };
+    }
     if (action === 'choices.catalogue') {
       const s = workspace(store);
       return collection.catalogue(choiceProjection(store, r, s.data), meta());

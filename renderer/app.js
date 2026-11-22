@@ -311,7 +311,7 @@ function filteredCars() {
         (!usage.length ||
           (matchAll ? usage.every(u => (c.usage || []).includes(u)) : usage.some(u => (c.usage || []).includes(u))))
     )
-    .sort((a, b) => CarSort.compare(a, b, sort, sortDirection));
+    .sort((a, b) => CarSort.compare(a, b, sort, sortDirection, CarSort.kind(sort, current().customFields)));
 }
 // The detail rows of a car card (Garage Card): the label on the left, the value on the right.
 function carCardRows(c) {
@@ -444,7 +444,19 @@ function renderProfile() {
 // The specification groups live in tech-groups.js (shared with the PDF reports).
 const techGroups = TechGroups;
 const techLabels = Object.fromEntries(Object.values(techGroups).flat());
+// Custom fields chosen for a car section show there, under "Your fields".
+function customDetails(c, name) {
+  const fields = CustomFields.inSection(current().customFields, name);
+  return fields.length ? panel('Your fields', dl(fields.map(f => [f.label, c.custom?.[f.id]]))) : '';
+}
 function profileContent(c) {
+  const content = profileSectionContent(c);
+  if (!['Technical & parts', 'Real Car History', 'Maintenance', 'Performance'].includes(section)) return content;
+  if (slotforgeDomain.isWishlist(c) && ['Maintenance', 'Performance'].includes(section)) return content;
+  const extra = customDetails(c, section);
+  return extra ? content + '<div class="mt">' + extra + '</div>' : content;
+}
+function profileSectionContent(c) {
   const d = current(),
     events = d.events.filter(e => e.carId === c.id),
     setups = d.setups.filter(s => s.carId === c.id);
@@ -482,7 +494,7 @@ function profileContent(c) {
         ['Borrower', c.loanTo],
         ['Return due', c.returnDate]
       ])
-    )}</div>${panel('Notes', `<p class="prewrap">${esc(c.description || 'No description yet.')}</p>${local() && c.privateNotes ? `<h3>${icon('lock')} Private notes</h3><p class="prewrap">${esc(c.privateNotes)}</p>` : ''}${d.customFields.length ? dl(d.customFields.map(f => [f.label, c.custom?.[f.id]])) : ''}`)}`;
+    )}</div>${panel('Notes', `<p class="prewrap">${esc(c.description || 'No description yet.')}</p>${local() && c.privateNotes ? `<h3>${icon('lock')} Private notes</h3><p class="prewrap">${esc(c.privateNotes)}</p>` : ''}${CustomFields.inSection(d.customFields, CustomFields.DEFAULT).length ? dl(CustomFields.inSection(d.customFields, CustomFields.DEFAULT).map(f => [f.label, c.custom?.[f.id]])) : ''}`)}`;
   if (section === 'Technical & parts') {
     const installed = d.installations.filter(i => i.carId === c.id && !i.removed);
     return `<div class="actions">${local() ? btn('Edit specifications', 'edit-car', '', c.id) + btn('Use Factory specifications…', 'factory-specs', '', c.id) + (slotforgeDomain.isWishlist(c) ? '' : btn('Install part', 'install-part', 'primary', c.id)) : ''}</div><div class="two-col mt">${Object.entries(
@@ -667,7 +679,9 @@ function modal(title, body, onSubmit, submitLabel = 'Save') {
   // A window that removes something gets the "cannot be undone" badge before its title.
   dialog.classList.toggle('dialog-danger', !!onSubmit && /delete|remove|discard|reset|dismantle/i.test(submitLabel));
   dialog.showModal();
-  [...dialog.querySelectorAll('input:not([type=hidden]),select,textarea')].find(el => !el.hidden && !el.closest('[hidden]'))?.focus();
+  [...dialog.querySelectorAll('input:not([type=hidden]),select,textarea')]
+    .find(el => !el.hidden && !el.closest('[hidden]'))
+    ?.focus();
 }
 // Enter in a search box searches; it never submits (saves and closes) the window around it.
 document.addEventListener('keydown', e => {
@@ -680,15 +694,42 @@ function keepFocus(redraw) {
     action = el?.dataset?.action,
     id = el?.dataset?.id ?? '',
     owner = el?.closest?.('[data-key],[data-shelf-car]'),
-    ownerSel = owner ? (owner.dataset.key !== undefined ? `[data-key="${CSS.escape(owner.dataset.key)}"]` : `[data-shelf-car="${CSS.escape(owner.dataset.shelfCar)}"]`) : '',
+    ownerSel = owner
+      ? owner.dataset.key !== undefined
+        ? `[data-key="${CSS.escape(owner.dataset.key)}"]`
+        : `[data-shelf-car="${CSS.escape(owner.dataset.shelfCar)}"]`
+      : '',
     elId = el?.id;
   redraw();
   if (!el || el === document.body || (document.contains(el) && document.activeElement === el)) return;
   let next = null;
   if (action && ownerSel) next = document.querySelector(`${ownerSel} [data-action="${CSS.escape(action)}"]`);
-  if (!next && action) next = document.querySelector(`[data-action="${CSS.escape(action)}"][data-id="${CSS.escape(id)}"]`);
+  if (!next && action)
+    next = document.querySelector(`[data-action="${CSS.escape(action)}"][data-id="${CSS.escape(id)}"]`);
   if (!next && elId) next = document.getElementById(elId);
   if (next && !next.disabled) next.focus();
+}
+function customFormSections(c, sections, title = '') {
+  const input = f =>
+    field(
+      'custom.' + f.id,
+      f.label,
+      c.custom?.[f.id] || '',
+      f.type === 'notes' ? 'textarea' : f.type === 'yesno' ? 'select' : f.type === 'choice' ? 'text' : f.type,
+      f.type === 'yesno'
+        ? ['', 'Yes', 'No']
+        : f.type === 'choice'
+          ? db._view?.carCustomChoices?.[f.id] || db.cars.map(c => c.custom?.[f.id]).filter(Boolean)
+          : []
+    );
+  return sections
+    .map(name => {
+      const fields = CustomFields.inSection(db.customFields, name);
+      return fields.length
+        ? `<section class="form-section"><h3>${esc(title || name)}</h3><div class="form-grid">${fields.map(input).join('')}</div></section>`
+        : '';
+    })
+    .join('');
 }
 function simpleForm(title, fields, submit, label) {
   modal(title, `<div class="form-grid">${fields}</div>`, submit, label);
@@ -796,7 +837,12 @@ function editCar(id) {
       .join('');
   modal(
     id ? 'Edit ' + c.name : wish ? 'Add to Wishlist' : 'Add a car',
-    `<div class="tabs">${['Identity', 'Collection', 'Technical', 'Factory', 'Custom'].map((t, i) => `<button type="button" class="${i === 0 ? 'active' : ''}" data-action="form-tab" data-id="${t}">${icon({ Identity: 'identity', Collection: 'box', Technical: 'gear', Factory: 'database', Custom: 'list' }[t])}${t}</button>`).join('')}</div><div data-form-panel="Identity"><p class="muted tiny">Only a display name is required. Type a new value or choose a previous entry.</p><div class="form-grid">${identityFields.map(input).join('')}${field('usage', 'Usage labels (comma separated)', (c.usage || []).join(', '), 'text', [...usageDefaults, ...(db.choices.usage || [])])}${field('tags', 'Tags (comma separated)', (c.tags || []).join(', '), 'text', db.choices.tags || [])}</div><div class="actions mt"><button type="button" class="btn" data-action="form-photo">Choose main photo</button><span id="photo-status" class="tiny muted">${modalPhoto ? 'Photo attached' : 'No photo yet'}</span></div></div><div data-form-panel="Collection" hidden><p class="muted tiny">Ownership, storage and purchase information stay out of car-sharing packages.</p><div class="form-grid">${ownershipFields.map(input).join('')}</div></div><div data-form-panel="Technical" hidden><p class="muted tiny">${wish ? 'Record the specifications you want or expect. These are plans, not installed inventory.' : 'Describe the configuration currently installed. Use Record work to journal physical changes; editing here records a correction.'}</p>${tech('technical')}</div><div data-form-panel="Factory" hidden><p class="muted tiny">Optional original specifications. These do not overwrite the current configuration.</p>${tech('factory')}</div><div data-form-panel="Custom" hidden><div class="form-grid">${db.customFields.map(f => field('custom.' + f.id, f.label, c.custom?.[f.id] || '', f.type === 'notes' ? 'textarea' : f.type === 'yesno' ? 'select' : f.type === 'choice' ? 'text' : f.type, f.type === 'yesno' ? ['', 'Yes', 'No'] : f.type === 'choice' ? db._view?.carCustomChoices?.[f.id] || db.cars.map(c => c.custom?.[f.id]).filter(Boolean) : [])).join('') || '<p class="muted">Add custom fields in Settings.</p>'}</div></div>`,
+    `<div class="tabs">${['Identity', 'Collection', 'Technical', 'Factory', 'Custom'].map((t, i) => `<button type="button" class="${i === 0 ? 'active' : ''}" data-action="form-tab" data-id="${t}">${icon({ Identity: 'identity', Collection: 'box', Technical: 'gear', Factory: 'database', Custom: 'list' }[t])}${t}</button>`).join('')}</div><div data-form-panel="Identity"><p class="muted tiny">Only a display name is required. Type a new value or choose a previous entry.</p><div class="form-grid">${identityFields.map(input).join('')}${field('usage', 'Usage labels (comma separated)', (c.usage || []).join(', '), 'text', [...usageDefaults, ...(db.choices.usage || [])])}${field('tags', 'Tags (comma separated)', (c.tags || []).join(', '), 'text', db.choices.tags || [])}</div><div class="actions mt"><button type="button" class="btn" data-action="form-photo">Choose main photo</button><span id="photo-status" class="tiny muted">${modalPhoto ? 'Photo attached' : 'No photo yet'}</span></div></div><div data-form-panel="Collection" hidden><p class="muted tiny">Ownership, storage and purchase information stay out of car-sharing packages.</p><div class="form-grid">${ownershipFields.map(input).join('')}</div></div><div data-form-panel="Technical" hidden><p class="muted tiny">${wish ? 'Record the specifications you want or expect. These are plans, not installed inventory.' : 'Describe the configuration currently installed. Use Record work to journal physical changes; editing here records a correction.'}</p>${tech('technical')}${customFormSections(c, ['Technical & parts'], 'Your technical fields')}</div><div data-form-panel="Factory" hidden><p class="muted tiny">Optional original specifications. These do not overwrite the current configuration.</p>${tech('factory')}</div><div data-form-panel="Custom" hidden>${
+      customFormSections(
+        c,
+        CustomFields.SECTIONS.filter(s => s !== 'Technical & parts')
+      ) || '<p class="muted">Add custom fields in Library › Custom fields.</p>'
+    }</div>`,
     async values => {
       const data = {
         technical: {},
@@ -894,9 +940,17 @@ function addWork(id) {
           html +
           `<button type="button" class="nj-kind ${t.id === 'maintenance' ? 'on' : ''}" data-action="rw-category" data-id="${t.id}" data-tone="${t.tone}" aria-pressed="${t.id === 'maintenance'}"><i aria-hidden="true">${icon(t.icon)}</i>${esc(t.label)}</button>`,
         '<div class="nj-kinds tu-kinds" role="group" aria-label="What kind of work">'
-      )}</div><div id="record-work-fields"><p class="tu-hint">Record work you have already completed. To plan future work, create a Workshop job.</p><div class="tu-grp">The work</div><div class="tu-row tu-work-top">${field('title', 'Work performed', '')}<label class="field">Date<input name="performedDate" type="date" value="${today}"><span class="tu-chips"><button type="button" class="on" data-action="rw-date" data-id="${today}">Today</button><button type="button" data-action="rw-date" data-id="${yesterday}">Yesterday</button></span></label></div>${field('notes', 'Work, parts and observations', '', 'textarea')}<div class="tu-grp">Service reminder</div><label class="tu-switch"><input type="checkbox" id="rw-remind"><i aria-hidden="true"></i><span>Remind me to do this again<small>Whichever comes first: a date or a number of laps. Laps from SlotForge Timing races and manual track tests count from the start of the day of this work (do not also record Timing races as manual tests).</small></span></label><div class="tu-remind" id="rw-reminder" hidden>${field('task', 'Reminder task (reuse the same name)', '', 'text', tasks)}<div class="tu-row">${field('nextDue', 'Next due date', '', 'date').replace('</label>', `<span class="tu-chips">${[1, 3, 6].map(m => `<button type="button" data-action="rw-months" data-id="${m}">${m} ${m === 1 ? 'month' : 'months'}</button>`).join('')}</span></label>`)}${field('nextDueLaps', 'Or after this many laps', '', 'number')
+      )}</div><div id="record-work-fields"><p class="tu-hint">Record work you have already completed. To plan future work, create a Workshop job.</p><div class="tu-grp">The work</div><div class="tu-row tu-work-top">${field('title', 'Work performed', '')}<label class="field">Date<input name="performedDate" type="date" value="${today}"><span class="tu-chips"><button type="button" class="on" data-action="rw-date" data-id="${today}">Today</button><button type="button" data-action="rw-date" data-id="${yesterday}">Yesterday</button></span></label></div>${field('notes', 'Work, parts and observations', '', 'textarea')}<div class="tu-grp">Service reminder</div><label class="tu-switch"><input type="checkbox" id="rw-remind"><i aria-hidden="true"></i><span>Remind me to do this again<small>Whichever comes first: a date or a number of laps. Laps from SlotForge Timing races and manual track tests count from the start of the day of this work (do not also record Timing races as manual tests).</small></span></label><div class="tu-remind" id="rw-reminder" hidden>${field('task', 'Reminder task (reuse the same name)', '', 'text', tasks)}<div class="tu-row">${field('nextDue', 'Next due date', '', 'date').replace('</label>', `<span class="tu-chips">${[1, 3, 6].map(m => `<button type="button" data-action="rw-months" data-id="${m}">${m} ${m === 1 ? 'month' : 'months'}</button>`).join('')}</span></label>`)}${field(
+      'nextDueLaps',
+      'Or after this many laps',
+      '',
+      'number'
+    )
       .replace('step="any" min="0"', 'step="1" min="1"')
-      .replace('</label>', `<span class="tu-chips">${[250, 500, 1000].map(n => `<button type="button" data-action="rw-laps" data-id="${n}">${n}</button>`).join('')}</span></label>`)}</div></div></div><div id="record-rebuild-fields" class="note info mt" hidden>Start a rebuild project in Workshop. The original car and its history stay intact. Choose parts later in the rebuild editor; inventory changes only when the rebuild is completed.</div></div>`,
+      .replace(
+        '</label>',
+        `<span class="tu-chips">${[250, 500, 1000].map(n => `<button type="button" data-action="rw-laps" data-id="${n}">${n}</button>`).join('')}</span></label>`
+      )}</div></div></div><div id="record-rebuild-fields" class="note info mt" hidden>Start a rebuild project in Workshop. The original car and its history stay intact. Choose parts later in the rebuild editor; inventory changes only when the rebuild is completed.</div></div>`,
     async values => {
       if (values.category === 'rebuild') {
         await openRebuildJob(await change('rebuild.start', { carId: id, revision }));
@@ -965,7 +1019,8 @@ function recordWorkAction(action, id) {
     const from = form.querySelector('[name="performedDate"]').value || slotforgeDomain.today(),
       d = new Date(from + 'T12:00:00');
     d.setMonth(d.getMonth() + Number(id));
-    form.querySelector('[name="nextDue"]').value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    form.querySelector('[name="nextDue"]').value =
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     $('#rw-remind').checked = true;
   }
   if (action === 'rw-laps') {
@@ -1075,6 +1130,7 @@ document.addEventListener('click', async event => {
     if (await rebuildAction(action, id)) return;
     if (await slotcarResearchAction(action, id)) return;
     if (await carComparisonAction(action, id)) return;
+    if (await customFieldAction(action, id)) return;
     if (await workshopLibraryAction(action, id)) return;
     if (await historyAction(action, id, target)) return;
     if (await paceAction(action, id)) return;
@@ -1115,7 +1171,8 @@ document.addEventListener('click', async event => {
         selected.clear();
         if (id === 'Workshop') recentWorkLimit = 3;
         if (id === 'Parts') stockScope = 'owned';
-        if (id === 'Library' && local() && libraryTab !== 'parts') await loadChoices();
+        if (id === 'Library' && local() && libraryTab === 'choices') await loadChoices();
+        if (id === 'Library' && local() && libraryTab === 'fields') await loadCustomFieldUsage();
         break;
       case 'recent-work-more':
       case 'recent-work-less': {
@@ -1540,14 +1597,6 @@ document.addEventListener('click', async event => {
         );
         return;
       }
-      case 'custom-add':
-        simpleForm(
-          'Add a custom car field',
-          field('label', 'Field name', '') +
-            field('type', 'Field type', 'text', 'select', ['text', 'choice', 'number', 'date', 'yesno', 'notes']),
-          async values => change('custom.add', values)
-        );
-        return;
 
       case 'refresh-inbox': {
         const r = await readScreen();
