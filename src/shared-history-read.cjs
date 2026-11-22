@@ -353,14 +353,14 @@ function statistics(r, url, carId, { sessionScope = false } = {}) {
     }
     const v = r.db
       .prepare(
-        `SELECT count(*) n,sum(json_extract(json,'$.durationMs') IS NOT NULL) measured,
- sum(json_extract(json,'$.valid')=1 AND json_extract(json,'$.pit')=0) valid,
- sum(CASE WHEN json_extract(json,'$.valid')=1 AND json_extract(json,'$.pit')=0 THEN json_extract(json,'$.durationMs') ELSE 0 END) time,
- sum(json_extract(json,'$.valid')=1 AND json_extract(json,'$.pit')=0 AND json_extract(json,'$.recordEligible')=1) eligible,
- min(CASE WHEN json_extract(json,'$.valid')=1 AND json_extract(json,'$.pit')=0 AND json_extract(json,'$.recordEligible')=1 THEN json_extract(json,'$.durationMs') END) best,
- sum(CASE WHEN json_extract(json,'$.countsForDistance')=1 THEN coalesce(json_extract(json,'$.distanceM'),0) ELSE 0 END) distance,
- sum(json_extract(json,'$.countsForDistance')=1 AND json_extract(json,'$.distanceM') IS NULL) unknown
- FROM query_laps WHERE key=? AND participant=? AND json_extract(json,'$.stintId') IN (SELECT value FROM json_each(?))`
+        `SELECT count(*) n,sum(duration IS NOT NULL) measured,
+ sum(valid=1 AND pit=0) valid,
+ sum(CASE WHEN valid=1 AND pit=0 THEN duration ELSE 0 END) time,
+ sum(valid=1 AND pit=0 AND record_eligible=1) eligible,
+ min(CASE WHEN valid=1 AND pit=0 AND record_eligible=1 THEN duration END) best,
+ sum(CASE WHEN counts_distance=1 THEN coalesce(distance,0) ELSE 0 END) distance,
+ sum(counts_distance=1 AND distance IS NULL) unknown
+ FROM query_lap_values WHERE key=? AND participant=? AND stint_id IN (SELECT value FROM json_each(?))`
       )
       .get(row.key, participant.id, JSON.stringify(stints));
     if (v.n) counted.add(row.key);

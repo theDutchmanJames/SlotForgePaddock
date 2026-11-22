@@ -36,24 +36,23 @@ function consistency(r, carId, { sourceId, sessionId, participantId, driverId, l
     conditions.push("json_extract(p.value,'$.id')=?");
     args.push(participantId);
   }
-  const valid =
-    "json_extract(l.json,'$.durationMs') IS NOT NULL AND json_extract(l.json,'$.valid')=1 AND json_extract(l.json,'$.pit')=0";
+  const valid = 'l.duration IS NOT NULL AND l.valid=1 AND l.pit=0';
   const lapWhere = [valid];
   if (lane !== undefined) {
     lapWhere.push(
-      "CASE WHEN parts.format='history-v1' THEN json_extract(l.json,'$.lane') ELSE (SELECT json_extract(st.value,'$.lane') FROM json_each(parts.participant,'$.stints') st WHERE json_extract(st.value,'$.id')=json_extract(l.json,'$.stintId')) END=?"
+      "CASE WHEN parts.format='history-v1' THEN l.lane ELSE (SELECT json_extract(st.value,'$.lane') FROM json_each(parts.participant,'$.stints') st WHERE json_extract(st.value,'$.id')=l.stint_id) END=?"
     );
     args.push(lane);
   }
   if (driverId !== undefined) {
     lapWhere.push(
-      "CASE WHEN parts.format='history-v1' THEN json_extract(l.json,'$.driverId') ELSE (SELECT json_extract(st.value,'$.driverId') FROM json_each(parts.participant,'$.stints') st WHERE json_extract(st.value,'$.id')=json_extract(l.json,'$.stintId')) END=?"
+      "CASE WHEN parts.format='history-v1' THEN l.driver_id ELSE (SELECT json_extract(st.value,'$.driverId') FROM json_each(parts.participant,'$.stints') st WHERE json_extract(st.value,'$.id')=l.stint_id) END=?"
     );
     args.push(driverId);
   }
   const row = r.db
     .prepare(
-      `WITH parts AS MATERIALIZED (SELECT s.key key,json_extract(p.value,'$.id') pid,json_extract(s.json,'$.format') format,p.value participant FROM query_sessions s ${resultJoin(r)} JOIN json_each(s.json,'$.payload.participants') p WHERE ${conditions.join(' AND ')}), samples AS MATERIALIZED (SELECT json_extract(l.json,'$.durationMs') duration FROM parts JOIN query_laps l ON l.key=parts.key AND l.participant=parts.pid WHERE ${lapWhere.join(' AND ')}), moments AS (SELECT count(*) n,avg(duration) mean,min(duration) fastest,max(duration) slowest FROM samples) SELECT *, (SELECT avg((duration-moments.mean)*(duration-moments.mean)) FROM samples) variance FROM moments`
+      `WITH parts AS MATERIALIZED (SELECT s.key key,json_extract(p.value,'$.id') pid,json_extract(s.json,'$.format') format,p.value participant FROM query_sessions s ${resultJoin(r)} JOIN json_each(s.json,'$.payload.participants') p WHERE ${conditions.join(' AND ')}), samples AS MATERIALIZED (SELECT l.duration duration FROM parts JOIN query_lap_values l ON l.key=parts.key AND l.participant=parts.pid WHERE ${lapWhere.join(' AND ')}), moments AS (SELECT count(*) n,avg(duration) mean,min(duration) fastest,max(duration) slowest FROM samples) SELECT *, (SELECT avg((duration-moments.mean)*(duration-moments.mean)) FROM samples) variance FROM moments`
     )
     .get(...(r.merges.active ? [] : [carId]), ...args);
   const deviation = row.n >= 2 ? Math.sqrt(Math.max(0, row.variance)) : null;
@@ -85,15 +84,15 @@ function laneRecords(r, carId, offset = 0) {
   WHERE json_extract(s.json,'$.payload.state')='active' AND coalesce(json_extract(s.json,'$._query.requiresCorrection'),0)=0
    AND json_extract(p.value,'$.kind')='physical' AND ${owner()}=? AND json_extract(s.json,'$.payload.track.id') IS NOT NULL
  ), laps AS (
-  SELECT parts.source,parts.session,trackId,track,name,startedAt,savedAt,participantId,json_extract(l.json,'$.id') lapId,json_extract(l.json,'$.number') lapNumber,
-   json_extract(l.json,'$.durationMs') durationMs,json_extract(l.json,'$.endedAtMs') endedAtMs,
-   CASE WHEN parts.format='history-v1' THEN json_extract(l.json,'$.lane') ELSE json_extract(st.value,'$.lane') END lane,
-   CASE WHEN parts.format='history-v1' THEN json_extract(l.json,'$.driverId') ELSE json_extract(st.value,'$.driverId') END driverId,
+  SELECT parts.source,parts.session,trackId,track,name,startedAt,savedAt,participantId,l.lap_id lapId,l.number lapNumber,
+   l.duration durationMs,l.ended_at endedAtMs,
+   CASE WHEN parts.format='history-v1' THEN l.lane ELSE json_extract(st.value,'$.lane') END lane,
+   CASE WHEN parts.format='history-v1' THEN l.driver_id ELSE json_extract(st.value,'$.driverId') END driverId,
    drivers
-  FROM parts JOIN query_laps l ON l.key=parts.key AND l.participant=parts.participantId
-   LEFT JOIN json_each(parts.participant,'$.stints') st ON json_extract(st.value,'$.id')=json_extract(l.json,'$.stintId')
-  WHERE json_extract(l.json,'$.valid')=1 AND json_extract(l.json,'$.pit')=0 AND json_extract(l.json,'$.durationMs') IS NOT NULL
-   AND CASE WHEN parts.format='history-v1' THEN json_extract(l.json,'$.trackRecordEligible') ELSE json_extract(l.json,'$.recordEligible') END=1
+  FROM parts JOIN query_lap_values l ON l.key=parts.key AND l.participant=parts.participantId
+   LEFT JOIN json_each(parts.participant,'$.stints') st ON json_extract(st.value,'$.id')=l.stint_id
+  WHERE l.valid=1 AND l.pit=0 AND l.duration IS NOT NULL
+   AND CASE WHEN parts.format='history-v1' THEN l.track_eligible ELSE l.record_eligible END=1
  ), ranked AS (SELECT *,row_number() OVER(PARTITION BY source,trackId,lane ORDER BY durationMs,coalesce(startedAt,savedAt,'9999'),coalesce(endedAtMs,1e20),session,participantId,lapId) rank FROM laps WHERE lane IS NOT NULL),
  winners AS (SELECT *,count(*) OVER() total FROM ranked WHERE rank=1)
  SELECT source,session,trackId,track,name,participantId,lapId,lapNumber,durationMs,startedAt,savedAt,endedAtMs,lane,total,
@@ -155,7 +154,7 @@ function read(store, input) {
         const row = r.db
           .prepare(
             `SELECT json_extract(json,'$.receivedAt') receivedAt,json_array_length(json,'$.history') corrections,json_extract(json,'$.payload.reason') reason,json_extract(json,'$._query.requiresCorrection') quarantined,
-    json((SELECT json_group_array(json_object('id',json_extract(p.value,'$.id'),'name',json_extract(p.value,'$.displayName'),'drivers',json_extract(p.value,'$.drivers'),'configurationKind',json_extract(p.value,'$.configuration.kind'),'configurationRevision',json_extract(p.value,'$.configuration.revision'),'capturedAt',json_extract(p.value,'$.configuration.capturedAt'),'lanes',json((SELECT json_group_array(lane) FROM (SELECT json_extract(st.value,'$.lane') lane FROM json_each(p.value,'$.stints') st UNION SELECT json_extract(l.json,'$.lane') lane FROM query_laps l WHERE l.key=query_sessions.key AND l.participant=json_extract(p.value,'$.id')) WHERE lane IS NOT NULL ORDER BY lane)))) FROM json_each(query_sessions.json,'$.payload.participants') p WHERE ${owner('query_sessions')}=?)) participants FROM query_sessions WHERE source=? AND session=?`
+    json((SELECT json_group_array(json_object('id',json_extract(p.value,'$.id'),'name',json_extract(p.value,'$.displayName'),'drivers',json_extract(p.value,'$.drivers'),'configurationKind',json_extract(p.value,'$.configuration.kind'),'configurationRevision',json_extract(p.value,'$.configuration.revision'),'capturedAt',json_extract(p.value,'$.configuration.capturedAt'),'lanes',json((SELECT json_group_array(lane) FROM (SELECT json_extract(st.value,'$.lane') lane FROM json_each(p.value,'$.stints') st UNION SELECT l.lane lane FROM query_lap_values l WHERE l.key=query_sessions.key AND l.participant=json_extract(p.value,'$.id')) WHERE lane IS NOT NULL ORDER BY lane)))) FROM json_each(query_sessions.json,'$.payload.participants') p WHERE ${owner('query_sessions')}=?)) participants FROM query_sessions WHERE source=? AND session=?`
           )
           .get(input.carId, e.sourceId, e.sessionId);
         return { ...e, ...row, participants: JSON.parse(row.participants) };
