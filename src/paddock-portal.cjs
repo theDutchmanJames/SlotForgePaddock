@@ -393,6 +393,28 @@ class PaddockPortal {
       }
       throw fault('INVALID_ROUTE', 'Unknown Portal action.', 404);
     } catch (e) {
+      // Refused before the upload was read: read the rest first (up to the size limit, for at
+      // most 5 seconds), so the phone gets the reason. Closing while it is still sending gives
+      // it a broken connection instead (seen on macOS as EPIPE).
+      if (
+        !req.complete &&
+        !req.destroyed &&
+        e.httpStatus !== 413 &&
+        Number(req.headers['content-length'] || 0) <= MAX_PHOTOS_BODY
+      )
+        await new Promise(resolve => {
+          const timer = setTimeout(resolve, 5000);
+          timer.unref?.();
+          const done = () => {
+            clearTimeout(timer);
+            resolve();
+          };
+          // Stopping the Portal still ends this request at once.
+          s.reading.add(req);
+          req.once('end', done);
+          req.once('close', done);
+          req.resume();
+        }).finally(() => s.reading.delete(req));
       const known = ['COMMAND_CONFLICT', 'COMMAND_EPOCH_CHANGED', 'QUERY_CHANGED', 'WRITE_UNCERTAIN', 'WORKER_BUSY'];
       send(e.httpStatus || (known.includes(e.code) ? 409 : 500), {
         code: e.code || 'UPLOAD_FAILED',

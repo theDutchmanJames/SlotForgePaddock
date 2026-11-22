@@ -124,6 +124,13 @@ test('gallery receipt failure rolls back every photo, revision and new attachmen
  try{const result=await f.call('/api/photos',input);assert.equal(result.status,500);const fresh=await Store.open(f.store.file);assert.equal(fresh.data.cars[0].revision,c.revision);assert.equal(fresh.data.cars[0].photos.length,0);assert.equal(count(),before);assert.equal((await f.call('/api/receipts/'+input.operationId)).value.found,false);}finally{sql.exec('DROP TRIGGER portal_receipt_failure');sql.close();}
  assert.equal((await f.call('/api/photos',input)).status,200);
 });
+test('an upload refused before it is read still gets its reason, not a broken connection',async t=>{
+ const f=await fixture(t);await f.auth();const auth=await f.auth();f.store.replace(f.store.snapshot());
+ const size=4*1024*1024,chunk=Buffer.alloc(256*1024,32);
+ const status=await new Promise((resolve,reject)=>{const req=http.request(f.base+'/api/photos',{method:'POST',headers:{Origin:f.base,'Content-Type':'application/json',Authorization:'Bearer '+auth.value.token,'Content-Length':size}},res=>{res.resume();res.on('end',()=>resolve(res.statusCode));});req.on('error',reject);
+  let sent=0;const next=()=>{if(sent>=size)return req.end();sent+=chunk.length;req.write(chunk,()=>setTimeout(next,5));};next();});
+ assert.equal(status,409);
+});
 test('five-photo maximum is accepted and partial uploads/restore cannot create a partial gallery',async t=>{
  const f=await fixture(t);await f.auth();const c=await existing(f),input=appendInput(c,{photos:Array.from({length:5},(_,i)=>({name:'Photo '+i,data:picture}))});assert.equal((await f.call('/api/photos',input)).status,200);assert.equal(f.store.data.cars[0].photos.length,5);
  const auth=await f.auth(),req=http.request(f.base+'/api/photos',{method:'POST',headers:{Origin:f.base,'Content-Type':'application/json',Authorization:'Bearer '+auth.value.token,'Content-Length':100000}},res=>res.resume());req.on('error',()=>{});req.write('{');await new Promise(r=>setTimeout(r,50));await f.portal.stop();req.destroy();assert.equal(f.store.data.cars[0].photos.length,5);
