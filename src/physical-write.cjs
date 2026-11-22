@@ -161,7 +161,7 @@ function context(store, action, p) {
       )
     )
       data.planning.shoppingChecklistSources = [];
-    const needsPurchasing = action !== 'setup.save' && action !== 'job.start' && action !== 'rebuild.start';
+    const needsPurchasing = action !== 'setup.save' && action !== 'job.start';
     if (needsPurchasing && version === undefined) {
       // One-time legacy upgrade needs every old line before setting its global
       // version. Modern collections do not take this path.

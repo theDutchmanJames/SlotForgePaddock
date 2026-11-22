@@ -134,26 +134,37 @@ function actions(db, rnd) {
 // first appear. The same names are used to translate an ID chosen on one copy to the other copy.
 const GENERATED = /00000000-0000-4000-8000-[0-9a-f]{12}/g;
 function labels(data) {
-  const text = JSON.stringify(withoutEmptyLists(JSON.parse(JSON.stringify(data)))),
+  // Numbered without the parts that are set aside below, so they cannot shift the numbering.
+  const text = JSON.stringify(data, (k, v) =>
+      k === 'shoppingChecklistSources' || k === 'shoppingLists' ? undefined : v
+    ),
     names = new Map();
   for (const id of text.match(GENERATED) || []) if (!names.has(id)) names.set(id, 'id#' + names.size);
   return names;
 }
-// Known difference, left as it is: the full path adds an empty shopping list header for every open rebuild
-// whenever any stock action runs; the scoped path adds it when that rebuild itself is touched. Items on
-// the lists never differ. Empty, unreferenced list headers and the one-time upgrade marker are set aside.
-function withoutEmptyLists(data) {
+// A rebuild's shopping list ID is a fingerprint of its job ID, and the two copies use different generated
+// IDs, so lists are compared by what they belong to. Known difference, left as it is: after a car is
+// renamed, the full path puts the new car name on its open rebuild list at the next stock change; the
+// scoped path keeps the name the list was given. The car-name part of those list names is set aside.
+// Also known and left for a decision: the full path marks every open plan as generated on any stock change,
+// even while it is still empty; the scoped path marks a plan when it is saved. Those marks are set aside.
+function normalLists(data) {
   const p = data.planning;
-  if (!p) return data;
-  const used = new Set(p.shopping.map(l => l.purchase?.listId).filter(Boolean));
-  if (p.shoppingLists) p.shoppingLists = p.shoppingLists.filter(l => used.has(l.id) || l.source?.kind === 'manual');
-  if (p.shoppingLists && !p.shoppingLists.length) delete p.shoppingLists;
-  delete p.purchasingVersion;
+  if (!p?.shoppingLists) return data;
   delete p.shoppingChecklistSources;
+  const ids = new Map();
+  for (const l of p.shoppingLists)
+    if (/^purchase-[0-9a-f]{64}$/.test(l.id) && l.source?.id) {
+      ids.set(l.id, 'list:' + l.source.kind + ':' + l.source.id);
+      l.id = ids.get(l.id);
+    }
+  for (const l of p.shoppingLists) if (l.source?.kind === 'job') l.name = l.name.replace(/^.*? · /, '… · ');
+  for (const line of p.shopping)
+    if (line.purchase && ids.has(line.purchase.listId)) line.purchase.listId = ids.get(line.purchase.listId);
   return data;
 }
 const comparable = (data, names = labels(data)) =>
-  withoutEmptyLists(JSON.parse(JSON.stringify(data).replace(GENERATED, id => names.get(id))));
+  normalLists(JSON.parse(JSON.stringify(data).replace(GENERATED, id => names.get(id))));
 function translate(payload, from, to) {
   const back = new Map([...to].map(([id, name]) => [name, id]));
   return JSON.parse(JSON.stringify(payload).replace(GENERATED, id => back.get(from.get(id)) || id));

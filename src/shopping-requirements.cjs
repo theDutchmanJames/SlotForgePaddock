@@ -111,7 +111,9 @@ const matches = (o, l) =>
   o.kind === 'build'
     ? l.buildId === o.id
     : !l.buildId && l.purchase?.requirement?.kind === 'job' && l.purchase.requirement.id === o.id;
-function sync(db, origin, totals, stamp, state = 'active', stock = inventory(db)) {
+// The list a build or job buys into (a rebuild's build shares its job's list). Creating it does not
+// mark the plan as generated: its first planned parts still fill it.
+function ensureList(db, origin) {
   purchasing.upgrade(db);
   const listKind = origin.jobId ? 'job' : origin.kind,
     listKey = origin.jobId || origin.id;
@@ -126,6 +128,9 @@ function sync(db, origin, totals, stamp, state = 'active', stock = inventory(db)
       name: origin.name,
       source: { kind: listKind, id: listKey }
     });
+}
+function sync(db, origin, totals, stamp, state = 'active', stock = inventory(db)) {
+  ensureList(db, origin);
   const sources = (db.planning.shoppingChecklistSources ??= []);
   const existing = db.planning.shopping.filter(l => matches(origin, l));
   if (!sources.some(o => key(o) === key(origin))) {
@@ -348,4 +353,4 @@ const affects = action =>
     'job.edit',
     'car.delete'
   ].includes(action);
-module.exports = { build, job, refresh, conflicts, buildDemand, jobDemand, affects, preview, apply };
+module.exports = { build, job, refresh, conflicts, buildDemand, jobDemand, affects, preview, apply, ensureList };

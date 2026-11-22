@@ -128,6 +128,15 @@ function start(db, p) {
   const stamp = new Date().toISOString(),
     draft = { id: randomUUID(), created: stamp, updated: stamp, data };
   db.buildDrafts.unshift(draft);
+  // The rebuild gets its own shopping list straight away (empty until parts are planned), instead of
+  // whenever some later stock change happened to refresh every plan.
+  // Named "Car · Job", as every later refresh names a job's list.
+  require('./shopping-requirements.cjs').ensureList(db, {
+    kind: 'build',
+    id: draft.id,
+    jobId: job.id,
+    name: [car.name, job.name].filter(Boolean).join(' · ').slice(0, 200)
+  });
   return draft.id;
 }
 function plan(db, d) {
