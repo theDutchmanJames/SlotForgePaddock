@@ -134,9 +134,12 @@ function sync(db, origin, totals, stamp, state = 'active', stock = inventory(db)
   const sources = (db.planning.shoppingChecklistSources ??= []);
   const existing = db.planning.shopping.filter(l => matches(origin, l));
   if (!sources.some(o => key(o) === key(origin))) {
-    // First generation can populate a new list. Existing lists are adopted as-is.
+    // First generation can populate a new list. Existing lists are adopted as-is. A rebuild plan with no
+    // parts yet is not marked as generated: its first planned parts always fill its list, even when an
+    // unrelated stock change refreshed every plan in between.
     if (!existing.length) calculate(db, origin, totals, stamp, state, stock);
-    sources.push({ kind: origin.kind, id: origin.id });
+    const emptyRebuild = origin.kind === 'build' && origin.jobId && !totals.size && !existing.length;
+    if (!emptyRebuild) sources.push({ kind: origin.kind, id: origin.id });
   }
   const C = require('./shopping-checklist.cjs');
   for (const l of db.planning.shopping.filter(l => matches(origin, l))) {

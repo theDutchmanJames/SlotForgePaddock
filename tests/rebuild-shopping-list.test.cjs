@@ -48,3 +48,33 @@ for (const scoped of [false, true])
       assert.equal(data.buildDrafts.filter(d => d.data.rebuild?.jobId === job.id).length, 1);
     }
   );
+
+for (const scoped of [false, true])
+  test(
+    'a rebuild’s first planned parts fill its list even after an unrelated stock change (' +
+      (scoped ? 'scoped' : 'full') +
+      ' save path)',
+    async t => {
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'paddock-rebuild-plan-'));
+      t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+      const file = path.join(dir, 'db.sqlite');
+      let s = new Store(file);
+      const carId = s.mutate('car.save', { data: { name: 'Old racer' } }).result;
+      const motor = s.mutate('part.save', { data: { name: 'Motor', quantity: 0, tracking: 'quantity' } }).result;
+      const run = async (action, p) => {
+        if (!scoped) return s.mutate(action, { revision: s.data.revision, ...p }).result;
+        s = new Store(file, { deferred: true });
+        return (await s.mutateAsync(action, { revision: s.data.revision, ...p }, { snapshot: false })).result;
+      };
+      const draftId = await run('rebuild.start', { carId });
+      await run('part.save', { data: { name: 'Unrelated tyres', quantity: 4, tracking: 'quantity' } });
+      const plan = structuredClone(new Store(file).snapshot().buildDrafts.find(d => d.id === draftId).data);
+      plan.parts = [{ key: 'motor', partId: motor, name: 'Motor', quantity: 2, slot: 'motor', position: 'Motor' }];
+      await run('build.draft.save', { id: draftId, data: plan });
+      const lines = new Store(file).snapshot().planning.shopping.filter(l => l.buildId === draftId);
+      assert.deepEqual(
+        lines.map(l => [l.partId, l.quantity]),
+        [[motor, 2]]
+      );
+    }
+  );

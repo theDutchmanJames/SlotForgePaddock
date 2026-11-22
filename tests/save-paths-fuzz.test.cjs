@@ -135,9 +135,7 @@ function actions(db, rnd) {
 const GENERATED = /00000000-0000-4000-8000-[0-9a-f]{12}/g;
 function labels(data) {
   // Numbered without the parts that are set aside below, so they cannot shift the numbering.
-  const text = JSON.stringify(data, (k, v) =>
-      k === 'shoppingChecklistSources' || k === 'shoppingLists' ? undefined : v
-    ),
+  const text = JSON.stringify(data, (k, v) => (k === 'shoppingLists' ? undefined : v)),
     names = new Map();
   for (const id of text.match(GENERATED) || []) if (!names.has(id)) names.set(id, 'id#' + names.size);
   return names;
@@ -146,12 +144,11 @@ function labels(data) {
 // IDs, so lists are compared by what they belong to. Known difference, left as it is: after a car is
 // renamed, the full path puts the new car name on its open rebuild list at the next stock change; the
 // scoped path keeps the name the list was given. The car-name part of those list names is set aside.
-// Also known and left for a decision: the full path marks every open plan as generated on any stock change,
-// even while it is still empty; the scoped path marks a plan when it is saved. Those marks are set aside.
 function normalLists(data) {
   const p = data.planning;
   if (!p?.shoppingLists) return data;
-  delete p.shoppingChecklistSources;
+  if (Array.isArray(p.shoppingChecklistSources) && !p.shoppingChecklistSources.length)
+    delete p.shoppingChecklistSources; // none either way
   const ids = new Map();
   for (const l of p.shoppingLists)
     if (/^purchase-[0-9a-f]{64}$/.test(l.id) && l.source?.id) {
