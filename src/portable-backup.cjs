@@ -288,24 +288,25 @@ function exportBackup(source, destination, options = {}) {
     check(Buffer.byteLength(manifest) <= MAX_RECORD, 'Backup manifest exceeds 32 MiB.');
     const keys = keysOf(manifest),
       assets = new Set(),
-      put = db.prepare('INSERT INTO records VALUES(?,?,?)');
+      put = db.prepare('INSERT INTO records VALUES(?,?,?)'),
+      // (Timing 2.4.0, speed) prepared once, not for every record: 27 s for the records of a large history
+      undoOf = db.prepare('SELECT json FROM original.undo_records WHERE key=?'),
+      rowOf = db.prepare('SELECT json FROM original.records WHERE key=?'),
+      fieldsOf = db.prepare('SELECT path,json FROM original.record_fields WHERE record=?');
     let done = 0;
     for (const key of keys) {
       guard(options);
-      const undo = options.previous ? db.prepare('SELECT json FROM original.undo_records WHERE key=?').get(key) : null;
+      const undo = options.previous ? undoOf.get(key) : null;
       let json;
       if (undo) {
         check(undo.json !== null, 'Previous revision has a missing record.');
         json = undo.json;
       } else {
-        const row = db.prepare('SELECT json FROM original.records WHERE key=?').get(key);
+        const row = rowOf.get(key);
         check(row, 'Backup has a missing record.');
         json = F.merge(
           row.json,
-          db
-            .prepare('SELECT path,json FROM original.record_fields WHERE record=?')
-            .all(key)
-            .map(f => [f.path, f.json])
+          fieldsOf.all(key).map(f => [f.path, f.json])
         );
       }
       const e = envelope(json);
@@ -446,7 +447,8 @@ function stageBackup(source, destination, options = {}) {
     guard(options);
     // Validation includes domain references, stock invariants, received result
     // signatures and the existing collection cap, with original bodies lazy.
-    let info = { databaseId: meta.identity[0], revision: meta.identity[1] };
+    let info = { databaseId: meta.identity[0], revision: meta.identity[1] },
+      kept = null;
     if (options.validate !== false) {
       options.progress?.({ phase: 'Validating collection', done: 0, total: 1 });
       const store = new (require('./store.cjs').Store)(destination);
@@ -456,9 +458,14 @@ function stageBackup(source, destination, options = {}) {
       );
       check(store.expectedIdentity === JSON.stringify(meta.identity), 'Backup identity mismatch.');
       info = { ...info, name: store.data.settings.name, cars: store.data.cars.length };
+      if (options.keepData) kept = store.data;
     }
     guard(options);
-    return { path: destination, sourceDigest: meta.digest, ...info };
+    const staged = { path: destination, sourceDigest: meta.digest, ...info };
+    // (Timing 2.4.0, speed) the validated collection for a caller that uses it next (not part of the result): opening it again took over
+    // a minute with a large history
+    if (kept) Object.defineProperty(staged, 'data', { value: kept, enumerable: false });
+    return staged;
   } catch (e) {
     db?.close();
     for (const file of [destination, destination + '-journal']) if (fs.existsSync(file)) fs.unlinkSync(file);

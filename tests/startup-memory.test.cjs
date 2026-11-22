@@ -36,7 +36,7 @@ test('direct JSON measurement matches native encoding for escapes, Unicode, hole
 });
 test('Timing reports collection capacity separately from ordinary storage failures',()=>{
  const {fixtures}=require('./support/timing-fixtures.cjs'),timing=require('../src/timing-integration.cjs'),f=fixtures();
- f.store.transact=()=>require('../src/storage-resources.cjs').checkCollectionSize(201*1024*1024);assert.throws(()=>timing.receive(f.store,f.normal),e=>e.apiCode==='CAPACITY_EXCEEDED'&&e.httpStatus===507);
+ f.store.transact=()=>{const R=require('../src/storage-resources.cjs');R.checkCollectionSize(R.METADATA_LIMIT+1);};assert.throws(()=>timing.receive(f.store,f.normal),e=>e.apiCode==='CAPACITY_EXCEEDED'&&e.httpStatus===507);
  f.store.transact=()=>{throw Error('disk failure');};assert.throws(()=>timing.receive(f.store,f.normal),e=>e.apiCode==='STORAGE_FAILED'&&e.httpStatus===500);
 });
 

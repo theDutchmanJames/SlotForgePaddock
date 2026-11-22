@@ -199,7 +199,8 @@ function contributions(store, input) {
     } else {
       const keys = r.db
         .prepare(
-          `SELECT o.key FROM records o JOIN record_fields s ON s.record=o.key AND s.path='["sourceId"]' AND s.json=? JOIN record_fields n ON n.record=o.key AND n.path='["sessionId"]' AND n.json=? WHERE o.bucket='["libraryOrigins"]'`
+          // (Timing 2.4.0, speed) through the field index, in the order the bucket index gave (identity, then row): every origin was read
+          `SELECT o.key FROM record_fields n CROSS JOIN records o ON o.key=n.record JOIN record_fields s ON s.record=o.key AND s.path='["sourceId"]' AND s.json=?1 WHERE n.path='["sessionId"]' AND n.json=?2 AND length(n.json)<=512 AND o.bucket='["libraryOrigins"]' ORDER BY o.identity,o.rowid`
         )
         .all(JSON.stringify(input.sourceId), JSON.stringify(input.sessionId));
       const originals = keys

@@ -25,7 +25,10 @@ function load(r, input) {
   } else {
     const keys = r.db
       .prepare(
-        `SELECT o.key FROM records o JOIN record_fields s ON s.record=o.key AND s.path='["sourceId"]' AND s.json=? JOIN record_fields c ON c.record=o.key AND c.path='["carId"]' AND c.json=? WHERE o.bucket='["libraryOrigins"]'`
+        // (Timing 2.4.0, speed) the car's few origins through the field index, in the order the bucket index gave them (identity, then
+        // row): going through every origin of the library took 60 ms a car with 2,500 races, 3 s for a page of the car list
+        `SELECT o.key FROM record_fields c CROSS JOIN records o ON o.key=c.record JOIN record_fields s ON s.record=o.key AND s.path='["sourceId"]' AND s.json=?1
+ WHERE c.path='["carId"]' AND c.json=?2 AND length(c.json)<=512 AND o.bucket='["libraryOrigins"]' ORDER BY o.identity,o.rowid`
       )
       .all(JSON.stringify(input.sourceId), JSON.stringify(input.carId));
     const origins = keys.map(k => r.record(k.key)).filter(o => o.entity === 'car');

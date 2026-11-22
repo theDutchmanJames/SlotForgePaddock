@@ -87,9 +87,11 @@ async function restore(file, options, input) {
   let ticket,
     committed = false;
   try {
-    const staged = B.stageBackup(input.source, stage);
-    require('./shared-library-key.cjs').ensure(stage);
-    const validated = new Store(stage).data;
+    const staged = B.stageBackup(input.source, stage, { keepData: true });
+    // (Timing 2.4.0, speed) the collection staging validated, unless the capture key was written into it since: opening the staged
+    // library a second time took over a minute with a large history
+    const keyed = require('./shared-library-key.cjs').ensure(stage);
+    const validated = keyed === false && staged.data ? staged.data : new Store(stage).data;
     check(state(store), input);
     const result = await L.withReplacement(options.sharedRoot, file, input.databaseId, async active => {
       ticket = active;

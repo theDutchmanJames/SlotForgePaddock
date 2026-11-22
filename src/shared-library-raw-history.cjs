@@ -74,7 +74,8 @@ function prepare(store, input) {
       );
     const occupied = r.db
       .prepare(
-        `SELECT r.key FROM records r JOIN record_fields s ON s.record=r.key AND s.path='["sourceId"]' JOIN record_fields n ON n.record=r.key AND n.path='["sessionId"]' WHERE r.bucket='["libraryOrigins"]' AND s.json=? AND n.json=? LIMIT 1`
+        // (Timing 2.4.0, speed) through the field index, in the order the bucket index gave (identity, then row): every origin was read
+        `SELECT r.key FROM record_fields n CROSS JOIN records r ON r.key=n.record JOIN record_fields s ON s.record=r.key AND s.path='["sourceId"]' WHERE r.bucket='["libraryOrigins"]' AND s.json=?1 AND n.path='["sessionId"]' AND n.json=?2 AND length(n.json)<=512 ORDER BY r.identity,r.rowid LIMIT 1`
       )
       .get(JSON.stringify(input.sourceId), JSON.stringify(input.sessionId));
     if (occupied && occupied.key !== JSON.stringify(['libraryOrigins', 'id:' + prior.origin]))
@@ -207,7 +208,8 @@ function read(store, input) {
         (input.carId !== undefined && !validId(input.carId))
       )
         fail('INVALID_QUERY', 'Invalid original history filters.');
-      let from = `FROM records r JOIN record_fields p ON p.record=r.key AND p.path='["projectionStatus"]' WHERE r.bucket='["libraryOrigins"]' AND p.json='"raw-only"'`,
+      // (Timing 2.4.0, speed) from the few "raw-only" origins through record_fields_lookup
+      let from = `FROM record_fields p CROSS JOIN records r ON r.key=p.record WHERE p.path='["projectionStatus"]' AND p.json='"raw-only"' AND length(p.json)<=512 AND r.bucket='["libraryOrigins"]'`,
         args = [];
       if (input.sourceId) {
         from += ` AND EXISTS(SELECT 1 FROM record_fields s WHERE s.record=r.key AND s.path='["sourceId"]' AND s.json=?)`;

@@ -22,6 +22,28 @@ function discover(options) {
   if (options.sharedRoot && !options.appData) return [];
   return R.discover({ appData: options.appData || appData() });
 }
+// Whether a kept view still describes the library on disk: the same identity, revision and change epoch, and no write half done.
+function keptCurrent(file, store) {
+  const token = store.deferredState?.token;
+  if (!token || store.pendingWrite) return false;
+  try {
+    const db = new (require('node:sqlite').DatabaseSync)(file, { readOnly: true, timeout: 5000 });
+    try {
+      const state = Object.fromEntries(
+        db
+          .prepare("SELECT key,value FROM state WHERE key IN ('identity','change_epoch')")
+          .all()
+          .map(r => [r.key, r.value])
+      );
+      const [id, revision] = JSON.parse(state.identity);
+      return token.id === id && token.revision === revision && token.epoch === state.change_epoch;
+    } finally {
+      db.close();
+    }
+  } catch {
+    return false;
+  }
+}
 function paddockPath(options) {
   if (options.legacyPaddockPath) return options.legacyPaddockPath;
   if (options.sharedRoot && !options.appData) return null;
@@ -32,7 +54,7 @@ function paddockPath(options) {
   }
   return null;
 }
-async function adopt(file, root, options) {
+async function adopt(file, root, options, progress = () => {}) {
   require('./shared-library-key.cjs').ensure(file);
   const descriptors = discover(options),
     result = [];
@@ -51,7 +73,13 @@ async function adopt(file, root, options) {
     try {
       const sourceId = reader.sourceId || 'legacy-' + descriptor.originKey,
         client = { application: 'SlotForge Timing', installationId: sourceId };
-      const store = () => new (require('./store.cjs').Store)(file, { deferred: true }),
+      // (Timing 2.4.0, speed) The view of the library is kept from one save to the next while the library on disk is still exactly what
+      // it describes (as the worker does between requests); building it again for every car and race took about a third of the first start.
+      let kept = null;
+      const store = () => {
+        if (kept && keptCurrent(file, kept)) return kept;
+        return (kept = new (require('./store.cjs').Store)(file, { deferred: true }));
+      },
         status = await E.call(store(), client, 'status'),
         identity = { databaseId: status.databaseId, recoveryId: status.recoveryId };
       const recovery = path.join(root, 'recovery'),
@@ -124,6 +152,22 @@ async function adopt(file, root, options) {
             }
           });
       }
+      // (Timing 2.4.0) how far the copy is, for the opening screen: a large history takes minutes
+      let counted = {};
+      try {
+        counted = reader.counts();
+      } catch {
+        /* Without totals the opening screen counts up only. */
+      }
+      const carTotal = counted.slotcars ?? null,
+        sessionTotal = counted.sessions ?? null;
+      const tell = (phase, done, of) => {
+        try {
+          progress({ phase, done, total: of });
+        } catch {
+          /* Showing progress never changes the adoption. */
+        }
+      };
       for (let after = -1; ; ) {
         const page = reader.page('slotcars', { after, limit: 25 });
         for (const row of page.rows) {
@@ -148,6 +192,7 @@ async function adopt(file, root, options) {
             )
           });
           cars++;
+          if (cars % 10 === 0) tell('cars', cars, carTotal);
         }
         if (page.next === null) break;
         after = page.next;
@@ -181,10 +226,12 @@ async function adopt(file, root, options) {
           });
           if (saved.projectionStatus === 'raw-only') originalOnly++;
           sessions++;
+          if (sessions % 5 === 0 || sessions === 1) tell('sessions', sessions, sessionTotal);
         }
         if (page.next === null) break;
         after = page.next;
       }
+      tell('laps', 0, null);
       // Retain orphaned laps too. Do not fabricate a measured session around them.
       const orphaned = [];
       for (let after = -1; ; ) {
@@ -208,7 +255,9 @@ async function adopt(file, root, options) {
         });
         originalOnly++;
       }
+      let serviced = 0;
       for (const item of serviceCars) {
+        if (serviced++ % 10 === 0) tell('service', serviced - 1, serviceCars.length);
         const car = await E.call(store(), client, 'serviceRead', { carId: item.carId });
         if (car.service.revision) continue;
         const raw = item.raw,

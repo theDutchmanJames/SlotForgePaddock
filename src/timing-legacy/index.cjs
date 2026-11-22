@@ -167,6 +167,14 @@ function open({ profile, sourceId } = {}) {
     db?.close();
     throw e;
   }
+  // (Timing 2.4.0, speed) the queries of get() and page() are prepared once: the first start reads every lap, and preparing them again for
+  // every lap was a large part of it.
+  const prepared = new Map(),
+    q = sql => {
+      let st = prepared.get(sql);
+      if (!st) prepared.set(sql, (st = db.prepare(sql)));
+      return st;
+    };
   function get(entity, id, { media = true } = {}) {
     assertOpen();
     if (!entities.has(entity) && entity !== '@meta') fail('Unsupported legacy entity.');
@@ -174,11 +182,10 @@ function open({ profile, sourceId } = {}) {
       const row = entity === '@meta' ? data[id] : indexes.get(entity).get(id);
       return row === undefined ? null : structuredClone(row);
     }
-    const record = db.prepare('SELECT shape FROM records WHERE entity=? AND id=?').get(entity, id);
+    const record = q('SELECT shape FROM records WHERE entity=? AND id=?').get(entity, id);
     if (!record) return null;
     const fields = new Map(
-        db
-          .prepare('SELECT path,json FROM fields WHERE entity=? AND id=?')
+        q('SELECT path,json FROM fields WHERE entity=? AND id=?')
           .all(entity, id)
           .map(f => [f.path, f.json])
       ),
@@ -196,8 +203,7 @@ function open({ profile, sourceId } = {}) {
     let value = build(JSON.parse(record.shape));
     if (used.size !== fields.size) fail('Unexpected legacy fields.');
     if (media)
-      for (const a of db
-        .prepare('SELECT path,mime,bytes,digest,original FROM assets WHERE entity=? AND id=?')
+      for (const a of q('SELECT path,mime,bytes,digest,original FROM assets WHERE entity=? AND id=?')
         .iterate(entity, id)) {
         if (digest(a.bytes) !== a.digest) fail('Legacy media checksum mismatch.');
         const uri = a.original ?? `data:${a.mime};base64,${Buffer.from(a.bytes).toString('base64')}`,
@@ -240,13 +246,11 @@ function open({ profile, sourceId } = {}) {
     if (db)
       refs =
         sessionId !== undefined
-          ? db
-              .prepare(
-                "SELECT r.id,r.ordinal FROM lap_index l JOIN records r ON r.entity='laps' AND r.id=l.id WHERE l.sessionId=? AND r.ordinal>? ORDER BY r.ordinal LIMIT ?"
+          ? q(
+                "SELECT r.id,r.ordinal FROM lap_index l CROSS JOIN records r ON r.entity='laps' AND r.id=l.id WHERE l.sessionId=? AND r.ordinal>? ORDER BY r.ordinal LIMIT ?"
               )
               .all(sessionId, after, limit + 1)
-          : db
-              .prepare('SELECT id,ordinal FROM records WHERE entity=? AND ordinal>? ORDER BY ordinal LIMIT ?')
+          : q('SELECT id,ordinal FROM records WHERE entity=? AND ordinal>? ORDER BY ordinal LIMIT ?')
               .all(entity, after, limit + 1);
     else {
       refs = [];

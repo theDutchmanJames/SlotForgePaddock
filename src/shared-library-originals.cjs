@@ -6,7 +6,8 @@ const Q = require('./sqlite-query.cjs'),
 const fail = (code, message) => {
   throw Object.assign(Error(message), { code });
 };
-const WHERE = `FROM records r JOIN record_fields p ON p.record=r.key AND p.path='["projectionStatus"]' JOIN record_fields c ON c.record=r.key AND c.path='["carIds"]' WHERE r.bucket='["libraryOrigins"]' AND p.json='"raw-only"' AND ${require('./car-merge-query.cjs').rawMember()}`;
+// (Timing 2.4.0, speed) from the few "raw-only" origins through record_fields_lookup, not through every origin of the library
+const WHERE = `FROM record_fields p CROSS JOIN records r ON r.key=p.record JOIN record_fields c ON c.record=r.key AND c.path='["carIds"]' WHERE p.path='["projectionStatus"]' AND p.json='"raw-only"' AND length(p.json)<=512 AND r.bucket='["libraryOrigins"]' AND ${require('./car-merge-query.cjs').rawMember()}`;
 function count(r, carId) {
   return r.db.prepare('SELECT count(*) n ' + WHERE).get(carId).n;
 }

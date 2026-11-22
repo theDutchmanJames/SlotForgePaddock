@@ -43,7 +43,8 @@ function originals(r, carId, from, options = {}) {
   };
   const rows = r.db
     .prepare(
-      `SELECT r.key FROM records r JOIN record_fields p ON p.record=r.key AND p.path='["projectionStatus"]' JOIN record_fields c ON c.record=r.key AND c.path='["carIds"]' WHERE r.bucket='["libraryOrigins"]' AND p.json='"raw-only"' AND EXISTS(SELECT 1 FROM json_each(c.json) WHERE value IN (SELECT value FROM json_each(?)))`
+      // (Timing 2.4.0, speed) from the few "raw-only" origins through record_fields_lookup, not through every origin of the library (19 ms a car)
+      `SELECT r.key FROM record_fields p CROSS JOIN records r ON r.key=p.record JOIN record_fields c ON c.record=r.key AND c.path='["carIds"]' WHERE p.path='["projectionStatus"]' AND p.json='"raw-only"' AND length(p.json)<=512 AND r.bucket='["libraryOrigins"]' AND EXISTS(SELECT 1 FROM json_each(c.json) WHERE value IN (SELECT value FROM json_each(?)))`
     )
     .iterate(JSON.stringify(originalIds));
   for (const row of rows) {

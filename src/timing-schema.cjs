@@ -358,20 +358,25 @@ schema.$defs.telemetryChanges = object({
   changeToken: hash,
   changed: { type: 'boolean' }
 });
-function validate(value, definition = schema, path = '$') {
+// (Timing 2.4.0, speed) Trying the shapes of anyOf throws a cheap marker, not an Error: an Error records a stack trace, and the first start
+// tried several shapes for every field of every lap (17 s for 150 races). Patterns are compiled once. What is valid has not changed.
+const MISMATCH = { mismatch: true },
+  patterns = new Map();
+function validate(value, definition = schema, path = '$', quiet = false) {
   const fail = message => {
+    if (quiet) throw MISMATCH;
     const e = Error((path + ': ' + message).slice(0, 1800));
     e.apiCode = 'INVALID_PAYLOAD';
     e.httpStatus = 400;
     throw e;
   };
-  if (definition.$ref) return validate(value, schema.$defs[definition.$ref.split('/').pop()], path);
+  if (definition.$ref) return validate(value, schema.$defs[definition.$ref.split('/').pop()], path, quiet);
   if (definition.anyOf) {
     for (const option of definition.anyOf)
       try {
-        validate(value, option, path);
+        validate(value, option, path, true);
         return;
-      } catch {}
+      } catch {} // (as before: anything that goes wrong in an option means the option does not match)
     return fail('does not match a supported shape');
   }
   if ('const' in definition && value !== definition.const) fail('unexpected constant');
@@ -391,13 +396,13 @@ function validate(value, definition = schema, path = '$') {
     for (const k of definition.required || []) if (!Object.hasOwn(value, k)) fail('missing ' + k);
     for (const k of Object.keys(value)) {
       if (!Object.hasOwn(definition.properties, k)) fail('unknown field ' + k);
-      validate(value[k], definition.properties[k], path + '.' + k);
+      validate(value[k], definition.properties[k], quiet ? path : path + '.' + k, quiet);
     }
   }
   if (t === 'array') {
     if (value.length > (definition.maxItems ?? Infinity) || value.length < (definition.minItems ?? 0))
       fail('invalid item count');
-    value.forEach((v, i) => validate(v, definition.items, path + '[' + i + ']'));
+    value.forEach((v, i) => validate(v, definition.items, quiet ? path : path + '[' + i + ']', quiet));
   }
   if (t === 'string') {
     // UTF-16 length bounds Unicode code-point length. Most strings (especially
@@ -414,7 +419,11 @@ function validate(value, definition = schema, path = '$') {
       }
     }
     if (length < min) fail('invalid text length');
-    if (definition.pattern && !new RegExp(definition.pattern).test(value)) fail('invalid text format');
+    if (definition.pattern) {
+      let pattern = patterns.get(definition.pattern);
+      if (!pattern) patterns.set(definition.pattern, (pattern = new RegExp(definition.pattern)));
+      if (!pattern.test(value)) fail('invalid text format');
+    }
     if (
       definition.format === 'date-time' &&
       (!Number.isFinite(Date.parse(value)) || new Date(value).toISOString() !== value)

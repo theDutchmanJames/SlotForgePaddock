@@ -86,7 +86,9 @@ function structure(db) {
       has('trigger', ['query_totals_insert', 'query_totals_update', 'query_totals_delete']),
     performance:
       has('table', ['query_performance', 'query_performance_dirty']) &&
-      has('trigger', ['query_performance_insert', 'query_performance_update', 'query_performance_delete'])
+      has('trigger', ['query_performance_insert', 'query_performance_update', 'query_performance_delete']),
+    // (Timing 2.4.0, speed) the values of each lap, see query-lap-values.cjs
+    laps: has('table', ['query_lap_values']) && has('trigger', require('./query-lap-values.cjs').TRIGGERS)
   };
 }
 function objectsReady(db) {
@@ -103,7 +105,7 @@ function ensure(db) {
     current = db.prepare("SELECT value FROM state WHERE key='query_index_identity'").get()?.value === identity(db);
   const ready = structure(db);
   if (current && ready.records) {
-    if (version === '8' && ready.totals && ready.performance) {
+    if (version === '8' && ready.totals && ready.performance && ready.laps) {
       require('./query-indexes.cjs').ensure(db);
       return;
     }
@@ -114,6 +116,7 @@ function ensure(db) {
       // the affected family, but preserve the independent healthy family.
       if (version === '6' || !ready.totals) require('./query-totals.cjs').rebuild(db);
       if (version !== '8' || !ready.performance) require('./query-performance.cjs').rebuild(db);
+      if (!ready.laps) require('./query-lap-values.cjs').rebuild(db);
       require('./query-indexes.cjs').ensure(db);
       if (version !== '8') db.prepare("UPDATE state SET value='8' WHERE key='query_index_version'").run();
       return;
@@ -121,6 +124,7 @@ function ensure(db) {
   }
   require('./query-timing.cjs').schema(db);
   require('./query-performance.cjs').schema(db);
+  require('./query-lap-values.cjs').schema(db);
   db.exec(
     'DELETE FROM query_laps; DELETE FROM query_car_results; DELETE FROM query_sessions; DELETE FROM query_performance;'
   );

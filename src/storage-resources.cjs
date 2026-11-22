@@ -1,7 +1,10 @@
 'use strict';
 const fs = require('node:fs'),
   path = require('node:path');
-const METADATA_LIMIT = 200 * 1024 * 1024,
+// (Timing 2.4.0) 1 GiB, was 200 MiB: the race history copied from Timing is metadata, about 500 bytes a lap, so 200 MiB was reached
+// near 400,000 laps (a club with a few years of racing). The collection is read lazily, record by record, and backups go record by
+// record too, so nothing here holds the whole collection as one string (Electron's limit for one string is 512 MiB).
+const METADATA_LIMIT = 1024 * 1024 * 1024,
   RESERVE = 16 * 1024 * 1024;
 function freeBytes(folder) {
   const s = fs.statfsSync(folder);
@@ -74,7 +77,7 @@ function checkCollectionSize(size) {
   if (!Number.isSafeInteger(size) || size < 0 || size > METADATA_LIMIT)
     throw Object.assign(
       Error(
-        'Database metadata exceeds the 200 MiB working limit. Photos and documents are stored separately and do not count toward this limit.'
+        'Database metadata exceeds the 1 GiB working limit. Photos and documents are stored separately and do not count toward this limit.'
       ),
       { code: 'COLLECTION_LIMIT' }
     );

@@ -69,7 +69,8 @@ function prepare(store, prepared) {
     for (const extra of extras) {
       const keys = r.db
         .prepare(
-          `SELECT o.key FROM records o JOIN record_fields s ON s.record=o.key AND s.path='["sourceId"]' AND s.json=? JOIN record_fields i ON i.record=o.key AND i.path='["originalId"]' AND i.json=? WHERE o.bucket='["libraryOrigins"]'`
+          // (Timing 2.4.0, speed) through the field index, in the order the bucket index gave (identity, then row): every origin was read
+          `SELECT o.key FROM record_fields i CROSS JOIN records o ON o.key=i.record JOIN record_fields s ON s.record=o.key AND s.path='["sourceId"]' AND s.json=?1 WHERE i.path='["originalId"]' AND i.json=?2 AND length(i.json)<=512 AND o.bucket='["libraryOrigins"]' ORDER BY o.identity,o.rowid`
         )
         .all(JSON.stringify(extra.sourceId), JSON.stringify(extra.originalId));
       for (const k of keys) {

@@ -66,7 +66,9 @@ parentPort.on('message', message => {
                 locations.assertCurrent(location.root, location.file, location.databaseId);
                 return fn();
               });
-            const adoption = await within(() => bootstrap.adopt(location.file, location.root, workerData)),
+            const adoption = await within(() =>
+                bootstrap.adopt(location.file, location.root, workerData, progress => parentPort.postMessage({ progress }))
+              ),
               nativeHistoryRepair = await within(() =>
                 require('./shared-library-native-history.cjs').repair(location.file, location.root)
               );

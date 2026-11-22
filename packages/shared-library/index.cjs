@@ -3,7 +3,7 @@ const path=require('node:path'),fs=require('node:fs'),{Worker}=require('node:wor
 const engine=fs.existsSync(path.join(__dirname,'engine','src'))?path.join(__dirname,'engine','src'):path.resolve(__dirname,'../../src');
 async function open(options){
  if(!options||typeof options.application!=='string'||!/^[\w-]{1,100}$/.test(options.installationId||''))throw Error('Shared library needs an application and persistent installation ID.');
- const {thumbnailEncoder,...workerOptions}=options;
+ const {thumbnailEncoder,onProgress,...workerOptions}=options; // (Timing 2.4.0) onProgress: how far the first-start copy is
  const worker=new Worker(path.join(engine,'shared-library-worker.cjs'),{workerData:workerOptions}),pending=new Map();let serial=0,closed=false,closing=null;
  const waiting=[];let active=0,thumbnails;
  const pump=()=>{while(active<8&&waiting.length&&!closed){const item=waiting.shift(),id=++serial;active++;pending.set(id,item);try{worker.postMessage({id,method:item.method,input:item.input});}catch(e){pending.delete(id);active--;item.reject(e);}}};
@@ -13,7 +13,7 @@ async function open(options){
   // Preserve postMessage's call-time snapshot even while admission is queued.
   waiting.push({method,input:structuredClone(input),resolve,reject});pump();
  });
- worker.on('message',m=>{const p=pending.get(m.id);if(!p)return;pending.delete(m.id);active--;pump();if(m.error)p.reject(Object.assign(Error(m.error.message),m.error));else p.resolve(m.value);});
+ worker.on('message',m=>{if(m&&m.progress&&m.id===undefined){try{onProgress?.(m.progress)}catch{}return;}const p=pending.get(m.id);if(!p)return;pending.delete(m.id);active--;pump();if(m.error)p.reject(Object.assign(Error(m.error.message),m.error));else p.resolve(m.value);});
  const fail=e=>{for(const p of pending.values())p.reject(e);pending.clear();for(const p of waiting.splice(0))p.reject(e);active=0;closed=true;thumbnails?.close().catch(()=>{});};worker.on('error',fail);worker.on('exit',code=>fail(Object.assign(Error('Library worker stopped; retained write identities can be retried.'),{code:'WRITE_UNCERTAIN',exitCode:code})));
  thumbnails=require('./thumbnail-client.cjs')(invoke,thumbnailEncoder);
  const handle=Object.fromEntries(['catalogueOverview','status','backup','restore','carSchema','carIdentity','mergeMappings','mergeContributions','timingSettings','timingSettingsWrite','catalogue','carWrite','customSchema','customRead','customDefinitionWrite','serviceRead','serviceWrite','historyWrite','historyRead','timingRead','originalHistory','originalHistoryWrite','changes','receipt','adoptCar','adoptSession','adoptionStatus','origin','extensionRead','extensionWrite','profile'].map(name=>[name,input=>invoke(name,input)]));
