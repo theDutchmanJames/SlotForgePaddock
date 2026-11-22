@@ -18,6 +18,22 @@ function project(db, filters = {}, reader = null) {
     planning: state
   });
   const stock = (bucket, ids) => (reader ? descriptors(reader, bucket, ids) : db[bucket]);
+  // A job's list (a rebuild's, for instance) is always named "Car · Job" and cannot be renamed by hand,
+  // so the name is taken from the car and job as they are now: renaming either shows at once.
+  const jobLists = (state.shoppingLists || []).filter(l => l.source?.kind === 'job' && l.source.id);
+  if (jobLists.length) {
+    const ids = jobLists.map(l => l.source.id),
+      jobs = new Map(
+        (reader ? descriptors(reader, 'jobs', ids, ['name', 'carId']) : db.jobs.filter(j => ids.includes(j.id))).map(
+          j => [j.id, j]
+        )
+      ),
+      cars = new Map(stock('cars', [...jobs.values()].map(j => j.carId).filter(Boolean)).map(c => [c.id, c]));
+    for (const list of jobLists) {
+      const job = jobs.get(list.source.id);
+      if (job) list.name = [cars.get(job.carId)?.name, job.name].filter(Boolean).join(' · ').slice(0, 200) || list.name;
+    }
+  }
   const parts = new Map(stock('parts', state.shopping.map(l => l.partId).filter(Boolean)).map(p => [p.id, p])),
     supplies = new Map(
       stock(
@@ -105,9 +121,14 @@ function project(db, filters = {}, reader = null) {
 }
 // Read only searchable text and classification. Pictures and detailed product
 // metadata are loaded only for the displayed matches, through Reader.one().
-function descriptors(reader, bucket, ids = null) {
+function descriptors(
+  reader,
+  bucket,
+  ids = null,
+  fields = ['name', 'maker', 'reference', 'category', 'partType', 'archived']
+) {
   if (ids && !ids.length) return [];
-  const paths = ['name', 'maker', 'reference', 'category', 'partType', 'archived'].map(k => JSON.stringify([k]));
+  const paths = fields.map(k => JSON.stringify([k]));
   return reader.db
     .prepare(
       `SELECT r.identity,json_group_object(json_extract(f.path,'$[0]'),json(f.json)) fields FROM records r JOIN record_fields f ON f.record=r.key WHERE r.bucket=? AND f.path IN (SELECT value FROM json_each(?)) ${ids ? 'AND r.key IN (SELECT value FROM json_each(?))' : ''} GROUP BY r.key`

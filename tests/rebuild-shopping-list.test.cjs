@@ -78,3 +78,33 @@ for (const scoped of [false, true])
       );
     }
   );
+
+for (const scoped of [false, true])
+  test(
+    'renaming a car or its rebuild shows in the rebuild list name (' + (scoped ? 'scoped' : 'full') + ' save path)',
+    async t => {
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'paddock-rebuild-name-'));
+      t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+      const file = path.join(dir, 'db.sqlite');
+      let s = new Store(file);
+      const carId = s.mutate('car.save', { data: { name: 'Bravo' } }).result;
+      const run = async (action, p) => {
+        if (!scoped) return s.mutate(action, { revision: s.data.revision, ...p }).result;
+        s = new Store(file, { deferred: true });
+        return (await s.mutateAsync(action, { revision: s.data.revision, ...p }, { snapshot: false })).result;
+      };
+      await run('rebuild.start', { carId });
+      const shown = () => {
+        const page = new Store(file, { deferred: true });
+        const v = require('../src/view-query.cjs').view(page, { page: 'Shopping List' });
+        return (v.data || v).planning.shoppingLists.filter(l => l.source.kind === 'job').map(l => l.name);
+      };
+      assert.deepEqual(shown(), ['Bravo · Rebuild Bravo']);
+      const car = new Store(file).snapshot().cars.find(c => c.id === carId);
+      await run('car.save', { id: carId, revision: car.revision, data: { name: 'Delta' } });
+      assert.deepEqual(shown(), ['Delta · Rebuild Bravo'], 'the car rename shows at once');
+      const job = new Store(file).snapshot().jobs.find(j => j.carId === carId);
+      await run('job.edit', { id: job.id, name: 'Fresh racer', notes: '', category: 'rebuild' });
+      assert.deepEqual(shown(), ['Delta · Fresh racer'], 'the job rename shows too');
+    }
+  );

@@ -141,9 +141,9 @@ function labels(data) {
   return names;
 }
 // A rebuild's shopping list ID is a fingerprint of its job ID, and the two copies use different generated
-// IDs, so lists are compared by what they belong to. Known difference, left as it is: after a car is
-// renamed, the full path puts the new car name on its open rebuild list at the next stock change; the
-// scoped path keeps the name the list was given. The car-name part of those list names is set aside.
+// IDs, so lists are compared by what they belong to. The stored name of a job's list may
+// lag behind a car rename on one path; it is never shown, because the Shopping page names a job's list from
+// the car and job as they are now (shopping-query.cjs). So the car-name part of those names is set aside.
 function normalLists(data) {
   const p = data.planning;
   if (!p?.shoppingLists) return data;
