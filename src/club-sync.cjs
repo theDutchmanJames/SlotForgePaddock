@@ -21,12 +21,18 @@ function removeStage(folder, target) {
   );
   fs.rmSync(resolved, { recursive: true, force: true });
 }
+// Photo staging folders in use by this run. Paddock runs once per profile, so any other staging folder
+// belongs to a copy that was cut off (computer switched off, app closed mid-transfer). It can hold every
+// photo of the collection, so it is removed at once instead of after a day.
+const activeStages = new Set();
 function cleanup(folder) {
   for (const entry of fs.readdirSync(folder, { withFileTypes: true })) {
     if (!/^sync-(snapshot-[a-f0-9-]{36}|stage-[a-zA-Z0-9]+)$/.test(entry.name)) continue;
     const file = path.join(folder, entry.name);
     try {
-      if (Date.now() - fs.statSync(file).mtimeMs < 86400000) continue;
+      const stage = entry.isDirectory() && entry.name.startsWith('sync-stage-');
+      if (stage && activeStages.has(path.resolve(file))) continue;
+      if (!stage && Date.now() - fs.statSync(file).mtimeMs < 86400000) continue;
       if (entry.isDirectory()) removeStage(folder, file);
       else fs.rmSync(file, { force: true });
     } catch {
@@ -160,12 +166,14 @@ function hashes(rows) {
 }
 async function staging(club, fn) {
   const { Store } = require('./store.cjs'),
-    dir = fs.mkdtempSync(path.join(club.folder, 'sync-stage-')),
-    stage = new Store(path.join(dir, 'assets.sqlite'));
-  stage.persist(stage.data);
+    dir = fs.mkdtempSync(path.join(club.folder, 'sync-stage-'));
+  activeStages.add(path.resolve(dir));
   try {
+    const stage = new Store(path.join(dir, 'assets.sqlite'));
+    stage.persist(stage.data);
     return await fn(stage);
   } finally {
+    activeStages.delete(path.resolve(dir));
     try {
       removeStage(club.folder, dir);
     } catch {
@@ -259,12 +267,21 @@ class Snapshots {
   }
   create() {
     this.prune();
+    // A member that was switched off or lost its connection mid-copy leaves its transfer open for two
+    // minutes, and two such leftovers blocked every new join. A live transfer asks for pieces many times a
+    // second and needs nothing more once it has them, so one that has been quiet for 15 seconds gives way.
+    if (this.sessions.size >= 2) {
+      const quiet = [...this.sessions]
+        .filter(([, s]) => Date.now() - s.used > 15000)
+        .sort((a, b) => a[1].used - b[1].used);
+      if (quiet.length) this.release(quiet[0][0]);
+    }
     check(this.sessions.size < 2, 'Two snapshot transfers are already in progress. Retry shortly.');
     const store = this.club.main,
       id = crypto.randomUUID(),
       file = path.join(this.club.folder, 'sync-snapshot-' + id),
       written = S.sharedSnapshot(store, file, MAX);
-    const s = { file, ...written, expires: Date.now() + 120000, pins: store.data };
+    const s = { file, ...written, expires: Date.now() + 120000, used: Date.now(), pins: store.data };
     this.sessions.set(id, s);
     return { version: 2, id, size: s.size, digest: s.digest, cursor: s.cursor, chunkSize: CHUNK };
   }
@@ -274,6 +291,7 @@ class Snapshots {
     const s = this.sessions.get(id);
     check(s, 'Snapshot transfer expired. Restart the transfer.');
     s.expires = Date.now() + 120000;
+    s.used = Date.now();
     return s;
   }
   chunk(id, offset) {

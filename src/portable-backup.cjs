@@ -229,12 +229,40 @@ function verify(file, options = {}) {
     db.close();
   }
 }
+// A backup cut off by a crash or power cut leaves its temporary copy (as large as the collection) and
+// journal behind. Each export clears such leftovers in its own folder once they are a day old; younger
+// ones may belong to another computer writing to a shared folder right now.
+const LEFTOVER = /^\.slotforge-backup-[0-9a-f-]{36}\.tmp(-journal)?$/;
+function sweepLeftovers(folder, now = Date.now()) {
+  let names;
+  try {
+    names = fs.readdirSync(folder);
+  } catch {
+    return 0;
+  }
+  let removed = 0;
+  for (const name of names) {
+    if (!LEFTOVER.test(name)) continue;
+    const file = path.join(folder, name);
+    try {
+      const stat = fs.lstatSync(file);
+      if (stat.isFile() && now - stat.mtimeMs > 24 * 60 * 60 * 1000) {
+        fs.unlinkSync(file);
+        removed++;
+      }
+    } catch {
+      /* Still in use or already gone. */
+    }
+  }
+  return removed;
+}
 function exportBackup(source, destination, options = {}) {
   check(fs.existsSync(source), 'Save the database before backing it up.');
   check(
     ![source, ...(options.protectedFiles || [])].some(f => sameFile(f, destination)),
     'Choose an export location outside the live database files.'
   );
+  sweepLeftovers(path.dirname(destination));
   space(path.dirname(destination), fs.statSync(source).size * 1.2 + 16 * CHUNK, options);
   guard(options);
   const temp = path.join(path.dirname(destination), '.slotforge-backup-' + crypto.randomUUID() + '.tmp');
@@ -437,4 +465,4 @@ function stageBackup(source, destination, options = {}) {
     throw e;
   }
 }
-module.exports = { exportBackup, stageBackup, verify, space, VERSION, APPLICATION };
+module.exports = { exportBackup, stageBackup, verify, space, sweepLeftovers, VERSION, APPLICATION };

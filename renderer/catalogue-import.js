@@ -453,7 +453,9 @@ document.addEventListener('change', e => {
     catalogueStatus = el.value;
     refreshCatalogueGroups();
   }
-  if (el.dataset.catalogueSelect !== undefined) {
+  // The Library's catalogue manager uses the same attribute for its own ticks; only rows of the import
+  // window belong here.
+  if (el.dataset.catalogueSelect !== undefined && catalogueReview && el.closest('.catalogue-product')) {
     const i = Number(el.dataset.catalogueSelect);
     if (el.checked && catalogueSelectable(catalogueReview.preview.rows[i])) catalogueSelected.add(i);
     else catalogueSelected.delete(i);

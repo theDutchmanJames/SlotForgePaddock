@@ -5,6 +5,8 @@ const {initial,Store,makePackage}=require('../src/store.cjs');
 const {dialog}=require('electron');
 module.exports=async(win,store,network,media,services={})=>{
   win.webContents.setBackgroundThrottling(false);
+  // Random-click run on the collection already in the smoke profile (a library copy); it must not be reset.
+  if(process.argv.includes('--monkey-only'))return require('./monkey-smoke.cjs')(win,store,network);
   // Electron can reject a capture while the compositor replaces an SVG frame.
   // Retry only that transient capture failure; assertions and persistent
   // capture errors still fail the suite normally.

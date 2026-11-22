@@ -35,7 +35,7 @@ const RETRY_AFTER = HOUR;
 const IDLE_MS = 2 * 60 * 1000;
 const FOLDER_TIMEOUT_MS = 15 * 1000;
 const GIB = 1024 * 1024 * 1024;
-const TEMP = /^\.slotforge-backup-[0-9a-f-]{36}\.tmp$/;
+const TEMP = /^\.slotforge-backup-[0-9a-f-]{36}\.tmp(-journal)?$/;
 
 function fault(message, code) {
   return Object.assign(Error(message), code ? { code } : {});

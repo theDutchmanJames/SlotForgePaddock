@@ -37,6 +37,11 @@ module.exports=async({win,store,js,wait,click,fill,submit,qa,dialog})=>{
     await click('[data-action="catalogue-product"][data-id="0"]');await fill({decision:'new'});await submit();assert.equal(await js(`document.querySelector('[data-catalogue-select="0"]').disabled`),false);
     await js(`document.querySelector('[data-catalogue-select="0"]').click()`);await click('[data-action="catalogue-confirm"]');await js(`document.querySelector('[name=confirmed]').checked=true`);await submit();assert.equal(store.data.parts.length,3);
     checks.push('possible name matches stay blocked until the user explicitly chooses a new product or an existing record');
+    // The Library's parts catalogue uses the same tick attribute as the import window; ticking there must not reach the import code.
+    await js(`page='Library';libraryTab='parts';catalogueManagerSelected.clear();render()`);await wait(`!!document.querySelector('.catalogue-manager-table [data-catalogue-select]')`);
+    const tick=await js(`(()=>{const seen=[];const on=e=>seen.push(String(e.error?.message||e.message));addEventListener('error',on);const box=document.querySelector('.catalogue-manager-table [data-catalogue-select]');box.click();removeEventListener('error',on);return {seen,selected:catalogueManagerSelected.size}})()`);
+    assert.deepEqual(tick,{seen:[],selected:1});await js(`catalogueManagerSelected.clear();page='Import & Export';render()`);
+    checks.push('ticking a part in the Library catalogue selects it without touching a catalogue import');
     // Large groups render in bounded batches; selections include hidden rows deliberately.
     pack.products=Array.from({length:120},(_,i)=>product({name:'Tyre '+i,manufacturer:'Another brand',reference:'T'+i,category:'Wheels & tyres',partType:'Tyre'}));fs.writeFileSync(file,JSON.stringify(pack));await click('[data-action="catalogue-pick"]');assert.equal(await js(`document.querySelectorAll('[data-catalogue-select]').length`),50);
     await js(`document.querySelector('[data-catalogue-group]').open=true`);await click('[data-action="catalogue-more"]');assert.equal(await js(`document.querySelectorAll('[data-catalogue-select]').length`),100);
